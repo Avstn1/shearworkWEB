@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  /* Base Tones */
+  --background: #E8EDC7;  /* Light Avocado */
+  --foreground: #3E3B2E;  /* Dark Olive */
+  --accent-1: #4f5847;    /* Sage */
+  --accent-2: #7B8C68;    /* Moss Green */
+  --accent-3: #5F6F52;    /* Deep Olive */
+  --accent-4: #2d3429;
+  --text-muted: #6E725E;  /* Muted Olive */
+  --text-bright: #F7F9EE; /* Cream White */
+
+  /* 🌟 New Highlights */
+  --highlight: #C1A85D;   /* Golden Olive – for logo, headers, strong accents */
+  --text-subtle: #868A75; /* Softer but readable – for dates, sublabels */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent-1: var(--accent-1);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-text-muted: var(--text-muted);
+  --color-text-bright: var(--text-bright);
+  --color-highlight: var(--highlight);
+  --color-text-subtle: var(--text-subtle);
+  --font-sans: var(--font-geist-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #2C2A22;
+    --foreground: #E8EDC7;
+    --accent-1: #4f5847;    /* Sage */
+    --accent-2: #8FA37A;
+    --accent-3: #A9BA9D;
+    --accent-4: #2d3429;
+    --text-muted: #A9BA9D;
+    --text-bright: #F7F9EE;
+    --highlight: #D4C27B;   /* Brighter Golden Olive for dark backgrounds */
+    --text-subtle: #B6B9A2; /* Softer muted tone for subtle text */
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
