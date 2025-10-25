@@ -26,18 +26,19 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
-    // ✅ Redirect logged-in users from /login to /dashboard
+    // Redirect logged-in users away from auth pages
     if (['/', '/login', '/signup'].includes(request.nextUrl.pathname)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
+    // Safely fetch profile, allow null if missing
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarded')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profile && !profile.onboarded && !request.nextUrl.pathname.startsWith('/app/onboarding')) {
+    if (!profile?.onboarded && !request.nextUrl.pathname.startsWith('/app/onboarding')) {
       return NextResponse.redirect(new URL('/onboarding', request.url));
     }
   }
@@ -45,7 +46,6 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// ✅ Apply middleware only to protected routes + login page
 export const config = {
   matcher: ['/', '/login', '/signup', '/app/:path*', '/dashboard/:path*'],
 };
