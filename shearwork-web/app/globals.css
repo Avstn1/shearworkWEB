@@ -10,10 +10,12 @@
   --accent-4: #2d3429;
   --text-muted: #6E725E;  /* Muted Olive */
   --text-bright: #F7F9EE; /* Cream White */
+  --text-dark: #56574a;
 
   /* 🌟 New Highlights */
   --highlight: #C1A85D;   /* Golden Olive – for logo, headers, strong accents */
   --text-subtle: #868A75; /* Softer but readable – for dates, sublabels */
+  --text-med: #767866;
 }
 
 @theme inline {
@@ -41,6 +43,8 @@
     --text-bright: #F7F9EE;
     --highlight: #D4C27B;   /* Brighter Golden Olive for dark backgrounds */
     --text-subtle: #B6B9A2; /* Softer muted tone for subtle text */
+    --text-med: #767866;
+    --text-dark: #56574a;
   }
 }
 

@@ -19,7 +19,7 @@ export default function SignOutButton({ className }: SignOutButtonProps) {
   return (
     <button
       onClick={handleSignOut}
-      className={`bg-[var(--accent-2)] text-[var(--text-bright)] py-2 px-4 rounded-lg font-semibold shadow-md hover:bg-[var(--accent-1)] hover:text-[var(--foreground)] transition ${className || ''}`}
+      className={`bg-[var(--accent-3)] text-[var(--text-bright)] py-2 px-4 rounded-lg font-semibold shadow-md hover:bg-[var(--accent-1)] hover:text-[var(--foreground)] transition ${className || ''}`}
     >
       Sign Out
     </button>

@@ -21,63 +21,51 @@ interface SummaryCarouselProps {
 export default function SummaryCarousel({ summaries }: SummaryCarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const scrollLeft = () => {
+  const scroll = (dir: 'left' | 'right') => {
     if (!containerRef.current) return
-    const cardWidth = containerRef.current.firstChild
-      ? (containerRef.current.firstChild as HTMLElement).clientWidth + 24
-      : 0
-    containerRef.current.scrollBy({ left: -cardWidth, behavior: 'smooth' })
-  }
-
-  const scrollRight = () => {
-    if (!containerRef.current) return
-    const cardWidth = containerRef.current.firstChild
-      ? (containerRef.current.firstChild as HTMLElement).clientWidth + 24
-      : 0
-    containerRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' })
+    const amount = 260
+    containerRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' })
   }
 
   return (
-    <div className="relative w-full max-w-[100%] mx-auto mt-6 overflow-visible">
-      {/* Left arrow */}
+    <div className="relative w-full">
+      {/* Scroll arrows */}
       <button
-        onClick={scrollLeft}
-        className="absolute -left-20 top-1/2 -translate-y-1/2 z-10 bg-[var(--accent-3)] text-[var(--background)] rounded-full p-3 shadow hover:bg-[var(--accent-2)] transition"
+        onClick={() => scroll('left')}
+        className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-[var(--accent-3)]/80 text-[var(--background)] rounded-full p-2 shadow hover:scale-110 transition"
       >
-        <FaChevronLeft size={20} />
+        <FaChevronLeft size={16} />
       </button>
 
-      {/* Right arrow */}
       <button
-        onClick={scrollRight}
-        className="absolute -right-20 top-1/2 -translate-y-1/2 z-10 bg-[var(--accent-3)] text-[var(--background)] rounded-full p-3 shadow hover:bg-[var(--accent-2)] transition"
+        onClick={() => scroll('right')}
+        className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-[var(--accent-3)]/80 text-[var(--background)] rounded-full p-2 shadow hover:scale-110 transition"
       >
-        <FaChevronRight size={20} />
+        <FaChevronRight size={16} />
       </button>
 
-      <div className="overflow-visible">
-        <div
-          ref={containerRef}
-          className="flex gap-6 snap-x snap-mandatory overflow-x-auto scroll-smooth hide-scrollbar p-4"
-        >
-          {summaries.map((s, idx) => (
-            <div
-              key={idx}
-              className="snap-start flex-shrink-0 w-80 md:w-96 bg-[var(--accent-1)] text-[var(--foreground)] rounded-2xl p-6 shadow-lg transition-transform transform-gpu duration-300 hover:scale-105 hover:z-20 relative"
-            >
-              <h3 className="text-xl font-bold text-[var(--accent-3)] mb-2">{s.date}</h3>
-              <div className="space-y-1">
-                <p>Revenue: ${s.revenue}</p>
-                <p>Expenses: ${s.expenses}</p>
-                <p>Total Clients: {s.total_clients}</p>
-                <p>Returning Clients: {s.returning_clients}</p>
-                <p>New Clients: {s.new_clients}</p>
-                <p>Avg Ticket: ${s.avg_ticket.toFixed(2)}</p>
-                <p>Top Service: {s.top_service}</p>
-              </div>
+      {/* Cards */}
+      <div
+        ref={containerRef}
+        className="flex gap-4 overflow-x-auto scroll-smooth hide-scrollbar pb-2"
+      >
+        {summaries.map((s, idx) => (
+          <div
+            key={idx}
+            className="flex-shrink-0 w-64 bg-[var(--accent-1)]/15 rounded-xl p-4 border border-[var(--accent-2)]/20 text-[var(--foreground)] shadow-sm hover:shadow-md transition"
+          >
+            <h3 className="text-base font-semibold text-[var(--accent-3)] mb-1">{s.date}</h3>
+            <div className="text-sm space-y-0.5">
+              <p>Revenue: ${s.revenue}</p>
+              <p>Expenses: ${s.expenses}</p>
+              <p>Total Clients: {s.total_clients}</p>
+              <p>Returning: {s.returning_clients}</p>
+              <p>New: {s.new_clients}</p>
+              <p>Avg Ticket: ${s.avg_ticket.toFixed(2)}</p>
+              <p>Top: {s.top_service}</p>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
       <style jsx>{`

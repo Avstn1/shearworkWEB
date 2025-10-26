@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
+import DashboardHeader from '@/components/DashboardHeader'
+import StatsCard from '@/components/StatsCard'
+import SectionCard from '@/components/SectionCard'
 import AppointmentCard from '@/components/AppointmentCard'
-import UserProfile from '@/components/UserProfile'
 import { supabase } from '@/utils/supabaseClient'
 import { Appointment } from '@/utils/types'
 import SummaryCarousel, { Summary } from '@/components/SummaryCarousel'
@@ -19,34 +21,26 @@ export default function DashboardPage() {
       setLoading(true)
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          setAppointments([])
-          setDailySummaries([])
-          return
-        }
+        if (!session) return
 
         const userId = session.user.id
 
-        const { data: appointmentsData, error: appointmentsError } = await supabase
+        const { data: appointmentsData } = await supabase
           .from('barber_data')
           .select('*')
           .eq('user_id', userId)
           .order('date', { ascending: false })
 
-        if (appointmentsError) setError(appointmentsError.message)
-        else setAppointments(appointmentsData || [])
+        setAppointments(appointmentsData || [])
 
-        const { data: summaryData, error: summaryError } = await supabase
+        const { data: summaryData } = await supabase
           .from('daily_summaries')
           .select('*')
           .eq('user_id', userId)
           .order('date', { ascending: false })
 
-        if (summaryError) console.error(summaryError.message)
-        else setDailySummaries(summaryData || [])
+        setDailySummaries(summaryData || [])
       } catch (err: any) {
-        setAppointments([])
-        setDailySummaries([])
         setError(err.message)
       } finally {
         setLoading(false)
@@ -58,58 +52,39 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="flex flex-col items-center w-full px-4 md:px-8 my-8">
-        {/* Header */}
-        <div className="flex justify-between items-center w-full max-w-[100%] mb-10">
-          <h1 className="text-5xl font-extrabold text-[var(--accent-3)]">Dashboard</h1>
-          <UserProfile />
+      <div className="w-full px-6 md:px-12 py-8 space-y-8 text-[var(--foreground)] overflow-hidden">
+        <DashboardHeader />
+
+        {/* Top Stats Row - More Compact */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <StatsCard title="Appointments" value={appointments.length} />
+          <StatsCard title="Clients" value={new Set(appointments.map(a => a.client_name)).size} />
+          <StatsCard title="Revenue" value={`$${appointments.reduce((acc, a) => acc + (a.price || 0), 0)}`} />
         </div>
 
-        {/* Loading / Error */}
-        {loading && <p className="text-[var(--accent-2)]">Loading data...</p>}
-        {error && (
-          <p className="text-red-600 bg-[var(--accent-2)]/20 p-2 rounded">
-            {error}
-          </p>
-        )}
-
-        {/* Daily Summaries Carousel */}
-        {!loading && !error && dailySummaries.length > 0 && (
-          <div className="w-full max-w-6xl overflow-visible">
-            <h2 className="text-3xl font-semibold mb-6 text-[var(--accent-2)]">
-              Daily Summaries
-            </h2>
+        {/* Daily Summaries */}
+        <SectionCard title="Daily Summaries" loading={loading} error={error} className="flex-1">
+          {dailySummaries.length > 0 ? (
             <SummaryCarousel summaries={dailySummaries} />
-          </div>
-        )}
+          ) : (
+            <p className="text-[var(--text-dark)]">No summaries yet.</p>
+          )}
+        </SectionCard>
 
-        {/* Appointments */}
-        {!loading && !error && (
-          <div className="w-full max-w-6xl overflow-visible">
-            <h2 className="text-3xl font-semibold mb-6 text-[var(--accent-2)]">
-              Recent Appointments
-            </h2>
-            {appointments.length === 0 ? (
-              <p className="text-[var(--accent-2)] text-center">
-                No appointments found.
-              </p>
-            ) : (
-              <div className="">
-                <div className="flex gap-6 snap-x snap-mandatory scroll-px-6">
-                  {appointments.map((a) => (
-                    <div
-                      key={a.id}
-                      className="snap-start flex-shrink-0"
-                      style={{ minWidth: '300px', maxWidth: 'calc(100vw - 6rem)' }}
-                    >
-                      <AppointmentCard appointment={a} />
-                    </div>
-                  ))}
+        {/* Recent Appointments */}
+        <SectionCard title="Recent Appointments" loading={loading} error={error} className="flex-1">
+          {appointments.length === 0 ? (
+            <p className="text-[var(--text-muted)] text-center">No appointments found.</p>
+          ) : (
+            <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2">
+              {appointments.map((a) => (
+                <div key={a.id} className="snap-start flex-shrink-0 min-w-[260px] sm:min-w-[280px]">
+                  <AppointmentCard appointment={a} />
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </SectionCard>
       </div>
     </Layout>
   )
