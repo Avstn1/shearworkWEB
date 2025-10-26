@@ -106,18 +106,20 @@ export default function SettingsPage() {
   if (loading)
     return (
       <Layout>
-        <div className="p-8 text-gray-100">Loading...</div>
+        <div className="p-8 text-[var(--accent-2)]">Loading...</div>
       </Layout>
     )
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex flex-col items-center">
-        <h1 className="text-4xl font-bold text-gray-100 mb-6 mt-12">Settings</h1>
+      <div className="min-h-screen flex flex-col items-center py-12 px-4 md:px-8 bg-[var(--background)] text-[var(--foreground)] transition-colors">
+        <h1 className="text-5xl font-extrabold mb-10 text-[var(--accent-3)]">
+          Settings
+        </h1>
 
-        <div className="max-w-md bg-gray-700 rounded-2xl p-6 shadow-lg space-y-6 text-gray-100 w-full">
+        <div className="max-w-md w-full bg-[var(--accent-1)]/20 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-[var(--accent-1)] space-y-6">
           {/* Avatar */}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center space-y-2">
             <EditableAvatar
               avatarUrl={profile?.avatar_url}
               fullName={profile?.full_name}
@@ -132,35 +134,35 @@ export default function SettingsPage() {
               onChange={handleUpload}
               disabled={uploading}
             />
-            <span className="mt-2 text-sm text-gray-400">
+            <span className="text-sm text-[var(--text-subtle)]">
               {uploading ? 'Uploading...' : 'Click avatar to change'}
             </span>
           </div>
 
-          {/* Name */}
-          <div className="flex flex-col space-y-2 relative">
-            <label className="font-semibold text-gray-300">Full Name</label>
+          {/* Full Name */}
+          <div className="flex flex-col space-y-2">
+            <label className="font-semibold text-[var(--text-subtle)]">Full Name</label>
             <div className="flex space-x-2 items-center">
               <input
                 type="text"
                 value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                className={`flex-1 px-3 py-2 rounded-lg bg-gray-600 text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-400 ${
+                onChange={(e) => setFullName(e.target.value)}
+                readOnly={!editable}
+                className={`flex-1 px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] ${
                   editable ? '' : 'opacity-70'
                 }`}
-                readOnly={!editable}
                 style={{ caretColor: editable ? undefined : 'transparent' }}
               />
               <button
-                className="text-gray-300 hover:text-teal-400 transition"
+                className="text-[var(--accent-2)] hover:text-[var(--highlight)] transition"
                 onClick={() => setEditable(!editable)}
-                title="Enable editing"
+                title="Edit name"
               >
                 <FaCog />
               </button>
               {editable && (
                 <button
-                  className="px-4 py-2 bg-teal-500 hover:bg-teal-600 rounded-lg font-semibold text-gray-900 transition"
+                  className="px-4 py-2 bg-[var(--highlight)] text-[var(--foreground)] font-semibold rounded-lg hover:opacity-90 transition"
                   onClick={handleNameUpdate}
                 >
                   Save
@@ -169,18 +171,18 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Role and Email */}
+          {/* Role + Email */}
           <div className="flex flex-col space-y-1">
-            <span className="text-gray-400 text-sm">
+            <span className="text-[var(--text-subtle)] text-sm">
               Role: {profile?.role || 'Barber'}
             </span>
-            <span className="text-gray-400 text-sm">
+            <span className="text-[var(--text-subtle)] text-sm">
               Email: {profile?.email || ''}
             </span>
           </div>
 
           {/* Sign Out */}
-          <SignOutButton className="bg-red-600 hover:bg-red-700 w-full mt-4" />
+          <SignOutButton className="bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] w-full mt-6 rounded-lg py-2 transition" />
         </div>
       </div>
     </Layout>
