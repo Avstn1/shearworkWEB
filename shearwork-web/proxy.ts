@@ -1,12 +1,12 @@
 // proxy.ts (at root or src/)
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
-  const supabase = createServerClient(
+  const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
