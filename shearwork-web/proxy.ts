@@ -1,53 +1,35 @@
-// proxy.ts (at root or src/)
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createBrowserClient } from '@supabase/ssr';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
-export async function proxy(request: NextRequest) {
-  const response = NextResponse.next();
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          response.cookies.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
+export default async function proxy(request: NextRequest) {
+  const response = NextResponse.next()
+  const supabase = await createSupabaseServerClient()
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
-  console.log(user);
+  } = await supabase.auth.getUser()
 
-  if (user) {
-    if (['/', '/login', '/signup'].includes(request.nextUrl.pathname)) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
+  const pathname = request.nextUrl.pathname
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarded')
-      .eq('user_id', user.id)
-      .maybeSingle();
+  const isPublicRoute = [
+    '/login',
+    '/signup',
+    '/_next',
+    '/api',
+  ].some((path) => pathname.startsWith(path))
 
-    if (!profile?.onboarded && !request.nextUrl.pathname.startsWith('/app/onboarding')) {
-      return NextResponse.redirect(new URL('/onboarding', request.url));
-    }
+  // If not signed in → send to login
+  if (!user && !isPublicRoute) {
+    const loginUrl = new URL('/login', request.url)
+    return NextResponse.redirect(loginUrl)
   }
 
-  return response;
-}
+  // If signed in and tries to access "/" → send to dashboard
+  if (user && pathname === '/') {
+    const dashUrl = new URL('/dashboard', request.url)
+    return NextResponse.redirect(dashUrl)
+  }
 
-export const config = {
-  matcher: ['/', '/login', '/signup', '/app/:path*', '/dashboard/:path*'],
-};
+  return response
+}
