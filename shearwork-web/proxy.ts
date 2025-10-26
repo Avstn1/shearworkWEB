@@ -1,37 +1,46 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-export async function proxy(request: Request) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
-  // ✅ Await the cookies before passing
-  const nextCookies = await cookies(); 
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          response.cookies.set({ name, value: '', ...options });
+        },
+      },
+    }
+  );
 
-  const supabase = createRouteHandlerClient({
-    cookies: () => nextCookies, // now a real RequestCookies object
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+  console.log(user);
 
   if (user) {
     console.log('User:', user);
-
-    const pathname = new URL(request.url).pathname;
-
-    if (['/', '/login', '/signup'].includes(pathname)) {
+    // Redirect logged-in users away from auth pages
+    if (['/', '/login', '/signup'].includes(request.nextUrl.pathname)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
+    // Safely fetch profile, allow null if missing
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarded')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!profile?.onboarded && !pathname.startsWith('/app/onboarding')) {
+    if (!profile?.onboarded && !request.nextUrl.pathname.startsWith('/app/onboarding')) {
       return NextResponse.redirect(new URL('/onboarding', request.url));
     }
   }
