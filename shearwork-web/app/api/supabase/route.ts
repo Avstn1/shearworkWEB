@@ -5,20 +5,20 @@ import { cookies } from 'next/headers';
 export async function GET() {
   try {
     const supabase = createRouteHandlerClient({
-      cookies: () => Promise.resolve(cookies()),
+      cookies: async () => cookies(),
     });
 
-    // Get the currently logged-in user
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
+      console.warn('No logged-in user found.');
       return NextResponse.json({ data: [] });
     }
 
-    // Fetch this user's appointments
+    // Fetch user-specific barber data
     const { data, error } = await supabase
       .from('barber_data')
       .select('*')
@@ -26,11 +26,13 @@ export async function GET() {
       .order('date', { ascending: false });
 
     if (error) {
+      console.error('Supabase query error:', error.message);
       return NextResponse.json({ data: [] });
     }
 
     return NextResponse.json({ data });
   } catch (err: any) {
+    console.error('Unexpected error in appointments route:', err);
     return NextResponse.json({ data: [] });
   }
 }
