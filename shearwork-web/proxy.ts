@@ -1,46 +1,34 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request: Request) {
   const response = NextResponse.next();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          response.cookies.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
+  const supabase = createRouteHandlerClient({
+    cookies: () => Promise.resolve(cookies()),
+  });
 
-  const { data: { user } } = await supabase.auth.getUser();
-  console.log(user);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (user) {
     console.log('User:', user);
+
     // Redirect logged-in users away from auth pages
-    if (['/', '/login', '/signup'].includes(request.nextUrl.pathname)) {
+    if (['/', '/login', '/signup'].includes(new URL(request.url).pathname)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    // Safely fetch profile, allow null if missing
+    // Fetch profile safely
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarded')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!profile?.onboarded && !request.nextUrl.pathname.startsWith('/app/onboarding')) {
+    if (!profile?.onboarded && !new URL(request.url).pathname.startsWith('/app/onboarding')) {
       return NextResponse.redirect(new URL('/onboarding', request.url));
     }
   }
