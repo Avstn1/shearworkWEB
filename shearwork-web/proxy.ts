@@ -12,7 +12,7 @@ export default async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  const isPublicRoute = ['/login', '/signup', '/_next', '/api'].some(path =>
+  const isPublicRoute = ['/','/login', '/signup', '/_next', '/api'].some(path =>
     pathname.startsWith(path)
   )
 
