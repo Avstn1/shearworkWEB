@@ -24,8 +24,10 @@ export async function proxy(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  console.log(user);
 
   if (user) {
+    console.log('User:', user);
     // Redirect logged-in users away from auth pages
     if (['/', '/login', '/signup'].includes(request.nextUrl.pathname)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
