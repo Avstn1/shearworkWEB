@@ -1,17 +1,24 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabaseClient';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    // Get currently logged-in user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const supabase = createRouteHandlerClient({
+      cookies: () => Promise.resolve(cookies()),
+    });
 
-    // If no user is logged in, return empty array
+    // Get the currently logged-in user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
       return NextResponse.json({ data: [] });
     }
 
-    // Fetch only this user's appointments
+    // Fetch this user's appointments
     const { data, error } = await supabase
       .from('barber_data')
       .select('*')
