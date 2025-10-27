@@ -159,7 +159,7 @@ export default function WeeklyReports({
               setReports((prev) =>
                 prev.map((r) => (r.id === selectedReport.id ? updatedReport : r))
               )
-              setSelectedReport(updatedReport) // so modal shows updated content
+              setSelectedReport(null) 
               setIsEditing(false)
             }
           }}

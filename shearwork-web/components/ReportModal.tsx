@@ -18,7 +18,6 @@ export default function ReportModal({
   onSave,
 }: ReportModalProps) {
   const isWeekly = report.week_number !== undefined
-  const isMonthly = !isWeekly
   const [editedContent, setEditedContent] = useState(report.content || '')
 
   useEffect(() => {
@@ -26,8 +25,12 @@ export default function ReportModal({
   }, [report])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fadeUp">
-      <div className="bg-[var(--background)] text-[var(--foreground)] rounded-2xl shadow-xl p-6 w-[90%] max-w-2xl max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center
+                    bg-black bg-opacity-20 backdrop-blur-sm animate-fadeUp">
+      <div className="bg-[var(--background)] text-[var(--foreground)] 
+                      rounded-2xl shadow-xl p-6 w-[90%] max-w-2xl max-h-[80vh] 
+                      flex flex-col">
+        {/* Header */}
         <h2 className="text-2xl font-bold mb-2 text-[var(--highlight)]">
           {isWeekly
             ? `Week ${report.week_number}`
@@ -39,12 +42,15 @@ export default function ReportModal({
             : `Summary for ${report.month} ${report.year || ''}`}
         </p>
 
+        {/* Content */}
         <div className="flex-1 overflow-y-auto mb-4">
           {isEditing && isAdmin ? (
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-64 p-3 border border-[var(--accent-3)] rounded-lg bg-[var(--background)] text-[var(--foreground)] text-sm leading-relaxed resize-none"
+              className="w-full h-64 p-3 border border-[var(--accent-3)] rounded-lg 
+                         bg-[var(--background)] text-[var(--foreground)] text-sm 
+                         leading-relaxed resize-none"
             />
           ) : (
             <div className="text-[var(--foreground)] whitespace-pre-wrap text-sm leading-relaxed">
@@ -53,12 +59,14 @@ export default function ReportModal({
           )}
         </div>
 
+        {/* Footer Buttons */}
         <div className="flex justify-end gap-2 mt-auto">
           {isEditing && isAdmin ? (
             <>
               <button
                 onClick={() => onSave && onSave(editedContent)}
-                className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-lg px-4 py-2 transition"
+                className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] 
+                           text-[var(--text-bright)] rounded-lg px-4 py-2 transition"
               >
                 Save
               </button>
@@ -72,7 +80,8 @@ export default function ReportModal({
           ) : (
             <button
               onClick={onClose}
-              className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-lg px-4 py-2 transition"
+              className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] 
+                         text-[var(--text-bright)] rounded-lg px-4 py-2 transition"
             >
               Close
             </button>
