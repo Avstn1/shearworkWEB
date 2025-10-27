@@ -5,12 +5,22 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import SignOutButton from '@/components/SignOutButton'
 import { supabase } from '@/utils/supabaseClient'
+import { motion } from 'framer-motion'
 
 const navLinksBase = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/clients', label: 'Clients' },
   { href: '/earnings', label: 'Earnings' },
 ]
+
+const navItemVariants = {
+  hidden: { x: -20, opacity: 0 },
+  visible: (i: number = 1) => ({
+    x: 0,
+    opacity: 1,
+    transition: { delay: i * 0.05, duration: 0.3 },
+  }),
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -56,7 +66,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // Build final nav links
   const navLinks = isAdmin
-    ? [...navLinksBase, { href: '/admin/dashboard', label: 'Admin Dashboard' }]
+    ? navLinksBase.filter(link => link.href !== '/dashboard').concat({
+        href: '/admin/dashboard',
+        label: 'Admin Dashboard',
+      })
     : navLinksBase
 
   return (
@@ -68,18 +81,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </Link>
 
         <nav className="flex flex-col space-y-3 mb-6">
-          {navLinks.map(link => (
-            <Link
+          {navLinks.map((link, i) => (
+            <motion.div
               key={link.href}
-              href={link.href}
-              className={`block px-4 py-3 rounded-lg text-lg transition-all ${
-                pathname === link.href
-                  ? 'bg-[var(--accent-2)] text-[var(--foreground)] font-semibold shadow-md'
-                  : 'hover:bg-[var(--accent-1)] hover:text-[var(--text-bright)]'
-              }`}
+              initial="hidden"
+              animate="visible"
+              custom={i}
+              variants={navItemVariants}
             >
-              {link.label}
-            </Link>
+              <Link
+                href={link.href}
+                className={`block px-4 py-3 rounded-lg text-lg transition-all ${
+                  pathname === link.href
+                    ? 'bg-[var(--accent-2)] text-[var(--foreground)] font-semibold shadow-md'
+                    : 'hover:bg-[var(--accent-1)] hover:text-[var(--text-bright)]'
+                }`}
+              >
+                {link.label}
+              </Link>
+            </motion.div>
           ))}
         </nav>
 

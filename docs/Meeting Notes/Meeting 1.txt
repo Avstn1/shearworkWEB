@@ -1,0 +1,30 @@
+recent appointments
+- change to weekly reports, side by side pressable.
+- 
+
+revenue progress:
+- change to monthly reports
+
+
+MAIN FOCUS:
+- focus on reports and storing them
+- for now have them manually added
+- two slots for weekly and monthly reports
+- enable uploading strictly for Gavin, only allow viewing (reading) for other users
+- add barbers tab to manage all barber reports
+- copy pasting chat gpt for now into a text box 
+
+automation:
+- acuity
+- for now, leave other automation ideas for later
+
+key summary:
+- focus on report display (monthly/weekly)
+- report uploading (only from admin side)
+	
+
+workflow summary:
+- barber sees: two bubbles (weekly/monthly reports)
+- pops up upon clicks
+
+- admin side: access to uploading reports

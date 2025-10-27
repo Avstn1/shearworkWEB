@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [refreshReports, setRefreshReports] = useState<number>(0)
 
-  // Fetch user & profile for top-right display and access control
+  // Fetch user & profile for access control
   useEffect(() => {
     const fetchUserAndProfile = async () => {
       try {
@@ -142,10 +142,12 @@ export default function AdminDashboardPage() {
   if (!userRole) return <p>Checking access...</p>
   if (loading) return <p>Loading barbers...</p>
 
+  const isAdmin = true // Since this is AdminDashboardPage, all users here can edit/delete
+
   return (
     <Layout>
       <div className="p-6 flex flex-col gap-6 text-[var(--foreground)] h-screen">
-        {/* Header with top-right UserProfile */}
+        {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold mb-4 text-[var(--highlight)]">Admin Dashboard</h1>
           {profile && <UserProfile />}
@@ -204,14 +206,15 @@ export default function AdminDashboardPage() {
         {/* Reports Grid */}
         {selectedBarber ? (
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
-            {/* Left: Monthly + Weekly Reports */}
+            {/* Left: Reports */}
             <div className="flex flex-col gap-3 h-full min-h-0">
               <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-2xl p-4 shadow-md flex-1 min-h-0 overflow-y-auto">
                 <h3 className="text-lg font-semibold mb-2">Monthly Reports</h3>
                 <MonthlyReports
                   userId={selectedBarber.user_id}
-                  refresh={refreshReports}
                   filterMonth={selectedMonth}
+                  isAdmin={isAdmin}
+                  refresh={refreshReports}
                 />
               </div>
 
@@ -219,13 +222,14 @@ export default function AdminDashboardPage() {
                 <h3 className="text-lg font-semibold mb-2">Weekly Reports</h3>
                 <WeeklyReports
                   userId={selectedBarber.user_id}
-                  refresh={refreshReports}
                   filterMonth={selectedMonth}
+                  isAdmin={isAdmin}
+                  refresh={refreshReports}
                 />
               </div>
             </div>
 
-            {/* Right: Add Report Form */}
+            {/* Right: Add Report */}
             <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-2xl p-6 shadow-md flex flex-col h-full min-h-0 overflow-y-auto">
               <h3 className="text-lg font-semibold mb-3">Add Report for {selectedBarber.full_name}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">

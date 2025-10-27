@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import ReportModal from './ReportModal'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import { MoreVertical, Edit, Trash2 } from 'lucide-react'
+import ReportModal from './ReportModal'
+import toast from 'react-hot-toast'
 
 type MonthlyReport = {
   id: string
@@ -19,15 +21,23 @@ interface MonthlyReportsProps {
   userId: string
   refresh?: number
   filterMonth?: string
+  isAdmin?: boolean
 }
 
-export default function MonthlyReports({ userId, refresh, filterMonth }: MonthlyReportsProps) {
+export default function MonthlyReports({
+  userId,
+  refresh,
+  filterMonth,
+  isAdmin = false,
+}: MonthlyReportsProps) {
   const [reports, setReports] = useState<MonthlyReport[]>([])
   const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
 
   const fetchMonthlyReports = async () => {
     if (!userId) return
-
     const { data, error } = await supabase
       .from('reports')
       .select('*')
@@ -35,30 +45,78 @@ export default function MonthlyReports({ userId, refresh, filterMonth }: Monthly
       .eq('type', 'monthly')
       .order('created_at', { ascending: false })
 
+    if (error) return console.error('Error fetching monthly reports:', error)
+
+    setReports(
+      (data || []).map((r: any) => ({
+        id: r.id,
+        month: r.month,
+        total_cuts: Number(r.total_cuts) || 0,
+        total_revenue: Number(r.total_revenue) || 0,
+        chair_rent_paid: r.chair_rent_paid,
+        notes: r.notes || '',
+        content: r.content || '',
+        year: r.year,
+      }))
+    )
+  }
+
+  useEffect(() => { fetchMonthlyReports() }, [userId, refresh])
+
+  const filteredReports = filterMonth
+    ? reports.filter((r) => r.month === filterMonth)
+    : reports
+
+  const handleEdit = (report: MonthlyReport) => {
+    setSelectedReport(report)
+    setIsEditing(true)
+    setMenuOpenId(null)
+  }
+
+  const handleSave = async (updatedContent: string) => {
+    if (!selectedReport) return
+    const { error } = await supabase
+      .from('reports')
+      .update({ content: updatedContent })
+      .eq('id', selectedReport.id)
+
     if (error) {
-      console.error('Error fetching monthly reports:', error)
+      toast.error('Failed to save report.')
       return
     }
 
-    const monthly = data.map((r: any) => ({
-      id: r.id,
-      month: r.month,
-      total_cuts: Number(r.total_cuts) || 0,
-      total_revenue: Number(r.total_revenue) || 0,
-      chair_rent_paid: r.chair_rent_paid,
-      notes: r.notes || '',
-      content: r.content || '', // ensure content is included
-      year: r.year,
-    }))
-
-    setReports(monthly)
+    setReports((prev) =>
+      prev.map((r) =>
+        r.id === selectedReport.id ? { ...r, content: updatedContent } : r
+      )
+    )
+    toast.success('✅ Report updated!')
+    setIsEditing(false)
+    setSelectedReport(null)
   }
 
-  useEffect(() => {
-    fetchMonthlyReports()
-  }, [userId, refresh])
+  const handleDelete = async (reportId: string) => {
+    if (!confirm('Are you sure you want to delete this report?')) return
+    const { error } = await supabase.from('reports').delete().eq('id', reportId)
+    if (error) {
+      toast.error('Failed to delete report.')
+      return
+    }
+    setReports((prev) => prev.filter((r) => r.id !== reportId))
+    setMenuOpenId(null)
+    toast.success('🗑 Report deleted')
+  }
 
-  const filteredReports = filterMonth ? reports.filter((r) => r.month === filterMonth) : reports
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpenId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <>
@@ -67,11 +125,48 @@ export default function MonthlyReports({ userId, refresh, filterMonth }: Monthly
           filteredReports.map((r) => (
             <div
               key={r.id}
-              onClick={() => setSelectedReport(r)}
-              className="bg-[#708B64] text-[#1f1f1a] p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer"
+              className="relative bg-[#708B64] text-[#1f1f1a] p-4 rounded-lg shadow-sm hover:shadow-md transition"
             >
-              <p className="font-semibold">{r.month} {r.year || ''}</p>
-              <p className="text-sm text-[var(--text-subtle)]">Click to view full report</p>
+              <div className="flex justify-between items-start">
+                <div
+                  onClick={() => setSelectedReport(r)}
+                  className="cursor-pointer flex-1"
+                >
+                  <p className="font-semibold">{r.month} {r.year || ''}</p>
+                  <p className="text-sm text-[var(--text-subtle)]">Click to view full report</p>
+                </div>
+
+                {isAdmin && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setMenuOpenId(menuOpenId === r.id ? null : r.id)}
+                      className="p-1 hover:bg-[#5e7256] rounded-md"
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+
+                    {menuOpenId === r.id && (
+                      <div
+                        ref={menuRef}
+                        className="absolute right-0 mt-1 bg-[#5e7256] text-white rounded-md shadow-lg z-10 w-28"
+                      >
+                        <button
+                          onClick={() => handleEdit(r)}
+                          className="flex items-center gap-2 w-full px-3 py-2 hover:bg-[#4e614b] text-sm"
+                        >
+                          <Edit size={14} /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r.id)}
+                          className="flex items-center gap-2 w-full px-3 py-2 hover:bg-[#4e614b] text-sm text-red-200"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           ))
         ) : (
@@ -82,7 +177,16 @@ export default function MonthlyReports({ userId, refresh, filterMonth }: Monthly
       </div>
 
       {selectedReport && (
-        <ReportModal report={selectedReport} onClose={() => setSelectedReport(null)} />
+        <ReportModal
+          report={selectedReport}
+          onClose={() => {
+            setSelectedReport(null)
+            setIsEditing(false)
+          }}
+          isEditing={isEditing && isAdmin}
+          isAdmin={isAdmin}
+          onSave={handleSave}
+        />
       )}
     </>
   )

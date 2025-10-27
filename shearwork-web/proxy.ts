@@ -20,8 +20,27 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  if (user && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (user) {
+    // Fetch profile to check role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const role = profile?.role?.toLowerCase()
+
+    // Admins always go to /admin/dashboard
+    if (role === 'admin' || role === 'owner') {
+      if (pathname === '/' || pathname === '/dashboard') {
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+      }
+    } else {
+      // Normal users default
+      if (pathname === '/') {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+    }
   }
 
   return response
