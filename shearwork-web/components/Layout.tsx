@@ -9,8 +9,6 @@ import { motion } from 'framer-motion'
 
 const navLinksBase = [
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/clients', label: 'Clients' },
-  { href: '/earnings', label: 'Earnings' },
 ]
 
 const navItemVariants = {

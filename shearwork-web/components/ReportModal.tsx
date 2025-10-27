@@ -25,18 +25,21 @@ export default function ReportModal({
   }, [report])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center
-                    bg-black bg-opacity-20 backdrop-blur-sm animate-fadeUp">
-      <div className="bg-[var(--background)] text-[var(--foreground)] 
-                      rounded-2xl shadow-xl p-6 w-[90%] max-w-2xl max-h-[80vh] 
-                      flex flex-col">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center
+                 bg-black/30 backdrop-blur-sm animate-fadeUp"
+    >
+      <div
+        className="bg-white text-black rounded-2xl shadow-2xl p-6 
+                   w-[90%] max-w-2xl max-h-[80vh] flex flex-col border border-gray-200"
+      >
         {/* Header */}
-        <h2 className="text-2xl font-bold mb-2 text-[var(--highlight)]">
+        <h2 className="text-2xl font-bold mb-1 text-gray-900">
           {isWeekly
             ? `Week ${report.week_number}`
             : `Monthly Report: ${report.month} ${report.year || ''}`}
         </h2>
-        <p className="text-sm text-[var(--text-subtle)] mb-4">
+        <p className="text-sm text-gray-500 mb-4">
           {isWeekly
             ? `${report.month} ${report.year || ''}`
             : `Summary for ${report.month} ${report.year || ''}`}
@@ -48,12 +51,12 @@ export default function ReportModal({
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-64 p-3 border border-[var(--accent-3)] rounded-lg 
-                         bg-[var(--background)] text-[var(--foreground)] text-sm 
-                         leading-relaxed resize-none"
+              className="w-full h-64 p-3 border border-gray-300 rounded-lg 
+                         bg-white text-black text-sm leading-relaxed resize-none 
+                         focus:outline-none focus:ring-2 focus:ring-gray-400"
             />
           ) : (
-            <div className="text-[var(--foreground)] whitespace-pre-wrap text-sm leading-relaxed">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
               {report.content || 'No content available.'}
             </div>
           )}
@@ -65,14 +68,13 @@ export default function ReportModal({
             <>
               <button
                 onClick={() => onSave && onSave(editedContent)}
-                className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] 
-                           text-[var(--text-bright)] rounded-lg px-4 py-2 transition"
+                className="bg-black hover:bg-gray-800 text-white rounded-lg px-4 py-2 transition"
               >
                 Save
               </button>
               <button
                 onClick={onClose}
-                className="border border-[var(--accent-3)] rounded-lg px-4 py-2 transition"
+                className="border border-gray-400 text-gray-700 rounded-lg px-4 py-2 hover:bg-gray-100 transition"
               >
                 Cancel
               </button>
@@ -80,8 +82,7 @@ export default function ReportModal({
           ) : (
             <button
               onClick={onClose}
-              className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] 
-                         text-[var(--text-bright)] rounded-lg px-4 py-2 transition"
+              className="bg-black hover:bg-gray-800 text-white rounded-lg px-4 py-2 transition"
             >
               Close
             </button>
