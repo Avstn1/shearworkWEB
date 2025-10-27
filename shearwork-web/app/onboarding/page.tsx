@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
 import EditableAvatar from '@/components/EditableAvatar';
 
+const AVAILABLE_ROLES = ['Barber']; // Add more roles here in the future
+
 export default function OnboardingPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState(AVAILABLE_ROLES[0]); // default to first role
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -57,10 +59,10 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-8">
-      <h1 className="text-3xl font-bold mb-8 text-highlight">Complete Your Profile</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--background)] text-[var(--foreground)] p-8">
+      <h1 className="text-3xl font-bold mb-8 text-[var(--highlight)]">Complete Your Profile</h1>
       <form
-        className="bg-accent-1 p-8 rounded-2xl shadow-md w-full max-w-md space-y-6 flex flex-col items-center"
+        className="bg-[var(--accent-1)] p-8 rounded-2xl shadow-md w-full max-w-md space-y-6 flex flex-col items-center"
         onSubmit={handleSubmit}
       >
         <EditableAvatar
@@ -83,25 +85,27 @@ export default function OnboardingPage() {
             type="text"
             value={fullName}
             onChange={e => setFullName(e.target.value)}
-            className="w-full p-2 rounded bg-accent-3 text-foreground focus:outline-none focus:ring-2 focus:ring-highlight"
+            className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
             required
           />
         </div>
 
         <div className="w-full">
           <label className="block mb-1 font-semibold">Role</label>
-          <input
-            type="text"
+          <select
             value={role}
             onChange={e => setRole(e.target.value)}
-            className="w-full p-2 rounded bg-accent-3 text-foreground focus:outline-none focus:ring-2 focus:ring-highlight"
-            required
-          />
+            className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+          >
+            {AVAILABLE_ROLES.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
         </div>
 
         <button
           type="submit"
-          className="w-full py-3 bg-accent-2 hover:bg-accent-3 text-text-bright font-semibold rounded-lg transition"
+          className="w-full py-3 bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] font-semibold rounded-lg transition"
           disabled={loading}
         >
           {loading ? 'Saving...' : 'Complete Onboarding'}
