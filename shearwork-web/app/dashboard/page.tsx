@@ -138,14 +138,14 @@ export default function DashboardPage() {
     >
       {/* Header */}
       <motion.div variants={fadeInUp} custom={0}>
-        <div className={`flex justify-between items-center ${isMobile ? 'mb-2' : ''}`}>
-          <div className={`${isMobile ? 'space-y-0.5' : ''}`}>
-            <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'}`}>
+        <div className="flex justify-between items-center flex-nowrap mb-2">
+          <div className="flex-1 min-w-0">
+            <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'} truncate`}>
               Welcome back!
             </h1>
-            <p className="text-xs text-[#bdbdbd]">Here’s your weekly overview.</p>
+            <p className="text-xs text-[#bdbdbd] truncate">Here’s your weekly overview.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {profile && <UserProfile />}
             {isMobile && (
               <button

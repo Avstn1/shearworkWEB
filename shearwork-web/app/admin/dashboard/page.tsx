@@ -214,9 +214,11 @@ export default function AdminDashboardPage() {
   const content = (
     <div className="p-3 sm:p-6 flex flex-col gap-5 text-[var(--foreground)] min-h-screen overflow-y-auto">
       {/* Header */}
-      <div className="flex justify-between items-center flex-wrap gap-3">
-        <h1 className="text-2xl font-semibold text-[var(--highlight)]">Admin Dashboard</h1>
-        <div className="flex items-center gap-2">
+      <div className="flex justify-between items-center flex-nowrap gap-3">
+        <h1 className="text-2xl font-semibold text-[var(--highlight)] truncate flex-1 min-w-0">
+          Admin Dashboard
+        </h1>
+        <div className="flex items-center gap-2 flex-shrink-0">
           {profile && <UserProfile />}
           {isMobile && (
             <button
@@ -244,8 +246,8 @@ export default function AdminDashboardPage() {
       <section className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
         <h2 className="text-base font-semibold mb-3">Barbers</h2>
         <div
-          className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] 
-                    gap-4 justify-items-center place-items-center"
+          className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(130px,1fr))] 
+                     gap-4 justify-items-start place-items-start"
         >
           {paginatedBarbers.length === 0 && <p>No barbers found.</p>}
           {paginatedBarbers.map((b) => (
@@ -256,7 +258,7 @@ export default function AdminDashboardPage() {
               }
               className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 
                         rounded-xl flex flex-col items-center justify-center 
-                        transition-transform hover:scale-105 w-full max-w-[110px] sm:max-w-[140px]
+                        transition-transform hover:scale-105 w-full max-w-[120px] sm:max-w-[140px]
                         ${
                           selectedBarber?.user_id === b.user_id
                             ? 'ring-2 ring-[var(--accent-3)]'
@@ -303,8 +305,7 @@ export default function AdminDashboardPage() {
         )}
       </section>
 
-
-      {/* Reports Section */}
+      {/* Reports */}
       {selectedBarber ? (
         <div className="flex flex-col gap-6">
           <div className="flex flex-wrap items-center gap-3 mt-2 mb-1">
