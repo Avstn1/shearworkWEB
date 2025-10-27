@@ -243,7 +243,10 @@ export default function AdminDashboardPage() {
       {/* Barber List */}
       <section className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
         <h2 className="text-base font-semibold mb-3">Barbers</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 justify-items-center">
+        <div
+          className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(120px,1fr))] 
+                    gap-4 justify-items-center place-items-center"
+        >
           {paginatedBarbers.length === 0 && <p>No barbers found.</p>}
           {paginatedBarbers.map((b) => (
             <div
@@ -251,22 +254,27 @@ export default function AdminDashboardPage() {
               onClick={() =>
                 setSelectedBarber(prev => prev?.user_id === b.user_id ? null : b)
               }
-              className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 rounded-xl flex flex-col items-center w-[95px] sm:w-[140px] transition-transform hover:scale-105 ${
-                selectedBarber?.user_id === b.user_id ? 'ring-2 ring-[var(--accent-3)]' : ''
-              }`}
+              className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 
+                        rounded-xl flex flex-col items-center justify-center 
+                        transition-transform hover:scale-105 w-full max-w-[110px] sm:max-w-[140px]
+                        ${
+                          selectedBarber?.user_id === b.user_id
+                            ? 'ring-2 ring-[var(--accent-3)]'
+                            : ''
+                        }`}
             >
               {b.avatar_url ? (
                 <img
                   src={b.avatar_url}
                   alt={b.full_name}
-                  className="w-10 h-10 sm:w-14 sm:h-14 rounded-full mb-1 object-cover border border-[var(--accent-3)]"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full mb-1 object-cover border border-[var(--accent-3)]"
                 />
               ) : (
-                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-[var(--accent-3)] mb-1 flex items-center justify-center font-bold text-lg">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--accent-3)] mb-1 flex items-center justify-center font-bold text-lg">
                   {b.full_name[0]}
                 </div>
               )}
-              <p className="text-xs sm:text-sm font-medium text-center leading-tight">
+              <p className="text-xs sm:text-sm font-medium text-center leading-tight truncate w-full">
                 {b.full_name}
               </p>
             </div>
@@ -294,6 +302,7 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </section>
+
 
       {/* Reports Section */}
       {selectedBarber ? (
