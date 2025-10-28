@@ -1,6 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
+
+// ✅ Lazy-load TinyMCE safely
+const TinyMCEEditor = React.lazy(async () => {
+  const mod = await import('@tinymce/tinymce-react')
+  return { default: mod.Editor as unknown as React.ComponentType<any> }
+})
 
 type ReportModalProps = {
   report: any
@@ -31,10 +37,10 @@ export default function ReportModal({
     >
       <div
         className="bg-white text-black rounded-2xl shadow-2xl p-6 
-                   w-[90%] max-w-2xl max-h-[80vh] flex flex-col border border-gray-200"
+                   w-[90%] max-w-3xl max-h-[80vh] flex flex-col border border-gray-200"
       >
         {/* Header */}
-        <h2 className="text-2xl font-bold mb-1 text-gray-900">
+        <h2 className="text-3xl font-bold mb-1 text-gray-900">
           {isWeekly
             ? `Week ${report.week_number}`
             : `Monthly Report: ${report.month} ${report.year || ''}`}
@@ -46,19 +52,52 @@ export default function ReportModal({
         </p>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto mb-4">
+        <div className="flex-1 overflow-y-auto mb-4 min-h-[250px]">
           {isEditing && isAdmin ? (
-            <textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full h-64 p-3 border border-gray-300 rounded-lg 
-                         bg-white text-black text-sm leading-relaxed resize-none 
-                         focus:outline-none focus:ring-2 focus:ring-gray-400"
-            />
+            <Suspense fallback={<p>Loading editor...</p>}>
+              <TinyMCEEditor
+                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                tinymceScriptSrc="/tinymce/tinymce.min.js"
+                value={editedContent}
+                onEditorChange={(newValue: string) => setEditedContent(newValue)}
+                init={{
+                  height: 350,
+                  menubar: true,
+                  // ✅ Only plugins that exist in the official package
+                  plugins:
+                    'advlist autolink lists link image charmap preview anchor ' +
+                    'code fullscreen insertdatetime media table help wordcount',
+                  toolbar:
+                    'undo redo | blocks | bold italic forecolor | ' +
+                    'alignleft aligncenter alignright alignjustify | ' +
+                    'bullist numlist outdent indent | removeformat | help',
+                  content_style: `
+                    body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                      font-size: 16px;
+                      line-height: 1.6;
+                      color: #111;
+                      padding: 1rem;
+                    }
+                    p { margin-bottom: 0.75rem; }
+                    img { max-width: 100%; border-radius: 8px; }
+                    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+                    td, th { border: 1px solid #ddd; padding: 8px; }
+                    th { font-weight: 600; background: #f9f9f9; }
+                    a { color: #007bff; text-decoration: underline; }
+                  `,
+                  base_url: '/tinymce', // Points to public/tinymce
+                  suffix: '.min',
+                }}
+              />
+            </Suspense>
           ) : (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
-              {report.content || 'No content available.'}
-            </div>
+            <div
+              className="tinymce-content max-w-full overflow-x-auto"
+              dangerouslySetInnerHTML={{
+                __html: editedContent || 'No content available.',
+              }}
+            />
           )}
         </div>
 

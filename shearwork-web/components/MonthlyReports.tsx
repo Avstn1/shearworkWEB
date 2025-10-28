@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { MoreVertical, Edit, Trash2 } from 'lucide-react'
 import ReportModal from './ReportModal'
@@ -129,11 +129,28 @@ export default function MonthlyReports({
             >
               <div className="flex justify-between items-start">
                 <div
-                  onClick={() => setSelectedReport(r)}
+                  onClick={() => {
+                    setSelectedReport(r)
+                    setIsEditing(false)
+                  }}
                   className="cursor-pointer flex-1"
                 >
                   <p className="font-semibold">{r.month} {r.year || ''}</p>
-                  <p className="text-sm text-[var(--text-subtle)]">Click to view full report</p>
+
+                  {/* Rich-text preview */}
+                  <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
+                    <div
+                      className="prose prose-sm"
+                      dangerouslySetInnerHTML={{
+                        __html: r.content
+                          ? r.content.length > 100
+                            ? r.content.slice(0, 100) + '...'
+                            : r.content
+                          : 'No content available.',
+                      }}
+                    />
+                    <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[#708B64] to-transparent" />
+                  </div>
                 </div>
 
                 {isAdmin && (

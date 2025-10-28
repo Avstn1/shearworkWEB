@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import SignOutButton from '@/components/SignOutButton'
+import { Editor } from '@tinymce/tinymce-react'
 
 interface Barber {
   user_id: string
@@ -395,13 +396,40 @@ export default function AdminDashboardPage() {
                   value={reportData.year}
                   onChange={(e) => setReportData({ ...reportData, year: Number(e.target.value) })}
                 />
+                
+                {/* TinyMCE Editor */}
+                <div className="col-span-2 w-full">
+                  <Editor
+                    apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                    value={reportData.content}
+                    onEditorChange={(newValue) => setReportData({ ...reportData, content: newValue })}
+                    init={{
+                      height: 300,
+                      width: '100%',
+                      menubar: false,
+                      plugins: [
+                        'advlist','autolink','lists','link','charmap','preview','anchor',
+                        'code','fullscreen','insertdatetime','media','table','help','wordcount'
+                      ],
+                      toolbar:
+                        'undo redo | formatselect | bold italic backcolor | ' +
+                        'alignleft aligncenter alignright alignjustify | ' +
+                        'bullist numlist outdent indent | removeformat | help',
+                      content_style: `
+                        body { 
+                          font-family: Helvetica, Arial, sans-serif; 
+                          font-size: 14px; 
+                          color: #F1F5E9; 
+                          background-color: #2f3a2d; 
+                          padding: 8px;
+                        }`,
+                    }}
+                  />
 
-                <textarea
-                  placeholder="Report content..."
-                  className="bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-2 py-1 col-span-2 h-24 text-xs"
-                  value={reportData.content}
-                  onChange={(e) => setReportData({ ...reportData, content: e.target.value })}
-                />
+                </div>
+
+
+
               </div>
 
               <button
@@ -438,5 +466,4 @@ export default function AdminDashboardPage() {
       )}
     </>
   )
-
 }

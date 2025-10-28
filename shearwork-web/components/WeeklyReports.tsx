@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { MoreVertical } from 'lucide-react'
 import ReportModal from './ReportModal'
@@ -120,16 +120,28 @@ export default function WeeklyReports({
             <div
               onClick={() => {
                 setSelectedReport(r)
-                setIsEditing(false) // view mode
+                setIsEditing(false)
               }}
               className="cursor-pointer"
             >
               <p className="font-semibold">
                 Week {r.week_number} - {r.month} {r.year || ''}
               </p>
-              <p className="text-sm text-[var(--text-subtle)]">
-                {r.title || r.content?.slice(0, 40) + '...'}
-              </p>
+
+              {/* Rich-text preview */}
+              <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
+                <div
+                  className="prose prose-sm"
+                  dangerouslySetInnerHTML={{
+                    __html: r.content
+                      ? r.content.length > 100
+                        ? r.content.slice(0, 100) + '...'
+                        : r.content
+                      : 'No content available.',
+                  }}
+                />
+                <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[#708B64] to-transparent" />
+              </div>
             </div>
           </div>
         ))}
@@ -150,16 +162,14 @@ export default function WeeklyReports({
               .from('reports')
               .update({ content: updatedContent })
               .eq('id', selectedReport.id)
-            if (error) {
-              toast.error('Failed to save report.')
-            } else {
+            if (error) toast.error('Failed to save report.')
+            else {
               toast.success('✅ Report updated!')
-              // Update local reports and selected report
               const updatedReport = { ...selectedReport, content: updatedContent }
               setReports((prev) =>
                 prev.map((r) => (r.id === selectedReport.id ? updatedReport : r))
               )
-              setSelectedReport(null) 
+              setSelectedReport(null)
               setIsEditing(false)
             }
           }}
