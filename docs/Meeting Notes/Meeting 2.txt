@@ -2,3 +2,5 @@ Meeting 2
 - fix formatting for content formatting
 - change to black text on white background
 - confirming email brings to local host (WRONG)
+
+https://shearwork-e46g034os-austin-bartolomes-projects.vercel.app/

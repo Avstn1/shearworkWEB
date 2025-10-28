@@ -4,6 +4,7 @@
   /* Base Tones */
   --background: #E8EDC7;  /* Light Avocado */
   --foreground: #3E3B2E;  /* Dark Olive */
+  --navbar: #1e231c;
   --accent-1: #4f5847;    /* Sage */
   --accent-2: #7B8C68;    /* Moss Green */
   --accent-3: #5F6F52;    /* Deep Olive */
@@ -33,6 +34,7 @@
   :root {
     --background: #2C2A22;
     --foreground: #E8EDC7;
+    --navbar: #5d6b57;
     --accent-1: #4f5847;
     --accent-2: #8FA37A;
     --accent-3: #A9BA9D;
@@ -103,6 +105,25 @@ body {
 .tinymce-content img {
   max-width: 100%;
   border-radius: 8px;
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 
