@@ -425,12 +425,18 @@ export default function AdminDashboardPage() {
     <>
       {isMobile ? (
         <>
+          {/* Render mobile menu overlay when open */}
           {mobileMenuOpen && renderMobileMenu()}
-          {content}
+
+          {/* Main content */}
+          <div className={`${mobileMenuOpen ? 'pointer-events-none blur-sm' : ''}`}>
+            {content}
+          </div>
         </>
       ) : (
         <Layout>{content}</Layout>
       )}
     </>
   )
+
 }

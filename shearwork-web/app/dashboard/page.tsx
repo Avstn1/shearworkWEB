@@ -90,6 +90,7 @@ export default function DashboardPage() {
       </div>
     )
 
+  // Mobile menu with blur backdrop
   const renderMobileMenu = () => {
     const navLinks = isAdmin
       ? navLinksBase.filter(link => link.href !== '/dashboard').concat({
@@ -99,30 +100,37 @@ export default function DashboardPage() {
       : navLinksBase
 
     return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex flex-col">
-        <div className="bg-[var(--accent-2)] p-4 flex justify-between items-center">
-          <span className="text-[var(--highlight)] text-2xl font-bold">✂️ ShearWork</span>
-          <button
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-[var(--text-bright)] text-xl"
-          >
-            ✕
-          </button>
-        </div>
-        <nav className="flex flex-col p-4 space-y-3">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-[var(--text-bright)] text-lg font-semibold hover:text-[var(--highlight)]"
+      <div className="fixed inset-0 z-50 flex flex-col">
+        {/* Blur + dim backdrop */}
+        <div
+          className="absolute inset-0 backdrop-blur-sm bg-black/40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+        <div className="relative bg-[var(--accent-2)] p-4 w-64 shadow-lg z-50 flex flex-col min-h-full">
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-[var(--highlight)] text-2xl font-bold">✂️ ShearWork</span>
+            <button
               onClick={() => setMobileMenuOpen(false)}
+              className="text-[var(--text-bright)] text-xl"
             >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto p-4">
-          <SignOutButton className="w-full" />
+              ✕
+            </button>
+          </div>
+          <nav className="flex flex-col space-y-3 flex-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-[var(--text-bright)] text-lg font-semibold hover:text-[var(--highlight)]"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-auto">
+            <SignOutButton className="w-full" />
+          </div>
         </div>
       </div>
     )
@@ -138,12 +146,17 @@ export default function DashboardPage() {
     >
       {/* Header */}
       <motion.div variants={fadeInUp} custom={0}>
+        {isMobile && (
+          <div className="text-[var(--highlight)] text-2xl font-bold text-center">✂️ ShearWork</div>
+        )}
         <div className="flex justify-between items-center flex-nowrap mb-2">
-          <div className="flex-1 min-w-0">
-            <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'} truncate`}>
-              Welcome back!
-            </h1>
-            <p className="text-xs text-[#bdbdbd] truncate">Here’s your weekly overview.</p>
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            <div className="flex flex-col truncate">
+              <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'} truncate`}>
+                Welcome back!
+              </h1>
+              <p className="text-xs text-[#bdbdbd] truncate">Here’s your weekly overview.</p>
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {profile && <UserProfile />}
@@ -226,6 +239,7 @@ export default function DashboardPage() {
           {content}
         </>
       ) : (
+        // Desktop: use Layout wrapper
         <Layout>{content}</Layout>
       )}
     </>
