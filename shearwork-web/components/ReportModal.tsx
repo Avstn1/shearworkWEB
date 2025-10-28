@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, Suspense } from 'react'
+import type { Editor as TinyMCEEditorType } from 'tinymce'
 
 // ✅ Lazy-load TinyMCE safely
 const TinyMCEEditor = React.lazy(async () => {
@@ -26,6 +27,9 @@ export default function ReportModal({
   const isWeekly = report.week_number !== undefined
   const [editedContent, setEditedContent] = useState(report.content || '')
 
+  // readonly if not editing
+  const readonly = !(isEditing && isAdmin)
+
   useEffect(() => {
     setEditedContent(report.content || '')
   }, [report])
@@ -37,7 +41,7 @@ export default function ReportModal({
     >
       <div
         className="bg-white text-black rounded-2xl shadow-2xl p-6 
-                   w-[90%] max-w-3xl max-h-[80vh] flex flex-col border border-gray-200"
+                   w-[90%] max-w-4xl max-h-[90vh] flex flex-col border border-gray-200"
       >
         {/* Header */}
         <h2 className="text-3xl font-bold mb-1 text-gray-900">
@@ -52,58 +56,62 @@ export default function ReportModal({
         </p>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto mb-4 min-h-[250px]">
-          {isEditing && isAdmin ? (
-            <Suspense fallback={<p>Loading editor...</p>}>
-              <TinyMCEEditor
-                apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                tinymceScriptSrc="/tinymce/tinymce.min.js"
-                value={editedContent}
-                onEditorChange={(newValue: string) => setEditedContent(newValue)}
-                init={{
-                  height: 350,
-                  menubar: true,
-                  // ✅ Only plugins that exist in the official package
-                  plugins:
-                    'advlist autolink lists link image charmap preview anchor ' +
-                    'code fullscreen insertdatetime media table help wordcount',
-                  toolbar:
-                    'undo redo | blocks | bold italic forecolor | ' +
-                    'alignleft aligncenter alignright alignjustify | ' +
-                    'bullist numlist outdent indent | removeformat | help',
-                  content_style: `
-                    body {
-                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                      font-size: 16px;
-                      line-height: 1.6;
-                      color: #111;
-                      padding: 1rem;
-                    }
-                    p { margin-bottom: 0.75rem; }
-                    img { max-width: 100%; border-radius: 8px; }
-                    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-                    td, th { border: 1px solid #ddd; padding: 8px; }
-                    th { font-weight: 600; background: #f9f9f9; }
-                    a { color: #007bff; text-decoration: underline; }
-                  `,
-                  base_url: '/tinymce', // Points to public/tinymce
-                  suffix: '.min',
-                }}
-              />
-            </Suspense>
-          ) : (
-            <div
-              className="tinymce-content max-w-full overflow-x-auto"
-              dangerouslySetInnerHTML={{
-                __html: editedContent || 'No content available.',
+        <div className="flex-1 overflow-y-auto mb-4 min-h-[400px]">
+          <Suspense fallback={<p>Loading editor...</p>}>
+            <TinyMCEEditor
+              apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+              tinymceScriptSrc="/tinymce/tinymce.min.js"
+              value={editedContent}
+              onEditorChange={
+                !readonly ? (newValue: string) => setEditedContent(newValue) : undefined
+              }
+              init={{
+                license_key: 'gpl',
+                height: 700,         // initial height
+                resize: true,        // allow manual resize
+                menubar: !readonly,
+                toolbar: !readonly
+                  ? 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help'
+                  : false,
+                readonly: readonly ? 1 : 0,
+                setup: (editor: TinyMCEEditorType) => {
+                  if (readonly) {
+                    editor.on('init', () => {
+                      const body = editor.getBody()
+                      body.setAttribute('contenteditable', 'false') // disable editing
+                      body.style.userSelect = 'none'               // prevent text selection
+                      body.style.pointerEvents = 'none'            // prevent clicking/focus
+                    })
+                  }
+                },
+                plugins:
+                  'advlist autolink lists link image charmap preview anchor ' +
+                  'code fullscreen insertdatetime media table help wordcount',
+                content_style: `
+                  body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    color: #111;
+                    padding: 1rem;
+                  }
+                  p { margin-bottom: 0.75rem; }
+                  img { max-width: 100%; border-radius: 8px; }
+                  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+                  td, th { border: 1px solid #ddd; padding: 8px; }
+                  th { font-weight: 600; background: #f9f9f9; }
+                  a { color: #007bff; text-decoration: underline; }
+                `,
+                base_url: '/tinymce',
+                suffix: '.min',
               }}
             />
-          )}
+          </Suspense>
         </div>
 
         {/* Footer Buttons */}
         <div className="flex justify-end gap-2 mt-auto">
-          {isEditing && isAdmin ? (
+          {!readonly ? (
             <>
               <button
                 onClick={() => onSave && onSave(editedContent)}

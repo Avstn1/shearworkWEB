@@ -7,7 +7,7 @@
   --accent-1: #4f5847;    /* Sage */
   --accent-2: #7B8C68;    /* Moss Green */
   --accent-3: #5F6F52;    /* Deep Olive */
-  --accent-4: #2d3429;
+  --accent-4: #1e231c;
   --text-muted: #6E725E;  /* Muted Olive */
   --text-bright: #F7F9EE; /* Cream White */
   --text-dark: #56574a;
@@ -36,7 +36,7 @@
     --accent-1: #4f5847;
     --accent-2: #8FA37A;
     --accent-3: #A9BA9D;
-    --accent-4: #2d3429;
+    --accent-4: #1e231c;
     --text-muted: #A9BA9D;
     --text-bright: #F7F9EE;
     --highlight: #D4C27B;

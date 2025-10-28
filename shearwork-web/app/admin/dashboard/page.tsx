@@ -213,7 +213,7 @@ export default function AdminDashboardPage() {
 
   // ----- MAIN CONTENT -----
   const content = (
-    <div className="p-3 sm:p-6 flex flex-col gap-5 text-[var(--foreground)] min-h-screen overflow-y-auto">
+    <div className="p-3 sm:p-6 flex flex-col gap-5 text-[var(--foreground)] bg-[var(--accent-4)] min-h-screen overflow-y-auto">
       {/* Header */}
       <div className="flex justify-between items-center flex-nowrap gap-3">
         <h1 className="text-2xl font-semibold text-[var(--highlight)] truncate flex-1 min-w-0">
@@ -322,9 +322,9 @@ export default function AdminDashboardPage() {
             </select>
           </div>
 
-          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <section className="bg-[var(--accent-4)]/10 grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="flex flex-col gap-4">
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
+              <div className="bg-[var(--accent-4)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
                 <h3 className="text-base font-semibold mb-2">Monthly Reports</h3>
                 <MonthlyReports
                   userId={selectedBarber.user_id}
