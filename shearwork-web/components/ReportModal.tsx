@@ -56,7 +56,7 @@ export default function ReportModal({
         </p>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto mb-4 min-h-[400px]">
+        <div className="flex-1 mb-4 min-h-[400px]">
           <Suspense fallback={<p>Loading editor...</p>}>
             <TinyMCEEditor
               apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
