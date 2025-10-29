@@ -214,7 +214,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Barber Search */}
+        {/* Search + Month Selector */}
         <div className="mt-2 flex flex-wrap gap-2 items-center">
           <input
             type="text"
@@ -223,6 +223,19 @@ export default function AdminDashboardPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+
+          <select
+            className="h-10 px-3 rounded-md bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] text-sm"
+            value={selectedMonth}
+            onChange={(e) => {
+              setSelectedMonth(e.target.value)
+              setRefreshReports(prev => prev + 1)
+            }}
+          >
+            {MONTHS.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
         </div>
 
         {/* Barber List */}
@@ -393,7 +406,6 @@ export default function AdminDashboardPage() {
                   </button>
                 </div>
               </div>
-
             </div>
 
             {/* Admin Revenue & Top Clients Editors */}
