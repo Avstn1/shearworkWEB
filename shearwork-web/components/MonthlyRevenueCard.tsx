@@ -10,8 +10,8 @@ interface MonthlyRevenueCardProps {
 }
 
 const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
 export default function MonthlyRevenueCard({ userId, selectedMonth, year }: MonthlyRevenueCardProps) {
@@ -27,7 +27,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       try {
         const currentYear = year ?? new Date().getFullYear()
 
-        // Current month revenue
+        // Fetch current month
         const { data: currentData, error: currentError } = await supabase
           .from('reports')
           .select('total_revenue')
@@ -40,7 +40,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
         if (currentError) console.error('Error fetching current month revenue:', currentError)
         setRevenue(currentData?.total_revenue ?? null)
 
-        // Previous month revenue
+        // Fetch previous month
         const currentIndex = MONTHS.indexOf(selectedMonth)
         let prevIndex = currentIndex - 1
         let prevYear = currentYear
@@ -81,13 +81,16 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
   const change = calculateChange()
 
   return (
-    <div className="bg-[#1f1f1a] p-4 rounded-lg shadow-md relative flex flex-col min-h-[120px]">
+    <div
+      className="p-4 rounded-lg shadow-md relative flex flex-col min-h-[140px] border border-[color:var(--card-revenue-border)]"
+      style={{ background: 'var(--card-revenue-bg)' }}
+    >
       {/* Header */}
-      <h2 className="text-[#c4d2b8] text-base font-semibold mb-2">💰 Monthly Revenue</h2>
+      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">🏆 Monthly Revenue</h2>
 
       {/* Revenue middle-left */}
       <div className="flex-1 flex items-center">
-        <p className="text-2xl font-bold text-[#F5E6C5]">
+        <p className="text-3xl font-bold text-[#F5E6C5]">
           {loading ? 'Loading...' : revenue !== null ? `$${revenue.toLocaleString()}` : 'N/A'}
         </p>
       </div>
@@ -95,11 +98,19 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       {/* Percentage bottom-left */}
       <div className="flex justify-start mt-auto">
         {change !== null ? (
-          <p className={`text-sm font-semibold ${change > 0 ? 'text-green-500' : change < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-            {change > 0 ? `+${change}%` : change < 0 ? `${change}%` : '0%'}
+          <p
+            className={`text-sm font-semibold ${
+              change > 0
+                ? 'text-green-400'
+                : change < 0
+                ? 'text-red-400'
+                : 'text-gray-400'
+            }`}
+          >
+            {change > 0 ? `+${change}%` : `${change}%`}
           </p>
         ) : (
-          <p className="invisible text-sm font-semibold">0%</p>
+          <p className="text-sm text-gray-500">—</p>
         )}
       </div>
     </div>

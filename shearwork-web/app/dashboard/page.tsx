@@ -181,7 +181,7 @@ export default function DashboardPage() {
       >
         <h3 className="text-[#bdbdbd] font-semibold">Reports for</h3>
         <select
-          className="bg-[#334030] rounded-md px-2 py-1 text-xs border border-[#55694b] text-black"
+          className="bg-[#334030] rounded-md px-2 py-1 text-xs border border-[#55694b] text-white"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
         >
@@ -218,7 +218,7 @@ export default function DashboardPage() {
             isMobile ? 'p-3' : 'p-6'
           } flex-1 min-h-0 overflow-y-auto`}
         >
-          <h2 className="text-[#c4d2b8] text-base font-semibold mb-2">
+          <h2 style={{ fontSize: '1.5rem' }} className="text-[#c4d2b8] font-semibold mb-2">
             Monthly Reports
           </h2>
           <MonthlyReports userId={user?.id} filterMonth={selectedMonth} />
@@ -231,10 +231,10 @@ export default function DashboardPage() {
             isMobile ? 'p-3' : 'p-6'
           } flex-1 min-h-0 flex flex-col`}
         >
-          <h2 className="text-[#c4d2b8] text-base font-semibold mb-2 flex-shrink-0">
+          <h2 style={{ fontSize: '1.5rem' }} className="text-[#c4d2b8] font-semibold mb-2">
             Weekly Reports
           </h2>
-          <div className="overflow-y-auto flex-1">
+          <div className="flex-1">
             <WeeklyReports userId={user?.id} filterMonth={selectedMonth} />
           </div>
         </motion.div>

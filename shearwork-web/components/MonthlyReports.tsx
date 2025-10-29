@@ -61,7 +61,9 @@ export default function MonthlyReports({
     )
   }
 
-  useEffect(() => { fetchMonthlyReports() }, [userId, refresh])
+  useEffect(() => {
+    fetchMonthlyReports()
+  }, [userId, refresh])
 
   const filteredReports = filterMonth
     ? reports.filter((r) => r.month === filterMonth)
@@ -107,7 +109,6 @@ export default function MonthlyReports({
     toast.success('🗑 Report deleted')
   }
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -125,7 +126,14 @@ export default function MonthlyReports({
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative bg-[#708B64] text-[#1f1f1a] p-4 rounded-lg shadow-sm hover:shadow-md transition"
+              /* kept your original structure and handlers */
+              className="relative rounded-lg p-4 border transition-all duration-300 ease-out transform hover:-translate-y-1 hover:scale-[1.02] cursor-default"
+              style={{
+                background: 'var(--card-monthly-bg)',
+                borderColor: 'var(--card-monthly-border)',
+                boxShadow: `0 3px 10px var(--card-monthly-shadow)`,
+                color: 'var(--foreground)',
+              }}
             >
               <div className="flex justify-between items-start">
                 <div
@@ -135,9 +143,10 @@ export default function MonthlyReports({
                   }}
                   className="cursor-pointer flex-1"
                 >
-                  <p className="font-semibold">{r.month} {r.year || ''}</p>
+                  <p className="font-semibold">
+                    {r.month} {r.year || ''}
+                  </p>
 
-                  {/* Rich-text preview */}
                   <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
                     <div
                       className="prose prose-sm"
@@ -149,15 +158,17 @@ export default function MonthlyReports({
                           : 'No content available.',
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[#708B64] to-transparent" />
+                    <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[var(--card-monthly-bg)] to-transparent" />
                   </div>
                 </div>
 
                 {isAdmin && (
                   <div className="relative">
                     <button
-                      onClick={() => setMenuOpenId(menuOpenId === r.id ? null : r.id)}
-                      className="p-1 hover:bg-[#5e7256] rounded-md"
+                      onClick={() =>
+                        setMenuOpenId(menuOpenId === r.id ? null : r.id)
+                      }
+                      className="p-1 rounded-md hover:bg-[var(--card-monthly-border)]/20 transition"
                     >
                       <MoreVertical size={18} />
                     </button>
@@ -165,17 +176,21 @@ export default function MonthlyReports({
                     {menuOpenId === r.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-0 mt-1 bg-[#5e7256] text-white rounded-md shadow-lg z-10 w-28"
+                        className="absolute right-0 mt-1 rounded-md shadow-lg z-10 w-28"
+                        style={{
+                          background: 'var(--card-monthly-border)',
+                          color: 'var(--text-bright)',
+                        }}
                       >
                         <button
                           onClick={() => handleEdit(r)}
-                          className="flex items-center gap-2 w-full px-3 py-2 hover:bg-[#4e614b] text-sm"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm"
                         >
                           <Edit size={14} /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(r.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 hover:bg-[#4e614b] text-sm text-red-200"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-300"
                         >
                           <Trash2 size={14} /> Delete
                         </button>

@@ -28,7 +28,6 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
         setLoading(true)
         const year = new Date().getFullYear()
 
-        // Get the monthly report for that user/month
         const { data: report, error: reportError } = await supabase
           .from('reports')
           .select('id')
@@ -49,7 +48,6 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
           return
         }
 
-        // Fetch top clients for that report
         const { data: topClients, error: topClientsError } = await supabase
           .from('report_top_clients')
           .select('id, rank, client_name, total_paid, notes')
@@ -75,8 +73,16 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
   }, [userId, selectedMonth])
 
   return (
-    <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex-1 min-h-[250px] text-[#c4d2b8]">
-      <h2 className="text-base font-semibold mb-3">Top Clients</h2>
+    <div
+      className="top-clients-card rounded-lg shadow-md p-6 flex-1 min-h-[250px] text-[#c4d2b8] border"
+      style={{
+        background: 'var(--card-topclients-bg)',
+        borderColor: 'var(--card-revenue-border)',
+      }}
+    >
+      <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+        🏆 Top Clients
+      </h2>
 
       {loading ? (
         <p className="text-sm text-gray-400">Loading...</p>

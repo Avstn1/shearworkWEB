@@ -72,7 +72,9 @@ export default function WeeklyReports({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => { fetchReports() }, [userId, refresh])
+  useEffect(() => {
+    fetchReports()
+  }, [userId, refresh])
 
   const filteredReports = filterMonth
     ? reports.filter((r) => r.month === filterMonth)
@@ -84,13 +86,19 @@ export default function WeeklyReports({
         {filteredReports.map((r) => (
           <div
             key={r.id}
-            className="relative bg-[#708B64] text-[#1f1f1a] p-4 rounded-lg shadow-sm hover:shadow-md transition"
+            className="relative rounded-lg p-4 border transition-all duration-300 ease-out transform hover:-translate-y-1 hover:scale-[1.02]"
+            style={{
+              background: 'var(--card-weekly-bg)',
+              borderColor: 'var(--card-weekly-border)',
+              boxShadow: `0 3px 10px var(--card-weekly-shadow)`,
+              color: 'var(--foreground)',
+            }}
           >
             {isAdmin && (
               <>
                 <button
                   onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)}
-                  className="absolute top-2 right-2 text-[#1f1f1a] hover:text-gray-700"
+                  className="absolute top-2 right-2 p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
                 >
                   <MoreVertical size={18} />
                 </button>
@@ -98,17 +106,21 @@ export default function WeeklyReports({
                 {openMenu === r.id && (
                   <div
                     ref={menuRef}
-                    className="absolute top-8 right-2 bg-white text-black shadow-md rounded-lg w-28 z-10"
+                    className="absolute top-8 right-2 rounded-md shadow-md w-28 z-10"
+                    style={{
+                      background: 'var(--card-weekly-border)',
+                      color: 'var(--text-bright)',
+                    }}
                   >
                     <button
                       onClick={() => handleEdit(r)}
-                      className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                      className="block w-full text-left px-3 py-2 text-sm"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(r.id)}
-                      className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-red-600"
+                      className="block w-full text-left px-3 py-2 text-sm text-red-300"
                     >
                       Delete
                     </button>
@@ -128,7 +140,6 @@ export default function WeeklyReports({
                 Week {r.week_number} - {r.month} {r.year || ''}
               </p>
 
-              {/* Rich-text preview */}
               <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
                 <div
                   className="prose prose-sm"
@@ -140,7 +151,7 @@ export default function WeeklyReports({
                       : 'No content available.',
                   }}
                 />
-                <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[#708B64] to-transparent" />
+                <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[var(--card-weekly-bg)] to-transparent" />
               </div>
             </div>
           </div>
