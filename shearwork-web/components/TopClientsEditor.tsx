@@ -20,18 +20,19 @@ interface TopClientsEditorProps {
 
 export default function TopClientsEditor({ barberId, month, year }: TopClientsEditorProps) {
   const [clients, setClients] = useState<TopClient[]>([])
+  const [originalClients, setOriginalClients] = useState<TopClient[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [reportId, setReportId] = useState<string | null>(null)
   const [monthlyReportExists, setMonthlyReportExists] = useState<boolean>(false)
 
+  // Fetch report and existing top clients
   useEffect(() => {
     if (!barberId) return
 
     const fetchReportAndClients = async () => {
       setLoading(true)
       try {
-        // Fetch the monthly report
         const { data: reports, error: reportError } = await supabase
           .from('reports')
           .select('*')
@@ -47,10 +48,9 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
         setMonthlyReportExists(exists)
         if (!exists) return
 
-        const report = reports![0]
+        const report = reports[0]
         setReportId(report.id)
 
-        // Fetch top clients
         const { data: topClients, error: topClientsError } = await supabase
           .from('report_top_clients')
           .select('*')
@@ -58,7 +58,10 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
           .order('rank', { ascending: true })
 
         if (topClientsError && topClientsError.code !== 'PGRST116') throw topClientsError
-        if (topClients) setClients(topClients)
+        if (topClients) {
+          setClients(topClients)
+          setOriginalClients(topClients)
+        }
       } catch (err) {
         console.error('Error loading top clients:', err)
         toast.error('Failed to load top clients.')
@@ -70,11 +73,32 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
     fetchReportAndClients()
   }, [barberId, month, year])
 
+  // Add new client
   const handleAddClient = () => {
     setClients(prev => [...prev, { rank: prev.length + 1, client_name: '', total_paid: 0, notes: '' }])
   }
 
-  const handleRemoveClient = (index: number) => {
+  // Remove client locally and delete from DB if needed
+  const handleRemoveClient = async (index: number) => {
+    const clientToRemove = clients[index]
+
+    if (clientToRemove.id) {
+      try {
+        const { error } = await supabase
+          .from('report_top_clients')
+          .delete()
+          .eq('id', clientToRemove.id)
+
+        if (error) throw error
+        toast.success(`Removed client "${clientToRemove.client_name}"`)
+      } catch (err) {
+        console.error('Error deleting client:', err)
+        toast.error('Failed to delete client.')
+        return
+      }
+    }
+
+    // Remove locally in any case
     setClients(prev => prev.filter((_, i) => i !== index))
   }
 
@@ -84,34 +108,31 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
 
   const handleSave = async () => {
     if (!reportId) {
-      console.log('No report selected. Variables:', { reportId, barberId, month, year, clients })
-      return toast.error('No report selected for saving.')
+      toast.error('No report selected for saving.')
+      return
     }
-
-    console.log('Saving top clients. Variables:', {
-      reportId,
-      barberId,
-      month,
-      year,
-      clients,
-    })
 
     setSaving(true)
 
     try {
-      const { error } = await supabase
-        .from('report_top_clients')
-        .upsert(clients.map(c => ({
-          ...(c.id ? { id: c.id } : {}), // only include id if it exists
+      const upsertData = clients.map(c => {
+        const base = {
           report_id: reportId,
           rank: c.rank,
           client_name: c.client_name,
           total_paid: c.total_paid,
           notes: c.notes,
-        })))
+        }
+        return c.id ? { id: c.id, ...base } : { id: crypto.randomUUID(), ...base } // generate id for new
+      })
+
+      const { error } = await supabase
+        .from('report_top_clients')
+        .upsert(upsertData, { onConflict: 'id' })
 
       if (error) throw error
       toast.success('Top clients saved!')
+      setOriginalClients([...clients]) // update snapshot
     } catch (err) {
       console.error('Error saving top clients:', err)
       toast.error('Failed to save top clients.')
