@@ -71,8 +71,11 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
     fetchRevenue()
   }, [userId, selectedMonth, year])
 
+  const formatCurrency = (amount: number) =>
+    `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
   const calculateChange = () => {
-    if (revenue === null || prevRevenue === null) return null
+    if (revenue === null || prevRevenue === null || prevRevenue === 0) return null
     const diff = revenue - prevRevenue
     const percent = (diff / prevRevenue) * 100
     return Math.round(percent)
@@ -91,7 +94,11 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       {/* Revenue middle-left */}
       <div className="flex-1 flex items-center">
         <p className="text-3xl font-bold text-[#F5E6C5]">
-          {loading ? 'Loading...' : revenue !== null ? `$${revenue.toLocaleString()}` : 'N/A'}
+          {loading
+            ? 'Loading...'
+            : revenue !== null
+              ? formatCurrency(revenue)
+              : 'N/A'}
         </p>
       </div>
 
@@ -103,8 +110,8 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
               change > 0
                 ? 'text-green-400'
                 : change < 0
-                ? 'text-red-400'
-                : 'text-gray-400'
+                  ? 'text-red-400'
+                  : 'text-gray-400'
             }`}
           >
             {change > 0 ? `+${change}%` : `${change}%`}
