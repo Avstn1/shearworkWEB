@@ -11,9 +11,9 @@ export default function Hero() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className="text-5xl md:text-6xl font-bold mb-6 text-[var(--accent-3)] leading-tight"
       >
-        Think, plan, and grow your barbershop
+        Understand your business.
         <br />
-        <span className="text-[var(--highlight)]">all in one place</span>
+        <span className="text-[var(--highlight)]">Unlock your next level.</span>
       </motion.h1>
 
       <motion.p
@@ -22,7 +22,7 @@ export default function Hero() {
         transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
         className="text-lg md:text-xl text-[var(--text-muted)] max-w-2xl mb-10"
       >
-        Manage appointments, analyze performance, and retain clients effortlessly.
+        Analyze performance, and retain clients effortlessly.
       </motion.p>
 
       <motion.div

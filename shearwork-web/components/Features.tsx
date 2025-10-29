@@ -4,9 +4,12 @@ import { motion } from 'framer-motion'
 
 export default function Features() {
   const features = [
-    { title: 'Smart Scheduling', desc: 'Drag-and-drop appointments with automatic reminders.', icon: '🗓️' },
-    { title: 'Business Insights', desc: 'See your revenue, trends, and performance in real-time.', icon: '📊' },
-    { title: 'Client Retention', desc: 'Automate follow-ups and build loyal relationships.', icon: '💬' },
+    {
+      title: 'Business Insights',
+      desc: 'See your revenue, trends, and performance in real-time.',
+      icon: '📊',
+    },
+    // Add more features freely — layout stays centered
   ]
 
   return (
@@ -21,7 +24,8 @@ export default function Features() {
         Why Barbers Choose ShearWork
       </motion.h2>
 
-      <div className="max-w-6xl mx-auto grid gap-8 md:grid-cols-3 px-6">
+      {/* ✅ Switched from grid to flex for proper horizontal centering */}
+      <div className="max-w-6xl w-full mx-auto px-6 flex flex-wrap justify-center gap-8">
         {features.map((f, i) => (
           <motion.div
             key={i}
@@ -29,10 +33,14 @@ export default function Features() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.25 }}
             transition={{ duration: 0.4, delay: i * 0.15, ease: 'easeOut' }}
+            className="flex"
           >
             <div
-              className="p-8 rounded-2xl shadow-md bg-[var(--accent-1)] text-[var(--text-bright)]
-                         hover:shadow-xl hover:-translate-y-1 transition-transform duration-300 border border-[var(--accent-2)]"
+              className="
+                p-8 rounded-2xl shadow-md bg-[var(--accent-1)] text-[var(--text-bright)]
+                hover:shadow-xl hover:-translate-y-1 transition-transform duration-300
+                border border-[var(--accent-2)] text-center w-72
+              "
             >
               <div className="text-4xl mb-4">{f.icon}</div>
               <h3 className="text-2xl font-semibold mb-2 text-[var(--highlight)]">{f.title}</h3>

@@ -10,10 +10,12 @@ import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import Link from 'next/link'
 import SignOutButton from '@/components/SignOutButton'
+import MonthlyRevenueCard from '@/components/MonthlyRevenueCard'
+import TopClientsCard from '@/components/TopClientsCard'
 
 const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
 const fadeInUp = {
@@ -40,9 +42,7 @@ export default function DashboardPage() {
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
-  const navLinksBase = [
-    { href: '/dashboard', label: 'Dashboard' },
-  ]
+  const navLinksBase = [{ href: '/dashboard', label: 'Dashboard' }]
 
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -101,7 +101,6 @@ export default function DashboardPage() {
 
     return (
       <div className="fixed inset-0 z-50 flex flex-col">
-        {/* Blur + dim backdrop */}
         <div
           className="absolute inset-0 backdrop-blur-sm bg-black/40"
           onClick={() => setMobileMenuOpen(false)}
@@ -155,7 +154,7 @@ export default function DashboardPage() {
               <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'} truncate`}>
                 Welcome back!
               </h1>
-              <p className="text-xs text-[#bdbdbd] truncate">Here’s your weekly overview.</p>
+              <p className="text-xs text-[#bdbdbd] truncate">Here’s your monthly summary.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -190,6 +189,18 @@ export default function DashboardPage() {
             <option key={m} value={m}>{m}</option>
           ))}
         </select>
+      </motion.div>
+
+      {/* Revenue + Top Clients Row */}
+      <motion.div
+        variants={fadeInUp}
+        custom={2}
+        className={`grid gap-4 ${
+          isMobile ? 'grid-cols-1' : 'grid-cols-2'
+        }`}
+      >
+        <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} />
+        <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} />
       </motion.div>
 
       {/* Reports Section */}
@@ -239,7 +250,6 @@ export default function DashboardPage() {
           {content}
         </>
       ) : (
-        // Desktop: use Layout wrapper
         <Layout>{content}</Layout>
       )}
     </>

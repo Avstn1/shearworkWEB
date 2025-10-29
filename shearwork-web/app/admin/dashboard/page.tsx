@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
 import WeeklyReports from '@/components/WeeklyReports'
 import MonthlyReports from '@/components/MonthlyReports'
 import UserProfile from '@/components/UserProfile'
 import toast from 'react-hot-toast'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { motion } from 'framer-motion'
 import Link from 'next/link'
 import SignOutButton from '@/components/SignOutButton'
+import AdminRevenueEditor from '@/components/AdminRevenueEditor'
+import TopClientsEditor from '@/components/TopClientsEditor'
 import { Editor } from '@tinymce/tinymce-react'
 
 interface Barber {
@@ -41,7 +42,6 @@ const MOBILE_BREAKPOINT = 768
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const pathname = usePathname()
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
   const [user, setUser] = useState<any>(null)
@@ -67,9 +67,11 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [monthlyReportExists, setMonthlyReportExists] = useState(false)
 
   const navLinksBase = [{ href: '/dashboard', label: 'Dashboard' }]
 
+  // --- User & Profile ---
   useEffect(() => {
     const fetchUserAndProfile = async () => {
       try {
@@ -100,6 +102,7 @@ export default function AdminDashboardPage() {
     fetchUserAndProfile()
   }, [router])
 
+  // --- Fetch Barbers ---
   useEffect(() => {
     async function fetchBarbers() {
       try {
@@ -121,6 +124,7 @@ export default function AdminDashboardPage() {
     fetchBarbers()
   }, [])
 
+  // --- Filter Barbers ---
   useEffect(() => {
     const query = searchQuery.toLowerCase()
     const filtered = barbers.filter(b => b.full_name.toLowerCase().includes(query))
@@ -134,6 +138,7 @@ export default function AdminDashboardPage() {
     currentPage * ITEMS_PER_PAGE
   )
 
+  // --- Add Report ---
   const handleAddReport = async () => {
     if (!selectedBarber || !reportData.content.trim()) {
       return toast.error('Please fill the report content and select a barber.')
@@ -167,12 +172,37 @@ export default function AdminDashboardPage() {
     setRefreshReports(prev => prev + 1)
   }
 
+  // --- Check if monthly report exists for selected barber & month ---
+  useEffect(() => {
+    if (!selectedBarber || !selectedMonth) return
+
+    const checkMonthlyReport = async () => {
+      try {
+        const { data: reports, error } = await supabase
+          .from('reports')
+          .select('id')
+          .eq('user_id', selectedBarber.user_id)
+          .eq('type', 'monthly')
+          .eq('month', selectedMonth)
+          .eq('year', reportData.year)
+          .limit(1)
+
+        if (error && error.code !== 'PGRST116') throw error
+        setMonthlyReportExists(Array.isArray(reports) && reports.length > 0)
+      } catch (err) {
+        console.error('Error checking monthly report:', err)
+        setMonthlyReportExists(false)
+      }
+    }
+
+    checkMonthlyReport()
+  }, [selectedBarber, selectedMonth, reportData.year])
+
   if (!userRole) return <p>Checking access...</p>
   if (loading) return <p>Loading barbers...</p>
 
   const isAdmin = true
 
-  // ----- MOBILE MENU -----
   const renderMobileMenu = () => {
     const navLinks = isAdmin
       ? navLinksBase.filter(link => link.href !== '/dashboard').concat({
@@ -211,10 +241,10 @@ export default function AdminDashboardPage() {
     )
   }
 
-  // ----- MAIN CONTENT -----
   const content = (
-    <div className="p-3 sm:p-6 flex flex-col gap-5 text-[var(--foreground)] bg-[var(--accent-4)] min-h-screen overflow-y-auto">
-      {/* Header */}
+    <div className="p-3 sm:p-6 flex flex-col gap-5 text-[var(--foreground)] bg-[var(--background)] min-h-screen overflow-y-auto">
+
+      {/* Header & Search */}
       <div className="flex justify-between items-center flex-nowrap gap-3">
         <h1 className="text-2xl font-semibold text-[var(--highlight)] truncate flex-1 min-w-0">
           Admin Dashboard
@@ -232,12 +262,12 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex flex-col sm:flex-row items-center gap-2">
+      {/* Fixed size barber search bar */}
+      <div className="mt-2 flex flex-wrap gap-2 items-center">
         <input
           type="text"
           placeholder="Search barbers..."
-          className="flex-1 bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+          className="flex-shrink-0 w-full sm:w-64 h-10 bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -246,10 +276,7 @@ export default function AdminDashboardPage() {
       {/* Barber List */}
       <section className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
         <h2 className="text-base font-semibold mb-3">Barbers</h2>
-        <div
-          className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(130px,1fr))] 
-                     gap-4 justify-items-start place-items-start"
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4 justify-items-start place-items-start">
           {paginatedBarbers.length === 0 && <p>No barbers found.</p>}
           {paginatedBarbers.map((b) => (
             <div
@@ -257,29 +284,17 @@ export default function AdminDashboardPage() {
               onClick={() =>
                 setSelectedBarber(prev => prev?.user_id === b.user_id ? null : b)
               }
-              className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 
-                        rounded-xl flex flex-col items-center justify-center 
-                        transition-transform hover:scale-105 w-full max-w-[120px] sm:max-w-[140px]
-                        ${
-                          selectedBarber?.user_id === b.user_id
-                            ? 'ring-2 ring-[var(--accent-3)]'
-                            : ''
-                        }`}
+              className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 rounded-xl flex flex-col items-center justify-center transition-transform hover:scale-105 w-full max-w-[120px] sm:max-w-[140px]
+                ${selectedBarber?.user_id === b.user_id ? 'ring-2 ring-[var(--accent-3)]' : ''}`}
             >
               {b.avatar_url ? (
-                <img
-                  src={b.avatar_url}
-                  alt={b.full_name}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full mb-1 object-cover border border-[var(--accent-3)]"
-                />
+                <img src={b.avatar_url} alt={b.full_name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-full mb-1 object-cover border border-[var(--accent-3)]" />
               ) : (
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--accent-3)] mb-1 flex items-center justify-center font-bold text-lg">
                   {b.full_name[0]}
                 </div>
               )}
-              <p className="text-xs sm:text-sm font-medium text-center leading-tight truncate w-full">
-                {b.full_name}
-              </p>
+              <p className="text-xs sm:text-sm font-medium text-center leading-tight truncate w-full">{b.full_name}</p>
             </div>
           ))}
         </div>
@@ -306,9 +321,10 @@ export default function AdminDashboardPage() {
         )}
       </section>
 
-      {/* Reports */}
+      {/* Reports & Monthly Details */}
       {selectedBarber ? (
         <div className="flex flex-col gap-6">
+
           <div className="flex flex-wrap items-center gap-3 mt-2 mb-1">
             <h3 className="text-sm font-semibold text-[#bdbdbd]">Viewing reports for</h3>
             <select
@@ -323,6 +339,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <section className="bg-[var(--accent-4)]/10 grid grid-cols-1 xl:grid-cols-2 gap-4">
+
             <div className="flex flex-col gap-4">
               <div className="bg-[var(--accent-4)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
                 <h3 className="text-base font-semibold mb-2">Monthly Reports</h3>
@@ -345,7 +362,7 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Add report */}
+            {/* Add Report */}
             <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
               <h3 className="text-base font-semibold mb-3">
                 Add Report for {selectedBarber.full_name}
@@ -379,6 +396,7 @@ export default function AdminDashboardPage() {
                     ))}
                   </select>
                 )}
+
                 <select
                   className="bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-2 py-1 text-xs col-span-2"
                   value={reportData.month}
@@ -396,8 +414,7 @@ export default function AdminDashboardPage() {
                   value={reportData.year}
                   onChange={(e) => setReportData({ ...reportData, year: Number(e.target.value) })}
                 />
-                
-                {/* TinyMCE Editor */}
+
                 <div className="col-span-2 w-full">
                   <Editor
                     apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
@@ -417,53 +434,42 @@ export default function AdminDashboardPage() {
                         'bullist numlist outdent indent | removeformat | help',
                       content_style: `
                         body { 
-                          font-family: Helvetica, Arial, sans-serif; 
-                          font-size: 14px; 
-                          color: #F1F5E9; 
-                          background-color: #2f3a2d; 
-                          padding: 8px;
-                        }`,
+                          font-family:Helvetica,Arial,sans-serif; 
+                          font-size:14px; 
+                          color:#F1F5E9;
+                          background-color:#1f2420;
+                        }
+                      `
                     }}
                   />
-
                 </div>
-
-
-
               </div>
-
               <button
                 onClick={handleAddReport}
-                className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-md px-4 py-2 text-xs font-semibold transition-all shadow-sm w-full"
+                className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] px-4 py-2 rounded-md"
               >
                 Add Report
               </button>
             </div>
           </section>
+
+          {/* Admin Revenue & Top Clients Editors */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <AdminRevenueEditor barberId={selectedBarber.user_id} month={selectedMonth} year={reportData.year} />
+              <TopClientsEditor barberId={selectedBarber.user_id} month={selectedMonth} year={reportData.year} />
+          </div>
+
         </div>
       ) : (
-        <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-8 shadow-sm text-center text-[var(--text-muted)]">
-          Click a barber to display or add reports
-        </div>
+        <p className="text-sm text-[#bdbdbd] mt-4">Select a barber to view reports and add new reports.</p>
       )}
     </div>
   )
 
   return (
-    <>
-      {isMobile ? (
-        <>
-          {/* Render mobile menu overlay when open */}
-          {mobileMenuOpen && renderMobileMenu()}
-
-          {/* Main content */}
-          <div className={`${mobileMenuOpen ? 'pointer-events-none blur-sm' : ''}`}>
-            {content}
-          </div>
-        </>
-      ) : (
-        <Layout>{content}</Layout>
-      )}
-    </>
+    <Layout>
+      {content}
+      {mobileMenuOpen && renderMobileMenu()}
+    </Layout>
   )
 }
