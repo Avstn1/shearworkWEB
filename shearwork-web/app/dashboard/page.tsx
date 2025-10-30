@@ -178,7 +178,7 @@ export default function DashboardPage() {
         style={{ height: 'calc(100vh - 230px)' }}
       >
         {/* --- LEFT SECTION --- */}
-        <div className="flex flex-col gap-6 overflow-y-auto pr-2">
+        <div className="flex flex-col gap-6 pr-2">
           <motion.div variants={fadeInUp} custom={1}>
             <YearlyRevenueCard userId={user?.id} />
           </motion.div>
@@ -192,7 +192,7 @@ export default function DashboardPage() {
         </div>
 
         {/* --- MIDDLE SECTION --- */}
-        <div className="flex flex-col gap-6 overflow-y-auto px-2">
+        <div className="flex flex-col gap-6 px-2">
           <motion.div variants={fadeInUp} custom={4}>
             <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} />
           </motion.div>
@@ -205,7 +205,7 @@ export default function DashboardPage() {
         <motion.div
           variants={fadeInUp}
           custom={6}
-          className="flex flex-col gap-6 overflow-y-auto pl-2"
+          className="flex flex-col gap-6 pl-2"
         >
           <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
             <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Monthly Reports</h2>
