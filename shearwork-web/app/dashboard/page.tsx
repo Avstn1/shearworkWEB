@@ -17,6 +17,7 @@ import AverageTicketCard from '@/components/AverageTicketCard'
 import ServiceBreakdownChart from '@/components/ServiceBreakdownChart'
 import MarketingFunnelsChart from '@/components/MarketingFunnelsChart'
 import Navbar from '@/components/Navbar'
+import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -186,7 +187,7 @@ export default function DashboardPage() {
             <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} />
           </motion.div>
           <motion.div variants={fadeInUp} custom={3} className="flex-1">
-            <ServiceBreakdownChart />
+            <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
           </motion.div>
         </div>
 
@@ -196,7 +197,7 @@ export default function DashboardPage() {
             <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} />
           </motion.div>
           <motion.div variants={fadeInUp} custom={5} className="flex-1">
-            <MarketingFunnelsChart />
+            <MarketingFunnelsChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
           </motion.div>
         </div>
 
@@ -226,15 +227,17 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Navbar />
-      {isMobile ? (
-        <>
-          {mobileMenuOpen && renderMobileMenu()}
-          {content}
-        </>
-      ) : (
-        content
-      )}
+      <OnboardingGuard>
+        <Navbar />
+        {isMobile ? (
+          <>
+            {mobileMenuOpen && renderMobileMenu()}
+            {content}
+          </>
+        ) : (
+          content
+        )}
+      </OnboardingGuard>
     </>
   )
 }

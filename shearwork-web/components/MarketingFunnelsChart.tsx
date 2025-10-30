@@ -1,28 +1,51 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
+import { supabase } from '@/utils/supabaseClient'
 
-interface MarketingFunnelsChartProps {
-  data?: {
-    source: string
-    newClients: number
-    returning: number
-    retention: number
-    avgTicket: number
-  }[]
+export interface MarketingFunnel {
+  source: string
+  new_clients: number
+  returning_clients: number
+  retention: number
+  avg_ticket: number
+  [key: string]: string | number | undefined
 }
 
-// Default static data for now
-const defaultData = [
-  { source: 'Instagram', newClients: 11, returning: 6, retention: 55, avgTicket: 52 },
-  { source: 'Referral', newClients: 6, returning: 2, retention: 33, avgTicket: 54 },
-  { source: 'Google / Walk-In', newClients: 0, returning: 0, retention: 0, avgTicket: 0 },
-]
+interface MarketingFunnelsChartProps {
+  barberId: string
+  month: string
+  year: number
+}
 
-export default function MarketingFunnelsChart({ data = defaultData }: MarketingFunnelsChartProps) {
+export default function MarketingFunnelsChart({ barberId, month, year }: MarketingFunnelsChartProps) {
+  const [data, setData] = useState<MarketingFunnel[]>([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: funnels, error } = await supabase
+        .from('marketing_funnels')
+        .select('source, new_clients, returning_clients, retention, avg_ticket')
+        .eq('user_id', barberId)
+        .eq('report_month', month)
+        .eq('report_year', year)
+
+      if (error) {
+        console.error('Error fetching marketing funnels:', error)
+        return
+      }
+
+      setData(funnels as MarketingFunnel[])
+    }
+
+    fetchData()
+  }, [barberId, month, year])
+
+  if (data.length === 0) return <p>Loading marketing data...</p>
+
   return (
     <div
       className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col h-[340px]"
@@ -36,8 +59,8 @@ export default function MarketingFunnelsChart({ data = defaultData }: MarketingF
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="newClients" name="New Clients" fill="#82ca9d" />
-          <Bar dataKey="returning" name="Returning" fill="#8884d8" />
+          <Bar dataKey="new_clients" name="New Clients" fill="#82ca9d" />
+          <Bar dataKey="returning_clients" name="Returning" fill="#8884d8" />
         </BarChart>
       </ResponsiveContainer>
     </div>

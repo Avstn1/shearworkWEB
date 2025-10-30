@@ -5,14 +5,19 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
 import EditableAvatar from '@/components/EditableAvatar';
 
-const AVAILABLE_ROLES = ['Barber']; // Add more roles here in the future
+const ROLE_OPTIONS = [
+  { label: 'Barber (Commission)', role: 'barber', barber_type: 'commission' },
+  { label: 'Barber (Chair Rental)', role: 'barber', barber_type: 'rental' },
+  // Future roles can be added here, e.g.,
+  // { label: 'Owner', role: 'owner', barber_type: null }
+];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState(AVAILABLE_ROLES[0]); // default to first role
+  const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS[0]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -45,7 +50,13 @@ export default function OnboardingPage() {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, role, avatar_url: avatarUrl, onboarded: true })
+        .update({
+          full_name: fullName,
+          role: selectedRole.role,
+          barber_type: selectedRole.barber_type,
+          avatar_url: avatarUrl,
+          onboarded: true,
+        })
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
@@ -93,12 +104,15 @@ export default function OnboardingPage() {
         <div className="w-full">
           <label className="block mb-1 font-semibold">Role</label>
           <select
-            value={role}
-            onChange={e => setRole(e.target.value)}
+            value={selectedRole.label}
+            onChange={e => {
+              const roleObj = ROLE_OPTIONS.find(r => r.label === e.target.value);
+              if (roleObj) setSelectedRole(roleObj);
+            }}
             className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
           >
-            {AVAILABLE_ROLES.map(r => (
-              <option key={r} value={r}>{r}</option>
+            {ROLE_OPTIONS.map(r => (
+              <option key={r.label} value={r.label}>{r.label}</option>
             ))}
           </select>
         </div>

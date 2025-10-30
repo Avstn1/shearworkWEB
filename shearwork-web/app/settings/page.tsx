@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Layout from '@/components/Layout'
 import Navbar from '@/components/Navbar'
+import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 
 interface ProfileData {
   full_name: string
@@ -247,15 +248,17 @@ export default function SettingsPage() {
 
   return (
     <>
-      <Navbar/>
-      {isMobile ? (
-        <>
-          {mobileMenuOpen && renderMobileMenu()}
-          {content}
-        </>
-      ) : (
-        content
-      )}
+      <OnboardingGuard>
+        <Navbar/>
+        {isMobile ? (
+          <>
+            {mobileMenuOpen && renderMobileMenu()}
+            {content}
+          </>
+        ) : (
+          content
+        )}
+      </OnboardingGuard>
     </>
   )
 }
