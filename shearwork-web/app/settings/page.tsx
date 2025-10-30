@@ -9,6 +9,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Layout from '@/components/Layout'
+import Navbar from '@/components/Navbar'
 
 interface ProfileData {
   full_name: string
@@ -246,13 +247,14 @@ export default function SettingsPage() {
 
   return (
     <>
+      <Navbar/>
       {isMobile ? (
         <>
           {mobileMenuOpen && renderMobileMenu()}
           {content}
         </>
       ) : (
-        <Layout>{content}</Layout>
+        content
       )}
     </>
   )

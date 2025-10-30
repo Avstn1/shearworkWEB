@@ -23,7 +23,6 @@ interface Barber {
 interface ReportData {
   user_id: string
   type: 'weekly' | 'monthly'
-  weekly: boolean
   week_number: number
   month: string
   year: number
@@ -51,7 +50,6 @@ export default function AdminDashboardPage() {
   const [reportData, setReportData] = useState<ReportData>({
     user_id: '',
     type: 'weekly',
-    weekly: true,
     week_number: 1,
     month: new Date().toLocaleString('default', { month: 'long' }),
     year: new Date().getFullYear(),
@@ -65,8 +63,6 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [monthlyReportExists, setMonthlyReportExists] = useState(false)
-
-  const navLinksBase = [{ href: '/dashboard', label: 'Dashboard' }]
 
   // --- User & Profile ---
   useEffect(() => {
@@ -144,14 +140,15 @@ export default function AdminDashboardPage() {
     const payload: any = {
       user_id: selectedBarber.user_id,
       type: reportData.type,
-      weekly: reportData.type === 'weekly',
       content: reportData.content.trim(),
       year: reportData.year,
       month: reportData.month,
       created_at: new Date().toISOString(),
     }
 
-    if (reportData.type === 'weekly') payload.week_number = reportData.week_number
+    if (reportData.type === 'weekly') {
+      payload.week_number = reportData.week_number
+    }
 
     const { error } = await supabase.from('reports').insert([payload])
     if (error) return toast.error(`Error adding report: ${error.message}`)
@@ -160,7 +157,6 @@ export default function AdminDashboardPage() {
     setReportData({
       user_id: '',
       type: 'weekly',
-      weekly: true,
       week_number: 1,
       month: new Date().toLocaleString('default', { month: 'long' }),
       year: new Date().getFullYear(),
@@ -329,7 +325,6 @@ export default function AdminDashboardPage() {
                         setReportData({
                           ...reportData,
                           type: e.target.value as 'weekly' | 'monthly',
-                          weekly: e.target.value === 'weekly',
                         })
                       }
                     >

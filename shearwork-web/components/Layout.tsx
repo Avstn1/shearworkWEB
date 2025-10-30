@@ -28,7 +28,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Detect mobile
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
     handleResize()
@@ -78,11 +77,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   if (loadingRole) return <p>Loading...</p>
 
   return (
-    <div className="min-h-screen flex flex-col sm:flex-row bg-[var(--background)] text-[var(--foreground)] font-sans">
+    <div className="flex flex-col sm:flex-row min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">
       {/* Sidebar for desktop */}
       {!isMobile && (
         <aside className="w-72 p-6 flex flex-col bg-[var(--accent-2)]/90 backdrop-blur-lg text-[var(--text-bright)] shadow-2xl">
-          <Link href="/" className="text-3xl font-extrabold mb-10 text-center text-[var(--highlight)]">
+          <Link
+            href="/"
+            className="text-3xl font-extrabold mb-10 text-center text-[var(--highlight)]"
+          >
             ✂️ ShearWork
           </Link>
           <nav className="flex flex-col space-y-3 mb-6">
@@ -115,7 +117,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Top Bar */}
       {isMobile && (
-        <header className="w-full flex justify-between items-center p-4 bg-[var(--accent-2)]">
+        <header className="w-full flex justify-between items-center p-4 bg-[var(--accent-2)] flex-shrink-0">
           <h1 className="text-lg font-bold text-[var(--highlight)] truncate">
             ✂️ ShearWork
           </h1>
@@ -133,11 +135,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-50 bg-black/50 flex flex-col">
           <div className="bg-[var(--accent-2)] p-4 flex justify-between items-center">
             <span className="text-[var(--highlight)] font-bold">✂️ ShearWork</span>
-            <button onClick={() => setMobileMenuOpen(false)} className="text-[var(--text-bright)] text-xl">
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-[var(--text-bright)] text-xl"
+            >
               ✕
             </button>
           </div>
-          <nav className="flex flex-col p-4 space-y-3 bg-[var(--accent-2)]/95 h-full">
+          <nav className="flex flex-col p-4 space-y-3 bg-[var(--accent-2)]/95 flex-1 overflow-hidden">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -156,7 +161,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className="flex-1 w-full overflow-y-auto p-3 sm:p-6">
+      <main className="flex-1 w-full p-3 sm:p-6 flex flex-col min-h-0 overflow-y-auto">
         {children}
       </main>
     </div>
