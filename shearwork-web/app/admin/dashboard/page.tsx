@@ -13,6 +13,11 @@ import AdminRevenueEditor from '@/components/AdminRevenueEditor'
 import TopClientsEditor from '@/components/TopClientsEditor'
 import { Editor } from '@tinymce/tinymce-react'
 
+// NEW: admin editors you asked to integrate
+import AdminServiceBreakdownEditor from '@/components/AdminServiceBreakdownEditor'
+import AdminAverageTicketEditor from '@/components/AdminAverageTicketEditor'
+import AdminMarketingFunnelsEditor from '@/components/AdminMarketingFunnelsEditor'
+
 interface Barber {
   user_id: string
   full_name: string
@@ -407,6 +412,16 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <AdminRevenueEditor barberId={selectedBarber.user_id} month={selectedMonth} year={reportData.year} />
               <TopClientsEditor barberId={selectedBarber.user_id} month={selectedMonth} year={reportData.year} />
+            </div>
+
+            {/* Admin Tools - new editors grouped together */}
+            <div className="mt-4">
+              <h3 className="text-base font-semibold mb-3">Admin Tools</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <AdminAverageTicketEditor month={selectedMonth} barberId={selectedBarber.user_id} />
+                <AdminServiceBreakdownEditor month={selectedMonth} barberId={selectedBarber.user_id} />
+                <AdminMarketingFunnelsEditor month={selectedMonth} barberId={selectedBarber.user_id} />
+              </div>
             </div>
 
           </div>
