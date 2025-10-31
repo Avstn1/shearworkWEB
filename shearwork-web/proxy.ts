@@ -12,6 +12,7 @@ export default async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  // Allow public routes
   const isPublicRoute = ['/', '/login', '/signup', '/_next', '/api'].some(path =>
     pathname.startsWith(path)
   )
@@ -31,15 +32,13 @@ export default async function proxy(request: NextRequest) {
     const role = profile?.role?.toLowerCase()
 
     // Admins always go to /admin/dashboard
-    if (role === 'admin' || role === 'owner') {
-      if (pathname === '/' || pathname === '/dashboard') {
-        return NextResponse.redirect(new URL('/admin/dashboard', request.url))
-      }
-    } else {
-      // Normal users default
-      if (pathname === '/') {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      }
+    if ((role === 'admin' || role === 'owner') && (pathname === '/' || pathname === '/dashboard')) {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+    }
+
+    // Normal users default
+    if ((role !== 'admin' && role !== 'owner') && pathname === '/') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 

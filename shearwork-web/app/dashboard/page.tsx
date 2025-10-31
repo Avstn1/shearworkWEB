@@ -10,10 +10,18 @@ import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import Link from 'next/link'
 import SignOutButton from '@/components/SignOutButton'
+import MonthlyRevenueCard from '@/components/MonthlyRevenueCard'
+import TopClientsCard from '@/components/TopClientsCard'
+import YearlyRevenueCard from '@/components/YearlyRevenueCard'
+import AverageTicketCard from '@/components/AverageTicketCard'
+import ServiceBreakdownChart from '@/components/ServiceBreakdownChart'
+import MarketingFunnelsChart from '@/components/MarketingFunnelsChart'
+import Navbar from '@/components/Navbar'
+import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 
 const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
 const fadeInUp = {
@@ -37,12 +45,9 @@ export default function DashboardPage() {
     new Date().toLocaleString('default', { month: 'long' })
   )
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
-  const navLinksBase = [
-    { href: '/dashboard', label: 'Dashboard' },
-  ]
+  const navLinksBase = [{ href: '/dashboard', label: 'Dashboard' }]
 
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -72,7 +77,6 @@ export default function DashboardPage() {
         setLoading(false)
       }
     }
-
     fetchUserAndProfile()
   }, [])
 
@@ -90,7 +94,6 @@ export default function DashboardPage() {
       </div>
     )
 
-  // Mobile menu with blur backdrop
   const renderMobileMenu = () => {
     const navLinks = isAdmin
       ? navLinksBase.filter(link => link.href !== '/dashboard').concat({
@@ -101,7 +104,6 @@ export default function DashboardPage() {
 
     return (
       <div className="fixed inset-0 z-50 flex flex-col">
-        {/* Blur + dim backdrop */}
         <div
           className="absolute inset-0 backdrop-blur-sm bg-black/40"
           onClick={() => setMobileMenuOpen(false)}
@@ -138,110 +140,104 @@ export default function DashboardPage() {
 
   const content = (
     <motion.div
-      className={`p-6 space-y-6 text-[var(--foreground)] flex flex-col ${
-        isMobile ? 'min-h-screen overflow-y-auto' : 'h-screen'
-      }`}
+      className="min-h-screen flex flex-col p-6 text-[var(--foreground)] pt-[110px]"
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
-      <motion.div variants={fadeInUp} custom={0}>
-        {isMobile && (
-          <div className="text-[var(--highlight)] text-2xl font-bold text-center">✂️ ShearWork</div>
-        )}
-        <div className="flex justify-between items-center flex-nowrap mb-2">
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            <div className="flex flex-col truncate">
-              <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'} truncate`}>
-                Welcome back!
-              </h1>
-              <p className="text-xs text-[#bdbdbd] truncate">Here’s your weekly overview.</p>
-            </div>
+      {/* HEADER */}
+      <motion.div variants={fadeInUp} custom={0} className="mb-6">
+        <div className="flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'}`}>
+              Welcome back!
+            </h1>
+            <p className="text-xs text-[#bdbdbd]">Here’s your monthly summary.</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {profile && <UserProfile />}
-            {isMobile && (
-              <button
-                onClick={() => setMobileMenuOpen(true)}
-                className="text-2xl text-[var(--highlight)]"
-              >
-                ☰
-              </button>
-            )}
+
+          {/* Month Selector */}
+          <div className="flex items-center gap-2">
+            <h3 className="text-[#bdbdbd] font-semibold text-sm">Reports for</h3>
+            <select
+              className="bg-[#334030] rounded-md px-2 py-1 text-xs border border-[#55694b] text-white"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
           </div>
         </div>
       </motion.div>
 
-      {/* Month Selector */}
-      <motion.div
-        variants={fadeInUp}
-        custom={1}
-        className={`flex items-center gap-2 ${
-          isMobile ? 'mt-1 mb-2 text-sm' : 'mt-2 mb-4'
-        }`}
+      {/* DASHBOARD GRID */}
+      <div
+        className={`grid gap-6 ${
+          isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'
+        } overflow-hidden flex-1`}
+        style={{ height: 'calc(100vh - 230px)' }}
       >
-        <h3 className="text-[#bdbdbd] font-semibold">Reports for</h3>
-        <select
-          className="bg-[#334030] rounded-md px-2 py-1 text-xs border border-[#55694b] text-black"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-        >
-          {MONTHS.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-      </motion.div>
+        {/* --- LEFT SECTION --- */}
+        <div className="flex flex-col gap-6 pr-2">
+          <motion.div variants={fadeInUp} custom={1}>
+            <YearlyRevenueCard userId={user?.id} />
+          </motion.div>
+          <motion.div variants={fadeInUp} custom={2} className="grid grid-cols-2 gap-4">
+            <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} />
+            <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} />
+          </motion.div>
+          <motion.div variants={fadeInUp} custom={3} className="flex-1">
+            <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
+          </motion.div>
+        </div>
 
-      {/* Reports Section */}
-      <motion.div
-        variants={fadeInUp}
-        custom={6}
-        className={`grid gap-4 flex-1 min-h-0 ${
-          isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 gap-6'
-        }`}
-      >
+        {/* --- MIDDLE SECTION --- */}
+        <div className="flex flex-col gap-6 px-2">
+          <motion.div variants={fadeInUp} custom={4}>
+            <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} />
+          </motion.div>
+          <motion.div variants={fadeInUp} custom={5} className="flex-1">
+            <MarketingFunnelsChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
+          </motion.div>
+        </div>
+
+        {/* --- RIGHT SECTION --- */}
         <motion.div
           variants={fadeInUp}
-          custom={7}
-          className={`bg-[#1f1f1a] rounded-lg shadow-md ${
-            isMobile ? 'p-3' : 'p-6'
-          } flex-1 min-h-0 overflow-y-auto`}
+          custom={6}
+          className="flex flex-col gap-6 pl-2"
         >
-          <h2 className="text-[#c4d2b8] text-base font-semibold mb-2">
-            Monthly Reports
-          </h2>
-          <MonthlyReports userId={user?.id} filterMonth={selectedMonth} />
-        </motion.div>
+          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
+            <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Monthly Reports</h2>
+            <div className="flex-1">
+              <MonthlyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
+            </div>
+          </div>
 
-        <motion.div
-          variants={fadeInUp}
-          custom={8}
-          className={`bg-[#1f1f1a] rounded-lg shadow-md ${
-            isMobile ? 'p-3' : 'p-6'
-          } flex-1 min-h-0 flex flex-col`}
-        >
-          <h2 className="text-[#c4d2b8] text-base font-semibold mb-2 flex-shrink-0">
-            Weekly Reports
-          </h2>
-          <div className="overflow-y-auto flex-1">
-            <WeeklyReports userId={user?.id} filterMonth={selectedMonth} />
+          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
+            <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Weekly Reports</h2>
+            <div className="flex-1">
+              <WeeklyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
+            </div>
           </div>
         </motion.div>
-      </motion.div>
+      </div>
     </motion.div>
   )
 
   return (
     <>
-      {isMobile ? (
-        <>
-          {mobileMenuOpen && renderMobileMenu()}
-          {content}
-        </>
-      ) : (
-        // Desktop: use Layout wrapper
-        <Layout>{content}</Layout>
-      )}
+      <OnboardingGuard>
+        <Navbar />
+        {isMobile ? (
+          <>
+            {mobileMenuOpen && renderMobileMenu()}
+            {content}
+          </>
+        ) : (
+          content
+        )}
+      </OnboardingGuard>
     </>
   )
 }
