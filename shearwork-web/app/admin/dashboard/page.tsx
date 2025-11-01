@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import AdminRevenueEditor from '@/components/AdminRevenueEditor'
 import TopClientsEditor from '@/components/TopClientsEditor'
 import { Editor } from '@tinymce/tinymce-react'
+import Navbar from '@/components/Navbar'
 
 // NEW: admin editors you asked to integrate
 import AdminServiceBreakdownEditor from '@/components/AdminServiceBreakdownEditor'
@@ -202,7 +203,8 @@ export default function AdminDashboardPage() {
   const isAdmin = true
 
   return (
-    <Layout>
+    <>
+      <Navbar/>
       <div className="flex flex-col gap-5 text-[var(--foreground)] bg-[var(--background)] min-h-screen p-3 sm:p-6 overflow-y-auto">
 
         {/* Header */}
@@ -430,6 +432,6 @@ export default function AdminDashboardPage() {
         )}
 
       </div>
-    </Layout>
+    </>
   )
 }
