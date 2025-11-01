@@ -53,7 +53,7 @@ export default function ReportModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200">
+        <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 p-2 sm:p-4">
           <Suspense fallback={<p>Loading editor...</p>}>
             <TinyMCEEditor
               apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
@@ -71,6 +71,9 @@ export default function ReportModal({
                   ? 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help'
                   : false,
                 readonly: readonly ? 1 : 0,
+                iframe_attrs: {
+                  style: 'width: 100%; height: 100%; border: none;',
+                },
                 plugins:
                   'advlist autolink lists link image charmap preview anchor code fullscreen insertdatetime media table help wordcount',
                 setup: (editor: TinyMCEEditorType) => {
@@ -85,20 +88,26 @@ export default function ReportModal({
                 },
                 content_style: `
                   html, body {
+                    margin: 0;
+                    padding: 1rem;
                     width: 100%;
                     box-sizing: border-box;
                     overflow-x: hidden;
-                  }
-                  body {
+                    word-wrap: break-word;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    font-size: 16px;
+                    font-size: clamp(14px, 2vw, 16px);
                     line-height: 1.6;
                     color: #111;
-                    padding: 1rem;
-                    margin: 0;
                   }
-                  p { margin-bottom: 0.75rem; }
-                  img { max-width: 100%; height: auto; border-radius: 8px; }
+
+                  p, li { margin-bottom: 0.75rem; }
+                  img {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 8px;
+                    display: block;
+                    margin: 0 auto;
+                  }
 
                   /* Tables */
                   table {
@@ -107,32 +116,51 @@ export default function ReportModal({
                     table-layout: auto;
                     font-size: 0.9rem;
                     margin-bottom: 1rem;
+                    display: block;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
                   }
                   td, th {
                     border: 1px solid #ddd;
-                    padding: 6px;
+                    padding: 0.5rem;
+                    text-align: left;
                     word-break: break-word;
                     white-space: normal;
                   }
-                  th { font-weight: 600; background: #f9f9f9; }
 
-                  /* Mobile adjustments */
+                  /* --- Header cells fix --- */
+                  th {
+                    font-weight: 600;
+                    background: #f9f9f9;
+                    white-space: nowrap;
+                    overflow-wrap: break-word;
+                    min-width: 80px;
+                    text-overflow: ellipsis;
+                  }
+
+                  /* On smaller screens, allow wrap but keep it readable */
                   @media (max-width: 768px) {
-                    body { font-size: 14px; }
+                    th {
+                      white-space: normal;
+                      min-width: 60px;
+                      word-break: break-word;
+                      text-align: center;
+                    }
+                    body {
+                      padding: 0.75rem;
+                      font-size: 13px;
+                    }
                     td, th {
-                      font-size: 0.75rem;
                       padding: 4px;
+                      font-size: 0.75rem;
                     }
                   }
 
-                  /* Optional: make tables scrollable horizontally if too wide */
-                  table {
-                    display: block;
-                    width: 100%;
-                    overflow-x: auto;
+                  a {
+                    color: #007bff;
+                    text-decoration: underline;
+                    word-break: break-all;
                   }
-
-                  a { color: #007bff; text-decoration: underline; }
                 `,
               }}
             />
