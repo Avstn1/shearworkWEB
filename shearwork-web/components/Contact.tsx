@@ -38,7 +38,7 @@ export default function Contact() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
         <a
-          href="mailto:trackingvalid@gmail.com?subject=Barbershop Inquiry&body=Hi!%20I’d%20like%20to%20learn%20more%20about%20ShearWork."
+          href="mailto:trackingvalid@gmail.com?subject=Barber Stats Inquiry&body=Hi!%20I’d%20like%20to%20learn%20more%20about%20ShearWork."
           className="inline-block bg-[var(--highlight)] text-[var(--accent-4)] font-semibold text-lg px-10 py-4 rounded-full
                      hover:scale-105 hover:shadow-lg transition-transform duration-300"
         >
