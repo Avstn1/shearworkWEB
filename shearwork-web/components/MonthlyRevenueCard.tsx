@@ -115,7 +115,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
 
       <div className="flex-1 flex items-center">
         <p
-          className="text-3xl md:text-3xl sm:text-2xl font-bold text-[#F5E6C5] truncate"
+          className="text-3xl md:text-3xl sm:text-2xl font-bold text-[#F5E6C5]"
         >
           {loading
             ? 'Loading...'
