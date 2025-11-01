@@ -13,8 +13,6 @@ import AdminRevenueEditor from '@/components/AdminRevenueEditor'
 import TopClientsEditor from '@/components/TopClientsEditor'
 import { Editor } from '@tinymce/tinymce-react'
 import Navbar from '@/components/Navbar'
-
-// NEW: admin editors you asked to integrate
 import AdminServiceBreakdownEditor from '@/components/AdminServiceBreakdownEditor'
 import AdminAverageTicketEditor from '@/components/AdminAverageTicketEditor'
 import AdminMarketingFunnelsEditor from '@/components/AdminMarketingFunnelsEditor'
@@ -36,8 +34,8 @@ interface ReportData {
 }
 
 const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
 const ITEMS_PER_PAGE = 6
@@ -70,6 +68,9 @@ export default function AdminDashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [monthlyReportExists, setMonthlyReportExists] = useState(false)
 
+  // 🧭 New: tab state (added 'addReport')
+  const [activeTab, setActiveTab] = useState<'revenue' | 'clients' | 'ticket' | 'breakdown' | 'funnels' | 'addReport'>('addReport')
+
   // --- User & Profile ---
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -97,7 +98,6 @@ export default function AdminDashboardPage() {
         toast.error('Failed to fetch user profile.')
       }
     }
-
     fetchUserAndProfile()
   }, [router])
 
@@ -185,7 +185,6 @@ export default function AdminDashboardPage() {
           .eq('month', selectedMonth)
           .eq('year', reportData.year)
           .limit(1)
-
         if (error && error.code !== 'PGRST116') throw error
         setMonthlyReportExists(Array.isArray(reports) && reports.length > 0)
       } catch (err) {
@@ -193,7 +192,6 @@ export default function AdminDashboardPage() {
         setMonthlyReportExists(false)
       }
     }
-
     checkMonthlyReport()
   }, [selectedBarber, selectedMonth, reportData.year])
 
@@ -204,7 +202,7 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <Navbar/>
+      <Navbar />
       <div className="flex flex-col gap-5 text-[var(--foreground)] bg-[var(--background)] min-h-screen p-3 sm:p-6 overflow-y-auto">
 
         {/* Header */}
@@ -212,9 +210,7 @@ export default function AdminDashboardPage() {
           <h1 className="text-2xl font-semibold text-[var(--highlight)] truncate flex-1 min-w-0">
             Admin Dashboard
           </h1>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {profile && <UserProfile />}
-          </div>
+          {profile && <UserProfile />}
         </div>
 
         {/* Search + Month Selector */}
@@ -249,11 +245,10 @@ export default function AdminDashboardPage() {
             {paginatedBarbers.map((b) => (
               <div
                 key={b.user_id}
-                onClick={() =>
-                  setSelectedBarber(prev => prev?.user_id === b.user_id ? null : b)
-                }
-                className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 rounded-xl flex flex-col items-center justify-center transition-transform hover:scale-105 w-24 sm:w-32
-                  ${selectedBarber?.user_id === b.user_id ? 'ring-2 ring-[var(--accent-3)]' : ''}`}
+                onClick={() => setSelectedBarber(prev => prev?.user_id === b.user_id ? null : b)}
+                className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 rounded-xl flex flex-col items-center justify-center transition-transform hover:scale-105 w-24 sm:w-32 ${
+                  selectedBarber?.user_id === b.user_id ? 'ring-2 ring-[var(--accent-3)]' : ''
+                }`}
               >
                 {b.avatar_url ? (
                   <img src={b.avatar_url} alt={b.full_name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-full mb-1 object-cover border border-[var(--accent-3)]" />
@@ -266,140 +261,101 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-4 gap-2 text-sm flex-wrap">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded bg-[var(--accent-2)] text-[var(--text-bright)] disabled:opacity-40 hover:bg-[var(--accent-3)]"
-              >
-                Prev
-              </button>
-              <span className="px-2 py-1">{currentPage}/{totalPages}</span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded bg-[var(--accent-2)] text-[var(--text-bright)] disabled:opacity-40 hover:bg-[var(--accent-3)]"
-              >
-                Next
-              </button>
-            </div>
-          )}
         </section>
 
-        {/* Reports & Add Report */}
+        {/* Tabs for report & admin tools */}
         {selectedBarber ? (
-          <div className="flex flex-col gap-6">
+          <>
+            <div className="flex gap-3 border-b border-[var(--accent-2)]/50 pb-2 mb-3 flex-wrap">
+              {[
+                { key: 'addReport', label: 'Add Report' },
+                { key: 'revenue', label: 'Revenue' },
+                { key: 'clients', label: 'Top Clients' },
+                { key: 'ticket', label: 'Average Ticket' },
+                { key: 'breakdown', label: 'Service Breakdown' },
+                { key: 'funnels', label: 'Marketing Funnels' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                  className={`px-3 py-1.5 rounded-md text-sm ${
+                    activeTab === tab.key
+                      ? 'bg-[var(--accent-3)] text-[var(--text-bright)]'
+                      : 'bg-transparent hover:bg-[var(--accent-1)]/30'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-            <div className="flex flex-col xl:flex-row gap-4">
-
-              {/* Reports */}
-              <div className="flex flex-col gap-4 flex-1">
-                <div className="bg-[var(--accent-4)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
-                  <h3 className="text-base font-semibold mb-2">Monthly Reports</h3>
-                  <MonthlyReports
-                    userId={selectedBarber.user_id}
-                    filterMonth={selectedMonth}
-                    isAdmin={isAdmin}
-                    refresh={refreshReports}
-                  />
-                </div>
-
-                <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
-                  <h3 className="text-base font-semibold mb-2">Weekly Reports</h3>
-                  <WeeklyReports
-                    userId={selectedBarber.user_id}
-                    filterMonth={selectedMonth}
-                    isAdmin={isAdmin}
-                    refresh={refreshReports}
-                  />
-                </div>
-              </div>
-
-              {/* Add Report */}
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm flex-1 min-w-0">
-                <h3 className="text-base font-semibold mb-3">Add Report for {selectedBarber.full_name}</h3>
-                <div className="flex flex-col gap-2">
-
-                  {/* Report Type */}
-                  <div className="flex gap-2 flex-wrap">
-                    <select
-                      className="bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-2 py-1 text-xs"
-                      value={reportData.type}
-                      onChange={(e) =>
-                        setReportData({
-                          ...reportData,
-                          type: e.target.value as 'weekly' | 'monthly',
-                        })
-                      }
-                    >
-                      <option value="weekly" className="text-black">Weekly</option>
-                      <option value="monthly" className="text-black">Monthly</option>
-                    </select>
-
-                    {reportData.type === 'weekly' && (
-                      <select
-                        className="bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-2 py-1 text-xs"
-                        value={reportData.week_number}
-                        onChange={(e) =>
-                          setReportData({ ...reportData, week_number: Number(e.target.value) })
-                        }
-                      >
-                        {[1,2,3,4,5].map((week) => (
-                          <option key={week} value={week}>Week {week}</option>
-                        ))}
-                      </select>
-                    )}
-
-                    <select
-                      className="bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-2 py-1 text-xs"
-                      value={reportData.month}
-                      onChange={(e) => setReportData({ ...reportData, month: e.target.value })}
-                    >
-                      {MONTHS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-
-                    <input
-                      type="number"
-                      placeholder="Year"
-                      className="bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] rounded-md px-2 py-1 text-xs"
-                      value={reportData.year}
-                      onChange={(e) => setReportData({ ...reportData, year: Number(e.target.value) })}
+            {activeTab === 'addReport' && (
+              <div className="flex flex-col gap-6">
+                {/* Reports row (Monthly + Weekly side-by-side) */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <div className="bg-[var(--accent-4)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
+                    <h3 className="text-base font-semibold mb-2">Monthly Reports</h3>
+                    <MonthlyReports
+                      userId={selectedBarber.user_id}
+                      filterMonth={selectedMonth}
+                      isAdmin={isAdmin}
+                      refresh={refreshReports}
                     />
                   </div>
 
-                  {/* TinyMCE Editor */}
+                  <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
+                    <h3 className="text-base font-semibold mb-2">Weekly Reports</h3>
+                    <WeeklyReports
+                      userId={selectedBarber.user_id}
+                      filterMonth={selectedMonth}
+                      isAdmin={isAdmin}
+                      refresh={refreshReports}
+                    />
+                  </div>
+                </div>
+
+                {/* Add Report section (below the reports) */}
+                <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
+                  <h3 className="text-base font-semibold mb-3">
+                    Add Report for {selectedBarber.full_name}
+                  </h3>
                   <Editor
                     apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
                     value={reportData.content}
-                    onEditorChange={(newValue) => setReportData({ ...reportData, content: newValue })}
+                    onEditorChange={(newValue) =>
+                      setReportData({ ...reportData, content: newValue })
+                    }
                     init={{
                       height: 300,
-                      width: '100%',
                       menubar: false,
                       plugins: [
-                        'advlist','autolink','lists','link','charmap','preview','anchor',
-                        'code','fullscreen','insertdatetime','media','table','help','wordcount'
+                        'advlist',
+                        'autolink',
+                        'lists',
+                        'link',
+                        'charmap',
+                        'preview',
+                        'anchor',
+                        'code',
+                        'fullscreen',
+                        'insertdatetime',
+                        'media',
+                        'table',
+                        'help',
+                        'wordcount',
                       ],
                       toolbar:
                         'undo redo | formatselect | bold italic backcolor | ' +
                         'alignleft aligncenter alignright alignjustify | ' +
                         'bullist numlist outdent indent | removeformat | help',
                       content_style: `
-                        body { 
-                          font-family:Helvetica,Arial,sans-serif; 
-                          font-size:14px; 
-                          color:#F1F5E9;
-                          background-color:#1f2420;
-                        }
-                      `
+                        body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color:#F1F5E9; background-color:#1f2420; }
+                        table { width:100%; border-collapse:collapse; }
+                        th, td { border:1px solid #444; padding:6px; }
+                        th { background:#333; white-space:nowrap; }
+                      `,
                     }}
                   />
-
                   <button
                     onClick={handleAddReport}
                     className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] px-4 py-2 rounded-md mt-2"
@@ -408,29 +364,28 @@ export default function AdminDashboardPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Admin Revenue & Top Clients Editors */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+            {activeTab === 'revenue' && (
               <AdminRevenueEditor barberId={selectedBarber.user_id} month={selectedMonth} year={reportData.year} />
+            )}
+            {activeTab === 'clients' && (
               <TopClientsEditor barberId={selectedBarber.user_id} month={selectedMonth} year={reportData.year} />
-            </div>
-
-            {/* Admin Tools - new editors grouped together */}
-            <div className="mt-4">
-              <h3 className="text-base font-semibold mb-3">Admin Tools</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <AdminAverageTicketEditor month={selectedMonth} barberId={selectedBarber.user_id} />
-                <AdminServiceBreakdownEditor month={selectedMonth} barberId={selectedBarber.user_id} />
-                <AdminMarketingFunnelsEditor month={selectedMonth} barberId={selectedBarber.user_id} />
-              </div>
-            </div>
-
-          </div>
+            )}
+            {activeTab === 'ticket' && (
+              <AdminAverageTicketEditor month={selectedMonth} barberId={selectedBarber.user_id} />
+            )}
+            {activeTab === 'breakdown' && (
+              <AdminServiceBreakdownEditor month={selectedMonth} barberId={selectedBarber.user_id} />
+            )}
+            {activeTab === 'funnels' && (
+              <AdminMarketingFunnelsEditor month={selectedMonth} barberId={selectedBarber.user_id} />
+            )}
+          </>
         ) : (
           <p className="text-sm text-[#bdbdbd] mt-4">Select a barber to view reports and add new reports.</p>
         )}
-
       </div>
     </>
   )
