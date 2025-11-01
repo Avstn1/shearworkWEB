@@ -9,6 +9,17 @@ interface Props {
   month: string
 }
 
+// Numeric input handler
+const handleNumericChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  onChange: (val: number | '') => void
+) => {
+  const value = e.target.value
+  if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+    onChange(value === '' ? '' : Number(value))
+  }
+}
+
 export default function AdminAverageTicketEditor({ barberId, month }: Props) {
   const [avgTicket, setAvgTicket] = useState<number | ''>('')
   const [loading, setLoading] = useState(false)
@@ -55,9 +66,10 @@ export default function AdminAverageTicketEditor({ barberId, month }: Props) {
       <h3 className="text-[#E8EDC7] font-semibold mb-3 text-lg">💵 Average Ticket Editor</h3>
       <div className="flex items-center gap-3 mb-3">
         <input
-          type="number"
+          type="text"
+          inputMode="decimal"
           value={avgTicket}
-          onChange={e => setAvgTicket(e.target.value === '' ? '' : Number(e.target.value))}
+          onChange={e => handleNumericChange(e, setAvgTicket)}
           placeholder="Avg ticket"
           className="p-2 rounded bg-[#2b2b2b] text-white w-32"
         />

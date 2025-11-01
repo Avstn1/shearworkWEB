@@ -12,10 +12,21 @@ interface Props {
 interface FunnelRow {
   id?: number | string
   source: string
-  new_clients: number
-  returning_clients: number
+  new_clients: number | ''
+  returning_clients: number | ''
   retention: number
   isNew?: boolean
+}
+
+// Numeric input handler
+const handleNumericChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  onChange: (val: number | '') => void
+) => {
+  const value = e.target.value
+  if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+    onChange(value === '' ? '' : Number(value))
+  }
 }
 
 export default function AdminMarketingFunnelsEditor({ barberId, month }: Props) {
@@ -51,17 +62,16 @@ export default function AdminMarketingFunnelsEditor({ barberId, month }: Props) 
     if (!barberId) return toast.error('Missing barber ID.')
     setSavingId(row.id ?? null)
 
-    const retention =
-      row.new_clients + row.returning_clients > 0
-        ? Math.round((row.returning_clients / (row.new_clients + row.returning_clients)) * 100)
-        : 0
+    const newClients = row.new_clients || 0
+    const returningClients = row.returning_clients || 0
+    const retention = newClients > 0 ? Math.round((returningClients / newClients) * 100) : 0
 
     if (row.isNew) {
       const payload = {
         user_id: barberId,
         source: row.source,
-        new_clients: row.new_clients,
-        returning_clients: row.returning_clients,
+        new_clients: row.new_clients || 0,
+        returning_clients: row.returning_clients || 0,
         retention,
         report_month: month,
         report_year: new Date().getFullYear(),
@@ -91,8 +101,8 @@ export default function AdminMarketingFunnelsEditor({ barberId, month }: Props) 
       .from('marketing_funnels')
       .update({
         source: row.source,
-        new_clients: row.new_clients,
-        returning_clients: row.returning_clients,
+        new_clients: row.new_clients || 0,
+        returning_clients: row.returning_clients || 0,
         retention,
       })
       .eq('id', row.id)
@@ -133,8 +143,8 @@ export default function AdminMarketingFunnelsEditor({ barberId, month }: Props) 
     const newRow: FunnelRow = {
       id: tempId,
       source: '',
-      new_clients: 0,
-      returning_clients: 0,
+      new_clients: '',
+      returning_clients: '',
       retention: 0,
       isNew: true,
     }
@@ -173,47 +183,32 @@ export default function AdminMarketingFunnelsEditor({ barberId, month }: Props) 
                 className="p-2 rounded bg-[#2b2b2b] text-white flex-[4] min-w-2"
                 value={row.source}
                 onChange={e => setRows(prev => prev.map(r => r.id === row.id ? { ...r, source: e.target.value } : r))}
-                placeholder="Source (e.g., Instagram, Referral, Ads)"
+                placeholder="Source name"
               />
-
-              <div className="flex flex-col w-full md:w-16 max-w-14">
-                <label className="text-xs text-gray-400 md:hidden mb-1">New</label>
-                <input
-                  className="p-2 rounded bg-[#2b2b2b] text-white text-center"
-                  type="number"
-                  value={row.new_clients}
-                  onChange={e => setRows(prev => prev.map(r => r.id === row.id ? { ...r, new_clients: Number(e.target.value) } : r))}
-                  placeholder="New"
-                />
-              </div>
-
-              <div className="flex flex-col w-full md:w-20 max-w-14">
-                <label className="text-xs text-gray-400 md:hidden mb-1">Returning</label>
-                <input
-                  className="p-2 rounded bg-[#2b2b2b] text-white text-center"
-                  type="number"
-                  value={row.returning_clients}
-                  onChange={e => setRows(prev => prev.map(r => r.id === row.id ? { ...r, returning_clients: Number(e.target.value) } : r))}
-                  placeholder="Returning"
-                />
-              </div>
-
-              <div className="text-gray-400 text-center md:w-20 md:block max-w-10">
-                <label className="text-xs text-gray-400 md:hidden block mb-1">Retention %</label>
-                <div className="p-2 bg-[#2b2b2b] rounded">{row.retention ? `${row.retention}%` : '-'}</div>
-              </div>
-
-              <div className="flex gap-2 justify-end w-full md:w-32 mt-2 md:mt-0">
+              <input
+                className="p-2 rounded bg-[#2b2b2b] text-white w-16 text-center"
+                value={row.new_clients}
+                onChange={e => handleNumericChange(e, val => setRows(prev => prev.map(r => r.id === row.id ? { ...r, new_clients: val } : r)))}
+                placeholder="0"
+              />
+              <input
+                className="p-2 rounded bg-[#2b2b2b] text-white w-20 text-center"
+                value={row.returning_clients}
+                onChange={e => handleNumericChange(e, val => setRows(prev => prev.map(r => r.id === row.id ? { ...r, returning_clients: val } : r)))}
+                placeholder="0"
+              />
+              <div className="w-20 text-center">{row.retention}%</div>
+              <div className="flex gap-2">
                 <button
                   onClick={() => handleSave(row)}
                   disabled={savingId === row.id}
-                  className="px-3 py-1 bg-[#445539] rounded hover:bg-[#4d6544] text-white text-sm"
+                  className="px-2 py-1 bg-[#445539] rounded hover:bg-[#4d6544] text-white text-xs"
                 >
-                  {savingId === row.id ? 'Saving...' : row.isNew ? 'Save New' : 'Save'}
+                  {savingId === row.id ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={() => handleDelete(row.id, row.isNew)}
-                  className="px-3 py-1 bg-[#7b2b2b] rounded hover:bg-[#8b3939] text-white text-sm"
+                  className="px-2 py-1 bg-red-600 rounded hover:bg-red-700 text-white text-xs"
                 >
                   Delete
                 </button>

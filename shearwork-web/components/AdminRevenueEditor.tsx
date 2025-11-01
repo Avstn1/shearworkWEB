@@ -11,7 +11,7 @@ interface AdminRevenueEditorProps {
 }
 
 export default function AdminRevenueEditor({ barberId, month, year }: AdminRevenueEditorProps) {
-  const [revenue, setRevenue] = useState<number>(0)
+  const [revenue, setRevenue] = useState<string>('') // ← store as string for empty support
   const [loading, setLoading] = useState(true)
   const [monthlyReportExists, setMonthlyReportExists] = useState<boolean>(false)
 
@@ -32,7 +32,7 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
         const exists = Array.isArray(reports) && reports.length > 0
         setMonthlyReportExists(exists)
 
-        if (exists) setRevenue(reports![0].total_revenue ?? 0)
+        if (exists) setRevenue(reports![0].total_revenue?.toString() ?? '')
       } catch (err) {
         console.error(err)
         toast.error('Failed to load monthly revenue.')
@@ -47,9 +47,11 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
   const handleUpdate = async () => {
     if (!monthlyReportExists) return toast.error('No monthly report exists for this month.')
 
+    const num = revenue === '' ? 0 : Number(revenue)
+
     const { error } = await supabase
       .from('reports')
-      .update({ total_revenue: revenue })
+      .update({ total_revenue: num })
       .eq('user_id', barberId)
       .eq('type', 'monthly')
       .eq('month', month)
@@ -59,17 +61,26 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
     toast.success('Revenue updated successfully!')
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    // Allow empty string or digits only
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setRevenue(value)
+    }
+  }
+
   if (loading) return <p>Loading revenue...</p>
-  if (!monthlyReportExists) return null
 
   return (
     <div className="bg-[#1f1f1a] text-white rounded-xl p-4 shadow-md">
       <h3 className="text-lg font-semibold mb-2">Edit Monthly Revenue</h3>
       <input
-        type="number"
+        type="text" // ← text instead of number
+        inputMode="decimal" // shows numeric keyboard on mobile
         value={revenue}
-        onChange={(e) => setRevenue(Number(e.target.value))}
-        className="w-full bg-[#2f3a2d] text-[#F1F5E9] border border-[#55694b] rounded-md p-2 mb-3"
+        onChange={handleChange}
+        placeholder="Enter revenue..."
+        className="w-full bg-[#2f3a2d] text-[#F1F5E9] border border-[#55694b] rounded-md p-2 mb-3 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <button
         onClick={handleUpdate}

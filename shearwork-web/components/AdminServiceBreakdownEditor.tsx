@@ -12,8 +12,19 @@ interface Props {
 interface ServiceRow {
   id?: number | string
   service_name: string
-  bookings: number
+  bookings: number | ''
   isNew?: boolean
+}
+
+// Numeric input handler
+const handleNumericChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  onChange: (val: number | '') => void
+) => {
+  const value = e.target.value
+  if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+    onChange(value === '' ? '' : Number(value))
+  }
 }
 
 export default function AdminServiceBreakdownEditor({ barberId, month }: Props) {
@@ -48,16 +59,16 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
     if (!barberId) return toast.error('Missing barber ID.')
     setSavingId(row.id ?? null)
 
-    if (row.isNew) {
-      const payload = {
-        user_id: barberId,
-        service_name: row.service_name,
-        bookings: row.bookings,
-        report_month: month,
-        report_year: new Date().getFullYear(),
-        created_at: new Date().toISOString(),
-      }
+    const payload = {
+      user_id: barberId,
+      service_name: row.service_name,
+      bookings: row.bookings || 0,
+      report_month: month,
+      report_year: new Date().getFullYear(),
+      created_at: new Date().toISOString(),
+    }
 
+    if (row.isNew) {
       const { data, error } = await supabase
         .from('service_bookings')
         .insert([payload])
@@ -65,10 +76,8 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
         .maybeSingle()
 
       setSavingId(null)
-      if (error) {
-        console.error('Insert failed:', error)
-        toast.error('Failed to save new service.')
-      } else if (data) {
+      if (error) toast.error('Failed to save new service.')
+      else if (data) {
         toast.success('Service saved!')
         setRows(prev =>
           prev.map(r => (r.id === row.id ? { ...data, isNew: false } : r))
@@ -79,7 +88,7 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
 
     const { error } = await supabase
       .from('service_bookings')
-      .update({ service_name: row.service_name, bookings: row.bookings })
+      .update({ service_name: row.service_name, bookings: row.bookings || 0 })
       .eq('id', row.id)
 
     setSavingId(null)
@@ -112,7 +121,7 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
     const newRow: ServiceRow = {
       id: tempId,
       service_name: '',
-      bookings: 0,
+      bookings: '',
       isNew: true,
     }
     setRows(prev => [...prev, newRow])
@@ -141,14 +150,19 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
               <input
                 type="text"
                 value={row.service_name}
-                onChange={e => setRows(prev => prev.map(r => r.id === row.id ? { ...r, service_name: e.target.value } : r))}
+                onChange={e => setRows(prev =>
+                  prev.map(r => r.id === row.id ? { ...r, service_name: e.target.value } : r)
+                )}
                 placeholder="Service Name"
                 className="p-2 rounded bg-[#2b2b2b] text-white w-40"
               />
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={row.bookings}
-                onChange={e => setRows(prev => prev.map(r => r.id === row.id ? { ...r, bookings: Number(e.target.value) } : r))}
+                onChange={e => handleNumericChange(e, val =>
+                  setRows(prev => prev.map(r => r.id === row.id ? { ...r, bookings: val } : r))
+                )}
                 placeholder="Bookings"
                 className="p-2 rounded bg-[#2b2b2b] text-white w-24"
               />

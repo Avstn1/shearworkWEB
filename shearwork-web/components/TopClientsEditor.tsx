@@ -6,9 +6,10 @@ import toast from 'react-hot-toast'
 
 interface TopClient {
   id?: string
-  rank: number
+  rank: number | ''
   client_name: string
-  total_paid: number
+  total_paid: number | ''
+  num_visits: number | ''
   notes: string
 }
 
@@ -18,15 +19,24 @@ interface TopClientsEditorProps {
   year: number
 }
 
+// Numeric input handler
+const handleNumericChange = (
+  e: React.ChangeEvent<HTMLInputElement>,
+  onChange: (val: number | '') => void
+) => {
+  const value = e.target.value
+  if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+    onChange(value === '' ? '' : Number(value))
+  }
+}
+
 export default function TopClientsEditor({ barberId, month, year }: TopClientsEditorProps) {
   const [clients, setClients] = useState<TopClient[]>([])
-  const [originalClients, setOriginalClients] = useState<TopClient[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [reportId, setReportId] = useState<string | null>(null)
   const [monthlyReportExists, setMonthlyReportExists] = useState<boolean>(false)
 
-  // Fetch report and existing top clients
   useEffect(() => {
     if (!barberId) return
 
@@ -59,8 +69,14 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
 
         if (topClientsError && topClientsError.code !== 'PGRST116') throw topClientsError
         if (topClients) {
-          setClients(topClients)
-          setOriginalClients(topClients)
+          setClients(
+            topClients.map(c => ({
+              ...c,
+              num_visits: c.num_visits ?? 0,
+              total_paid: c.total_paid ?? 0,
+              rank: c.rank ?? 0,
+            }))
+          )
         }
       } catch (err) {
         console.error('Error loading top clients:', err)
@@ -73,12 +89,13 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
     fetchReportAndClients()
   }, [barberId, month, year])
 
-  // Add new client
   const handleAddClient = () => {
-    setClients(prev => [...prev, { rank: prev.length + 1, client_name: '', total_paid: 0, notes: '' }])
+    setClients(prev => [
+      ...prev,
+      { rank: '', client_name: '', total_paid: '', num_visits: '', notes: '' },
+    ])
   }
 
-  // Remove client locally and delete from DB if needed
   const handleRemoveClient = async (index: number) => {
     const clientToRemove = clients[index]
 
@@ -98,12 +115,11 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
       }
     }
 
-    // Remove locally in any case
     setClients(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleChange = (index: number, field: keyof TopClient, value: any) => {
-    setClients(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
+    setClients(prev => prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)))
   }
 
   const handleSave = async () => {
@@ -115,16 +131,15 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
     setSaving(true)
 
     try {
-      const upsertData = clients.map(c => {
-        const base = {
-          report_id: reportId,
-          rank: c.rank,
-          client_name: c.client_name,
-          total_paid: c.total_paid,
-          notes: c.notes,
-        }
-        return c.id ? { id: c.id, ...base } : { id: crypto.randomUUID(), ...base } // generate id for new
-      })
+      const upsertData = clients.map(c => ({
+        id: c.id ?? crypto.randomUUID(),
+        report_id: reportId,
+        rank: c.rank === '' ? 0 : c.rank,
+        client_name: c.client_name,
+        total_paid: c.total_paid === '' ? 0 : c.total_paid,
+        num_visits: c.num_visits === '' ? 0 : c.num_visits,
+        notes: c.notes,
+      }))
 
       const { error } = await supabase
         .from('report_top_clients')
@@ -132,7 +147,6 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
 
       if (error) throw error
       toast.success('Top clients saved!')
-      setOriginalClients([...clients]) // update snapshot
     } catch (err) {
       console.error('Error saving top clients:', err)
       toast.error('Failed to save top clients.')
@@ -142,46 +156,73 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
   }
 
   if (loading) return <p>Loading top clients...</p>
-  if (!monthlyReportExists) return null
 
   return (
     <div className="bg-[var(--accent-2)]/20 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
       <h3 className="text-base font-semibold mb-3">Top Clients</h3>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         {clients.map((client, idx) => (
-          <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-            <input
-              type="number"
-              placeholder="Rank"
-              className="col-span-1 bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-              value={client.rank}
-              onChange={e => handleChange(idx, 'rank', Number(e.target.value))}
-            />
-            <input
-              type="text"
-              placeholder="Client Name"
-              className="col-span-4 bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-              value={client.client_name}
-              onChange={e => handleChange(idx, 'client_name', e.target.value)}
-            />
-            <input
-              type="number"
-              placeholder="Total Paid"
-              className="col-span-2 bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-              value={client.total_paid}
-              onChange={e => handleChange(idx, 'total_paid', Number(e.target.value))}
-            />
-            <input
-              type="text"
-              placeholder="Notes"
-              className="col-span-4 bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-              value={client.notes}
-              onChange={e => handleChange(idx, 'notes', e.target.value)}
-            />
+          <div
+            key={idx}
+            className="grid grid-cols-12 gap-2 items-center bg-[var(--bg-light)]/10 rounded-lg p-2 border border-[var(--accent-3)]/20"
+          >
+            <div className="col-span-1 flex flex-col">
+              <label className="text-[10px] text-gray-400 mb-0.5">Rank</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
+                value={client.rank}
+                onChange={e => handleNumericChange(e, val => handleChange(idx, 'rank', val))}
+              />
+            </div>
+
+            <div className="col-span-3 flex flex-col">
+              <label className="text-[10px] text-gray-400 mb-0.5">Client Name</label>
+              <input
+                type="text"
+                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
+                value={client.client_name}
+                onChange={e => handleChange(idx, 'client_name', e.target.value)}
+              />
+            </div>
+
+            <div className="col-span-2 flex flex-col">
+              <label className="text-[10px] text-gray-400 mb-0.5">Total Paid ($)</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
+                value={client.total_paid}
+                onChange={e => handleNumericChange(e, val => handleChange(idx, 'total_paid', val))}
+              />
+            </div>
+
+            <div className="col-span-2 flex flex-col">
+              <label className="text-[10px] text-gray-400 mb-0.5"># of Visits</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
+                value={client.num_visits}
+                onChange={e => handleNumericChange(e, val => handleChange(idx, 'num_visits', val))}
+              />
+            </div>
+
+            <div className="col-span-3 flex flex-col">
+              <label className="text-[10px] text-gray-400 mb-0.5">Notes</label>
+              <input
+                type="text"
+                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
+                value={client.notes}
+                onChange={e => handleChange(idx, 'notes', e.target.value)}
+              />
+            </div>
+
             <button
               onClick={() => handleRemoveClient(idx)}
-              className="col-span-1 bg-red-600 hover:bg-red-700 text-white rounded px-2 py-1 text-xs"
+              className="col-span-1 bg-red-600 hover:bg-red-700 text-white rounded px-2 py-1 text-xs mt-4"
             >
               ✕
             </button>
