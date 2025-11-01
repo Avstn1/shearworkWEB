@@ -35,17 +35,17 @@ export default function ReportModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fadeUp">
       <div
-        className="bg-white text-black rounded-2xl shadow-2xl p-6 
+        className="bg-white text-black rounded-2xl shadow-2xl p-4 sm:p-6 
                    w-[95%] max-w-5xl h-[95vh] flex flex-col border border-gray-200"
       >
         {/* Header */}
-        <div className="shrink-0">
+        <div className="shrink-0 mb-3">
           <h2 className="text-2xl sm:text-3xl font-bold mb-1 text-gray-900 truncate">
             {isWeekly
               ? `Week ${report.week_number}`
               : `Monthly Report: ${report.month} ${report.year || ''}`}
           </h2>
-          <p className="text-sm text-gray-500 mb-4 truncate">
+          <p className="text-sm text-gray-500 truncate">
             {isWeekly
               ? `${report.month} ${report.year || ''}`
               : `Summary for ${report.month} ${report.year || ''}`}
@@ -53,7 +53,7 @@ export default function ReportModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-gray-200">
+        <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200">
           <Suspense fallback={<p>Loading editor...</p>}>
             <TinyMCEEditor
               apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
@@ -64,7 +64,7 @@ export default function ReportModal({
               }
               init={{
                 license_key: 'gpl',
-                height: '100%', // ✅ fill remaining height perfectly
+                height: '100%',
                 resize: false,
                 menubar: !readonly,
                 toolbar: !readonly
@@ -85,41 +85,47 @@ export default function ReportModal({
                 },
                 content_style: `
                   html, body {
-                    overflow-x: hidden !important;
                     width: 100%;
-                    max-width: 100%;
                     box-sizing: border-box;
+                    overflow-x: hidden;
                   }
                   body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: 16px;
                     line-height: 1.6;
                     color: #111;
                     padding: 1rem;
                     margin: 0;
-                    word-break: normal !important;
-                    overflow-wrap: break-word !important;
-                    white-space: normal !important;
                   }
                   p { margin-bottom: 0.75rem; }
                   img { max-width: 100%; height: auto; border-radius: 8px; }
+
+                  /* Tables default font size */
                   table {
                     border-collapse: collapse;
                     width: 100%;
-                    table-layout: fixed;
-                    word-break: normal !important;
-                    overflow-wrap: break-word !important;
-                    white-space: normal !important;
+                    table-layout: auto;
+                    font-size: 0.85rem; /* smaller default font */
                   }
                   td, th {
                     border: 1px solid #ddd;
-                    padding: 8px;
-                    word-break: normal !important;
-                    overflow-wrap: break-word !important;
-                    white-space: normal !important;
+                    padding: 6px;
+                    word-break: break-word;
+                    white-space: normal;
+                    font-size: 0.85rem; /* match table font */
                   }
                   th { font-weight: 600; background: #f9f9f9; }
+
                   a { color: #007bff; text-decoration: underline; }
+
+                  /* Mobile adjustments */
+                  @media (max-width: 768px) {
+                    body { font-size: 14px; }
+                    td, th {
+                      font-size: 0.75rem; /* smaller font on mobile */
+                      padding: 4px;
+                    }
+                  }
                 `,
               }}
             />

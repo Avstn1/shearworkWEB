@@ -27,7 +27,7 @@ export default function Contact() {
         transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
         className="max-w-2xl mx-auto mb-10 text-lg text-[var(--text-subtle)]"
       >
-        Let’s help you manage your barbershop effortlessly. Contact us for a free demo or onboarding assistance.
+        Let’s help you manage your barber business effortlessly. Contact us for a free demo or onboarding assistance.
       </motion.p>
 
       {/* Contact Button — opens email client */}
