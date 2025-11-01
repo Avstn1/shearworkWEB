@@ -6,6 +6,9 @@ import {
 } from 'recharts'
 import { supabase } from '@/utils/supabaseClient'
 
+// 💈 Theme colors matching your app
+const COLORS = ['#E8EDC7', '#9AC8CD', '#B19470', '#748E63', '#F1EEDC']
+
 export interface MarketingFunnel {
   source: string
   new_clients: number
@@ -48,19 +51,54 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col h-[340px]"
-      style={{ background: 'var(--card-revenue-bg)' }}
+      className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col"
+      style={{
+        background: 'var(--card-revenue-bg)',
+        height: '360px',
+        overflow: 'visible',
+      }}
     >
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-4">📣 Marketing Funnels</h2>
+      <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
+        📣 Marketing Funnels
+      </h2>
+
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="source" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="new_clients" name="New Clients" fill="#82ca9d" />
-          <Bar dataKey="returning_clients" name="Returning" fill="#8884d8" />
+        <BarChart
+          data={data}
+          margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
+          <XAxis dataKey="source" stroke="#E8EDC7" />
+          <YAxis stroke="#E8EDC7" />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: '#2b2b2b',
+              border: '1px solid #E8EDC7',
+              borderRadius: '8px',
+              color: '#E8EDC7',
+            }}
+            itemStyle={{ color: '#E8EDC7' }}
+            labelStyle={{ color: '#E8EDC7' }}
+          />
+          <Legend
+            iconType="circle"
+            wrapperStyle={{
+              color: '#E8EDC7',
+              paddingTop: '10px',
+            }}
+          />
+          <Bar
+            dataKey="new_clients"
+            name="New Clients"
+            fill={COLORS[1]}
+            radius={[8, 8, 0, 0]}
+          />
+          <Bar
+            dataKey="returning_clients"
+            name="Returning"
+            fill={COLORS[3]}
+            radius={[8, 8, 0, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

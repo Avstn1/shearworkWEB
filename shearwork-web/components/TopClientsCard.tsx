@@ -13,6 +13,7 @@ interface TopClient {
   rank: number | null
   client_name: string | null
   total_paid: number | null
+  num_visits: number | null
   notes: string | null
 }
 
@@ -28,6 +29,7 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
         setLoading(true)
         const year = new Date().getFullYear()
 
+        // Fetch the monthly report
         const { data: report } = await supabase
           .from('reports')
           .select('id')
@@ -42,9 +44,10 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
           return
         }
 
+        // Fetch top clients including num_visits
         const { data: topClients } = await supabase
           .from('report_top_clients')
-          .select('id, rank, client_name, total_paid, notes')
+          .select('id, rank, client_name, total_paid, num_visits, notes')
           .eq('report_id', report.id)
           .order('rank', { ascending: true })
 
@@ -84,6 +87,7 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
               <th className="py-1">#</th>
               <th className="py-1">Client</th>
               <th className="py-1">Total Paid</th>
+              <th className="py-1">Visits</th>
               <th className="py-1">Notes</th>
             </tr>
           </thead>
@@ -99,6 +103,9 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
                 <td className="py-1 font-semibold">{client.client_name ?? 'N/A'}</td>
                 <td className="py-1 font-semibold text-green-400">
                   ${client.total_paid?.toFixed(2) ?? '-'}
+                </td>
+                <td className="py-1 font-semibold text-yellow-400">
+                  {client.num_visits ?? '-'}
                 </td>
                 <td className="py-1 italic text-gray-300">{client.notes ?? '-'}</td>
               </tr>

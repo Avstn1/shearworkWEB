@@ -130,7 +130,7 @@ export default function DashboardPage() {
               </Link>
             ))}
           </nav>
-          <div className="mt-auto">
+          <div className="mt-auto w-full">
             <SignOutButton className="w-full" />
           </div>
         </div>
@@ -175,14 +175,14 @@ export default function DashboardPage() {
         className={`grid gap-6 ${
           isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'
         } overflow-hidden flex-1`}
-        style={{ height: 'calc(100vh - 230px)' }}
+        style={{ height: isMobile ? 'auto' : 'calc(100vh - 230px)' }}
       >
         {/* --- LEFT SECTION --- */}
         <div className="flex flex-col gap-6 pr-2">
           <motion.div variants={fadeInUp} custom={1}>
             <YearlyRevenueCard userId={user?.id} />
           </motion.div>
-          <motion.div variants={fadeInUp} custom={2} className="grid grid-cols-2 gap-4">
+          <motion.div variants={fadeInUp} custom={2} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} />
             <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} />
           </motion.div>
@@ -207,18 +207,14 @@ export default function DashboardPage() {
           custom={6}
           className="flex flex-col gap-6 pl-2"
         >
-          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
+          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1 overflow-auto">
             <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Monthly Reports</h2>
-            <div className="flex-1">
-              <MonthlyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
-            </div>
+            <MonthlyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
           </div>
 
-          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
+          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1 overflow-auto">
             <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Weekly Reports</h2>
-            <div className="flex-1">
-              <WeeklyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
-            </div>
+            <WeeklyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
           </div>
         </motion.div>
       </div>
@@ -226,18 +222,16 @@ export default function DashboardPage() {
   )
 
   return (
-    <>
-      <OnboardingGuard>
-        <Navbar />
-        {isMobile ? (
-          <>
-            {mobileMenuOpen && renderMobileMenu()}
-            {content}
-          </>
-        ) : (
-          content
-        )}
-      </OnboardingGuard>
-    </>
+    <OnboardingGuard>
+      <Navbar />
+      {isMobile ? (
+        <>
+          {mobileMenuOpen && renderMobileMenu()}
+          {content}
+        </>
+      ) : (
+        content
+      )}
+    </OnboardingGuard>
   )
 }

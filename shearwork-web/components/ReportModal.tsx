@@ -3,7 +3,6 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import type { Editor as TinyMCEEditorType } from 'tinymce'
 
-// ✅ Lazy-load TinyMCE safely
 const TinyMCEEditor = React.lazy(async () => {
   const mod = await import('@tinymce/tinymce-react')
   return { default: mod.Editor as unknown as React.ComponentType<any> }
@@ -27,7 +26,6 @@ export default function ReportModal({
   const isWeekly = report.week_number !== undefined
   const [editedContent, setEditedContent] = useState(report.content || '')
 
-  // readonly if not editing
   const readonly = !(isEditing && isAdmin)
 
   useEffect(() => {
@@ -35,28 +33,27 @@ export default function ReportModal({
   }, [report])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center
-                 bg-black/30 backdrop-blur-sm animate-fadeUp"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fadeUp">
       <div
         className="bg-white text-black rounded-2xl shadow-2xl p-6 
-                   w-[90%] max-w-4xl max-h-[90vh] flex flex-col border border-gray-200"
+                   w-[95%] max-w-5xl h-[95vh] flex flex-col border border-gray-200"
       >
         {/* Header */}
-        <h2 className="text-3xl font-bold mb-1 text-gray-900">
-          {isWeekly
-            ? `Week ${report.week_number}`
-            : `Monthly Report: ${report.month} ${report.year || ''}`}
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          {isWeekly
-            ? `${report.month} ${report.year || ''}`
-            : `Summary for ${report.month} ${report.year || ''}`}
-        </p>
+        <div className="shrink-0">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-1 text-gray-900 truncate">
+            {isWeekly
+              ? `Week ${report.week_number}`
+              : `Monthly Report: ${report.month} ${report.year || ''}`}
+          </h2>
+          <p className="text-sm text-gray-500 mb-4 truncate">
+            {isWeekly
+              ? `${report.month} ${report.year || ''}`
+              : `Summary for ${report.month} ${report.year || ''}`}
+          </p>
+        </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto mb-4 min-h-[400px]">
+        <div className="flex-1 min-h-0 overflow-hidden rounded-md border border-gray-200">
           <Suspense fallback={<p>Loading editor...</p>}>
             <TinyMCEEditor
               apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
@@ -67,50 +64,70 @@ export default function ReportModal({
               }
               init={{
                 license_key: 'gpl',
-                height: 700,         // initial height
-                resize: true,        // allow manual resize
+                height: '100%', // ✅ fill remaining height perfectly
+                resize: false,
                 menubar: !readonly,
                 toolbar: !readonly
                   ? 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help'
                   : false,
                 readonly: readonly ? 1 : 0,
+                plugins:
+                  'advlist autolink lists link image charmap preview anchor code fullscreen insertdatetime media table help wordcount',
                 setup: (editor: TinyMCEEditorType) => {
                   if (readonly) {
                     editor.on('init', () => {
                       const body = editor.getBody()
-                      body.setAttribute('contenteditable', 'false') // disable editing
-                      body.style.userSelect = 'none'               // prevent text selection
-                      body.style.pointerEvents = 'none'            // prevent clicking/focus
+                      body.setAttribute('contenteditable', 'false')
+                      body.style.userSelect = 'none'
+                      body.style.pointerEvents = 'none'
                     })
                   }
                 },
-                plugins:
-                  'advlist autolink lists link image charmap preview anchor ' +
-                  'code fullscreen insertdatetime media table help wordcount',
                 content_style: `
+                  html, body {
+                    overflow-x: hidden !important;
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                  }
                   body {
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                     font-size: 16px;
                     line-height: 1.6;
                     color: #111;
                     padding: 1rem;
+                    margin: 0;
+                    word-break: normal !important;
+                    overflow-wrap: break-word !important;
+                    white-space: normal !important;
                   }
                   p { margin-bottom: 0.75rem; }
-                  img { max-width: 100%; border-radius: 8px; }
-                  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-                  td, th { border: 1px solid #ddd; padding: 8px; }
+                  img { max-width: 100%; height: auto; border-radius: 8px; }
+                  table {
+                    border-collapse: collapse;
+                    width: 100%;
+                    table-layout: fixed;
+                    word-break: normal !important;
+                    overflow-wrap: break-word !important;
+                    white-space: normal !important;
+                  }
+                  td, th {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    word-break: normal !important;
+                    overflow-wrap: break-word !important;
+                    white-space: normal !important;
+                  }
                   th { font-weight: 600; background: #f9f9f9; }
                   a { color: #007bff; text-decoration: underline; }
                 `,
-                base_url: '/tinymce',
-                suffix: '.min',
               }}
             />
           </Suspense>
         </div>
 
-        {/* Footer Buttons */}
-        <div className="flex justify-end gap-2 mt-auto">
+        {/* Footer */}
+        <div className="flex justify-end gap-2 mt-4 shrink-0">
           {!readonly ? (
             <>
               <button

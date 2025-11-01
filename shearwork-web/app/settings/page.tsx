@@ -8,7 +8,6 @@ import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import Layout from '@/components/Layout'
 import Navbar from '@/components/Navbar'
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 
@@ -21,6 +20,120 @@ interface ProfileData {
 
 const MOBILE_BREAKPOINT = 768
 
+// ----- ChangePasswordForm Component -----
+function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [messageColor, setMessageColor] = useState('red')
+  const [showPasswords, setShowPasswords] = useState(false)
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage('')
+
+    if (newPassword !== confirmPassword) {
+      setMessageColor('red')
+      setMessage("New password and confirmation don't match")
+      return
+    }
+
+    if (!newPassword) {
+      setMessageColor('red')
+      setMessage("New password cannot be empty")
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) {
+        setMessageColor('red')
+        setMessage(`Error: ${error.message}`)
+      } else {
+        setMessageColor('green')
+        setMessage('Password updated successfully!')
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+        // Automatically hide form after success
+        setTimeout(() => onSuccess(), 1500)
+      }
+    } catch (err: any) {
+      setMessageColor('red')
+      setMessage(`Unexpected error: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleChangePassword}
+      className="flex flex-col gap-4 bg-[var(--accent-1)] p-5 rounded-xl shadow-md border border-[var(--accent-2)] mt-4"
+    >
+      <h2 className="font-semibold text-[var(--highlight)] text-lg mb-2">
+        🔒 Change Password
+      </h2>
+
+      {message && <p className={`text-sm ${messageColor === 'green' ? 'text-green-400' : 'text-red-400'}`}>{message}</p>}
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm text-[var(--text-subtle)]">Current Password</label>
+        <input
+          type={showPasswords ? 'text' : 'password'}
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm text-[var(--text-subtle)]">New Password</label>
+        <input
+          type={showPasswords ? 'text' : 'password'}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm text-[var(--text-subtle)]">Confirm New Password</label>
+        <input
+          type={showPasswords ? 'text' : 'password'}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={showPasswords}
+          onChange={() => setShowPasswords(!showPasswords)}
+          id="show-passwords"
+        />
+        <label htmlFor="show-passwords" className="text-sm text-[var(--text-subtle)]">
+          Show passwords
+        </label>
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="bg-[var(--highlight)] text-[var(--foreground)] py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50"
+      >
+        {loading ? 'Updating...' : 'Change Password'}
+      </button>
+    </form>
+  )
+}
+
+// ----- SettingsPage -----
 export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(false)
@@ -28,6 +141,7 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState('')
   const [editable, setEditable] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
@@ -47,9 +161,8 @@ export default function SettingsPage() {
         .eq('user_id', user.id)
         .single()
 
-      if (error) {
-        console.error('Error fetching profile:', error.message)
-      } else {
+      if (error) console.error('Error fetching profile:', error.message)
+      else {
         setProfile({
           full_name: data.full_name ?? 'User',
           avatar_url: data.avatar_url ?? '',
@@ -116,7 +229,6 @@ export default function SettingsPage() {
       </div>
     )
 
-  // ----- MOBILE MENU -----
   const renderMobileMenu = () => (
     <div className="fixed inset-0 bg-black/50 z-50 flex flex-col">
       <div className="bg-[var(--accent-2)] p-4 flex justify-between items-center">
@@ -143,7 +255,6 @@ export default function SettingsPage() {
     </div>
   )
 
-  // ----- CONTENT -----
   const content = (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -240,25 +351,36 @@ export default function SettingsPage() {
           <p>Email: {profile?.email || ''}</p>
         </div>
 
+        {/* Change Password Toggle */}
+        <button
+          onClick={() => setShowChangePassword(!showChangePassword)}
+          className="w-full bg-[var(--accent-2)] text-[var(--foreground)] py-2 rounded-lg hover:bg-[var(--accent-3)] transition mb-3"
+        >
+          {showChangePassword ? 'Cancel Password Change' : 'Change Password'}
+        </button>
+
+        {/* Change Password Form */}
+        {showChangePassword && (
+          <ChangePasswordForm onSuccess={() => setShowChangePassword(false)} />
+        )}
+
         {/* Sign Out */}
-        <SignOutButton className="bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] w-full py-2 rounded-lg transition" />
+        <SignOutButton className="bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] w-full py-2 rounded-lg transition mt-4" />
       </div>
     </motion.div>
   )
 
   return (
-    <>
-      <OnboardingGuard>
-        <Navbar/>
-        {isMobile ? (
-          <>
-            {mobileMenuOpen && renderMobileMenu()}
-            {content}
-          </>
-        ) : (
-          content
-        )}
-      </OnboardingGuard>
-    </>
+    <OnboardingGuard>
+      <Navbar />
+      {isMobile ? (
+        <>
+          {mobileMenuOpen && renderMobileMenu()}
+          {content}
+        </>
+      ) : (
+        content
+      )}
+    </OnboardingGuard>
   )
 }

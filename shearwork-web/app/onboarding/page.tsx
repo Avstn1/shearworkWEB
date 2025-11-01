@@ -6,8 +6,8 @@ import { supabase } from '@/utils/supabaseClient';
 import EditableAvatar from '@/components/EditableAvatar';
 
 const ROLE_OPTIONS = [
-  { label: 'Barber (Commission)', role: 'barber', barber_type: 'commission' },
-  { label: 'Barber (Chair Rental)', role: 'barber', barber_type: 'rental' },
+  { label: 'Barber (Commission)', role: 'Barber', barber_type: 'commission' },
+  { label: 'Barber (Chair Rental)', role: 'Barber', barber_type: 'rental' },
   // Future roles can be added here, e.g.,
   // { label: 'Owner', role: 'owner', barber_type: null }
 ];

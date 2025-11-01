@@ -14,17 +14,12 @@ export default function Navbar() {
   useEffect(() => {
     const getUser = async () => {
       try {
-        // ✅ Use getSession instead of getUser to avoid "Auth session missing!" errors
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
         if (sessionError) {
           console.error('Error fetching session:', sessionError.message)
           setUser(null)
-        } else if (!session) {
-          console.warn('No active Supabase session found.')
-          setUser(null)
         } else {
-          setUser(session.user)
+          setUser(session?.user ?? null)
         }
       } catch (err: any) {
         console.error('Unexpected error fetching user:', err.message)
@@ -36,7 +31,6 @@ export default function Navbar() {
 
     getUser()
 
-    // ✅ Listen for auth changes (login/logout)
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null)
     })
@@ -48,25 +42,31 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-[var(--navbar)]/90 backdrop-blur-md shadow-sm">
-      {/* Tighter horizontal spacing so logo and profile hug edges */}
-      <div className="w-full px-4 py-4 flex justify-between items-center">
+      <div className="w-full px-4 py-4 flex justify-between items-center relative">
         {/* --- LEFT: Logo --- */}
-        <Link href="/" className="text-2xl font-bold text-[var(--accent-3)]">
+        <Link href="/" className="text-2xl font-bold text-[var(--highlight)]">
           ✂️ ShearWork
         </Link>
 
-        {/* --- WHEN USER IS LOGGED OUT --- */}
+        {/* --- CENTER: Desktop links (hidden on mobile) --- */}
         {!user && (
-          <>
-            {/* Desktop Links */}
-            <div className="hidden md:flex gap-8 text-[var(--foreground)]">
-              <a href="#features" className="hover:text-[var(--highlight)]">Features</a>
-              <a href="#pricing" className="hover:text-[var(--highlight)]">Pricing</a>
-              <a href="#contact" className="hover:text-[var(--highlight)]">Contact</a>
-            </div>
+          <div className="hidden md:flex gap-8 text-[var(--foreground)] absolute left-1/2 -translate-x-1/2">
+            <a href="#features" className="hover:text-[var(--highlight)]">Features</a>
+            <a href="#pricing" className="hover:text-[var(--highlight)]">Pricing</a>
+            <a href="#contact" className="hover:text-[var(--highlight)]">Contact</a>
+          </div>
+        )}
 
-            {/* Desktop Auth Buttons */}
-            <div className="hidden md:flex gap-3">
+        {/* --- RIGHT: UserProfile + Hamburger --- */}
+        <div className="flex items-center gap-4 ml-auto">
+          {user && <UserProfile />} {/* Always show profile if logged in */}
+          <button className="md:hidden" onClick={() => setOpen(!open)}>
+            {open ? <X /> : <Menu />}
+          </button>
+
+          {/* --- Desktop Auth Buttons (if logged out) --- */}
+          {!user && (
+            <div className="hidden md:flex gap-3 ml-2">
               <Link
                 href="/login"
                 className="px-4 py-2 rounded-md border border-[var(--accent-2)] text-[var(--accent-3)] hover:bg-[var(--accent-2)] hover:text-[var(--text-bright)] transition"
@@ -80,28 +80,8 @@ export default function Navbar() {
                 Sign Up
               </Link>
             </div>
-          </>
-        )}
-
-        {/* --- WHEN USER IS LOGGED IN --- */}
-        {user && (
-          <div className="hidden md:flex items-center gap-6 ml-auto">
-            <Link
-              href="/dashboard"
-              className="text-[var(--foreground)] hover:text-[var(--highlight)] font-medium"
-            >
-              Dashboard
-            </Link>
-            <div className="flex-shrink-0">
-              <UserProfile />
-            </div>
-          </div>
-        )}
-
-        {/* Mobile menu button */}
-        <button className="md:hidden" onClick={() => setOpen(!open)}>
-          {open ? <X /> : <Menu />}
-        </button>
+          )}
+        </div>
       </div>
 
       {/* --- MOBILE MENU --- */}
@@ -125,9 +105,6 @@ export default function Navbar() {
             ) : (
               <>
                 <Link href="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
-                <div className="w-full flex justify-center">
-                  <UserProfile />
-                </div>
               </>
             )}
           </div>
