@@ -35,8 +35,8 @@ export default function ReportModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fadeUp">
       <div
-        className="bg-white text-black rounded-2xl shadow-2xl p-4 sm:p-6 
-                   w-[95%] max-w-5xl h-[95vh] flex flex-col border border-gray-200"
+        className="bg-white text-black rounded-2xl shadow-2xl 
+                   w-[95%] max-w-5xl h-[95vh] flex flex-col border border-gray-200 p-4 sm:p-6"
       >
         {/* Header */}
         <div className="shrink-0 mb-3">
@@ -100,32 +100,39 @@ export default function ReportModal({
                   p { margin-bottom: 0.75rem; }
                   img { max-width: 100%; height: auto; border-radius: 8px; }
 
-                  /* Tables default font size */
+                  /* Tables */
                   table {
                     border-collapse: collapse;
                     width: 100%;
                     table-layout: auto;
-                    font-size: 0.85rem; /* smaller default font */
+                    font-size: 0.9rem;
+                    margin-bottom: 1rem;
                   }
                   td, th {
                     border: 1px solid #ddd;
                     padding: 6px;
                     word-break: break-word;
                     white-space: normal;
-                    font-size: 0.85rem; /* match table font */
                   }
                   th { font-weight: 600; background: #f9f9f9; }
-
-                  a { color: #007bff; text-decoration: underline; }
 
                   /* Mobile adjustments */
                   @media (max-width: 768px) {
                     body { font-size: 14px; }
                     td, th {
-                      font-size: 0.75rem; /* smaller font on mobile */
+                      font-size: 0.75rem;
                       padding: 4px;
                     }
                   }
+
+                  /* Optional: make tables scrollable horizontally if too wide */
+                  table {
+                    display: block;
+                    width: 100%;
+                    overflow-x: auto;
+                  }
+
+                  a { color: #007bff; text-decoration: underline; }
                 `,
               }}
             />
