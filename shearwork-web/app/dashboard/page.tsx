@@ -207,12 +207,12 @@ export default function DashboardPage() {
           custom={6}
           className="flex flex-col gap-6 pl-2"
         >
-          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1 overflow-auto">
+          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
             <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Monthly Reports</h2>
             <MonthlyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
           </div>
 
-          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1 overflow-auto">
+          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
             <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Weekly Reports</h2>
             <WeeklyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
           </div>

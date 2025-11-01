@@ -64,24 +64,31 @@ export default function ServiceBreakdownChart({
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col"
+      className="p-4 rounded-lg shadow-md border"
       style={{
+        borderColor: 'var(--card-revenue-border)',
         background: 'var(--card-revenue-bg)',
         height: '360px',
+        display: 'flex',
+        flexDirection: 'column',
         overflow: 'visible',
       }}
     >
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-4 text-xl">
+      <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
         💈 Service Breakdown
       </h2>
-      <div className="flex-1 flex overflow-visible">
-        <ResponsiveContainer width="80%" height="100%">
-          <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+
+      <div
+        className="flex-1 flex flex-col justify-center items-center"
+        style={{ overflow: 'visible' }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart margin={{ top: 0, right: 0, bottom: 40, left: 0 }}>
             <Pie
               data={data}
               dataKey="bookings"
               nameKey="service_name"
-              outerRadius="90%"
+              outerRadius="80%"
               isAnimationActive={false}
               labelLine={false}
               label={false}
@@ -100,25 +107,21 @@ export default function ServiceBreakdownChart({
                 color: '#F5F5DC',
                 padding: '8px 12px',
               }}
-              itemStyle={{
-                color: '#E8EDC7',
-                fontWeight: 500,
-              }}
-              labelStyle={{
-                color: '#C8B653',
-                fontWeight: 600,
-              }}
+              itemStyle={{ color: '#E8EDC7', fontWeight: 500 }}
+              labelStyle={{ color: '#C8B653', fontWeight: 600 }}
               formatter={(value, name) => [`${value} bookings`, name]}
             />
 
             <Legend
-              layout="vertical"
-              verticalAlign="middle"
-              align="right"
+              layout="horizontal"
+              verticalAlign="bottom"
+              align="center"
               iconType="circle"
               wrapperStyle={{
                 color: '#E8EDC7',
                 fontSize: '0.85rem',
+                flexWrap: 'wrap',
+                marginTop: '12px',
               }}
             />
           </PieChart>
