@@ -76,6 +76,7 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
             textAnchor="end"
             interval={0} // show all labels
             height={60} // make space for rotated labels
+            style={{fontSize: '12px'}}
           />
           <YAxis stroke="#E8EDC7" />
           
