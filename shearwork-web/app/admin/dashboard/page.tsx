@@ -148,7 +148,7 @@ export default function AdminDashboardPage() {
       type: reportData.type,
       content: reportData.content.trim(),
       year: reportData.year,
-      month: reportData.month,
+      month: selectedMonth, // <-- use selectedMonth here
       created_at: new Date().toISOString(),
     }
 
@@ -164,12 +164,13 @@ export default function AdminDashboardPage() {
       user_id: '',
       type: 'weekly',
       week_number: 1,
-      month: new Date().toLocaleString('default', { month: 'long' }),
+      month: selectedMonth, // optional, keep it in sync
       year: new Date().getFullYear(),
       content: '',
     })
     setRefreshReports(prev => prev + 1)
   }
+
 
   // --- Check if monthly report exists ---
   useEffect(() => {
