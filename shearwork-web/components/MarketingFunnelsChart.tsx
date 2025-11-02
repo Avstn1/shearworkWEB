@@ -54,7 +54,7 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
       className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col"
       style={{
         background: 'var(--card-revenue-bg)',
-        height: '360px',
+        height: '400px', // slightly taller to give space for rotated labels
         overflow: 'visible',
       }}
     >
@@ -65,12 +65,27 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+          margin={{ top: 20, right: 20, left: 0, bottom: 60 }} // extra bottom margin for rotated labels
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
-          <XAxis dataKey="source" stroke="#E8EDC7" />
+          
+          <XAxis
+            dataKey="source"
+            stroke="#E8EDC7"
+            angle={-35} // rotate labels for readability
+            textAnchor="end"
+            interval={0} // show all labels
+            height={60} // make space for rotated labels
+          />
           <YAxis stroke="#E8EDC7" />
+          
           <Tooltip
+            formatter={(value: any, name: string) => {
+              if (name === 'Retention') {
+                return [`${value}%`, name]
+              }
+              return [value, name]
+            }}
             contentStyle={{
               backgroundColor: '#2b2b2b',
               border: '1px solid #E8EDC7',
@@ -80,13 +95,16 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
             itemStyle={{ color: '#E8EDC7' }}
             labelStyle={{ color: '#E8EDC7' }}
           />
+
           <Legend
+            formatter={(value) => value === 'Retention' ? 'Retention (%)' : value}
             iconType="circle"
             wrapperStyle={{
               color: '#E8EDC7',
               paddingTop: '10px',
             }}
           />
+
           <Bar
             dataKey="new_clients"
             name="New Clients"
