@@ -91,7 +91,6 @@ export default function ReportModal({
                     padding: 0.5rem;
                     box-sizing: border-box;
                     width: 100%;
-                    overflow-x: auto;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: clamp(14px, 2vw, 16px);
                     line-height: 1.6;
@@ -103,15 +102,13 @@ export default function ReportModal({
                   table {
                     border-collapse: collapse;
                     width: 100%;
-                    display: block;
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                    font-size: 0.9rem;
+                    font-size: 0.85rem;
                     margin-bottom: 1rem;
+                    table-layout: fixed; /* makes columns evenly distributed */
                   }
                   td, th {
                     border: 1px solid #ddd;
-                    padding: 0.5rem;
+                    padding: 0.25rem 0.35rem;
                     text-align: left;
                     word-break: break-word;
                     white-space: normal;
@@ -125,8 +122,8 @@ export default function ReportModal({
                   a { color: #007bff; text-decoration: underline; word-break: break-all; }
 
                   @media (max-width: 768px) {
-                    body { font-size: 13px; padding: 0.5rem; }
-                    td, th { font-size: 0.75rem; padding: 4px; text-align: center; }
+                    body { font-size: 12px; padding: 0.5rem; }
+                    td, th { font-size: 10px; padding: 2px 4px; text-align: center; }
                   }
                 `,
               }}
