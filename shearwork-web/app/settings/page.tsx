@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Navbar from '@/components/Navbar'
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
+import ConnectAcuityButton from '@/components/ConnectAcuityButton'
 
 interface ProfileData {
   full_name: string
@@ -363,6 +364,9 @@ export default function SettingsPage() {
         {showChangePassword && (
           <ChangePasswordForm onSuccess={() => setShowChangePassword(false)} />
         )}
+
+        {/* Connect Acuity Button */}
+        <ConnectAcuityButton/>
 
         {/* Sign Out */}
         <SignOutButton className="bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] w-full py-2 rounded-lg transition mt-4" />
