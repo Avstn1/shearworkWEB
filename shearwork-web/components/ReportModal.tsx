@@ -93,7 +93,7 @@ export default function ReportModal({
                     width: 100%;
                     overflow-x: auto;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    font-size: clamp(8px, 2vw, 16px);
+                    font-size: clamp(9px, 2vw, 16px);
                     line-height: 1.6;
                   }
 
