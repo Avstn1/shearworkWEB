@@ -42,7 +42,7 @@ export default function ReportModal({
         <div className="shrink-0 p-4 sm:p-6 border-b border-gray-200">
           <h2 className="text-2xl sm:text-3xl font-bold mb-1 text-gray-900 truncate">
             {isWeekly
-              ? `Week ${report.week_number}`
+              ? `Weekly Comparison Report`
               : `Monthly Report: ${report.month} ${report.year || ''}`}
           </h2>
           <p className="text-sm text-gray-500 truncate">
@@ -93,7 +93,7 @@ export default function ReportModal({
                     width: 100%;
                     overflow-x: auto;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    font-size: clamp(9px, 2vw, 16px);
+                    font-size: clamp(10px, 2vw, 16px);
                     line-height: 1.6;
                   }
 
