@@ -81,38 +81,51 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
       ) : clients.length === 0 ? (
         <p className="text-sm text-gray-400">No data available for {selectedMonth}.</p>
       ) : (
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="text-left border-b border-[#444]">
-              <th className="py-1">#</th>
-              <th className="py-1">Client</th>
-              <th className="py-1">Total Paid</th>
-              <th className="py-1">Visits</th>
-              <th className="py-1">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.slice(0, 5).map((client, idx) => (
-              <tr
-                key={client.id}
-                className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
-                  idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
-                }`}
-              >
-                <td className="py-1 font-medium">{client.rank ?? '-'}</td>
-                <td className="py-1 font-semibold">{client.client_name ?? 'N/A'}</td>
-                <td className="py-1 font-semibold text-green-400">
-                  ${client.total_paid?.toFixed(2) ?? '-'}
-                </td>
-                <td className="py-1 font-semibold text-yellow-400">
-                  {client.num_visits ?? '-'}
-                </td>
-                <td className="py-1 italic text-gray-300">{client.notes ?? '-'}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="text-left border-b border-[#444]">
+                <th className="py-2 px-3 min-w-[30px]">#</th>
+                <th className="py-2 px-3 min-w-[120px]">Client</th>
+                <th className="py-2 px-3 min-w-[80px]">Total Paid</th>
+                <th className="py-2 px-3 min-w-[60px]">Visits</th>
+                <th className="py-2 px-3 min-w-[100px]">Notes</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {clients.slice(0, 5).map((client, idx) => (
+                <tr
+                  key={client.id}
+                  className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
+                    idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
+                  }`}
+                >
+                  <td className="py-2 px-3 font-medium">{client.rank ?? '-'}</td>
+                  <td className="py-2 px-3 font-semibold">{client.client_name ?? 'N/A'}</td>
+                  <td className="py-2 px-3 font-semibold text-green-400">
+                    ${client.total_paid?.toFixed(2) ?? '-'}
+                  </td>
+                  <td className="py-2 px-3 font-semibold text-yellow-400">
+                    {client.num_visits ?? '-'}
+                  </td>
+                  <td className="py-2 px-3 italic text-gray-300">{client.notes ?? '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          table {
+            font-size: 0.75rem;
+          }
+          th, td {
+            padding: 0.25rem 0.5rem;
+          }
+        }
+      `}</style>
     </div>
   )
 }
