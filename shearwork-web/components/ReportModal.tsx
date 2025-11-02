@@ -93,25 +93,28 @@ export default function ReportModal({
                     width: 100%;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: clamp(14px, 2vw, 16px);
-                    line-height: 1.6;
+                    line-height: 1.5;
+                    overflow-x: hidden; /* prevent horizontal scroll */
                   }
 
-                  p, li { margin-bottom: 0.75rem; }
+                  p, li { margin-bottom: 0.5rem; }
                   img { max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
 
                   table {
+                    width: 100% !important;
                     border-collapse: collapse;
-                    width: 100%;
-                    font-size: 0.85rem;
+                    table-layout: fixed; /* evenly distributes columns to fit container */
+                    font-size: 12px; /* smaller font to fit all content */
+                    word-break: break-word; /* wrap long text inside cells */
+                    overflow-wrap: break-word;
                     margin-bottom: 1rem;
-                    table-layout: fixed; /* makes columns evenly distributed */
                   }
                   td, th {
                     border: 1px solid #ddd;
-                    padding: 0.25rem 0.35rem;
+                    padding: 4px 6px; /* reduce padding */
                     text-align: left;
-                    word-break: break-word;
-                    white-space: normal;
+                    white-space: normal; /* allow wrapping inside cells */
+                    overflow: hidden;
                   }
                   th {
                     font-weight: 600;
@@ -119,13 +122,15 @@ export default function ReportModal({
                     text-overflow: ellipsis;
                   }
 
-                  a { color: #007bff; text-decoration: underline; word-break: break-all; }
+                  a { color: #007bff; text-decoration: underline; word-break: break-word; }
 
+                  /* Responsive adjustments */
                   @media (max-width: 768px) {
-                    body { font-size: 12px; padding: 0.5rem; }
-                    td, th { font-size: 10px; padding: 2px 4px; text-align: center; }
+                    body { font-size: 12px; padding: 0.25rem; }
+                    td, th { font-size: 10px; padding: 2px 3px; text-align: center; }
                   }
-                `,
+                `
+
               }}
             />
           </Suspense>
