@@ -91,30 +91,30 @@ export default function ReportModal({
                     padding: 0.5rem;
                     box-sizing: border-box;
                     width: 100%;
+                    overflow-x: auto;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: clamp(14px, 2vw, 16px);
-                    line-height: 1.5;
-                    overflow-x: hidden; /* prevent horizontal scroll */
+                    line-height: 1.6;
                   }
 
-                  p, li { margin-bottom: 0.5rem; }
+                  p, li { margin-bottom: 0.75rem; }
                   img { max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
 
                   table {
-                    width: 100% !important;
                     border-collapse: collapse;
-                    table-layout: fixed; /* evenly distributes columns to fit container */
-                    font-size: 12px; /* smaller font to fit all content */
-                    word-break: break-word; /* wrap long text inside cells */
-                    overflow-wrap: break-word;
+                    width: 100%;
+                    display: block;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    font-size: 0.9rem;
                     margin-bottom: 1rem;
                   }
                   td, th {
                     border: 1px solid #ddd;
-                    padding: 4px 6px; /* reduce padding */
+                    padding: 0.5rem;
                     text-align: left;
-                    white-space: normal; /* allow wrapping inside cells */
-                    overflow: hidden;
+                    word-break: break-word;
+                    white-space: normal;
                   }
                   th {
                     font-weight: 600;
@@ -122,15 +122,13 @@ export default function ReportModal({
                     text-overflow: ellipsis;
                   }
 
-                  a { color: #007bff; text-decoration: underline; word-break: break-word; }
+                  a { color: #007bff; text-decoration: underline; word-break: break-all; }
 
-                  /* Responsive adjustments */
                   @media (max-width: 768px) {
-                    body { font-size: 12px; padding: 0.25rem; }
-                    td, th { font-size: 10px; padding: 2px 3px; text-align: center; }
+                    body { font-size: 13px; padding: 0.5rem; }
+                    td, th { font-size: 0.75rem; padding: 4px; text-align: center; }
                   }
-                `
-
+                `,
               }}
             />
           </Suspense>
