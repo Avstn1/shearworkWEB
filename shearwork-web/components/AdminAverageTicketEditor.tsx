@@ -9,19 +9,20 @@ interface Props {
   month: string
 }
 
-// Numeric input handler
+// Numeric input handler that allows decimals naturally
 const handleNumericChange = (
   e: React.ChangeEvent<HTMLInputElement>,
-  onChange: (val: number | '') => void
+  onChange: (val: string) => void
 ) => {
   const value = e.target.value
-  if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-    onChange(value === '' ? '' : Number(value))
+  // Allow empty string, digits, or digits with a single decimal
+  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+    onChange(value)
   }
 }
 
 export default function AdminAverageTicketEditor({ barberId, month }: Props) {
-  const [avgTicket, setAvgTicket] = useState<number | ''>('')
+  const [avgTicket, setAvgTicket] = useState<string>('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -41,16 +42,20 @@ export default function AdminAverageTicketEditor({ barberId, month }: Props) {
       .maybeSingle()
 
     if (error) console.error(error)
-    setAvgTicket(data?.avg_ticket ?? '')
+    setAvgTicket(data?.avg_ticket?.toString() ?? '')
     setLoading(false)
   }
 
   const updateAvgTicket = async () => {
-    if (avgTicket === '') return toast.error('Enter a valid average ticket.')
+    if (avgTicket === '' || isNaN(Number(avgTicket))) {
+      return toast.error('Enter a valid average ticket.')
+    }
+
     setLoading(true)
+    const ticketNumber = Number(avgTicket)
     const { error } = await supabase
       .from('reports')
-      .update({ avg_ticket: Number(avgTicket) })
+      .update({ avg_ticket: ticketNumber })
       .eq('user_id', barberId)
       .eq('type', 'monthly')
       .eq('month', month)
