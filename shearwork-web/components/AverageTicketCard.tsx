@@ -35,7 +35,7 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
 
         if (error) {
           // If server complains about single() when no rows, handle gracefully:
-          console.error('Supabase error fetching average ticket:', error.message ?? error)
+          // console.error('Supabase error fetching average ticket:', error.message ?? error)
           setAvgTicket(null)
           return
         }

@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabaseClient'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
 import WeeklyReports from '@/components/WeeklyReports'
+import WeeklyComparisonReports from '@/components/WeeklyComparisonReports'
 import MonthlyReports from '@/components/MonthlyReports'
 import UserProfile from '@/components/UserProfile'
 import toast from 'react-hot-toast'
@@ -26,7 +27,7 @@ interface Barber {
 
 interface ReportData {
   user_id: string
-  type: 'weekly' | 'monthly'
+  type: 'weekly' | 'monthly' | 'weekly_comparison'
   week_number: number
   month: string
   year: number
@@ -68,7 +69,6 @@ export default function AdminDashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [monthlyReportExists, setMonthlyReportExists] = useState(false)
 
-  // 🧭 New: tab state (added 'addReport')
   const [activeTab, setActiveTab] = useState<'revenue' | 'clients' | 'ticket' | 'breakdown' | 'funnels' | 'addReport'>('addReport')
 
   // --- User & Profile ---
@@ -152,7 +152,7 @@ export default function AdminDashboardPage() {
       created_at: new Date().toISOString(),
     }
 
-    if (reportData.type === 'weekly') {
+    if (reportData.type === 'weekly' || reportData.type === 'weekly_comparison') {
       payload.week_number = reportData.week_number
     }
 
@@ -204,8 +204,6 @@ export default function AdminDashboardPage() {
     <>
       <Navbar />
       <div className="flex flex-col gap-5 text-[var(--foreground)] bg-[var(--background)] min-h-screen p-3 sm:p-6 overflow-y-auto">
-
-        {/* Header */}
         <div className="flex flex-wrap justify-between items-center gap-3">
           <h1 className="text-2xl font-semibold text-[var(--highlight)] truncate flex-1 min-w-0">
             Admin Dashboard
@@ -213,7 +211,6 @@ export default function AdminDashboardPage() {
           {profile && <UserProfile />}
         </div>
 
-        {/* Search + Month Selector */}
         <div className="mt-2 flex flex-wrap gap-2 items-center">
           <input
             type="text"
@@ -222,7 +219,6 @@ export default function AdminDashboardPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-
           <select
             className="h-10 px-3 rounded-md bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] text-sm"
             value={selectedMonth}
@@ -237,7 +233,7 @@ export default function AdminDashboardPage() {
           </select>
         </div>
 
-        {/* Barber List */}
+        {/* --- Barbers List with Pagination --- */}
         <section className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm overflow-x-auto">
           <h2 className="text-base font-semibold mb-3">Barbers</h2>
           <div className="flex gap-4 w-max min-w-full">
@@ -261,9 +257,31 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-3">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded-md bg-[var(--accent-3)] text-[var(--text-bright)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--accent-4)]"
+              >
+                &larr;
+              </button>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded-md bg-[var(--accent-3)] text-[var(--text-bright)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--accent-4)]"
+              >
+                &rarr;
+              </button>
+            </div>
+          )}
         </section>
 
-        {/* Tabs for report & admin tools */}
         {selectedBarber ? (
           <>
             <div className="flex gap-3 border-b border-[var(--accent-2)]/50 pb-2 mb-3 flex-wrap">
@@ -291,8 +309,7 @@ export default function AdminDashboardPage() {
 
             {activeTab === 'addReport' && (
               <div className="flex flex-col gap-6">
-                {/* Reports row (Monthly + Weekly side-by-side) */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                   <div className="bg-[var(--accent-4)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
                     <h3 className="text-base font-semibold mb-2">Monthly Reports</h3>
                     <MonthlyReports
@@ -312,13 +329,82 @@ export default function AdminDashboardPage() {
                       refresh={refreshReports}
                     />
                   </div>
+
+                  <div className="bg-[var(--accent-2)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
+                    <h3 className="text-base font-semibold mb-2">Weekly Comparison Reports</h3>
+                    <WeeklyComparisonReports
+                      userId={selectedBarber.user_id}
+                      filterMonth={selectedMonth}
+                      isAdmin={isAdmin}
+                      refresh={refreshReports}
+                    />
+                  </div>
                 </div>
 
-                {/* Add Report section (below the reports) */}
                 <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
                   <h3 className="text-base font-semibold mb-3">
                     Add Report for {selectedBarber.full_name}
                   </h3>
+
+                  <div className="flex gap-2 flex-wrap w-full mb-4">
+                    <div className="flex-1">
+                      <label className="block mb-1 font-semibold">Report Type</label>
+                      <select
+                        value={reportData.type}
+                        onChange={(e) => {
+                          const newType = e.target.value as ReportData['type']
+                          setReportData(prev => ({
+                            ...prev,
+                            type: newType,
+                            week_number: newType === 'weekly_comparison' ? 2 : 1, // default week 2 for comparison
+                          }))
+                        }}
+                        className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+                      >
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="weekly_comparison">Weekly Comparison</option>
+                      </select>
+                    </div>
+
+                    {(reportData.type === 'weekly' || reportData.type === 'weekly_comparison') && (
+                      <div>
+                        <label className="block mb-1 font-semibold">Week Number</label>
+                        <select
+                          value={reportData.week_number}
+                          onChange={(e) =>
+                            setReportData({ ...reportData, week_number: Number(e.target.value) })
+                          }
+                          className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+                        >
+                          {(reportData.type === 'weekly'
+                            ? [1, 2, 3, 4, 5]
+                            : [2, 3, 4, 5] // weekly_comparison starts at 2
+                          ).map(w => (
+                            <option key={w} value={w}>
+                              Week {w}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block mb-1 font-semibold">Year</label>
+                      <select
+                        value={reportData.year}
+                        onChange={(e) => setReportData({ ...reportData, year: Number(e.target.value) })}
+                        className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+                      >
+                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   <Editor
                     apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
                     value={reportData.content}
@@ -365,7 +451,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             )}
-
 
             {activeTab === 'revenue' && (
               <AdminRevenueEditor barberId={selectedBarber.user_id} month={selectedMonth} year={reportData.year} />

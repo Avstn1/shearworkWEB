@@ -36,10 +36,10 @@ export default function ReportModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fadeUp">
       <div
         className="bg-white text-black rounded-2xl shadow-2xl 
-                   w-[95%] max-w-5xl h-[95vh] flex flex-col border border-gray-200 p-4 sm:p-6"
+                   w-[95%] max-w-5xl h-[95vh] flex flex-col border border-gray-200"
       >
         {/* Header */}
-        <div className="shrink-0 mb-3">
+        <div className="shrink-0 p-4 sm:p-6 border-b border-gray-200">
           <h2 className="text-2xl sm:text-3xl font-bold mb-1 text-gray-900 truncate">
             {isWeekly
               ? `Week ${report.week_number}`
@@ -53,26 +53,25 @@ export default function ReportModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-auto rounded-md border border-gray-200 p-2 sm:p-4">
+        <div className="flex-1 min-h-0 overflow-auto p-2 sm:p-4">
           <Suspense fallback={<p>Loading editor...</p>}>
             <TinyMCEEditor
               apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
               tinymceScriptSrc="/tinymce/tinymce.min.js"
               value={editedContent}
-              onEditorChange={
-                !readonly ? (newValue: string) => setEditedContent(newValue) : undefined
-              }
+              onEditorChange={!readonly ? (newValue: string) => setEditedContent(newValue) : undefined}
               init={{
                 license_key: 'gpl',
                 height: '100%',
-                resize: false,
+                min_height: 400,
+                resize: 'vertical',
                 menubar: !readonly,
                 toolbar: !readonly
                   ? 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help'
                   : false,
                 readonly: readonly ? 1 : 0,
                 iframe_attrs: {
-                  style: 'width: 100%; height: 100%; border: none;',
+                  style: 'width: 100%; min-height: 100%; border: none;',
                 },
                 plugins:
                   'advlist autolink lists link image charmap preview anchor code fullscreen insertdatetime media table help wordcount',
@@ -89,36 +88,26 @@ export default function ReportModal({
                 content_style: `
                   html, body {
                     margin: 0;
-                    padding: 1rem;
-                    width: 100%;
+                    padding: 0.5rem;
                     box-sizing: border-box;
-                    overflow-x: hidden;
-                    word-wrap: break-word;
+                    width: 100%;
+                    overflow-x: auto;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: clamp(14px, 2vw, 16px);
                     line-height: 1.6;
-                    color: #111;
                   }
 
                   p, li { margin-bottom: 0.75rem; }
-                  img {
-                    max-width: 100%;
-                    height: auto;
-                    border-radius: 8px;
-                    display: block;
-                    margin: 0 auto;
-                  }
+                  img { max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
 
-                  /* Tables */
                   table {
                     border-collapse: collapse;
                     width: 100%;
-                    table-layout: auto;
-                    font-size: 0.9rem;
-                    margin-bottom: 1rem;
                     display: block;
                     overflow-x: auto;
                     -webkit-overflow-scrolling: touch;
+                    font-size: 0.9rem;
+                    margin-bottom: 1rem;
                   }
                   td, th {
                     border: 1px solid #ddd;
@@ -127,39 +116,17 @@ export default function ReportModal({
                     word-break: break-word;
                     white-space: normal;
                   }
-
-                  /* --- Header cells fix --- */
                   th {
                     font-weight: 600;
                     background: #f9f9f9;
-                    white-space: nowrap;
-                    overflow-wrap: break-word;
-                    min-width: 80px;
                     text-overflow: ellipsis;
                   }
 
-                  /* On smaller screens, allow wrap but keep it readable */
-                  @media (max-width: 768px) {
-                    th {
-                      white-space: normal;
-                      min-width: 60px;
-                      word-break: break-word;
-                      text-align: center;
-                    }
-                    body {
-                      padding: 0.75rem;
-                      font-size: 13px;
-                    }
-                    td, th {
-                      padding: 4px;
-                      font-size: 0.75rem;
-                    }
-                  }
+                  a { color: #007bff; text-decoration: underline; word-break: break-all; }
 
-                  a {
-                    color: #007bff;
-                    text-decoration: underline;
-                    word-break: break-all;
+                  @media (max-width: 768px) {
+                    body { font-size: 13px; padding: 0.5rem; }
+                    td, th { font-size: 0.75rem; padding: 4px; text-align: center; }
                   }
                 `,
               }}
@@ -168,7 +135,7 @@ export default function ReportModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 mt-4 shrink-0">
+        <div className="shrink-0 p-4 sm:p-6 flex justify-end gap-2 border-t border-gray-200">
           {!readonly ? (
             <>
               <button

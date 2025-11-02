@@ -95,8 +95,14 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
           />
           <Bar
             dataKey="returning_clients"
-            name="Returning"
+            name="Returning Clients"
             fill={COLORS[3]}
+            radius={[8, 8, 0, 0]}
+          />
+          <Bar
+            dataKey="retention"
+            name="Retention"
+            fill={COLORS[2]}
             radius={[8, 8, 0, 0]}
           />
         </BarChart>

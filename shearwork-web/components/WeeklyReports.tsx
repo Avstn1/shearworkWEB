@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabaseClient'
 import { MoreVertical } from 'lucide-react'
 import ReportModal from './ReportModal'
 import toast from 'react-hot-toast'
+import { createPortal } from 'react-dom'
 
 type WeeklyReport = {
   id: string
@@ -106,7 +107,7 @@ export default function WeeklyReports({
                 {openMenu === r.id && (
                   <div
                     ref={menuRef}
-                    className="absolute top-8 right-2 rounded-md shadow-md w-28 z-10"
+                    className="absolute top-8 right-2 rounded-md shadow-md w-28 z-50"
                     style={{
                       background: 'var(--card-weekly-border)',
                       color: 'var(--text-bright)',
@@ -158,34 +159,36 @@ export default function WeeklyReports({
         ))}
       </div>
 
-      {selectedReport && (
-        <ReportModal
-          report={selectedReport}
-          onClose={() => {
-            setSelectedReport(null)
-            setIsEditing(false)
-          }}
-          isEditing={isEditing && isAdmin}
-          isAdmin={isAdmin}
-          onSave={async (updatedContent: string) => {
-            if (!selectedReport) return
-            const { error } = await supabase
-              .from('reports')
-              .update({ content: updatedContent })
-              .eq('id', selectedReport.id)
-            if (error) toast.error('Failed to save report.')
-            else {
-              toast.success('✅ Report updated!')
-              const updatedReport = { ...selectedReport, content: updatedContent }
-              setReports((prev) =>
-                prev.map((r) => (r.id === selectedReport.id ? updatedReport : r))
-              )
+      {selectedReport &&
+        createPortal(
+          <ReportModal
+            report={selectedReport}
+            onClose={() => {
               setSelectedReport(null)
               setIsEditing(false)
-            }
-          }}
-        />
-      )}
+            }}
+            isEditing={isEditing && isAdmin}
+            isAdmin={isAdmin}
+            onSave={async (updatedContent: string) => {
+              if (!selectedReport) return
+              const { error } = await supabase
+                .from('reports')
+                .update({ content: updatedContent })
+                .eq('id', selectedReport.id)
+              if (error) toast.error('Failed to save report.')
+              else {
+                toast.success('✅ Report updated!')
+                const updatedReport = { ...selectedReport, content: updatedContent }
+                setReports((prev) =>
+                  prev.map((r) => (r.id === selectedReport.id ? updatedReport : r))
+                )
+                setSelectedReport(null)
+                setIsEditing(false)
+              }
+            }}
+          />,
+          document.body
+        )}
     </>
   )
 }

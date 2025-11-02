@@ -18,6 +18,7 @@ import ServiceBreakdownChart from '@/components/ServiceBreakdownChart'
 import MarketingFunnelsChart from '@/components/MarketingFunnelsChart'
 import Navbar from '@/components/Navbar'
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
+import WeeklyComparisonReports from '@/components/WeeklyComparisonReports'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -138,86 +139,93 @@ export default function DashboardPage() {
     )
   }
 
+  const cardClass =
+    'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
+
   const content = (
     <motion.div
-      className="min-h-screen flex flex-col p-6 text-[var(--foreground)] pt-[110px]"
+      className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#0e100f] via-[#1a1e18] to-[#2b3a29]"
       initial="hidden"
       animate="visible"
     >
       {/* HEADER */}
-      <motion.div variants={fadeInUp} custom={0} className="mb-6">
-        <div className="flex justify-between items-center flex-wrap gap-3">
-          <div>
-            <h1 className={`font-bold text-[#F5E6C5] ${isMobile ? 'text-xl' : 'text-3xl'}`}>
-              Welcome back!
-            </h1>
-            <p className="text-xs text-[#bdbdbd]">Here’s your monthly summary.</p>
-          </div>
+      <motion.div variants={fadeInUp} custom={0} className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div>
+          <h1 className={`font-bold bg-gradient-to-r from-amber-200 to-lime-400 bg-clip-text text-transparent ${isMobile ? 'text-xl' : 'text-2xl'} animate-gradient`}>
+            Welcome back!
+          </h1>
+          <p className="text-xs text-[#bdbdbd]">Here’s your monthly summary.</p>
+        </div>
 
-          {/* Month Selector */}
-          <div className="flex items-center gap-2">
-            <h3 className="text-[#bdbdbd] font-semibold text-sm">Reports for</h3>
-            <select
-              className="bg-[#334030] rounded-md px-2 py-1 text-xs border border-[#55694b] text-white"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+        {/* Modern Month Selector as pill buttons */}
+        <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
+          {MONTHS.map((m) => (
+            <button
+              key={m}
+              onClick={() => setSelectedMonth(m)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                selectedMonth === m
+                  ? 'bg-amber-300 text-black'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
             >
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
+              {m.slice(0,3)}
+            </button>
+          ))}
         </div>
       </motion.div>
 
       {/* DASHBOARD GRID */}
-      <div
-        className={`grid gap-6 ${
-          isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'
-        } overflow-hidden flex-1`}
-        style={{ height: isMobile ? 'auto' : 'calc(100vh - 230px)' }}
+      <motion.div
+        className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'} flex-1`}
+        style={{ overflow: 'visible' }} // <-- fix modal clipping
       >
         {/* --- LEFT SECTION --- */}
-        <div className="flex flex-col gap-6 pr-2">
-          <motion.div variants={fadeInUp} custom={1}>
+        <div className="flex flex-col gap-4 pr-1">
+          <motion.div variants={fadeInUp} custom={1} className={cardClass}>
             <YearlyRevenueCard userId={user?.id} />
           </motion.div>
           <motion.div variants={fadeInUp} custom={2} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} />
-            <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} />
+            <motion.div className={cardClass}>
+              <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} />
+            </motion.div>
+            <motion.div className={cardClass}>
+              <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} />
+            </motion.div>
           </motion.div>
-          <motion.div variants={fadeInUp} custom={3} className="flex-1">
+          <motion.div variants={fadeInUp} custom={3} className={cardClass}>
             <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
           </motion.div>
         </div>
 
         {/* --- MIDDLE SECTION --- */}
-        <div className="flex flex-col gap-6 px-2">
-          <motion.div variants={fadeInUp} custom={4}>
+        <div className="flex flex-col gap-4 px-1">
+          <motion.div variants={fadeInUp} custom={4} className={cardClass}>
             <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} />
           </motion.div>
-          <motion.div variants={fadeInUp} custom={5} className="flex-1">
+          <motion.div variants={fadeInUp} custom={5} className={cardClass}>
             <MarketingFunnelsChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
           </motion.div>
         </div>
 
         {/* --- RIGHT SECTION --- */}
-        <motion.div
-          variants={fadeInUp}
-          custom={6}
-          className="flex flex-col gap-6 pl-2"
-        >
-          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
-            <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Monthly Reports</h2>
+        <div className="flex flex-col gap-4 pl-1">
+          <motion.div variants={fadeInUp} custom={6} className={cardClass}>
+            <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
             <MonthlyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
-          </div>
+          </motion.div>
 
-          <div className="bg-[#1f1f1a] rounded-lg shadow-md p-6 flex flex-col flex-1">
-            <h2 className="text-[#c4d2b8] font-semibold mb-3 text-lg">Weekly Reports</h2>
+          <motion.div variants={fadeInUp} custom={7} className={cardClass}>
+            <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
             <WeeklyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+
+          <motion.div variants={fadeInUp} custom={8} className={cardClass}>
+            <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison Reports</h2>
+            <WeeklyComparisonReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
+          </motion.div>
+        </div>
+      </motion.div>
     </motion.div>
   )
 
