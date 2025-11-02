@@ -127,7 +127,7 @@ export default function WeeklyComparisonReports({
                   className="cursor-pointer flex-1"
                 >
                   <p className="font-semibold">
-                    Week {r.week_number} - {r.month} {r.year}
+                    Weekly Comparison - {r.month} {r.year}
                   </p>
                   <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
                     <div

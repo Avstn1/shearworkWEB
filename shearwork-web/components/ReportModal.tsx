@@ -106,7 +106,7 @@ export default function ReportModal({
                     display: block;
                     overflow-x: auto;
                     -webkit-overflow-scrolling: touch;
-                    font-size: 0.4rem;
+                    font-size: 0.6rem;
                     margin-bottom: 1rem;
                   }
                   td, th {
