@@ -1,4 +1,3 @@
-// app/api/acuity/pull/route.ts
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
@@ -7,8 +6,10 @@ export async function GET(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user)
+
+  if (!user) {
     return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+  }
 
   // 1️⃣ Parse requested endpoint from query (default to appointments)
   const { searchParams } = new URL(request.url)
@@ -21,10 +22,14 @@ export async function GET(request: Request) {
     .eq('user_id', user.id)
     .single()
 
-  if (tokenError || !tokenRow)
-    return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
+  if (tokenError || !tokenRow) {
+    return NextResponse.json(
+      { error: 'No Acuity connection found' },
+      { status: 400 }
+    )
+  }
 
-  // 3️⃣ Auto-refresh token if expired
+  // 3️⃣ Refresh token if expired
   let accessToken = tokenRow.access_token
   const now = Math.floor(Date.now() / 1000)
 
@@ -56,14 +61,20 @@ export async function GET(request: Request) {
           .eq('user_id', user.id)
       } else {
         console.error('Token refresh failed:', newTokens)
-        return NextResponse.json({ error: 'Token refresh failed', details: newTokens })
+        return NextResponse.json(
+          { error: 'Token refresh failed', details: newTokens },
+          { status: 500 }
+        )
       }
     } catch (err) {
-      return NextResponse.json({ error: 'Failed to refresh token', details: String(err) })
+      return NextResponse.json({
+        error: 'Failed to refresh token',
+        details: String(err),
+      })
     }
   }
 
-  // 4️⃣ Define a list of allowed Acuity endpoints (for safety)
+  // 4️⃣ Validate endpoint
   const ALLOWED_ENDPOINTS = [
     'appointments',
     'clients',
@@ -78,10 +89,13 @@ export async function GET(request: Request) {
   ]
 
   if (!ALLOWED_ENDPOINTS.includes(endpoint)) {
-    return NextResponse.json({ error: `Invalid endpoint '${endpoint}'` }, { status: 400 })
+    return NextResponse.json(
+      { error: `Invalid endpoint '${endpoint}'` },
+      { status: 400 }
+    )
   }
 
-  // 5️⃣ Fetch from Acuity API
+  // 5️⃣ Fetch data from Acuity
   const acuityRes = await fetch(`https://acuityscheduling.com/api/v1/${endpoint}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -90,22 +104,78 @@ export async function GET(request: Request) {
 
   const acuityData = await acuityRes.json()
 
-  // TEMP: log for debugging
-  console.log('💧 Acuity data fetched for endpoint', endpoint, acuityData)
-
   if (!acuityRes.ok) {
-    return NextResponse.json({
-      error: 'Failed to fetch from Acuity',
-      details: acuityData,
-    }, { status: 500 })
+    console.error('❌ Failed to fetch from Acuity:', acuityData)
+    return NextResponse.json(
+      { error: 'Failed to fetch from Acuity', details: acuityData },
+      { status: 500 }
+    )
   }
 
-  // 6️⃣ Optional: Process or store data in Supabase here
-  // e.g. store new appointments into `monthly_data` or other analytics tables
+  console.log('💧 Acuity data fetched for endpoint:', endpoint)
 
+  // 6️⃣ If appointments, calculate revenue & average ticket
+  let revenueByMonth: Record<string, number> = {}
+  let avgTicketByMonth: Record<string, number> = {}
+
+  if (endpoint === 'appointments' && Array.isArray(acuityData)) {
+    const paidAppointments = acuityData.filter((a: any) => a.paid === 'yes')
+
+    const groupedByMonth: Record<string, any[]> = {}
+
+    // group appointments by month
+    for (const appt of paidAppointments) {
+      const date = new Date(appt.datetime)
+      const monthName = date.toLocaleString('default', { month: 'long' })
+      const year = date.getFullYear()
+      const key = `${year}-${monthName}`
+      if (!groupedByMonth[key]) groupedByMonth[key] = []
+      groupedByMonth[key].push(appt)
+    }
+
+    // calculate totals
+    for (const [key, appts] of Object.entries(groupedByMonth)) {
+      const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
+      const avgTicket = appts.length > 0 ? totalRevenue / appts.length : 0
+
+      const [year, month] = key.split('-')
+      revenueByMonth[key] = totalRevenue
+      avgTicketByMonth[key] = parseFloat(avgTicket.toFixed(2))
+    }
+
+    console.log('📊 Calculated revenueByMonth:', revenueByMonth)
+    console.log('🎟️ Calculated avgTicketByMonth:', avgTicketByMonth)
+
+    // 🧠 Upsert into monthly_data
+    const upsertRows = Object.keys(revenueByMonth).map((key) => {
+      const [year, month] = key.split('-')
+      return {
+        user_id: user.id,
+        month,
+        year: parseInt(year),
+        total_revenue: revenueByMonth[key],
+        avg_ticket: avgTicketByMonth[key],
+        updated_at: new Date().toISOString(),
+      }
+    })
+
+    const { error: upsertError } = await supabase.from('monthly_data').upsert(upsertRows, {
+      onConflict: 'user_id,month,year',
+    })
+
+    if (upsertError) {
+      console.error('❌ Failed to update monthly_data:', upsertError)
+    } else {
+      console.log('✅ monthly_data table updated successfully!')
+    }
+  }
+
+  // 7️⃣ Return summary
   return NextResponse.json({
     endpoint,
     fetched_at: new Date().toISOString(),
-    data: acuityData,
+    updated_rows: Object.keys(revenueByMonth).length,
+    revenue_summary: revenueByMonth,
+    avg_ticket_summary: avgTicketByMonth,
   })
 }

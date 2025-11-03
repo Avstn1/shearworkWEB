@@ -80,6 +80,22 @@ export default function DashboardPage() {
     }
     fetchUserAndProfile()
   }, [])
+  
+  useEffect(() => {
+    if (!user) return
+    const syncAcuity = async () => {
+      try {
+        const res = await fetch('/api/acuity/pull?endpoint=appointments')
+        const data = await res.json()
+        console.log('✅ Updated monthly revenue:', data.revenue_summary)
+        console.log('🎟️ Updated average tickets:', data.avg_ticket_summary)
+      } catch (err) {
+        console.error('❌ Acuity sync failed:', err)
+      }
+    }
+    syncAcuity()
+  }, [user])
+
 
   if (loading)
     return (
