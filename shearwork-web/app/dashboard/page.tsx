@@ -50,6 +50,7 @@ export default function DashboardPage() {
 
   const navLinksBase = [{ href: '/dashboard', label: 'Dashboard' }]
 
+  // 🔹 Load user + profile
   useEffect(() => {
     const fetchUserAndProfile = async () => {
       try {
@@ -80,21 +81,22 @@ export default function DashboardPage() {
     }
     fetchUserAndProfile()
   }, [])
-  
+
+  // 🔹 Sync Acuity when user or selectedMonth changes
   useEffect(() => {
     if (!user) return
     const syncAcuity = async () => {
       try {
-        const res = await fetch('/api/acuity/pull?endpoint=appointments')
+        console.log(`🔄 Fetching Acuity appointments for ${selectedMonth}...`)
+        const res = await fetch(`/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}`)
         const data = await res.json()
-        console.log('📊 Raw Acuity Data:', data)
+        console.log('📊 Acuity Data:', data)
       } catch (err) {
         console.error('❌ Acuity sync failed:', err)
       }
     }
     syncAcuity()
-  }, [user])
-
+  }, [user, selectedMonth]) // ✅ Fixed: always exactly 2 items in array
 
   if (loading)
     return (
@@ -172,7 +174,7 @@ export default function DashboardPage() {
           <p className="text-xs text-[#bdbdbd]">Here’s your monthly summary.</p>
         </div>
 
-        {/* Modern Month Selector as pill buttons */}
+        {/* Month Selector */}
         <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
           {MONTHS.map((m) => (
             <button
@@ -190,12 +192,12 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* DASHBOARD GRID */}
+      {/* GRID */}
       <motion.div
         className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'} flex-1`}
-        style={{ overflow: 'visible' }} // <-- fix modal clipping
+        style={{ overflow: 'visible' }}
       >
-        {/* --- LEFT SECTION --- */}
+        {/* --- LEFT --- */}
         <div className="flex flex-col gap-4 pr-1">
           <motion.div variants={fadeInUp} custom={1} className={cardClass}>
             <YearlyRevenueCard userId={user?.id} />
@@ -213,7 +215,7 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* --- MIDDLE SECTION --- */}
+        {/* --- MIDDLE --- */}
         <div className="flex flex-col gap-4 px-1">
           <motion.div variants={fadeInUp} custom={4} className={cardClass}>
             <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} />
@@ -223,18 +225,16 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* --- RIGHT SECTION --- */}
+        {/* --- RIGHT --- */}
         <div className="flex flex-col gap-4 pl-1">
           <motion.div variants={fadeInUp} custom={6} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
             <MonthlyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
           </motion.div>
-
           <motion.div variants={fadeInUp} custom={7} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
             <WeeklyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
           </motion.div>
-
           <motion.div variants={fadeInUp} custom={8} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison Reports</h2>
             <WeeklyComparisonReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />

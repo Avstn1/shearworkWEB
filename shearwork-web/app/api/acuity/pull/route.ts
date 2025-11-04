@@ -1,3 +1,5 @@
+'use server'
+
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
@@ -14,6 +16,8 @@ export async function GET(request: Request) {
   // 1️⃣ Parse requested endpoint from query (default to appointments)
   const { searchParams } = new URL(request.url)
   const endpoint = searchParams.get('endpoint') || 'appointments'
+  const requestedMonth = searchParams.get('month') || null // e.g. "January"
+  const requestedYear = searchParams.get('year') ? parseInt(searchParams.get('year') as string, 10) : null // e.g. 2025
 
   // 2️⃣ Fetch token from DB
   const { data: tokenRow, error: tokenError } = await supabase
@@ -95,18 +99,45 @@ export async function GET(request: Request) {
   }
 
   console.log('💧 Acuity data fetched for endpoint:', endpoint)
+  console.log('📦 Total items fetched:', Array.isArray(acuityData) ? acuityData.length : 'n/a')
+  console.log('🔎 Requested month/year:', requestedMonth, requestedYear)
 
   // 6️⃣ Process appointments
-  let clientMap: Record<string, { client_name: string; email: string; total_paid: number; num_visits: number }> = {}
-
   if (endpoint === 'appointments' && Array.isArray(acuityData)) {
-    const paidAppointments = acuityData
-    // .filter((a: any) => !a.canceled)
+    // start from full set
+    let appointmentsToProcess = acuityData
+    // .filter((a: any) => !a.canceled) // ⛔ Keeping it commented out as requested
+
+    // If a month or year was requested, filter the appointment list accordingly
+    if (requestedMonth || requestedYear) {
+      appointmentsToProcess = appointmentsToProcess.filter((appt: any) => {
+        try {
+          const date = new Date(appt.datetime)
+          const monthName = date.toLocaleString('default', { month: 'long' })
+          const year = date.getFullYear()
+          if (requestedMonth && requestedYear) {
+            return monthName === requestedMonth && year === requestedYear
+          } else if (requestedMonth) {
+            return monthName === requestedMonth
+          } else if (requestedYear) {
+            return year === requestedYear
+          } else {
+            return true
+          }
+        } catch (e) {
+          // if date parsing fails, exclude that appt from filtered set
+          console.warn('Failed to parse appointment datetime when filtering by month/year:', appt)
+          return false
+        }
+      })
+    }
+
+    console.log('🧾 Appointments to process count:', appointmentsToProcess.length)
 
     const groupedByMonth: Record<string, any[]> = {}
 
-    // group appointments by month
-    for (const appt of paidAppointments) {
+    // Group appointments by month/year (keyed by "YEAR||MonthName")
+    for (const appt of appointmentsToProcess) {
       const date = new Date(appt.datetime)
       const monthName = date.toLocaleString('default', { month: 'long' })
       const year = date.getFullYear()
@@ -115,7 +146,7 @@ export async function GET(request: Request) {
       groupedByMonth[key].push(appt)
     }
 
-    // calculate totals
+    // Calculate totals
     const revenueByMonth: Record<string, number> = {}
     const avgTicketByMonth: Record<string, number> = {}
 
@@ -123,7 +154,6 @@ export async function GET(request: Request) {
       const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
       const avgTicket = appts.length > 0 ? totalRevenue / appts.length : 0
 
-      const [year, month] = key.split('||')
       revenueByMonth[key] = totalRevenue
       avgTicketByMonth[key] = parseFloat(avgTicket.toFixed(2))
     }
@@ -154,15 +184,15 @@ export async function GET(request: Request) {
       console.log('✅ monthly_data table updated successfully!')
     }
 
-    // 🧩 Count bookings per service
+    // 🧾 Count bookings per service
     const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
 
-    for (const appt of paidAppointments) {
+    for (const appt of appointmentsToProcess) {
       const service = appt.type || 'Unknown'
       const date = new Date(appt.datetime)
       const month = date.toLocaleString('default', { month: 'long' })
       const year = date.getFullYear()
-      const key = `${service}||${month}||${year}` // ✅ use safe delimiter
+      const key = `${service}||${month}||${year}`
       if (!serviceCounts[key]) serviceCounts[key] = { month, year, count: 0 }
       serviceCounts[key].count++
     }
@@ -198,7 +228,7 @@ export async function GET(request: Request) {
       >
     > = {}
 
-    for (const appt of paidAppointments) {
+    for (const appt of appointmentsToProcess) {
       const email = appt.email?.toLowerCase() || ''
       if (!email) continue
 
@@ -249,7 +279,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 7️⃣ Return summary
+  // 7️⃣ Return response
   return NextResponse.json({
     endpoint,
     fetched_at: new Date().toISOString(),
