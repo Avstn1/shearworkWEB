@@ -23,10 +23,7 @@ export async function GET(request: Request) {
     .single()
 
   if (tokenError || !tokenRow) {
-    return NextResponse.json(
-      { error: 'No Acuity connection found' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
   }
 
   // 3️⃣ Refresh token if expired
@@ -61,16 +58,10 @@ export async function GET(request: Request) {
           .eq('user_id', user.id)
       } else {
         console.error('Token refresh failed:', newTokens)
-        return NextResponse.json(
-          { error: 'Token refresh failed', details: newTokens },
-          { status: 500 }
-        )
+        return NextResponse.json({ error: 'Token refresh failed', details: newTokens }, { status: 500 })
       }
     } catch (err) {
-      return NextResponse.json({
-        error: 'Failed to refresh token',
-        details: String(err),
-      })
+      return NextResponse.json({ error: 'Failed to refresh token', details: String(err) })
     }
   }
 
@@ -89,34 +80,24 @@ export async function GET(request: Request) {
   ]
 
   if (!ALLOWED_ENDPOINTS.includes(endpoint)) {
-    return NextResponse.json(
-      { error: `Invalid endpoint '${endpoint}'` },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: `Invalid endpoint '${endpoint}'` }, { status: 400 })
   }
 
   // 5️⃣ Fetch data from Acuity
   const acuityRes = await fetch(`https://acuityscheduling.com/api/v1/${endpoint}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: { Authorization: `Bearer ${accessToken}` },
   })
 
   const acuityData = await acuityRes.json()
-
   if (!acuityRes.ok) {
     console.error('❌ Failed to fetch from Acuity:', acuityData)
-    return NextResponse.json(
-      { error: 'Failed to fetch from Acuity', details: acuityData },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch from Acuity', details: acuityData }, { status: 500 })
   }
 
   console.log('💧 Acuity data fetched for endpoint:', endpoint)
 
-  // 6️⃣ If appointments, calculate revenue & average ticket
-  let revenueByMonth: Record<string, number> = {}
-  let avgTicketByMonth: Record<string, number> = {}
+  // 6️⃣ Process appointments
+  let clientMap: Record<string, { client_name: string; email: string; total_paid: number; num_visits: number }> = {}
 
   if (endpoint === 'appointments' && Array.isArray(acuityData)) {
     const paidAppointments = acuityData.filter((a: any) => a.paid === 'yes')
@@ -134,6 +115,9 @@ export async function GET(request: Request) {
     }
 
     // calculate totals
+    const revenueByMonth: Record<string, number> = {}
+    const avgTicketByMonth: Record<string, number> = {}
+
     for (const [key, appts] of Object.entries(groupedByMonth)) {
       const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
       const avgTicket = appts.length > 0 ? totalRevenue / appts.length : 0
@@ -168,14 +152,105 @@ export async function GET(request: Request) {
     } else {
       console.log('✅ monthly_data table updated successfully!')
     }
+
+    // 🧩 Count bookings per service
+    const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
+    for (const appt of paidAppointments) {
+      const service = appt.type || 'Unknown'
+      const date = new Date(appt.datetime)
+      const month = date.toLocaleString('default', { month: 'long' })
+      const year = date.getFullYear()
+      const key = `${service}-${month}-${year}`
+      if (!serviceCounts[key]) serviceCounts[key] = { month, year, count: 0 }
+      serviceCounts[key].count++
+    }
+
+    const serviceUpserts = Object.entries(serviceCounts).map(([key, val]) => {
+      const [service] = key.split('-')
+      return {
+        user_id: user.id,
+        service_name: service,
+        bookings: val.count,
+        report_month: val.month,
+        report_year: val.year,
+        created_at: new Date().toISOString(),
+      }
+    })
+
+    const { error: bookingsError } = await supabase
+      .from('service_bookings')
+      .upsert(serviceUpserts, { onConflict: 'user_id,service_name,report_month,report_year' })
+
+    if (bookingsError) {
+      console.error('❌ Failed to update service_bookings:', bookingsError)
+    } else {
+      console.log('✅ service_bookings table updated successfully!')
+    }
+
+    // 🔹 Aggregate clients by email *per month*
+    const monthlyClientMap: Record<
+      string,
+      Record<
+        string,
+        { client_name: string; email: string; total_paid: number; num_visits: number; month: string; year: number }
+      >
+    > = {}
+
+    for (const appt of paidAppointments) {
+      const email = appt.email?.toLowerCase() || ''
+      if (!email) continue
+
+      const date = new Date(appt.datetime)
+      const month = date.toLocaleString('default', { month: 'long' })
+      const year = date.getFullYear()
+      const key = `${year}-${month}`
+
+      if (!monthlyClientMap[key]) monthlyClientMap[key] = {}
+      if (!monthlyClientMap[key][email]) {
+        monthlyClientMap[key][email] = {
+          client_name: appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}` : 'Unknown',
+          email,
+          total_paid: 0,
+          num_visits: 0,
+          month,
+          year,
+        }
+      }
+
+      monthlyClientMap[key][email].total_paid += parseFloat(appt.priceSold || '0')
+      monthlyClientMap[key][email].num_visits += 1
+    }
+
+    // 🔹 Upsert report_top_clients table for each month
+    for (const [key, clients] of Object.entries(monthlyClientMap)) {
+      const upsertClients = Object.values(clients).map((c) => ({
+        user_id: user.id,
+        client_name: c.client_name,
+        email: c.email,
+        total_paid: c.total_paid,
+        num_visits: c.num_visits,
+        month: c.month,
+        year: c.year,
+        updated_at: new Date().toISOString(),
+      }))
+
+      // ✅ FIX: use proper unique constraint on (user_id, email, month, year)
+      const { error: clientsError } = await supabase
+        .from('report_top_clients')
+        .upsert(upsertClients, { onConflict: 'user_id,email,month,year' })
+
+      if (clientsError) {
+        console.error(`❌ Failed to upsert clients for ${key}:`, clientsError)
+      } else {
+        console.log(`✅ Upserted ${upsertClients.length} clients for ${key} successfully!`)
+      }
+    }
   }
 
   // 7️⃣ Return summary
   return NextResponse.json({
     endpoint,
     fetched_at: new Date().toISOString(),
-    updated_rows: Object.keys(revenueByMonth).length,
-    revenue_summary: revenueByMonth,
-    avg_ticket_summary: avgTicketByMonth,
+    total_clients_upserted: Object.keys(clientMap || {}).length,
   })
 }

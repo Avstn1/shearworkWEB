@@ -22,7 +22,7 @@ export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardPro
     const fetchTotal = async () => {
       setLoading(true)
       try {
-        // Fetch barber type from profile
+        // ✅ Fetch barber type from profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('role, barber_type')
@@ -36,17 +36,18 @@ export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardPro
 
         const currentYear = year ?? new Date().getFullYear()
 
+        // ✅ Fetch all monthly_data entries for the current year
         const { data, error } = await supabase
-          .from('reports')
-          .select('total_revenue')
+          .from('monthly_data') // ← changed
+          .select('total_revenue') // ← same
           .eq('user_id', userId)
-          .eq('type', 'monthly')
           .eq('year', currentYear)
 
         if (error) throw error
 
+        // ✅ Sum total_revenue across months
         const totalSum = data?.reduce((sum, r) => sum + (r.total_revenue || 0), 0)
-        setTotal(totalSum)
+        setTotal(totalSum ?? 0)
       } catch (err) {
         console.error('Error fetching yearly revenue:', err)
       } finally {

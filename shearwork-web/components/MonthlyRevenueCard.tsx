@@ -52,19 +52,19 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       try {
         const currentYear = year ?? new Date().getFullYear()
 
-        // Current month revenue
-        const { data: currentData } = await supabase
-          .from('reports')
+        // ✅ Fetch current month revenue from monthly_data
+        const { data: currentData, error: currentError } = await supabase
+          .from('monthly_data')
           .select('total_revenue')
           .eq('user_id', userId)
-          .eq('type', 'monthly')
           .eq('month', selectedMonth)
           .eq('year', currentYear)
           .maybeSingle()
 
+        if (currentError) console.error('Error fetching current month:', currentError)
         setRevenue(currentData?.total_revenue ?? null)
 
-        // Previous month revenue
+        // ✅ Determine previous month/year
         const currentIndex = MONTHS.indexOf(selectedMonth)
         let prevIndex = currentIndex - 1
         let prevYear = currentYear
@@ -74,15 +74,16 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
         }
         const prevMonth = MONTHS[prevIndex]
 
-        const { data: prevData } = await supabase
-          .from('reports')
+        // ✅ Fetch previous month revenue from monthly_data
+        const { data: prevData, error: prevError } = await supabase
+          .from('monthly_data')
           .select('total_revenue')
           .eq('user_id', userId)
-          .eq('type', 'monthly')
           .eq('month', prevMonth)
           .eq('year', prevYear)
           .maybeSingle()
 
+        if (prevError) console.error('Error fetching previous month:', prevError)
         setPrevRevenue(prevData?.total_revenue ?? null)
       } catch (err) {
         console.error('Error fetching revenues:', err)
@@ -114,9 +115,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
 
       <div className="flex-1 flex items-center">
-        <p
-          className="text-3xl md:text-3xl sm:text-2xl font-bold text-[#F5E6C5]"
-        >
+        <p className="text-3xl md:text-3xl sm:text-2xl font-bold text-[#F5E6C5]">
           {loading
             ? 'Loading...'
             : revenue !== null

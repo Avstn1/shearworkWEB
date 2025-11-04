@@ -87,8 +87,7 @@ export default function DashboardPage() {
       try {
         const res = await fetch('/api/acuity/pull?endpoint=appointments')
         const data = await res.json()
-        console.log('✅ Updated monthly revenue:', data.revenue_summary)
-        console.log('🎟️ Updated average tickets:', data.avg_ticket_summary)
+        console.log('📊 Raw Acuity Data:', data)
       } catch (err) {
         console.error('❌ Acuity sync failed:', err)
       }

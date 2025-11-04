@@ -57,5 +57,5 @@ export async function GET(req: Request) {
   })
 
   // Redirect back to app (dashboard, settings, etc.)
-  return NextResponse.redirect(new URL('/dashboard', 'http://localhost:3000'))
+  return NextResponse.redirect(new URL('/dashboard', process.env.NEXT_PUBLIC_SITE_URL!))
 }

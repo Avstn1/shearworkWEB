@@ -6,7 +6,6 @@ import toast from 'react-hot-toast'
 
 interface TopClient {
   id?: string
-  rank: number | ''
   client_name: string
   total_paid: number | ''
   num_visits: number | ''
@@ -65,7 +64,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
           .from('report_top_clients')
           .select('*')
           .eq('report_id', report.id)
-          .order('rank', { ascending: true })
+          .order('total_paid', { ascending: false })
 
         if (topClientsError && topClientsError.code !== 'PGRST116') throw topClientsError
         if (topClients) {
@@ -74,7 +73,6 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
               ...c,
               num_visits: c.num_visits ?? 0,
               total_paid: c.total_paid ?? 0,
-              rank: c.rank ?? 0,
             }))
           )
         }
@@ -92,7 +90,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
   const handleAddClient = () => {
     setClients(prev => [
       ...prev,
-      { rank: '', client_name: '', total_paid: '', num_visits: '', notes: '' },
+      { client_name: '', total_paid: '', num_visits: '', notes: '' },
     ])
   }
 
@@ -134,7 +132,6 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
       const upsertData = clients.map(c => ({
         id: c.id ?? crypto.randomUUID(),
         report_id: reportId,
-        rank: c.rank === '' ? 0 : c.rank,
         client_name: c.client_name,
         total_paid: c.total_paid === '' ? 0 : c.total_paid,
         num_visits: c.num_visits === '' ? 0 : c.num_visits,
@@ -168,14 +165,8 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
             className="grid grid-cols-12 gap-2 items-center bg-[var(--bg-light)]/10 rounded-lg p-2 border border-[var(--accent-3)]/20"
           >
             <div className="col-span-1 flex flex-col">
-              <label className="text-[10px] text-gray-400 mb-0.5">Rank</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-                value={client.rank}
-                onChange={e => handleNumericChange(e, val => handleChange(idx, 'rank', val))}
-              />
+              <label className="text-[10px] text-gray-400 mb-0.5">#</label>
+              <div className="text-center text-xs font-bold text-white mt-1">{idx + 1}</div>
             </div>
 
             <div className="col-span-3 flex flex-col">

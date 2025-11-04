@@ -71,6 +71,39 @@ export default function AdminDashboardPage() {
 
   const [activeTab, setActiveTab] = useState<'revenue' | 'clients' | 'ticket' | 'breakdown' | 'funnels' | 'addReport'>('addReport')
 
+  const handleTestGenerateReport = async () => {
+    if (!selectedBarber) {
+      toast.error('Please select a barber first.')
+      return
+    }
+
+    try {
+      toast.loading('Generating report...')
+
+      const response = await fetch(
+        `/api/openai/generate?type=monthly&user_id=${selectedBarber.user_id}&month=${selectedMonth}&year=${reportData.year}`
+      )
+
+      const data = await response.json()
+      console.log('Raw response:', data);
+      toast.dismiss()
+
+      if (!response.ok) throw new Error(data.error || 'Failed to generate report.')
+
+      toast.success('✅ Report generated and saved successfully!')
+      
+      // Force reload of reports table from Supabase
+      setRefreshReports(prev => prev + 1)
+
+    } catch (err: any) {
+      console.error(err)
+      toast.dismiss()
+      toast.error(err.message || 'Failed to generate report.')
+    }
+  }
+
+
+
   // --- User & Profile ---
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -449,6 +482,19 @@ export default function AdminDashboardPage() {
                   >
                     Add Report
                   </button>
+
+                  <div className="mt-4 border-t border-[var(--accent-2)]/50 pt-3">
+                    <h4 className="text-sm font-semibold mb-2 text-[var(--accent-3)]">
+                      ⚙️ Feature in Testing
+                    </h4>
+                    <button
+                      onClick={handleTestGenerateReport}
+                      className="bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] px-4 py-2 rounded-md"
+                    >
+                      Test Auto-Generate Report
+                    </button>
+                  </div>
+
                 </div>
               </div>
             )}
