@@ -113,6 +113,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
     setSaving(true)
     try {
       const upsertData = clients.map(c => ({
+        id: c.id, // use id for conflict detection
         user_id: barberId,
         month,
         year,
@@ -125,7 +126,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
 
       const { error } = await supabase
         .from('report_top_clients')
-        .upsert(upsertData, { onConflict: 'user_id,month,year,email' })
+        .upsert(upsertData, { onConflict: 'id' }) // <--- conflict on primary key
 
       if (error) throw error
       toast.success('Top clients saved!')
