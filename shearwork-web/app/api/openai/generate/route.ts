@@ -29,6 +29,15 @@ export async function GET(req: Request) {
     // 🧮 Week number only for weekly reports
     const week_number = Math.ceil(new Date().getDate() / 7);
 
+    // 🧲 name
+    const { data: userName, error: nameError } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("user_id", user_id)
+    .single();
+
+    if (nameError) throw nameError;
+
     // 🧲 1️⃣ monthly_data
     const { data: monthlyData, error: monthlyError } = await supabase
       .from("monthly_data")
@@ -90,6 +99,7 @@ export async function GET(req: Request) {
       services_percentage, // <--- added this
       marketing_funnels: funnels || [],
       top_clients: topClients || [],
+      user_name: userName,
     };
 
     // 🧠 Define prompts for each report type
@@ -106,7 +116,11 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Include section
 2. Quick Overview (from monthly_data)
     - Display table with columns: Metric, Value.
     - In the same table with rows: Total Clients, New Clients, Returning Clients, Average Ticket, Total Revenue, Personal Earnings, Date Range
-    - End with a nice fun summary.
+    - **After the table**, write a short summary paragraph (2–3 sentences) that naturally interprets these metrics.
+      Example style:
+      "<strong>${month}</strong> was a strong month for ${userName} — [X] total clients with [Y]% new bookings. 
+      Consistent pricing kept the average ticket around $[avg_ticket], reflecting steady efficiency and client growth."
+      Make it sound natural, insightful, and encouraging, but concise.
 3. Service Breakdown (from service_bookings) 
     - Include % of each service relative to total bookings
 4. Marketing Funnels (from marketing_funnels) 
