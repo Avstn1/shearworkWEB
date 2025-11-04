@@ -156,24 +156,25 @@ export async function GET(request: Request) {
 
     // 🧩 Count bookings per service
     const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
+
     for (const appt of paidAppointments) {
       const service = appt.type || 'Unknown'
       const date = new Date(appt.datetime)
       const month = date.toLocaleString('default', { month: 'long' })
       const year = date.getFullYear()
-      const key = `${service}-${month}-${year}`
+      const key = `${service}||${month}||${year}` // ✅ use safe delimiter
       if (!serviceCounts[key]) serviceCounts[key] = { month, year, count: 0 }
       serviceCounts[key].count++
     }
 
     const serviceUpserts = Object.entries(serviceCounts).map(([key, val]) => {
-      const [service] = key.split('-')
+      const [service, month, year] = key.split('||')
       return {
         user_id: user.id,
         service_name: service,
         bookings: val.count,
-        report_month: val.month,
-        report_year: val.year,
+        report_month: month,
+        report_year: parseInt(year),
         created_at: new Date().toISOString(),
       }
     })
