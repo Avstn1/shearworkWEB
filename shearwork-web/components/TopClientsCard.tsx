@@ -28,20 +28,12 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
         setLoading(true)
         const year = new Date().getFullYear()
 
-        const { data: report } = await supabase
-          .from('reports')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('type', 'monthly')
-          .eq('month', selectedMonth)
-          .eq('year', year)
-          .maybeSingle()
-
         const { data: topClients } = await supabase
           .from('report_top_clients')
           .select('id, client_name, total_paid, num_visits, notes')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
+          .eq('year', year)
           .order('total_paid', { ascending: false })
 
         setClients(topClients || [])
@@ -58,11 +50,12 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
 
   return (
     <div
-      className="top-clients-card rounded-lg shadow-md p-4 flex-1 min-h-[250px] border"
+      className="top-clients-card rounded-lg shadow-md p-4 flex-1 border flex flex-col"
       style={{
         background: 'var(--card-topclients-bg)',
         borderColor: 'var(--card-revenue-border)',
         color: 'var(--foreground)',
+        height: '370px', // fixed height sized for ~5 rows + header
       }}
     >
       <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
@@ -70,13 +63,17 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
       </h2>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading...</p>
+        <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+          Loading...
+        </div>
       ) : clients.length === 0 ? (
-        <p className="text-sm text-gray-400">No data available for {selectedMonth}.</p>
+        <div className="flex-1 flex items-center justify-center text-sm text-gray-400 text-center">
+          No data available for {selectedMonth}.
+        </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-y-auto flex-1">
           <table className="w-full border-collapse text-sm">
-            <thead>
+            <thead className="sticky top-0 bg-[var(--card-topclients-bg)]">
               <tr className="text-left border-b border-[#444]">
                 <th className="py-2 px-3 min-w-[30px]">#</th>
                 <th className="py-2 px-3 min-w-[120px]">Client</th>
@@ -92,16 +89,21 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
                   className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
                     idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
                   }`}
+                  style={{ height: '45px' }} // consistent row height
                 >
                   <td className="py-2 px-3 font-medium">{idx + 1}</td>
-                  <td className="py-2 px-3 font-semibold">{client.client_name ?? 'N/A'}</td>
+                  <td className="py-2 px-3 font-semibold truncate">
+                    {client.client_name ?? 'N/A'}
+                  </td>
                   <td className="py-2 px-3 font-semibold text-green-400">
                     ${client.total_paid?.toFixed(2) ?? '-'}
                   </td>
                   <td className="py-2 px-3 font-semibold text-yellow-400">
                     {client.num_visits ?? '-'}
                   </td>
-                  <td className="py-2 px-3 italic text-gray-300">{client.notes ?? '-'}</td>
+                  <td className="py-2 px-3 italic text-gray-300 truncate">
+                    {client.notes ?? '-'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -114,7 +116,8 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
           table {
             font-size: 0.75rem;
           }
-          th, td {
+          th,
+          td {
             padding: 0.25rem 0.5rem;
           }
         }

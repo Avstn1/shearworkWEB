@@ -60,28 +60,34 @@ export default function ServiceBreakdownChart({
     fetchData()
   }, [barberId, month, year])
 
-  if (data.length === 0) return <p>No data to see here yet!</p>
+  if (data.length === 0)
+    return (
+      <div
+        className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[360px]"
+        style={{
+          borderColor: 'var(--card-revenue-border)',
+          background: 'var(--card-revenue-bg)',
+        }}
+      >
+        <p className="text-[#E8EDC7] opacity-70">No data to see here yet!</p>
+      </div>
+    )
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md border"
+      className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
       style={{
         borderColor: 'var(--card-revenue-border)',
         background: 'var(--card-revenue-bg)',
-        height: '360px',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'visible',
+        minHeight: '360px',
+        maxHeight: '420px',
       }}
     >
       <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
         💈 Service Breakdown
       </h2>
 
-      <div
-        className="flex-1 flex flex-col justify-center items-center"
-        style={{ overflow: 'visible' }}
-      >
+      <div className="flex-1 flex items-center justify-center overflow-visible">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 0, right: 0, bottom: 40, left: 0 }}>
             <Pie

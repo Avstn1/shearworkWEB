@@ -2,7 +2,14 @@
 
 import React, { useEffect, useState } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
 } from 'recharts'
 import { supabase } from '@/utils/supabaseClient'
 
@@ -24,7 +31,11 @@ interface MarketingFunnelsChartProps {
   year: number
 }
 
-export default function MarketingFunnelsChart({ barberId, month, year }: MarketingFunnelsChartProps) {
+export default function MarketingFunnelsChart({
+  barberId,
+  month,
+  year,
+}: MarketingFunnelsChartProps) {
   const [data, setData] = useState<MarketingFunnel[]>([])
 
   useEffect(() => {
@@ -47,14 +58,27 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
     fetchData()
   }, [barberId, month, year])
 
-  if (data.length === 0) return <p>No data to see here yet!</p>
+  if (data.length === 0)
+    return (
+      <div
+        className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[400px]"
+        style={{
+          borderColor: 'var(--card-revenue-border)',
+          background: 'var(--card-revenue-bg)',
+        }}
+      >
+        <p className="text-[#E8EDC7] opacity-70">No data to see here yet!</p>
+      </div>
+    )
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col"
+      className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
       style={{
+        borderColor: 'var(--card-revenue-border)',
         background: 'var(--card-revenue-bg)',
-        height: '400px', // slightly taller to give space for rotated labels
+        minHeight: '400px',
+        maxHeight: '440px',
         overflow: 'visible',
       }}
     >
@@ -62,70 +86,72 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
         📣 Marketing Funnels
       </h2>
 
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          margin={{ top: 20, right: 20, left: 0, bottom: 60 }} // extra bottom margin for rotated labels
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
-          
-          <XAxis
-            dataKey="source"
-            stroke="#E8EDC7"
-            angle={-35} // rotate labels for readability
-            textAnchor="end"
-            interval={0} // show all labels
-            height={60} // make space for rotated labels
-            style={{fontSize: '12px'}}
-          />
-          <YAxis stroke="#E8EDC7" />
-          
-          <Tooltip
-            formatter={(value: any, name: string) => {
-              if (name === 'Retention') {
-                return [`${value}%`, name]
+      <div className="flex-1 flex items-center justify-center overflow-visible">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 20, left: 0, bottom: 60 }} // extra bottom margin for rotated labels
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
+
+            <XAxis
+              dataKey="source"
+              stroke="#E8EDC7"
+              angle={-35} // rotate labels for readability
+              textAnchor="end"
+              interval={0} // show all labels
+              height={60} // make space for rotated labels
+              style={{ fontSize: '12px' }}
+            />
+            <YAxis stroke="#E8EDC7" />
+
+            <Tooltip
+              formatter={(value: any, name: string) => {
+                if (name === 'Retention') return [`${value}%`, name]
+                return [value, name]
+              }}
+              contentStyle={{
+                backgroundColor: '#2b2b2b',
+                border: '1px solid #E8EDC7',
+                borderRadius: '8px',
+                color: '#E8EDC7',
+              }}
+              itemStyle={{ color: '#E8EDC7' }}
+              labelStyle={{ color: '#E8EDC7' }}
+            />
+
+            <Legend
+              formatter={(value) =>
+                value === 'Retention' ? 'Retention (%)' : value
               }
-              return [value, name]
-            }}
-            contentStyle={{
-              backgroundColor: '#2b2b2b',
-              border: '1px solid #E8EDC7',
-              borderRadius: '8px',
-              color: '#E8EDC7',
-            }}
-            itemStyle={{ color: '#E8EDC7' }}
-            labelStyle={{ color: '#E8EDC7' }}
-          />
+              iconType="circle"
+              wrapperStyle={{
+                color: '#E8EDC7',
+                paddingTop: '10px',
+              }}
+            />
 
-          <Legend
-            formatter={(value) => value === 'Retention' ? 'Retention (%)' : value}
-            iconType="circle"
-            wrapperStyle={{
-              color: '#E8EDC7',
-              paddingTop: '10px',
-            }}
-          />
-
-          <Bar
-            dataKey="new_clients"
-            name="New Clients"
-            fill={COLORS[1]}
-            radius={[8, 8, 0, 0]}
-          />
-          <Bar
-            dataKey="returning_clients"
-            name="Returning Clients"
-            fill={COLORS[3]}
-            radius={[8, 8, 0, 0]}
-          />
-          <Bar
-            dataKey="retention"
-            name="Retention"
-            fill={COLORS[2]}
-            radius={[8, 8, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+            <Bar
+              dataKey="new_clients"
+              name="New Clients"
+              fill={COLORS[1]}
+              radius={[8, 8, 0, 0]}
+            />
+            <Bar
+              dataKey="returning_clients"
+              name="Returning Clients"
+              fill={COLORS[3]}
+              radius={[8, 8, 0, 0]}
+            />
+            <Bar
+              dataKey="retention"
+              name="Retention"
+              fill={COLORS[2]}
+              radius={[8, 8, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   )
 }

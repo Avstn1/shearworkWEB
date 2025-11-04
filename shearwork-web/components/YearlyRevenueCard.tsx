@@ -13,7 +13,6 @@ export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardPro
   const [total, setTotal] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [barberType, setBarberType] = useState<'rental' | 'commission' | undefined>(undefined)
-
   const { label } = useBarberLabel(barberType)
 
   useEffect(() => {
@@ -22,7 +21,6 @@ export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardPro
     const fetchTotal = async () => {
       setLoading(true)
       try {
-        // ✅ Fetch barber type from profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('role, barber_type')
@@ -36,16 +34,14 @@ export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardPro
 
         const currentYear = year ?? new Date().getFullYear()
 
-        // ✅ Fetch all monthly_data entries for the current year
         const { data, error } = await supabase
-          .from('monthly_data') // ← changed
-          .select('total_revenue') // ← same
+          .from('monthly_data')
+          .select('total_revenue')
           .eq('user_id', userId)
           .eq('year', currentYear)
 
         if (error) throw error
 
-        // ✅ Sum total_revenue across months
         const totalSum = data?.reduce((sum, r) => sum + (r.total_revenue || 0), 0)
         setTotal(totalSum ?? 0)
       } catch (err) {
@@ -63,13 +59,21 @@ export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardPro
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md relative flex flex-col min-h-[140px] border border-[color:var(--card-revenue-border)]"
-      style={{ background: 'var(--card-revenue-bg)' }}
+      className="flex flex-col justify-between rounded-lg shadow-md border border-[color:var(--card-revenue-border)]"
+      style={{
+        background: 'var(--card-revenue-bg)',
+        height: '100%',
+        minHeight: '150px',
+        maxHeight: '200px',
+        padding: '1rem',
+      }}
     >
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">💰 Total {label} (YTD)</h2>
+      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">
+        💰 Total {label} (YTD)
+      </h2>
 
-      <div className="flex-1 flex items-center">
-        <p className="text-3xl font-bold text-[#F5E6C5]">
+      <div className="flex-1 flex items-center justify-start">
+        <p className="text-3xl font-bold text-[#F5E6C5] truncate">
           {loading
             ? 'Loading...'
             : total !== null
