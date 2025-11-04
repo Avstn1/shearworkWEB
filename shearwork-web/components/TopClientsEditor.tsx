@@ -112,15 +112,15 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
         user_id: barberId,
         month,
         year,
-        client_name: c.client_name,
+        client_name: c.client_name.trim(),
         total_paid: c.total_paid === '' ? 0 : c.total_paid,
         num_visits: c.num_visits === '' ? 0 : c.num_visits,
-        notes: c.notes,
+        notes: c.notes.trim(),
       }))
 
       const { error } = await supabase
         .from('report_top_clients')
-        .upsert(upsertData, { onConflict: 'id' })
+        .upsert(upsertData, { onConflict: 'user_id,month,year,client_name' })
 
       if (error) throw error
       toast.success('Top clients saved!')
@@ -131,6 +131,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
       setSaving(false)
     }
   }
+
 
   if (loading) return <p>Loading top clients...</p>
 
