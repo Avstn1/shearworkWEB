@@ -33,10 +33,9 @@ export default function AdminAverageTicketEditor({ barberId, month }: Props) {
   const fetchAvgTicket = async () => {
     setLoading(true)
     const { data, error } = await supabase
-      .from('reports')
+      .from('monthly_data')
       .select('avg_ticket')
       .eq('user_id', barberId)
-      .eq('type', 'monthly')
       .eq('month', month)
       .eq('year', new Date().getFullYear())
       .maybeSingle()
@@ -54,10 +53,9 @@ export default function AdminAverageTicketEditor({ barberId, month }: Props) {
     setLoading(true)
     const ticketNumber = Number(avgTicket)
     const { error } = await supabase
-      .from('reports')
+      .from('monthly_data')
       .update({ avg_ticket: ticketNumber })
       .eq('user_id', barberId)
-      .eq('type', 'monthly')
       .eq('month', month)
       .eq('year', new Date().getFullYear())
 
