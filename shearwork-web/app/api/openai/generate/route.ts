@@ -1,3 +1,5 @@
+'use server'
+
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { openai } from "@/lib/openaiClient";
@@ -48,6 +50,17 @@ export async function GET(req: Request) {
 
     if (serviceError) throw serviceError;
 
+    // 🔹 Calculate percentage of each service
+    let services_percentage: { name: string; bookings: number; percentage: number }[] = [];
+    if (services && services.length > 0) {
+      const totalBookings = services.reduce((sum, s) => sum + (s.bookings || 0), 0);
+      services_percentage = services.map((s) => ({
+        name: s.service_name,
+        bookings: s.bookings || 0,
+        percentage: totalBookings > 0 ? ((s.bookings || 0) / totalBookings) * 100 : 0,
+      }));
+    }
+
     // 🧲 3️⃣ marketing_funnels
     const { data: funnels, error: funnelError } = await supabase
       .from("marketing_funnels")
@@ -58,45 +71,96 @@ export async function GET(req: Request) {
 
     if (funnelError) throw funnelError;
 
+    // 🧲 3️⃣ top_clients
+    const { data: topClients, error: topClientsError } = await supabase
+      .from('report_top_clients')
+      .select('id, client_name, total_paid, num_visits, notes')
+      .eq('user_id', user_id)
+      .eq('month', month)
+      .order('total_paid', { ascending: false });
+
+    if (topClientsError) throw topClientsError;
+
     // 🧩 Structured dataset
     const dataset = {
       month,
       year,
       monthly_summary: monthlyData || {},
       services: services || [],
+      services_percentage, // <--- added this
       marketing_funnels: funnels || [],
+      top_clients: topClients || [],
     };
 
-    // 🧠 Prompt for OpenAI
-    const prompt = `
-You are a professional analytics assistant creating a ${type} performance report for a barbershop professional. 
+    // 🧠 Define prompts for each report type
+    const prompts = {
+      monthly: `
+You are a professional analytics assistant creating a monthly performance report for a barbershop professional. 
+Be a little fun and use some emojis, especially in section headers.
 
-Below is the dataset in JSON format:
-\`\`\`json
+Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
-\`\`\`
 
-Generate a detailed ${type} report in **HTML** suitable for direct insertion into a TinyMCE editor.
+Generate a detailed monthly report in HTML suitable for TinyMCE. Include sections:
+1. <h1>${month} ${year} Business Report</h1>
+2. Quick Overview (from monthly_data)
+    - Display table with columns: Metric, Value.
+    - In the same table with rows: Total Clients, New Clients, Returning Clients, Average Ticket, Total Revenue, Personal Earnings, Date Range
+    - End with a nice fun summary.
+3. Service Breakdown (from service_bookings) 
+    - Include % of each service relative to total bookings
+4. Marketing Funnels (from marketing_funnels) 
+    - Display table with columns: Source, New Clients, Returning, Retention, and Avg Ticket 
+    - Highlights
+5. Top Clients (from top_clients)
+    - Display table with columns: Rank (medal emojis for top 3 ranks), Client, Total Paid, Visit, Notes
+    - Top 10 clients generated... (summary)
+6. Frequency Highlights (from top_clients)
+    - Display table sorted by Visits with columns: Client, Visits, Total Paid, Notes (but more summarized)
+7. Key Takeaways (emojis beside every point rather than bullets)
 
-Formatting requirements:
-- Use <h1>, <h2>, <h3> appropriately.
-- Use <p> for body text.
-- Use <ul><li> for bullet lists.
-- Use <table> for tabular data (like service breakdowns or marketing performance).
-- Include simple inline font-size or style attributes for visual hierarchy.
-- Professional, readable, and visually balanced layout.
-- If any section is missing data, write: “No data available for this section.”
+Use <h2>/<h3> for headings, <p> for text, <ul><li> for lists, <table> for tables. If any section has no data, write: "No data available for this section." Output only HTML body, no triple backticks.
+      `,
+      weekly: `
+You are a professional analytics assistant creating a weekly performance report for a barbershop professional.
 
-Sections to include:
-1. <h1> ${month} ${year} Performance Report
-2. Overview (from monthly_data)
-3. Service Breakdown (from service_bookings)
-4. Marketing Insights (from marketing_funnels)
-5. AI Tips & Recommendations (based on available data)
+Dataset (JSON):
+${JSON.stringify(dataset, null, 2)}
+
+Generate a detailed weekly report in HTML for TinyMCE. Include sections:
+1. <h1>Week ${week_number} - ${month} ${year} Performance Report</h1>
+2. Quick Overview (from monthly_data)
+3. Service Breakdown (from service_bookings) 
+    - Include % of each service relative to total bookings
+4. Marketing Funnels (from marketing_funnels) 
+    - Key Insights
+    - Action Items
+5. AI Tips & Recommendations
 6. Summary
 
-Output only the HTML body — no <html> or <body> tags.
-`;
+Use proper HTML headings, paragraphs, bullet lists, and tables. If a section has no data, write: "No data available for this section." Output only HTML body, no triple backticks.
+      `,
+      weekly_comparison: `
+You are a professional analytics assistant creating a weekly comparison report for a barbershop professional.
+
+Dataset (JSON):
+${JSON.stringify(dataset, null, 2)}
+
+Generate a detailed weekly comparison report in HTML for TinyMCE. Compare current week to previous week. Include sections:
+1. <h1>Week ${week_number} Comparison Report - ${month} ${year}</h1>
+2. Overview and week-over-week trends
+3. Service Breakdown Comparison 
+    - Include % of each service relative to total bookings
+4. Marketing Insights Comparison
+5. AI Recommendations based on trends
+6. Summary
+
+Use headings, paragraphs, lists, tables. If a section has no data, write: "No data available for this section." Output only HTML body, no triple backticks.
+      `,
+    };
+
+    // Assign prompt based on report type
+    const prompt = prompts[type as keyof typeof prompts] || prompts.monthly;
 
     // 🤖 Call OpenAI
     const response = await openai.chat.completions.create({

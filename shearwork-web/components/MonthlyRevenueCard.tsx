@@ -135,7 +135,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
                   : 'text-gray-400'
             }`}
           >
-            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`}
+            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-gray-400">(vs. prior month)</span>
           </p>
         ) : (
           <p className="text-sm text-gray-500">—</p>

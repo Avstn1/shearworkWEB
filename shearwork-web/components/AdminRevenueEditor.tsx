@@ -19,10 +19,9 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
     async function loadRevenue() {
       try {
         const { data: reports, error } = await supabase
-          .from('reports')
+          .from('monthly_data')
           .select('id, total_revenue')
           .eq('user_id', barberId)
-          .eq('type', 'monthly')
           .eq('month', month)
           .eq('year', year)
           .limit(1)
@@ -50,10 +49,9 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
     const num = revenue === '' ? 0 : Number(revenue)
 
     const { error } = await supabase
-      .from('reports')
+      .from('monthly_data')
       .update({ total_revenue: num })
       .eq('user_id', barberId)
-      .eq('type', 'monthly')
       .eq('month', month)
       .eq('year', year)
 

@@ -9,8 +9,14 @@ interface AvgTicketCardProps {
   year?: number
 }
 
+const MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+]
+
 export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTicketCardProps) {
   const [avgTicket, setAvgTicket] = useState<number | null>(null)
+  const [prevAvgTicket, setPrevAvgTicket] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -21,33 +27,41 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
       try {
         const currentYear = year ?? new Date().getFullYear()
 
-        // ✅ Query monthly_data table instead of reports
-        const { data, error } = await supabase
-          .from('monthly_data') // ← changed
-          .select('avg_ticket, created_at')
+        // ✅ Fetch current month avg_ticket from monthly_data
+        const { data: currentData, error: currentError } = await supabase
+          .from('monthly_data')
+          .select('avg_ticket')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
           .eq('year', currentYear)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single() // we expect exactly one or none
+          .maybeSingle()
 
-        if (error) {
-          console.warn('Supabase error fetching average ticket:', error.message)
-          setAvgTicket(null)
-          return
+        if (currentError) console.error('Error fetching current avg_ticket:', currentError)
+        setAvgTicket(currentData?.avg_ticket ?? null)
+
+        // ✅ Determine previous month/year
+        const currentIndex = MONTHS.indexOf(selectedMonth)
+        let prevIndex = currentIndex - 1
+        let prevYear = currentYear
+        if (prevIndex < 0) {
+          prevIndex = 11
+          prevYear -= 1
         }
+        const prevMonth = MONTHS[prevIndex]
 
-        if (!data) {
-          console.warn(`No monthly data found for ${selectedMonth} ${currentYear}`)
-          setAvgTicket(null)
-          return
-        }
+        // ✅ Fetch previous month avg_ticket
+        const { data: prevData, error: prevError } = await supabase
+          .from('monthly_data')
+          .select('avg_ticket')
+          .eq('user_id', userId)
+          .eq('month', prevMonth)
+          .eq('year', prevYear)
+          .maybeSingle()
 
-        setAvgTicket(data.avg_ticket ?? null)
-      } catch (err: any) {
-        console.error('Unexpected error fetching average ticket:', err?.message ?? err)
-        setAvgTicket(null)
+        if (prevError) console.error('Error fetching previous avg_ticket:', prevError)
+        setPrevAvgTicket(prevData?.avg_ticket ?? null)
+      } catch (err) {
+        console.error('Error fetching average tickets:', err)
       } finally {
         setLoading(false)
       }
@@ -58,6 +72,15 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
 
   const formatCurrency = (amount: number) =>
     `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  const calculateChange = (): number | null => {
+    if (avgTicket === null || prevAvgTicket === null || prevAvgTicket === 0) return null
+    const diff = avgTicket - prevAvgTicket
+    const percent = (diff / prevAvgTicket) * 100
+    return parseFloat(percent.toFixed(2))
+  }
+
+  const change = calculateChange()
 
   return (
     <div
@@ -74,6 +97,24 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
               ? formatCurrency(avgTicket)
               : 'N/A'}
         </p>
+      </div>
+
+      <div className="flex justify-start mt-auto">
+        {change !== null ? (
+          <p
+            className={`text-sm font-semibold ${
+              change > 0
+                ? 'text-green-400'
+                : change < 0
+                  ? 'text-red-400'
+                  : 'text-gray-400'
+            }`}
+          >
+            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-gray-400">(vs. prior month)</span>
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">—</p>
+        )}
       </div>
     </div>
   )
