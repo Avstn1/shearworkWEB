@@ -59,7 +59,9 @@ export default function Navbar() {
 
         {/* --- RIGHT: UserProfile + Hamburger --- */}
         <div className="flex items-center gap-4 ml-auto">
-          {user && <UserProfile />} {/* Always show profile if logged in */}
+          {user && <Link href="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>}
+          {user && <UserProfile/>} {/* Always show profile if logged in */}
+
           <button className="md:hidden" onClick={() => setOpen(!open)}>
             {open ? <X /> : <Menu />}
           </button>

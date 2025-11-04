@@ -269,7 +269,7 @@ export async function GET(request: Request) {
       // ✅ FIX: use proper unique constraint on (user_id, email, month, year)
       const { error: clientsError } = await supabase
         .from('report_top_clients')
-        .upsert(upsertClients, { onConflict: 'user_id,email,month,year' })
+        .upsert(upsertClients, { onConflict: 'user_id,month,year,email' })
 
       if (clientsError) {
         console.error(`❌ Failed to upsert clients for ${key}:`, clientsError)
