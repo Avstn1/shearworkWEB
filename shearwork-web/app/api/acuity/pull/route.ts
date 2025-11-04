@@ -100,7 +100,8 @@ export async function GET(request: Request) {
   let clientMap: Record<string, { client_name: string; email: string; total_paid: number; num_visits: number }> = {}
 
   if (endpoint === 'appointments' && Array.isArray(acuityData)) {
-    const paidAppointments = acuityData.filter((a: any) => !a.canceled)
+    const paidAppointments = acuityData
+    // .filter((a: any) => !a.canceled)
 
     const groupedByMonth: Record<string, any[]> = {}
 
@@ -251,6 +252,6 @@ export async function GET(request: Request) {
   return NextResponse.json({
     endpoint,
     fetched_at: new Date().toISOString(),
-    total_clients_upserted: Object.keys(clientMap || {}).length,
+    acuity_data: acuityData,
   })
 }
