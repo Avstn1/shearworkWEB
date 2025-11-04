@@ -33,46 +33,31 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
   const [clients, setClients] = useState<TopClient[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [reportId, setReportId] = useState<string | null>(null)
-  const [monthlyReportExists, setMonthlyReportExists] = useState<boolean>(false)
 
   useEffect(() => {
     if (!barberId) return
 
-    const fetchReportAndClients = async () => {
+    const fetchTopClients = async () => {
       setLoading(true)
       try {
-        const { data: reports, error: reportError } = await supabase
-          .from('reports')
-          .select('*')
-          .eq('user_id', barberId)
-          .eq('type', 'monthly')
-          .eq('month', month)
-          .eq('year', year)
-          .limit(1)
-
-        if (reportError) throw reportError
-
-        const exists = Array.isArray(reports) && reports.length > 0
-        setMonthlyReportExists(exists)
-        if (!exists) return
-
-        const report = reports[0]
-        setReportId(report.id)
-
-        const { data: topClients, error: topClientsError } = await supabase
+        const { data: topClients, error } = await supabase
           .from('report_top_clients')
           .select('*')
-          .eq('report_id', report.id)
+          .eq('user_id', barberId)
+          .eq('month', month)
+          .eq('year', year)
           .order('total_paid', { ascending: false })
 
-        if (topClientsError && topClientsError.code !== 'PGRST116') throw topClientsError
+        if (error) throw error
+
         if (topClients) {
           setClients(
             topClients.map(c => ({
               ...c,
-              num_visits: c.num_visits ?? 0,
-              total_paid: c.total_paid ?? 0,
+              num_visits: c.num_visits ?? '',
+              total_paid: c.total_paid ?? '',
+              notes: c.notes ?? '',
+              client_name: c.client_name ?? '',
             }))
           )
         }
@@ -84,7 +69,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
       }
     }
 
-    fetchReportAndClients()
+    fetchTopClients()
   }, [barberId, month, year])
 
   const handleAddClient = () => {
@@ -121,17 +106,12 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
   }
 
   const handleSave = async () => {
-    if (!reportId) {
-      toast.error('No report selected for saving.')
-      return
-    }
-
     setSaving(true)
-
     try {
       const upsertData = clients.map(c => ({
-        id: c.id ?? crypto.randomUUID(),
-        report_id: reportId,
+        user_id: barberId,
+        month,
+        year,
         client_name: c.client_name,
         total_paid: c.total_paid === '' ? 0 : c.total_paid,
         num_visits: c.num_visits === '' ? 0 : c.num_visits,
@@ -161,7 +141,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
       <div className="flex flex-col gap-4">
         {clients.map((client, idx) => (
           <div
-            key={idx}
+            key={client.id || idx}
             className="grid grid-cols-12 gap-2 items-center bg-[var(--bg-light)]/10 rounded-lg p-2 border border-[var(--accent-3)]/20"
           >
             <div className="col-span-1 flex flex-col">

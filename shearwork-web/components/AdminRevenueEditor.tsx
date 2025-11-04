@@ -44,18 +44,29 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
   }, [barberId, month, year])
 
   const handleUpdate = async () => {
-
     const num = revenue === '' ? 0 : Number(revenue)
 
     const { error } = await supabase
       .from('monthly_data')
-      .update({ total_revenue: num })
-      .eq('user_id', barberId)
-      .eq('month', month)
-      .eq('year', year)
+      .upsert(
+        {
+          user_id: barberId,
+          month,
+          year,
+          total_revenue: num,
+        },
+        {
+          onConflict: 'user_id,month,year', // important! match your unique constraint
+        }
+      )
 
-    if (error) return toast.error('Failed to update revenue.')
-    toast.success('Revenue updated successfully!')
+    if (error) {
+      console.error(error)
+      return toast.error('Failed to save revenue.')
+    }
+
+    toast.success('Revenue saved successfully!')
+    setMonthlyReportExists(true)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
