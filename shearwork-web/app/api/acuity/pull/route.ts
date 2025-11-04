@@ -110,7 +110,7 @@ export async function GET(request: Request) {
       const date = new Date(appt.datetime)
       const monthName = date.toLocaleString('default', { month: 'long' })
       const year = date.getFullYear()
-      const key = `${year}-${monthName}`
+      const key = `${year}||${monthName}`
       if (!groupedByMonth[key]) groupedByMonth[key] = []
       groupedByMonth[key].push(appt)
     }
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
       const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
       const avgTicket = appts.length > 0 ? totalRevenue / appts.length : 0
 
-      const [year, month] = key.split('-')
+      const [year, month] = key.split('||')
       revenueByMonth[key] = totalRevenue
       avgTicketByMonth[key] = parseFloat(avgTicket.toFixed(2))
     }
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
 
     // 🧠 Upsert into monthly_data
     const upsertRows = Object.keys(revenueByMonth).map((key) => {
-      const [year, month] = key.split('-')
+      const [year, month] = key.split('||')
       return {
         user_id: user.id,
         month,
@@ -205,7 +205,7 @@ export async function GET(request: Request) {
       const date = new Date(appt.datetime)
       const month = date.toLocaleString('default', { month: 'long' })
       const year = date.getFullYear()
-      const key = `${year}-${month}`
+      const key = `${year}||${month}`
 
       if (!monthlyClientMap[key]) monthlyClientMap[key] = {}
       if (!monthlyClientMap[key][email]) {
