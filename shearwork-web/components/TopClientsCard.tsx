@@ -10,7 +10,6 @@ interface TopClientsCardProps {
 
 interface TopClient {
   id: string
-  rank: number | null
   client_name: string | null
   total_paid: number | null
   num_visits: number | null
@@ -29,7 +28,6 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
         setLoading(true)
         const year = new Date().getFullYear()
 
-        // Fetch the monthly report
         const { data: report } = await supabase
           .from('reports')
           .select('id')
@@ -39,17 +37,12 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
           .eq('year', year)
           .maybeSingle()
 
-        if (!report?.id) {
-          setClients([])
-          return
-        }
-
-        // Fetch top clients including num_visits
         const { data: topClients } = await supabase
           .from('report_top_clients')
-          .select('id, rank, client_name, total_paid, num_visits, notes')
-          .eq('report_id', report.id)
-          .order('rank', { ascending: true })
+          .select('id, client_name, total_paid, num_visits, notes')
+          .eq('user_id', userId)
+          .eq('month', selectedMonth)
+          .order('total_paid', { ascending: false })
 
         setClients(topClients || [])
       } catch (err) {
@@ -100,7 +93,7 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
                     idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
                   }`}
                 >
-                  <td className="py-2 px-3 font-medium">{client.rank ?? '-'}</td>
+                  <td className="py-2 px-3 font-medium">{idx + 1}</td>
                   <td className="py-2 px-3 font-semibold">{client.client_name ?? 'N/A'}</td>
                   <td className="py-2 px-3 font-semibold text-green-400">
                     ${client.total_paid?.toFixed(2) ?? '-'}

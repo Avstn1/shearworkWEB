@@ -80,6 +80,21 @@ export default function DashboardPage() {
     }
     fetchUserAndProfile()
   }, [])
+  
+  useEffect(() => {
+    if (!user) return
+    const syncAcuity = async () => {
+      try {
+        const res = await fetch('/api/acuity/pull?endpoint=appointments')
+        const data = await res.json()
+        console.log('📊 Raw Acuity Data:', data)
+      } catch (err) {
+        console.error('❌ Acuity sync failed:', err)
+      }
+    }
+    syncAcuity()
+  }, [user])
+
 
   if (loading)
     return (

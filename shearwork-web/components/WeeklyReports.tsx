@@ -42,6 +42,7 @@ export default function WeeklyReports({
       .eq('user_id', userId)
       .eq('type', 'weekly')
       .order('week_number', { ascending: true })
+
     if (error) return console.error(error)
     setReports(data || [])
   }
@@ -84,79 +85,85 @@ export default function WeeklyReports({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredReports.map((r) => (
-          <div
-            key={r.id}
-            className="relative rounded-lg p-4 border transition-all duration-300 ease-out transform hover:-translate-y-1 hover:scale-[1.02]"
-            style={{
-              background: 'var(--card-weekly-bg)',
-              borderColor: 'var(--card-weekly-border)',
-              boxShadow: `0 3px 10px var(--card-weekly-shadow)`,
-              color: 'var(--foreground)',
-            }}
-          >
-            {isAdmin && (
-              <>
-                <button
-                  onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)}
-                  className="absolute top-2 right-2 p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
-                >
-                  <MoreVertical size={18} />
-                </button>
-
-                {openMenu === r.id && (
-                  <div
-                    ref={menuRef}
-                    className="absolute top-8 right-2 rounded-md shadow-md w-28 z-50"
-                    style={{
-                      background: 'var(--card-weekly-border)',
-                      color: 'var(--text-bright)',
-                    }}
-                  >
-                    <button
-                      onClick={() => handleEdit(r)}
-                      className="block w-full text-left px-3 py-2 text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(r.id)}
-                      className="block w-full text-left px-3 py-2 text-sm text-red-300"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-
+        {filteredReports.length > 0 ? (
+          filteredReports.map((r) => (
             <div
-              onClick={() => {
-                setSelectedReport(r)
-                setIsEditing(false)
+              key={r.id}
+              className="relative rounded-lg p-4 border transition-all duration-300 ease-out transform hover:-translate-y-1 hover:scale-[1.02]"
+              style={{
+                background: 'var(--card-weekly-bg)',
+                borderColor: 'var(--card-weekly-border)',
+                boxShadow: `0 3px 10px var(--card-weekly-shadow)`,
+                color: 'var(--foreground)',
               }}
-              className="cursor-pointer"
             >
-              <p className="font-semibold">
-                Week {r.week_number} - {r.month} {r.year || ''}
-              </p>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)}
+                    className="absolute top-2 right-2 p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
+                  >
+                    <MoreVertical size={18} />
+                  </button>
 
-              <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
-                <div
-                  className="prose prose-sm"
-                  dangerouslySetInnerHTML={{
-                    __html: r.content
-                      ? r.content.length > 100
-                        ? r.content.slice(0, 100) + '...'
-                        : r.content
-                      : 'No content available.',
-                  }}
-                />
-                <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[var(--card-weekly-bg)] to-transparent" />
+                  {openMenu === r.id && (
+                    <div
+                      ref={menuRef}
+                      className="absolute top-8 right-2 rounded-md shadow-md w-28 z-50"
+                      style={{
+                        background: 'var(--card-weekly-border)',
+                        color: 'var(--text-bright)',
+                      }}
+                    >
+                      <button
+                        onClick={() => handleEdit(r)}
+                        className="block w-full text-left px-3 py-2 text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        className="block w-full text-left px-3 py-2 text-sm text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div
+                onClick={() => {
+                  setSelectedReport(r)
+                  setIsEditing(false)
+                }}
+                className="cursor-pointer"
+              >
+                <p className="font-semibold">
+                  Week {r.week_number} - {r.month} {r.year || ''}
+                </p>
+
+                <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
+                  <div
+                    className="prose prose-sm"
+                    dangerouslySetInnerHTML={{
+                      __html: r.content
+                        ? r.content.length > 100
+                          ? r.content.slice(0, 100) + '...'
+                          : r.content
+                        : 'No content available.',
+                    }}
+                  />
+                  <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[var(--card-weekly-bg)] to-transparent" />
+                </div>
               </div>
             </div>
+          ))
+        ) : (
+          <div className="text-[#bdbdbd] text-sm mt-2 col-span-full">
+            No weekly reports available.
           </div>
-        ))}
+        )}
       </div>
 
       {selectedReport &&

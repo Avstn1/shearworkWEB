@@ -47,7 +47,7 @@ export default function MarketingFunnelsChart({ barberId, month, year }: Marketi
     fetchData()
   }, [barberId, month, year])
 
-  if (data.length === 0) return <p>Loading marketing data...</p>
+  if (data.length === 0) return <p>No data to see here yet!</p>
 
   return (
     <div

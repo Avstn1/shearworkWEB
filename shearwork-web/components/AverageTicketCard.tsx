@@ -21,27 +21,25 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
       try {
         const currentYear = year ?? new Date().getFullYear()
 
-        // Query monthly reports only, pick most recent if multiple exist
+        // ✅ Query monthly_data table instead of reports
         const { data, error } = await supabase
-          .from('reports')
+          .from('monthly_data') // ← changed
           .select('avg_ticket, created_at')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
           .eq('year', currentYear)
-          .eq('type', 'monthly')          // IMPORTANT: only monthly
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()                       // we expect exactly one or null
+          .single() // we expect exactly one or none
 
         if (error) {
-          // If server complains about single() when no rows, handle gracefully:
-          // console.error('Supabase error fetching average ticket:', error.message ?? error)
+          console.warn('Supabase error fetching average ticket:', error.message)
           setAvgTicket(null)
           return
         }
 
         if (!data) {
-          console.warn(`No monthly report found for ${selectedMonth} ${currentYear}`)
+          console.warn(`No monthly data found for ${selectedMonth} ${currentYear}`)
           setAvgTicket(null)
           return
         }
@@ -70,7 +68,11 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
 
       <div className="flex-1 flex items-center">
         <p className="text-3xl font-bold text-[#F5E6C5]">
-          {loading ? 'Loading...' : avgTicket !== null ? formatCurrency(avgTicket) : 'N/A'}
+          {loading
+            ? 'Loading...'
+            : avgTicket !== null
+              ? formatCurrency(avgTicket)
+              : 'N/A'}
         </p>
       </div>
     </div>
