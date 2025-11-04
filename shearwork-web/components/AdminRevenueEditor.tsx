@@ -44,7 +44,6 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
   }, [barberId, month, year])
 
   const handleUpdate = async () => {
-    if (!monthlyReportExists) return toast.error('No monthly report exists for this month.')
 
     const num = revenue === '' ? 0 : Number(revenue)
 
