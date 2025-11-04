@@ -252,6 +252,6 @@ export async function GET(request: Request) {
   return NextResponse.json({
     endpoint,
     fetched_at: new Date().toISOString(),
-    total_clients_upserted: Object.keys(clientMap || {}).length,
+    acuity_data: acuityData,
   })
 }
