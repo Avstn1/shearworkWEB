@@ -25,6 +25,10 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
+// Generate a list of years around current year
+const CURRENT_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i)
+
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number = 1) => ({
@@ -42,9 +46,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [selectedMonth, setSelectedMonth] = useState<string>(
-    new Date().toLocaleString('default', { month: 'long' })
-  )
+  const CURRENT_MONTH = MONTHS[new Date().getMonth()] // get current month string
+  const [selectedMonth, setSelectedMonth] = useState<string>(CURRENT_MONTH)
+  const [selectedYear, setSelectedYear] = useState<number>(CURRENT_YEAR)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
@@ -82,13 +86,15 @@ export default function DashboardPage() {
     fetchUserAndProfile()
   }, [])
 
-  // 🔹 Sync Acuity when user or selectedMonth changes
+  // 🔹 Sync Acuity when user, month, and year change
   useEffect(() => {
-    if (!user) return
+    if (!user || !selectedMonth || !selectedYear) return // ✅ only fetch if both month and year are selected
     const syncAcuity = async () => {
       try {
-        console.log(`🔄 Fetching Acuity appointments for ${selectedMonth}...`)
-        const res = await fetch(`/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}`)
+        console.log(`🔄 Fetching Acuity appointments for ${selectedMonth} ${selectedYear}...`)
+        const res = await fetch(
+          `/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`
+        )
         const data = await res.json()
         console.log('📊 Acuity Data:', data)
       } catch (err) {
@@ -96,7 +102,7 @@ export default function DashboardPage() {
       }
     }
     syncAcuity()
-  }, [user, selectedMonth]) // ✅ Fixed: always exactly 2 items in array
+  }, [user, selectedMonth, selectedYear])
 
   if (loading)
     return (
@@ -174,8 +180,8 @@ export default function DashboardPage() {
           <p className="text-xs text-[#bdbdbd]">Here’s your monthly summary.</p>
         </div>
 
-        {/* Month Selector */}
-        <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
+        {/* Month + Year Selector */}
+        <div className="flex flex-wrap gap-2 mt-2 sm:mt-0 items-center">
           {MONTHS.map((m) => (
             <button
               key={m}
@@ -189,6 +195,24 @@ export default function DashboardPage() {
               {m.slice(0,3)}
             </button>
           ))}
+          <select
+            value={selectedYear ?? ''}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="ml-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white text-sm font-semibold border border-white/20 shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 transition-all hover:bg-white/20 hover:scale-105"
+          >
+            <option value="" disabled className="text-gray-400">
+              Select Year
+            </option>
+            {YEARS.map((y) => (
+              <option
+                key={y}
+                value={y}
+                className="bg-[rgba(30,30,30,0.9)] text-white font-semibold"
+              >
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
       </motion.div>
 
@@ -204,24 +228,24 @@ export default function DashboardPage() {
           </motion.div>
           <motion.div variants={fadeInUp} custom={2} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <motion.div className={cardClass}>
-              <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} />
+              <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
             </motion.div>
             <motion.div className={cardClass}>
-              <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} />
+              <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
             </motion.div>
           </motion.div>
           <motion.div variants={fadeInUp} custom={3} className={cardClass}>
-            <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
+            <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={selectedYear ?? CURRENT_YEAR}/>
           </motion.div>
         </div>
 
         {/* --- MIDDLE --- */}
         <div className="flex flex-col gap-4 px-1">
           <motion.div variants={fadeInUp} custom={4} className={cardClass}>
-            <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} />
+            <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} />
           </motion.div>
           <motion.div variants={fadeInUp} custom={5} className={cardClass}>
-            <MarketingFunnelsChart barberId={user?.id} month={selectedMonth} year={new Date().getFullYear()}/>
+            <MarketingFunnelsChart barberId={user?.id} month={selectedMonth} year={selectedYear ?? CURRENT_YEAR}/>
           </motion.div>
         </div>
 
@@ -229,15 +253,15 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-4 pl-1">
           <motion.div variants={fadeInUp} custom={6} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
-            <MonthlyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
+            <MonthlyReports userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </motion.div>
           <motion.div variants={fadeInUp} custom={7} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
-            <WeeklyReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
+            <WeeklyReports userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </motion.div>
           <motion.div variants={fadeInUp} custom={8} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison Reports</h2>
-            <WeeklyComparisonReports userId={user?.id} filterMonth={selectedMonth} isAdmin={isAdmin} />
+            <WeeklyComparisonReports userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </motion.div>
         </div>
       </motion.div>

@@ -15,13 +15,14 @@ type MonthlyReport = {
   chair_rent_paid: boolean
   notes: string
   content: string
-  year?: number
+  year: number
 }
 
 interface MonthlyReportsProps {
   userId: string
   refresh?: number
   filterMonth?: string
+  filterYear?: number | null
   isAdmin?: boolean
 }
 
@@ -29,6 +30,7 @@ export default function MonthlyReports({
   userId,
   refresh,
   filterMonth,
+  filterYear,
   isAdmin = false,
 }: MonthlyReportsProps) {
   const [reports, setReports] = useState<MonthlyReport[]>([])
@@ -57,7 +59,7 @@ export default function MonthlyReports({
         chair_rent_paid: r.chair_rent_paid,
         notes: r.notes || '',
         content: r.content || '',
-        year: r.year,
+        year: r.year || new Date().getFullYear(),
       }))
     )
   }
@@ -66,9 +68,10 @@ export default function MonthlyReports({
     fetchMonthlyReports()
   }, [userId, refresh])
 
-  const filteredReports = filterMonth
-    ? reports.filter((r) => r.month === filterMonth)
-    : reports
+  const filteredReports = reports.filter((r) => {
+    return (!filterMonth || r.month === filterMonth) &&
+           (!filterYear || r.year === filterYear)
+  })
 
   const handleEdit = (report: MonthlyReport) => {
     setSelectedReport(report)
@@ -144,9 +147,8 @@ export default function MonthlyReports({
                   className="cursor-pointer flex-1"
                 >
                   <p className="font-semibold">
-                    {r.month} {r.year || ''}
+                    {r.month} {r.year}
                   </p>
-
                   <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
                     <div
                       className="prose prose-sm"
@@ -203,7 +205,7 @@ export default function MonthlyReports({
           ))
         ) : (
           <div className="text-[#bdbdbd] text-sm mt-2">
-            No monthly reports for this month.
+            No monthly reports for this month/year.
           </div>
         )}
       </div>

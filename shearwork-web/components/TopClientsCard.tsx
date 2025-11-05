@@ -6,6 +6,7 @@ import { supabase } from '@/utils/supabaseClient'
 interface TopClientsCardProps {
   userId?: string
   selectedMonth?: string
+  selectedYear?: number | null // allow null
 }
 
 interface TopClient {
@@ -16,25 +17,28 @@ interface TopClient {
   notes: string | null
 }
 
-export default function TopClientsCard({ userId, selectedMonth }: TopClientsCardProps) {
+export default function TopClientsCard({ userId, selectedMonth, selectedYear }: TopClientsCardProps) {
   const [clients, setClients] = useState<TopClient[]>([])
   const [loading, setLoading] = useState<boolean>(false)
 
   useEffect(() => {
-    if (!userId || !selectedMonth) return
+    if (!userId || !selectedMonth || !selectedYear) return
 
     const fetchTopClients = async () => {
       try {
         setLoading(true)
-        const year = new Date().getFullYear()
 
-        const { data: topClients } = await supabase
+        const year = selectedYear ?? new Date().getFullYear() // fallback if needed
+
+        const { data: topClients, error } = await supabase
           .from('report_top_clients')
           .select('id, client_name, total_paid, num_visits, notes')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
           .eq('year', year)
           .order('total_paid', { ascending: false })
+
+        if (error) throw error
 
         setClients(topClients || [])
       } catch (err) {
@@ -46,7 +50,7 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
     }
 
     fetchTopClients()
-  }, [userId, selectedMonth])
+  }, [userId ?? '', selectedMonth ?? '', selectedYear ?? 0])
 
   return (
     <div
@@ -55,7 +59,7 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
         background: 'var(--card-topclients-bg)',
         borderColor: 'var(--card-revenue-border)',
         color: 'var(--foreground)',
-        height: '370px', // fixed height sized for ~5 rows + header
+        height: '370px',
       }}
     >
       <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
@@ -68,7 +72,7 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
         </div>
       ) : clients.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-sm text-gray-400 text-center">
-          No data available for {selectedMonth}.
+          No data available for {selectedMonth} {selectedYear ?? ''}
         </div>
       ) : (
         <div className="overflow-y-auto flex-1">
@@ -89,7 +93,7 @@ export default function TopClientsCard({ userId, selectedMonth }: TopClientsCard
                   className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
                     idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
                   }`}
-                  style={{ height: '45px' }} // consistent row height
+                  style={{ height: '45px' }}
                 >
                   <td className="py-2 px-3 font-medium">{idx + 1}</td>
                   <td className="py-2 px-3 font-semibold truncate">
