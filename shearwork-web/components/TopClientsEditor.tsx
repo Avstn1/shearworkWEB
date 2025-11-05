@@ -112,31 +112,34 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
   const handleSave = async () => {
     setSaving(true)
     try {
-      const upsertData = clients.map(c => ({
-        id: c.id, // use id for conflict detection
-        user_id: barberId,
-        month,
-        year,
-        client_name: c.client_name.trim(),
-        email: c.email.trim(),
-        total_paid: c.total_paid === '' ? 0 : c.total_paid,
-        num_visits: c.num_visits === '' ? 0 : c.num_visits,
-        notes: c.notes.trim(),
-      }))
+      const upsertData = clients
+        .filter(c => c.client_name.trim() && c.email.trim()) // avoid empty required fields
+        .map(c => ({
+          // don't include 'id' here
+          user_id: barberId,
+          month,
+          year,
+          client_name: c.client_name.trim(),
+          email: c.email.trim(),
+          total_paid: c.total_paid === '' ? 0 : c.total_paid,
+          num_visits: c.num_visits === '' ? 0 : c.num_visits,
+          notes: c.notes.trim(),
+        }))
 
       const { error } = await supabase
         .from('report_top_clients')
-        .upsert(upsertData, { onConflict: 'id' }) // <--- conflict on primary key
+        .upsert(upsertData, { onConflict: 'user_id,month,year,email' })
 
       if (error) throw error
       toast.success('Top clients saved!')
-    } catch (err) {
-      console.error('Error saving top clients:', err)
+    } catch (err: any) {
+      console.error('Error saving top clients:', err.message, err.details, err.hint)
       toast.error('Failed to save top clients.')
     } finally {
       setSaving(false)
     }
   }
+
 
   // Pagination logic
   const totalPages = Math.ceil(clients.length / clientsPerPage)

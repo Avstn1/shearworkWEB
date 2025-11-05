@@ -7,7 +7,7 @@ import { useBarberLabel } from '@/hooks/useBarberLabel'
 interface MonthlyRevenueCardProps {
   userId: string
   selectedMonth?: string
-  year?: number
+  year?: number | null
 }
 
 const MONTHS = [

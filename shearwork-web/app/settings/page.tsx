@@ -366,7 +366,7 @@ export default function SettingsPage() {
         )}
 
         {/* Connect Acuity Button */}
-        <ConnectAcuityButton/>
+        {/* <ConnectAcuityButton/> */}
 
         {/* Sign Out */}
         <SignOutButton className="bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] w-full py-2 rounded-lg transition mt-4" />

@@ -13,13 +13,14 @@ type WeeklyReport = {
   week_number: number
   title?: string
   content: string
-  year?: number
+  year: number
 }
 
 interface WeeklyReportsProps {
   userId: string
   refresh?: number
   filterMonth?: string
+  filterYear?: number | null
   isAdmin?: boolean
 }
 
@@ -27,6 +28,7 @@ export default function WeeklyReports({
   userId,
   refresh,
   filterMonth,
+  filterYear,
   isAdmin = false,
 }: WeeklyReportsProps) {
   const [reports, setReports] = useState<WeeklyReport[]>([])
@@ -44,8 +46,22 @@ export default function WeeklyReports({
       .order('week_number', { ascending: true })
 
     if (error) return console.error(error)
-    setReports(data || [])
+    setReports(
+      (data || []).map((r: any) => ({
+        ...r,
+        year: r.year || new Date().getFullYear(),
+      }))
+    )
   }
+
+  useEffect(() => {
+    fetchReports()
+  }, [userId, refresh])
+
+  const filteredReports = reports.filter((r) => {
+    return (!filterMonth || r.month === filterMonth) &&
+           (!filterYear || r.year === filterYear)
+  })
 
   const handleEdit = (report: WeeklyReport) => {
     setSelectedReport(report)
@@ -73,14 +89,6 @@ export default function WeeklyReports({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  useEffect(() => {
-    fetchReports()
-  }, [userId, refresh])
-
-  const filteredReports = filterMonth
-    ? reports.filter((r) => r.month === filterMonth)
-    : reports
 
   return (
     <>
@@ -140,7 +148,7 @@ export default function WeeklyReports({
                 className="cursor-pointer"
               >
                 <p className="font-semibold">
-                  Week {r.week_number} - {r.month} {r.year || ''}
+                  Week {r.week_number} - {r.month} {r.year}
                 </p>
 
                 <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
@@ -161,7 +169,7 @@ export default function WeeklyReports({
           ))
         ) : (
           <div className="text-[#bdbdbd] text-sm mt-2 col-span-full">
-            No weekly reports available.
+            No weekly reports available for this month/year.
           </div>
         )}
       </div>

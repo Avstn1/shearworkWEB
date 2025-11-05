@@ -6,7 +6,7 @@ import { supabase } from '@/utils/supabaseClient'
 interface AvgTicketCardProps {
   userId: string
   selectedMonth?: string
-  year?: number
+  year?: number | null
 }
 
 const MONTHS = [

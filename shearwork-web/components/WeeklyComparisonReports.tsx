@@ -19,6 +19,7 @@ interface WeeklyComparisonReportsProps {
   userId: string;
   refresh?: number;
   filterMonth?: string;
+  filterYear?: number | null;
   isAdmin?: boolean;
 }
 
@@ -26,6 +27,7 @@ export default function WeeklyComparisonReports({
   userId,
   refresh,
   filterMonth,
+  filterYear,
   isAdmin = false,
 }: WeeklyComparisonReportsProps) {
   const [reports, setReports] = useState<WeeklyComparisonReport[]>([]);
@@ -44,16 +46,23 @@ export default function WeeklyComparisonReports({
       .order('week_number', { ascending: true });
 
     if (error) return console.error('Error fetching weekly comparison reports:', error);
-    setReports(data as WeeklyComparisonReport[]);
+
+    setReports(
+      (data || []).map((r: any) => ({
+        ...r,
+        year: r.year || new Date().getFullYear(),
+      }))
+    );
   };
 
   useEffect(() => {
     fetchReports();
   }, [userId, refresh]);
 
-  const filteredReports = filterMonth
-    ? reports.filter((r) => r.month === filterMonth)
-    : reports;
+  const filteredReports = reports.filter((r) => {
+    return (!filterMonth || r.month === filterMonth) &&
+           (!filterYear || r.year === filterYear)
+  })
 
   const handleEdit = (report: WeeklyComparisonReport) => {
     setSelectedReport(report);
@@ -185,7 +194,7 @@ export default function WeeklyComparisonReports({
           ))
         ) : (
           <div className="text-[#bdbdbd] text-sm mt-2 col-span-2">
-            No weekly comparison reports for this month.
+            No weekly comparison reports for this month/year.
           </div>
         )}
       </div>
