@@ -11,6 +11,12 @@ import { motion } from 'framer-motion'
 import Navbar from '@/components/Navbar'
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 import ConnectAcuityButton from '@/components/ConnectAcuityButton'
+import toast from 'react-hot-toast'
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+]
 
 interface ProfileData {
   full_name: string
@@ -20,8 +26,9 @@ interface ProfileData {
 }
 
 const MOBILE_BREAKPOINT = 768
+const fadeInUp = { hidden: { opacity: 0, y: 20 }, visible: (i = 1) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }) }
 
-// ----- ChangePasswordForm Component -----
+// ----- ChangePasswordForm -----
 function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -37,133 +44,97 @@ function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
 
     if (newPassword !== confirmPassword) {
       setMessageColor('red')
-      setMessage("New password and confirmation don't match")
+      setMessage("Passwords don't match")
       return
     }
-
     if (!newPassword) {
       setMessageColor('red')
-      setMessage("New password cannot be empty")
+      setMessage("Password cannot be empty")
       return
     }
 
     setLoading(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
-      if (error) {
-        setMessageColor('red')
-        setMessage(`Error: ${error.message}`)
-      } else {
+      if (error) setMessageColor('red'), setMessage(error.message)
+      else {
         setMessageColor('green')
         setMessage('Password updated successfully!')
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
-        // Automatically hide form after success
         setTimeout(() => onSuccess(), 1500)
       }
     } catch (err: any) {
       setMessageColor('red')
-      setMessage(`Unexpected error: ${err.message}`)
+      setMessage(err.message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form
+    <motion.form
       onSubmit={handleChangePassword}
-      className="flex flex-col gap-4 bg-[var(--accent-1)] p-5 rounded-xl shadow-md border border-[var(--accent-2)] mt-4"
+      initial="hidden"
+      animate="visible"
+      variants={fadeInUp}
+      className="flex flex-col gap-4 bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl p-4 shadow-xl mt-4"
     >
-      <h2 className="font-semibold text-[var(--highlight)] text-lg mb-2">
-        🔒 Change Password
-      </h2>
-
+      <h2 className="font-semibold text-[var(--highlight)] text-lg mb-2">🔒 Change Password</h2>
       {message && <p className={`text-sm ${messageColor === 'green' ? 'text-green-400' : 'text-red-400'}`}>{message}</p>}
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm text-[var(--text-subtle)]">Current Password</label>
-        <input
-          type={showPasswords ? 'text' : 'password'}
-          value={currentPassword}
-          onChange={(e) => setCurrentPassword(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-sm text-[var(--text-subtle)]">New Password</label>
-        <input
-          type={showPasswords ? 'text' : 'password'}
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-sm text-[var(--text-subtle)]">Confirm New Password</label>
-        <input
-          type={showPasswords ? 'text' : 'password'}
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
-        />
-      </div>
+      {['Current Password', 'New Password', 'Confirm Password'].map((label, idx) => {
+        const value = idx === 0 ? currentPassword : idx === 1 ? newPassword : confirmPassword
+        const setter = idx === 0 ? setCurrentPassword : idx === 1 ? setNewPassword : setConfirmPassword
+        return (
+          <div key={idx} className="flex flex-col gap-2">
+            <label className="text-sm text-[#bdbdbd]">{label}</label>
+            <input
+              type={showPasswords ? 'text' : 'password'}
+              value={value}
+              onChange={(e) => setter(e.target.value)}
+              className="px-3 py-2 rounded-lg bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] border border-white/20"
+            />
+          </div>
+        )
+      })}
 
       <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={showPasswords}
-          onChange={() => setShowPasswords(!showPasswords)}
-          id="show-passwords"
-        />
-        <label htmlFor="show-passwords" className="text-sm text-[var(--text-subtle)]">
-          Show passwords
-        </label>
+        <input type="checkbox" checked={showPasswords} onChange={() => setShowPasswords(!showPasswords)} id="show-passwords" />
+        <label htmlFor="show-passwords" className="text-sm text-[#bdbdbd]">Show passwords</label>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-[var(--highlight)] text-[var(--foreground)] py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50"
-      >
+      <button type="submit" disabled={loading} className="bg-[var(--highlight)] text-black py-2 px-4 rounded-full hover:opacity-90 transition disabled:opacity-50">
         {loading ? 'Updating...' : 'Change Password'}
       </button>
-    </form>
+    </motion.form>
   )
 }
 
 // ----- SettingsPage -----
 export default function SettingsPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [fullName, setFullName] = useState('')
   const [editable, setEditable] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true)
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        console.error('Error fetching user:', userError?.message)
-        setLoading(false)
-        return
-      }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url, role')
-        .eq('user_id', user.id)
-        .single()
-
-      if (error) console.error('Error fetching profile:', error.message)
-      else {
+      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle()
+      if (data) {
         setProfile({
           full_name: data.full_name ?? 'User',
           avatar_url: data.avatar_url ?? '',
@@ -174,33 +145,24 @@ export default function SettingsPage() {
       }
       setLoading(false)
     }
-
     fetchProfile()
   }, [])
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (!file || !profile) return
-
     setUploading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No active user')
+      if (!user) return
 
       const fileName = `${user.id}_${Date.now()}`
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true })
-
-      if (uploadError) throw uploadError
-
+      await supabase.storage.from('avatars').upload(fileName, file, { upsert: true })
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
-      const publicUrl = urlData.publicUrl
-
-      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', user.id)
-      setProfile({ ...profile, avatar_url: publicUrl })
+      await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('user_id', user.id)
+      setProfile({ ...profile, avatar_url: urlData.publicUrl })
     } catch (err: any) {
-      console.error('Upload error:', err.message)
+      console.error(err.message)
     } finally {
       setUploading(false)
     }
@@ -211,180 +173,162 @@ export default function SettingsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ full_name: fullName })
-      .eq('user_id', user.id)
+    await supabase.from('profiles').update({ full_name: fullName }).eq('user_id', user.id)
+    setProfile({ ...profile, full_name: fullName })
+    setEditable(false)
+  }
 
-    if (error) console.error('Error updating name:', error.message)
-    else {
-      setProfile({ ...profile, full_name: fullName })
-      setEditable(false)
+  const handleFullAcuitySync = async () => {
+    if (!profile) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || !selectedYear) return
+
+    setSyncing(true) // ⬅️ Start syncing mode
+    toast.loading(`Syncing ${selectedYear} data...`, { id: 'acuity-sync' })
+
+    try {
+      const monthsToFetch = [...MONTHS]
+
+      for (const month of monthsToFetch) {
+        const cacheKey = `${selectedYear}-${month}`
+
+        try {
+          console.log(`🔄 Fetching Acuity appointments for ${month} ${selectedYear}...`)
+          const res = await fetch(
+            `/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(month)}&year=${selectedYear}`
+          )
+          const data = await res.json()
+
+          if (!res.ok) {
+            console.error(`❌ Failed to fetch ${month} ${selectedYear}:`, data)
+            throw new Error(data.error || 'Acuity fetch failed')
+          }
+        } catch (err) {
+          console.error(`❌ Error fetching ${month} ${selectedYear}:`, err)
+        }
+      }
+
+      toast.success(`✅ Successfully synced ${selectedYear} data!`, { id: 'acuity-sync' })
+    } catch (err: any) {
+      console.error('❌ Full year sync failed:', err)
+      toast.error(`Failed to sync ${selectedYear} data.`, { id: 'acuity-sync' })
+    } finally {
+      setSyncing(false) // ⬅️ Stop syncing mode
     }
   }
 
+
   if (loading)
-    return (
-      <div className="flex justify-center items-center h-screen text-[var(--accent-2)]">
-        Loading profile...
-      </div>
-    )
+    return <div className="flex justify-center items-center h-screen text-white">Loading profile...</div>
 
   const renderMobileMenu = () => (
-    <div className="fixed inset-0 bg-black/50 z-50 flex flex-col">
-      <div className="bg-[var(--accent-2)] p-4 flex justify-between items-center">
-        <span className="text-[var(--highlight)] text-lg font-bold">⚙️ Settings</span>
-        <button
-          onClick={() => setMobileMenuOpen(false)}
-          className="text-[var(--text-bright)] text-xl"
-        >
-          ✕
-        </button>
-      </div>
-      <nav className="flex flex-col p-4 space-y-3">
-        <Link
-          href="/dashboard"
-          className="text-[var(--text-bright)] text-base font-semibold hover:text-[var(--highlight)]"
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          Dashboard
-        </Link>
-      </nav>
-      <div className="mt-auto p-4">
-        <SignOutButton className="w-full" />
+    <div className="fixed inset-0 z-50 flex flex-col">
+      <div className="absolute inset-0 backdrop-blur-sm bg-black/40" onClick={() => setMobileMenuOpen(false)} />
+      <div className="relative bg-[var(--accent-2)] p-4 w-64 shadow-lg flex flex-col min-h-full z-50">
+        <div className="flex justify-between items-center mb-6">
+          <span className="text-[var(--highlight)] text-2xl font-bold">⚙️ Settings</span>
+          <button onClick={() => setMobileMenuOpen(false)} className="text-[var(--text-bright)] text-xl">✕</button>
+        </div>
+        <nav className="flex flex-col space-y-3 flex-1">
+          <Link href="/dashboard" className="text-[var(--text-bright)] text-lg font-semibold hover:text-[var(--highlight)]" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
+        </nav>
+        <div className="mt-auto w-full"><SignOutButton className="w-full" /></div>
       </div>
     </div>
   )
 
-  const content = (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className={`flex flex-col items-center ${
-        isMobile ? 'p-4 pt-6' : 'p-10'
-      } text-[var(--foreground)] bg-[var(--background)] min-h-screen`}
-    >
-      {/* Header */}
-      <div
-        className={`w-full flex justify-between items-center mb-6 ${
-          isMobile ? 'px-2' : 'px-0'
-        }`}
-      >
-        <h1
-          className={`font-bold text-[var(--highlight)] ${
-            isMobile ? 'text-xl' : 'text-3xl'
-          }`}
-        >
-          Settings
-        </h1>
-        {isMobile && (
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="text-2xl text-[var(--highlight)]"
-          >
-            ☰
-          </button>
-        )}
-      </div>
-
-      {/* Profile Card */}
-      <div
-        className={`bg-[var(--accent-1)]/20 backdrop-blur-sm rounded-2xl shadow-lg border border-[var(--accent-1)] ${
-          isMobile ? 'w-full max-w-sm p-5' : 'w-full max-w-md p-8'
-        }`}
-      >
-        {/* Avatar */}
-        <div className="flex flex-col items-center mb-6">
-          <EditableAvatar
-            avatarUrl={profile?.avatar_url}
-            fullName={profile?.full_name}
-            onClick={() => document.getElementById('avatar-input')?.click()}
-            size={isMobile ? 90 : 110}
-          />
-          <input
-            type="file"
-            accept="image/*"
-            id="avatar-input"
-            className="hidden"
-            onChange={handleUpload}
-            disabled={uploading}
-          />
-          <span className="text-xs text-[var(--text-subtle)] mt-2">
-            {uploading ? 'Uploading...' : 'Tap avatar to change'}
-          </span>
-        </div>
-
-        {/* Full Name */}
-        <div className="space-y-2 mb-5">
-          <label className="font-semibold text-[var(--text-subtle)]">Full Name</label>
-          <div className="flex gap-2 items-center">
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              readOnly={!editable}
-              className={`flex-1 px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] ${
-                editable ? '' : 'opacity-70'
-              }`}
-            />
-            <button
-              className="text-[var(--accent-2)] hover:text-[var(--highlight)] transition"
-              onClick={() => setEditable(!editable)}
-              title="Edit name"
-            >
-              <FaCog />
-            </button>
-            {editable && (
-              <button
-                onClick={handleNameUpdate}
-                className="px-3 py-1 bg-[var(--highlight)] text-[var(--foreground)] text-xs font-semibold rounded-lg hover:opacity-90 transition"
-              >
-                Save
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Role & Email */}
-        <div className="text-sm text-[var(--text-subtle)] space-y-1 mb-5">
-          <p>Role: {profile?.role || 'Barber'}</p>
-          <p>Email: {profile?.email || ''}</p>
-        </div>
-
-        {/* Change Password Toggle */}
-        <button
-          onClick={() => setShowChangePassword(!showChangePassword)}
-          className="w-full bg-[var(--accent-2)] text-[var(--foreground)] py-2 rounded-lg hover:bg-[var(--accent-3)] transition mb-3"
-        >
-          {showChangePassword ? 'Cancel Password Change' : 'Change Password'}
-        </button>
-
-        {/* Change Password Form */}
-        {showChangePassword && (
-          <ChangePasswordForm onSuccess={() => setShowChangePassword(false)} />
-        )}
-
-        {/* Connect Acuity Button */}
-        {/* <ConnectAcuityButton/> */}
-
-        {/* Sign Out */}
-        <SignOutButton className="bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] w-full py-2 rounded-lg transition mt-4" />
-      </div>
-    </motion.div>
-  )
+  const cardClass = 'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col'
 
   return (
     <OnboardingGuard>
       <Navbar />
-      {isMobile ? (
-        <>
-          {mobileMenuOpen && renderMobileMenu()}
-          {content}
-        </>
-      ) : (
-        content
-      )}
+      {isMobile && mobileMenuOpen && renderMobileMenu()}
+
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        className="min-h-screen flex flex-col p-4 pt-[100px] bg-gradient-to-br from-[#0e100f] via-[#1a1e18] to-[#2b3a29] text-[var(--foreground)] gap-4"
+      >
+        {/* Header */}
+        <motion.h1 variants={fadeInUp} custom={0} className={`font-bold text-[var(--highlight)] ${isMobile ? 'text-xl' : 'text-3xl'}`}>
+          Settings
+        </motion.h1>
+
+        {/* Avatar & Name Card */}
+        <motion.div variants={fadeInUp} custom={1} className={cardClass}>
+          <EditableAvatar avatarUrl={profile?.avatar_url} fullName={profile?.full_name} onClick={() => document.getElementById('avatar-input')?.click()} size={isMobile ? 90 : 110} />
+          <input type="file" accept="image/*" id="avatar-input" className="hidden" onChange={handleUpload} />
+          <span className="text-xs text-[#bdbdbd] mt-2">{uploading ? 'Uploading...' : 'Tap avatar to change'}</span>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <label className="text-sm text-[#bdbdbd] font-semibold">Full Name</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                readOnly={!editable}
+                className={`flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] ${editable ? '' : 'opacity-70'}`}
+              />
+              <button className="text-[var(--accent-2)] hover:text-[var(--highlight)] transition" onClick={() => setEditable(!editable)} title="Edit name">
+                <FaCog />
+              </button>
+              {editable && (
+                <button onClick={handleNameUpdate} className="px-3 py-1 bg-[var(--highlight)] text-black text-xs font-semibold rounded-full hover:opacity-90 transition">
+                  Save
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="text-sm text-[#bdbdbd] mt-3 space-y-1">
+            <p>Role: {profile?.role}</p>
+            <p>Email: {profile?.email}</p>
+          </div>
+        </motion.div>
+
+        {/* Change Password Card */}
+        <motion.div variants={fadeInUp} custom={2} className={cardClass}>
+          <button onClick={() => setShowChangePassword(!showChangePassword)} className="w-full bg-white/10 text-white py-2 rounded-full hover:bg-white/20 transition mb-3">
+            {showChangePassword ? 'Cancel Password Change' : 'Change Password'}
+          </button>
+          {showChangePassword && <ChangePasswordForm onSuccess={() => setShowChangePassword(false)} />}
+        </motion.div>
+
+        {/* Connect Acuity Card */}
+        {/* <motion.div variants={fadeInUp} custom={3} className={cardClass}>
+          <ConnectAcuityButton />
+          <div className="flex flex-col gap-2 mt-4">
+            <label className="text-sm text-[#bdbdbd] font-semibold">Select Year to Sync</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] border border-white/20"
+            >
+              {Array.from({ length: 6 }, (_, i) => {
+                const y = new Date().getFullYear() - i
+                return (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+          <button
+            onClick={handleFullAcuitySync}
+            disabled={syncing}
+            className="mt-3 w-full bg-[var(--highlight)] text-black py-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
+          >
+            {syncing ? `Syncing ${selectedYear}...` : `Sync ${selectedYear} Data`}
+          </button>
+        </motion.div> */}
+
+        {/* Sign Out Card */}
+        <motion.div variants={fadeInUp} custom={4} className={cardClass}>
+          <SignOutButton className="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-full transition" />
+        </motion.div>
+      </motion.div>
     </OnboardingGuard>
   )
 }

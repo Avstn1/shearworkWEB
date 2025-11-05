@@ -25,7 +25,6 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-// Generate a list of years around current year
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i)
 
@@ -46,10 +45,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const CURRENT_MONTH = MONTHS[new Date().getMonth()] // get current month string
+  const CURRENT_MONTH = MONTHS[new Date().getMonth()]
   const [selectedMonth, setSelectedMonth] = useState<string>(CURRENT_MONTH)
   const [selectedYear, setSelectedYear] = useState<number>(CURRENT_YEAR)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [monthlyDataCache, setMonthlyDataCache] = useState<Record<string, any>>({})
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
   const navLinksBase = [{ href: '/dashboard', label: 'Dashboard' }]
@@ -86,22 +86,27 @@ export default function DashboardPage() {
     fetchUserAndProfile()
   }, [])
 
-  // 🔹 Sync Acuity when user, month, and year change
+  // 🔹 Fetch only the selected month (not the full year)
   useEffect(() => {
-    if (!user || !selectedMonth || !selectedYear) return // ✅ only fetch if both month and year are selected
-    const syncAcuity = async () => {
+    if (!user || !selectedMonth || !selectedYear) return
+
+    const fetchSelectedMonth = async () => {
+      const cacheKey = `${selectedYear}-${selectedMonth}`
+      if (monthlyDataCache[cacheKey]) return // already cached
+
       try {
         console.log(`🔄 Fetching Acuity appointments for ${selectedMonth} ${selectedYear}...`)
         const res = await fetch(
           `/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`
         )
         const data = await res.json()
-        console.log('📊 Acuity Data:', data)
+        setMonthlyDataCache(prev => ({ ...prev, [cacheKey]: data }))
       } catch (err) {
-        console.error('❌ Acuity sync failed:', err)
+        console.error(`❌ Failed to fetch ${selectedMonth} ${selectedYear}:`, err)
       }
     }
-    syncAcuity()
+
+    fetchSelectedMonth()
   }, [user, selectedMonth, selectedYear])
 
   if (loading)
@@ -198,17 +203,10 @@ export default function DashboardPage() {
           <select
             value={selectedYear ?? ''}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="ml-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white text-sm font-semibold border border-white/20 shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 transition-all hover:bg-white/20 hover:scale-105"
+            className="appearance-none pr-10 pl-4 py-2 rounded-full bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-black font-semibold text-sm border border-white/20 shadow-md focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 hover:scale-105 transition-all"
           >
-            <option value="" disabled className="text-gray-400">
-              Select Year
-            </option>
             {YEARS.map((y) => (
-              <option
-                key={y}
-                value={y}
-                className="bg-[rgba(30,30,30,0.9)] text-white font-semibold"
-              >
+              <option key={y} value={y}>
                 {y}
               </option>
             ))}
@@ -224,8 +222,9 @@ export default function DashboardPage() {
         {/* --- LEFT --- */}
         <div className="flex flex-col gap-4 pr-1">
           <motion.div variants={fadeInUp} custom={1} className={cardClass}>
-            <YearlyRevenueCard userId={user?.id} />
+            <YearlyRevenueCard userId={user?.id} year={selectedYear} />
           </motion.div>
+
           <motion.div variants={fadeInUp} custom={2} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <motion.div className={cardClass}>
               <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
@@ -234,6 +233,7 @@ export default function DashboardPage() {
               <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
             </motion.div>
           </motion.div>
+
           <motion.div variants={fadeInUp} custom={3} className={cardClass}>
             <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={selectedYear ?? CURRENT_YEAR}/>
           </motion.div>
