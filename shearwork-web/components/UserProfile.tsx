@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
 import SignOutButton from './SignOutButton'
 
@@ -30,10 +31,7 @@ export default function UserProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        console.error('Error fetching user:', userError?.message)
-        return
-      }
+      if (userError || !user) return
 
       const { data, error } = await supabase
         .from('profiles')
@@ -41,9 +39,7 @@ export default function UserProfile() {
         .eq('user_id', user.id)
         .single()
 
-      if (error) {
-        console.error('Error fetching profile:', error.message)
-      } else {
+      if (!error && data) {
         setProfile({
           full_name: data.full_name,
           avatar_url: data.avatar_url,
@@ -56,15 +52,23 @@ export default function UserProfile() {
     fetchProfile()
   }, [])
 
-  return (
-    <div className="flex items-center space-x-3 relative">
-      <span className="text-[var(--accent-3)] font-semibold">
-        {profile?.full_name || 'User'}
-      </span>
+  const menuVariants = {
+    open: { opacity: 1, y: 0, transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
+    closed: { opacity: 0, y: -10, transition: { staggerChildren: 0.05, staggerDirection: -1 } },
+  }
 
-      <div className="relative" ref={dropdownRef}>
-        <button
-          className="rounded-full focus:outline-none"
+  const itemVariants = {
+    open: { opacity: 1, y: 0 },
+    closed: { opacity: 0, y: -10 },
+  }
+
+  return (
+    <div className="relative flex items-center">
+      <div ref={dropdownRef} className="relative group">
+        {/* Avatar Button */}
+        <motion.button
+          whileHover={{ scale: 1.15, rotate: 5, boxShadow: '0 8px 20px rgba(0,0,0,0.2)' }}
+          className="rounded-full focus:outline-none p-1"
           onClick={() => setOpen(!open)}
         >
           {profile?.avatar_url ? (
@@ -78,49 +82,60 @@ export default function UserProfile() {
               {profile?.full_name?.[0] || 'U'}
             </div>
           )}
-        </button>
+        </motion.button>
 
-        {open && (
-          <div className="absolute right-0 mt-3 w-64 bg-[var(--accent-1)] border border-[var(--accent-2)]/50 rounded-2xl shadow-lg z-50 p-4 flex flex-col space-y-4 animate-fadeIn">
-            {/* Profile Info */}
-            <div className="flex flex-col text-[var(--foreground)]">
-              <span className="font-semibold text-lg text-[var(--accent-3)]">
-                {profile?.full_name || 'User'}
-              </span>
-              <span className="text-[var(--text-muted)] text-sm">{profile?.role || 'Barber'}</span>
-              <span className="text-[var(--text-muted)] text-sm break-words">
-                {profile?.email || ''}
-              </span>
-            </div>
+        {/* Hover popup text */}
+        <motion.span
+          initial={{ opacity: 0, y: 6 }}
+          whileHover={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="absolute top-full mt-2 left-1/2 -translate-x-1/2 text-sm text-white bg-black/85 backdrop-blur-sm border border-black/50 px-3 py-1 rounded-lg whitespace-nowrap shadow-lg pointer-events-none"
+        >
+          Profile
+        </motion.span>
 
-            {/* Settings Link */}
-            <Link
-              href="/settings"
-              className="bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] font-semibold py-2 px-3 rounded-lg text-center transition"
+        {/* Dropdown menu */}
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial="closed"
+              animate="open"
+              exit="closed"
+              variants={menuVariants}
+              className="absolute right-0 mt-3 w-64 bg-black/90 backdrop-blur-sm border border-black/60 rounded-2xl shadow-2xl z-50 p-4 flex flex-col space-y-4"
             >
-              Settings
-            </Link>
+              <motion.div
+                variants={itemVariants}
+                className="flex flex-col text-[var(--foreground)]"
+              >
+                <span className="font-semibold text-lg text-[var(--accent-3)]">{profile?.full_name || 'User'}</span>
+                <span className="text-[var(--text-muted)] text-sm">{profile?.role || 'Barber'}</span>
+                <span className="text-[var(--text-muted)] text-sm break-words">{profile?.email || ''}</span>
+              </motion.div>
 
-            {/* Sign Out Button (already themed) */}
-            <SignOutButton className="w-full" />
-          </div>
-        )}
+              <motion.div variants={itemVariants}>
+                <Link
+                  href="/settings"
+                  className="block bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] font-semibold py-2 px-3 rounded-lg text-center transition transform hover:scale-105 shadow-md"
+                >
+                  Settings
+                </Link>
+              </motion.div>
+
+              <motion.div variants={itemVariants}>
+                <SignOutButton className="w-full transform hover:scale-105" />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <style jsx>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-5px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-5px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fadeIn {
-          animation: fadeIn 0.15s ease-out;
-        }
+        .animate-fadeIn { animation: fadeIn 0.15s ease-out; }
       `}</style>
     </div>
   )

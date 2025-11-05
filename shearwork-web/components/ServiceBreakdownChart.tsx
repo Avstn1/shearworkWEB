@@ -12,13 +12,30 @@ import {
 import { supabase } from '@/utils/supabaseClient'
 
 const COLORS = [
-  '#C8B653', // gold
-  '#A67C52', // bronze
-  '#C97A84', // muted rose
-  '#7A8E69', // olive
-  '#5DAA8A', // teal
-  '#6E7DA2', // slate blue
-  '#E8EDC7', // cream
+  '#F6E27F', // soft gold
+  '#E7B7A3', // muted rose
+  '#A7C7E7', // powder blue
+  '#C6D8A8', // sage green
+  '#9AD1C9', // teal pastel
+  '#B7A0E3', // lavender
+  '#F5D6C6', // peach
+  '#F7C9D2', // blush pink
+  '#C9E5D3', // mint pastel
+  '#D6D6D6', // soft gray
+  '#E1D5F3', // light violet
+  '#FFE3A3', // pale yellow
+  '#A3D0FF', // soft sky blue
+  '#B0E0E6', // pale cyan
+  '#D0C9FF', // lilac
+  '#F0E2D6', // cream beige
+  '#C5F0C5', // light green
+  '#FFB3B3', // pastel coral
+  '#D3F4FF', // icy blue
+  '#E3C5FF', // pastel purple
+  '#FFE0B2', // light apricot
+  '#B2FFD9', // minty turquoise
+  '#F2B2FF', // soft neon pink
+  '#C4C4C4', // steel gray
 ]
 
 export interface ServiceBooking {

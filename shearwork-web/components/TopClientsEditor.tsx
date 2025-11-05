@@ -19,7 +19,6 @@ interface TopClientsEditorProps {
   year: number
 }
 
-// Numeric input handler
 const handleNumericChange = (
   e: React.ChangeEvent<HTMLInputElement>,
   onChange: (val: number | '') => void
@@ -35,11 +34,19 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [page, setPage] = useState(1)
+  const [showModal, setShowModal] = useState(false)
+  const [newClient, setNewClient] = useState<TopClient>({
+    client_name: '',
+    email: '',
+    total_paid: '',
+    num_visits: '',
+    notes: '',
+  })
+
   const clientsPerPage = 5
 
   useEffect(() => {
     if (!barberId) return
-
     const fetchTopClients = async () => {
       setLoading(true)
       try {
@@ -76,23 +83,28 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
     fetchTopClients()
   }, [barberId, month, year])
 
-  const handleAddClient = () => {
-    setClients(prev => [
-      ...prev,
-      { client_name: '', email: '', total_paid: '', num_visits: '', notes: '' },
-    ])
+  const handleAddClient = () => setShowModal(true)
+
+  const handleSaveNewClient = () => {
+    if (!newClient.client_name.trim() || !newClient.email.trim()) {
+      toast.error('Name and email are required.')
+      return
+    }
+
+    setClients(prev => [...prev, newClient])
+    setNewClient({ client_name: '', email: '', total_paid: '', num_visits: '', notes: '' })
+    setShowModal(false)
+    toast.success('Client added!')
   }
 
   const handleRemoveClient = async (index: number) => {
     const clientToRemove = clients[index]
-
     if (clientToRemove.id) {
       try {
         const { error } = await supabase
           .from('report_top_clients')
           .delete()
           .eq('id', clientToRemove.id)
-
         if (error) throw error
         toast.success(`Removed client "${clientToRemove.client_name}"`)
       } catch (err) {
@@ -101,7 +113,6 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
         return
       }
     }
-
     setClients(prev => prev.filter((_, i) => i !== index))
   }
 
@@ -113,9 +124,8 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
     setSaving(true)
     try {
       const upsertData = clients
-        .filter(c => c.client_name.trim() && c.email.trim()) // avoid empty required fields
+        .filter(c => c.client_name.trim() && c.email.trim())
         .map(c => ({
-          // don't include 'id' here
           user_id: barberId,
           month,
           year,
@@ -133,121 +143,90 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
       if (error) throw error
       toast.success('Top clients saved!')
     } catch (err: any) {
-      console.error('Error saving top clients:', err.message, err.details, err.hint)
+      console.error('Error saving top clients:', err.message)
       toast.error('Failed to save top clients.')
     } finally {
       setSaving(false)
     }
   }
 
-
-  // Pagination logic
   const totalPages = Math.ceil(clients.length / clientsPerPage)
   const startIdx = (page - 1) * clientsPerPage
   const currentClients = clients.slice(startIdx, startIdx + clientsPerPage)
 
-  const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1)
-  }
+  const handlePrevPage = () => page > 1 && setPage(page - 1)
+  const handleNextPage = () => page < totalPages && setPage(page + 1)
 
-  const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1)
-  }
-
-  if (loading) return <p>Loading top clients...</p>
+  if (loading) return <p className="text-gray-400">Loading top clients...</p>
 
   return (
-    <div className="bg-[var(--accent-2)]/20 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
-      <h3 className="text-base font-semibold mb-3">Top Clients</h3>
+    <div className="bg-zinc-900/60 border border-zinc-700/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(255,255,255,0.05)]">
+      <h3 className="text-lg font-semibold mb-4 text-white/90">Top Clients</h3>
 
-      <div className="flex flex-col gap-4">
+      {/* Client List */}
+      <div className="flex flex-col gap-3">
         {currentClients.map((client, idx) => (
           <div
             key={client.id || idx}
-            className="grid grid-cols-12 gap-2 items-center bg-[var(--bg-light)]/10 rounded-lg p-2 border border-[var(--accent-3)]/20"
+            className="grid grid-cols-11 gap-2 items-center bg-zinc-800/70 rounded-xl p-3 border border-zinc-700/50 hover:border-amber-300/30 hover:shadow-[0_0_10px_rgba(255,200,100,0.2)] transition-all"
           >
-            <div className="col-span-1 flex flex-col">
-              <label className="text-[10px] text-gray-400 mb-0.5">#</label>
-              <div className="text-center text-xs font-bold text-white mt-1">
-                {startIdx + idx + 1}
-              </div>
+            <div className="col-span-1 text-xs text-gray-400 text-center">
+              {startIdx + idx + 1}
             </div>
 
-            <div className="col-span-3 flex flex-col">
-              <label className="text-[10px] text-gray-400 mb-0.5">Client Name</label>
-              <input
-                type="text"
-                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-                value={client.client_name}
-                onChange={e => handleChange(startIdx + idx, 'client_name', e.target.value)}
-              />
-            </div>
-
-            <div className="col-span-3 flex flex-col">
-              <label className="text-[10px] text-gray-400 mb-0.5">Email</label>
-              <input
-                type="email"
-                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-                placeholder="client@example.com"
-                value={client.email}
-                onChange={e => handleChange(startIdx + idx, 'email', e.target.value)}
-              />
-            </div>
-
-            <div className="col-span-2 flex flex-col">
-              <label className="text-[10px] text-gray-400 mb-0.5">Total Paid ($)</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-                value={client.total_paid}
-                onChange={e =>
-                  handleNumericChange(e, val => handleChange(startIdx + idx, 'total_paid', val))
-                }
-              />
-            </div>
-
-            <div className="col-span-2 flex flex-col">
-              <label className="text-[10px] text-gray-400 mb-0.5"># of Visits</label>
-              <input
-                type="text"
-                inputMode="decimal"
-                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-                value={client.num_visits}
-                onChange={e =>
-                  handleNumericChange(e, val => handleChange(startIdx + idx, 'num_visits', val))
-                }
-              />
-            </div>
-
-            <div className="col-span-3 flex flex-col">
-              <label className="text-[10px] text-gray-400 mb-0.5">Notes</label>
-              <input
-                type="text"
-                className="bg-[#2f3a2d] border border-[#55694b] rounded-md px-2 py-1 text-xs text-white"
-                value={client.notes}
-                onChange={e => handleChange(startIdx + idx, 'notes', e.target.value)}
-              />
-            </div>
-
+            <input
+              className="col-span-2 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={client.client_name}
+              onChange={e => handleChange(startIdx + idx, 'client_name', e.target.value)}
+              placeholder="Name"
+            />
+            <input
+              className="col-span-3 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={client.email}
+              onChange={e => handleChange(startIdx + idx, 'email', e.target.value)}
+              placeholder="Email"
+            />
+            <input
+              className="col-span-1.5 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={client.total_paid}
+              onChange={e =>
+                handleNumericChange(e, val => handleChange(startIdx + idx, 'total_paid', val))
+              }
+              placeholder="$ Paid"
+            />
+            <input
+              className="col-span-1.5 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={client.num_visits}
+              onChange={e =>
+                handleNumericChange(e, val => handleChange(startIdx + idx, 'num_visits', val))
+              }
+              placeholder="Visits"
+            />
+            <input
+              className="col-span-2 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={client.notes}
+              onChange={e => handleChange(startIdx + idx, 'notes', e.target.value)}
+              placeholder="Notes"
+            />
             <button
               onClick={() => handleRemoveClient(startIdx + idx)}
-              className="col-span-1 bg-red-600 hover:bg-red-700 text-white rounded px-2 py-1 text-xs mt-4"
+              className="col-span-0.5 bg-red-600/90 hover:bg-red-700 text-white rounded-md px-2 py-1 text-xs transition"
             >
               ✕
             </button>
           </div>
         ))}
 
+        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-2 text-xs text-gray-400">
+          <div className="flex justify-between items-center mt-3 text-xs text-gray-400">
             <button
               onClick={handlePrevPage}
               disabled={page === 1}
-              className={`px-3 py-1 rounded-md ${
+              className={`px-3 py-1 rounded-md transition-all ${
                 page === 1
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-white'
+                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+                  : 'bg-zinc-800 hover:bg-zinc-700 text-white hover:border-amber-300/40'
               }`}
             >
               ← Prev
@@ -258,10 +237,10 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
             <button
               onClick={handleNextPage}
               disabled={page === totalPages}
-              className={`px-3 py-1 rounded-md ${
+              className={`px-3 py-1 rounded-md transition-all ${
                 page === totalPages
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-white'
+                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+                  : 'bg-zinc-800 hover:bg-zinc-700 text-white hover:border-amber-300/40'
               }`}
             >
               Next →
@@ -269,21 +248,89 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
           </div>
         )}
 
-        <button
-          onClick={handleAddClient}
-          className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-md px-4 py-2 text-xs font-semibold transition-all shadow-sm mt-3"
-        >
-          + Add Client
-        </button>
+        {/* Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <button
+            onClick={handleAddClient}
+            className="bg-amber-400/90 hover:bg-amber-300 text-black rounded-md px-4 py-2 text-sm font-semibold shadow-[0_0_10px_rgba(255,200,100,0.3)] transition"
+          >
+            + Add Client
+          </button>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="mt-2 bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-md px-4 py-2 text-xs font-semibold transition-all shadow-sm"
-        >
-          {saving ? 'Saving...' : 'Save Top Clients'}
-        </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-amber-400/90 hover:bg-amber-300 text-black rounded-md px-4 py-2 text-sm font-semibold shadow-[0_0_10px_rgba(255,200,100,0.3)] transition"
+          >
+            {saving ? 'Saving...' : 'Save Top Clients'}
+          </button>
+        </div>
       </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-zinc-900/95 border border-zinc-700/60 rounded-2xl p-6 w-[90%] max-w-md text-white shadow-[0_0_30px_rgba(255,200,100,0.15)]">
+            <h4 className="text-lg font-semibold mb-4">Add New Client</h4>
+
+            <div className="flex flex-col gap-3 text-sm">
+              {['Name', 'Email', '$ Paid', 'Visits', 'Notes'].map((label, idx) => (
+                <input
+                  key={label}
+                  placeholder={label}
+                  value={
+                    idx === 0
+                      ? newClient.client_name
+                      : idx === 1
+                      ? newClient.email
+                      : idx === 2
+                      ? newClient.total_paid
+                      : idx === 3
+                      ? newClient.num_visits
+                      : newClient.notes
+                  }
+                  onChange={e => {
+                    const val = e.target.value
+                    if (label === '$ Paid' || label === 'Visits') {
+                      handleNumericChange(e, v =>
+                        setNewClient({
+                          ...newClient,
+                          [label === '$ Paid' ? 'total_paid' : 'num_visits']: v,
+                        })
+                      )
+                    } else {
+                      setNewClient({
+                        ...newClient,
+                        [label === 'Name'
+                          ? 'client_name'
+                          : label === 'Email'
+                          ? 'email'
+                          : 'notes']: val,
+                      })
+                    }
+                  }}
+                  className="bg-zinc-800/90 border border-zinc-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+                />
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 rounded-md bg-zinc-700/70 hover:bg-zinc-600 text-sm transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNewClient}
+                className="px-4 py-2 rounded-md bg-amber-400/90 hover:bg-amber-300 text-black font-semibold text-sm transition"
+              >
+                Add Client
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

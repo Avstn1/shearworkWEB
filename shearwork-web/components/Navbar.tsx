@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Grid, UserCog } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 
@@ -14,7 +15,11 @@ export default function Navbar() {
   useEffect(() => {
     const getUser = async () => {
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
+
         if (sessionError) {
           console.error('Error fetching session:', sessionError.message)
           setUser(null)
@@ -51,16 +56,59 @@ export default function Navbar() {
         {/* --- CENTER: Desktop links (hidden on mobile) --- */}
         {!user && (
           <div className="hidden md:flex gap-8 text-[var(--foreground)] absolute left-1/2 -translate-x-1/2">
-            <a href="#features" className="hover:text-[var(--highlight)]">Features</a>
-            <a href="#pricing" className="hover:text-[var(--highlight)]">Pricing</a>
-            <a href="#contact" className="hover:text-[var(--highlight)]">Contact</a>
+            <a href="#features" className="hover:text-[var(--highlight)]">
+              Features
+            </a>
+            <a href="#pricing" className="hover:text-[var(--highlight)]">
+              Pricing
+            </a>
+            <a href="#contact" className="hover:text-[var(--highlight)]">
+              Contact
+            </a>
           </div>
         )}
 
-        {/* --- RIGHT: UserProfile + Hamburger --- */}
+        {/* --- RIGHT: UserProfile + Icons + Hamburger --- */}
         <div className="flex items-center gap-4 ml-auto">
-          {user && <Link href="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>}
-          {user && <UserProfile/>} {/* Always show profile if logged in */}
+          {user && (
+            <>
+              {/* Dashboard icon */}
+              <Link
+                href="/dashboard"
+                className="relative flex flex-col items-center group"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.2, rotate: 10 }}
+                  className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors"
+                >
+                  <Grid className="w-6 h-6 text-[var(--foreground)]" />
+                </motion.div>
+
+                <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none text-sm text-white bg-white/10 backdrop-blur-md border border-white/20 px-2 py-1 rounded-lg whitespace-nowrap shadow-lg">
+                  Dashboard
+                </span>
+              </Link>
+
+              {/* User Editor icon */}
+              <Link
+                href="/user-editor"
+                className="relative flex flex-col items-center group"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.2, rotate: 10 }}
+                  className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors"
+                >
+                  <UserCog className="w-6 h-6 text-[var(--foreground)]" />
+                </motion.div>
+
+                <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none text-sm text-white bg-white/10 backdrop-blur-md border border-white/20 px-2 py-1 rounded-lg whitespace-nowrap shadow-lg">
+                  User Editor
+                </span>
+              </Link>
+            </>
+          )}
+
+          {user && <UserProfile />}
 
           <button className="md:hidden" onClick={() => setOpen(!open)}>
             {open ? <X /> : <Menu />}
@@ -107,6 +155,7 @@ export default function Navbar() {
             ) : (
               <>
                 <Link href="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
+                <Link href="/user-editor" onClick={() => setOpen(false)}>User Editor</Link>
               </>
             )}
           </div>

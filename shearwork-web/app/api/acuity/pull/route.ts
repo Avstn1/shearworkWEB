@@ -2,11 +2,49 @@
 
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import crypto from 'crypto'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
+
+// Helper to compute start/end dates of selected month/year
+function getMonthRange(monthName: string, year: number) {
+  const start = new Date(`${monthName} 1, ${year}`)
+  const end = new Date(start)
+  end.setMonth(start.getMonth() + 1)
+  end.setDate(0) // last day of the month
+
+  const today = new Date()
+  if (end > today) {
+    end.setFullYear(today.getFullYear(), today.getMonth(), today.getDate())
+    end.setHours(today.getHours(), today.getMinutes(), today.getSeconds(), today.getMilliseconds())
+  }
+
+  const minDate = start.toISOString().split('T')[0]
+  const maxDate = end.toISOString().split('T')[0]
+  return { minDate, maxDate }
+}
+
+// Helper to get array of all dates in a month (stops at today)
+function getAllDatesInMonth(monthName: string, year: number): string[] {
+  const start = new Date(`${monthName} 1, ${year}`)
+  const end = new Date(start)
+  end.setMonth(end.getMonth() + 1)
+  end.setDate(0) // last day of month
+
+  const today = new Date()
+  if (end > today) {
+    end.setFullYear(today.getFullYear(), today.getMonth(), today.getDate())
+  }
+
+  const dates: string[] = []
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    dates.push(d.toISOString().split('T')[0])
+  }
+  return dates
+}
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient()
@@ -20,8 +58,8 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const endpoint = searchParams.get('endpoint') || 'appointments'
-  const requestedMonth = searchParams.get('month') || null // e.g. "October"
-  const requestedYear = searchParams.get('year') ? parseInt(searchParams.get('year') as string, 10) : null // e.g. 2025
+  const requestedMonth = searchParams.get('month') || null
+  const requestedYear = searchParams.get('year') ? parseInt(searchParams.get('year') as string, 10) : null
 
   // 2️⃣ Fetch token from DB
   const { data: tokenRow, error: tokenError } = await supabase
@@ -92,53 +130,59 @@ export async function GET(request: Request) {
   }
 
   // 5️⃣ Fetch data from Acuity
-  const acuityRes = await fetch(`https://acuityscheduling.com/api/v1/${endpoint}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  let allData: any[] = []
 
-  const acuityData = await acuityRes.json()
-  if (!acuityRes.ok) {
-    console.error('❌ Failed to fetch from Acuity:', acuityData)
-    return NextResponse.json({ error: 'Failed to fetch from Acuity', details: acuityData }, { status: 500 })
+  try {
+    if (endpoint === 'appointments' && requestedMonth && requestedYear) {
+      const dates = getAllDatesInMonth(requestedMonth, requestedYear)
+
+      for (const day of dates) {
+        const dayUrl = new URL(`https://acuityscheduling.com/api/v1/appointments`)
+        dayUrl.searchParams.set('minDate', day)
+        dayUrl.searchParams.set('maxDate', day)
+        dayUrl.searchParams.set('max', '100')
+
+        const dayRes = await fetch(dayUrl.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+
+        const dayData = await dayRes.json()
+        if (!dayRes.ok) {
+          console.error('❌ Failed fetching appointments for', day, dayData)
+          continue
+        }
+
+        if (Array.isArray(dayData)) allData.push(...dayData)
+      }
+
+      console.log(`🗓️ Fetched appointments for ${requestedMonth} ${requestedYear}:`, allData.length)
+    } else {
+      const baseUrl = new URL(`https://acuityscheduling.com/api/v1/${endpoint}`)
+      baseUrl.searchParams.set('max', '100')
+      const pageRes = await fetch(baseUrl.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      const pageData = await pageRes.json()
+      if (!pageRes.ok) {
+        console.error('❌ Failed to fetch from Acuity:', pageData)
+        return NextResponse.json({ error: 'Failed to fetch from Acuity', details: pageData }, { status: 500 })
+      }
+      if (Array.isArray(pageData)) allData.push(...pageData)
+    }
+  } catch (err) {
+    console.error('❌ Error fetching Acuity data:', err)
+    return NextResponse.json({ error: 'Failed to fetch data', details: String(err) }, { status: 500 })
   }
 
-  console.log('💧 Acuity data fetched for endpoint:', endpoint)
-  console.log('📦 Total items fetched:', Array.isArray(acuityData) ? acuityData.length : 'n/a')
-  console.log('🔎 Requested month/year:', requestedMonth, requestedYear)
+  const acuityData = allData
+  console.log('💧 Total fetched:', acuityData.length)
 
   // 6️⃣ Process appointments
   if (endpoint === 'appointments' && Array.isArray(acuityData)) {
-    let appointmentsToProcess = acuityData
+    const appointmentsToProcess = acuityData
 
-    if (requestedMonth || requestedYear) {
-      appointmentsToProcess = acuityData.filter((appt: any) => {
-        try {
-          // Use the date the appointment was created, not the appointment datetime
-          const date = new Date(appt.datetimeCreated)
-          const monthNum = date.getUTCMonth() + 1
-          const yearNum = date.getUTCFullYear()
-
-          let requestedMonthNum: number | null = null
-          if (requestedMonth) {
-            requestedMonthNum = MONTHS.findIndex(
-              (m) => m.toLowerCase() === requestedMonth.toLowerCase()
-            ) + 1
-          }
-
-          if (requestedMonthNum && requestedYear) return monthNum === requestedMonthNum && yearNum === requestedYear
-          if (requestedMonthNum) return monthNum === requestedMonthNum
-          if (requestedYear) return yearNum === requestedYear
-          return true
-        } catch {
-          return false
-        }
-      })
-    }
-
-    console.log('🧾 Appointments to process count:', appointmentsToProcess.length)
-
+    // --- Group by month
     const groupedByMonth: Record<string, any[]> = {}
-
     for (const appt of appointmentsToProcess) {
       const date = new Date(appt.datetime)
       const monthName = MONTHS[date.getUTCMonth()]
@@ -148,21 +192,18 @@ export async function GET(request: Request) {
       groupedByMonth[key].push(appt)
     }
 
+    // --- Revenue calculations
     const revenueByMonth: Record<string, number> = {}
     const avgTicketByMonth: Record<string, number> = {}
-
     for (const [key, appts] of Object.entries(groupedByMonth)) {
       const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
       const avgTicket = appts.length > 0 ? totalRevenue / appts.length : 0
-
       revenueByMonth[key] = totalRevenue
       avgTicketByMonth[key] = parseFloat(avgTicket.toFixed(2))
     }
 
-    console.log('📊 Calculated revenueByMonth:', revenueByMonth)
-    console.log('🎟️ Calculated avgTicketByMonth:', avgTicketByMonth)
-
-    const upsertRows = Object.keys(revenueByMonth).map((key) => {
+    // --- Upsert monthly_data
+    const upsertRows = Object.keys(revenueByMonth).map(key => {
       const [year, month] = key.split('||')
       return {
         user_id: user.id,
@@ -174,14 +215,9 @@ export async function GET(request: Request) {
       }
     })
 
-    const { error: upsertError } = await supabase.from('monthly_data').upsert(upsertRows, {
-      onConflict: 'user_id,month,year',
-    })
+    await supabase.from('monthly_data').upsert(upsertRows, { onConflict: 'user_id,month,year' })
 
-    if (upsertError) console.error('❌ Failed to update monthly_data:', upsertError)
-    else console.log('✅ monthly_data table updated successfully!')
-
-    // --- Bookings per service
+    // --- Service bookings (Top 5 + "Other")
     const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
     for (const appt of appointmentsToProcess) {
       const service = appt.type || 'Unknown'
@@ -193,45 +229,96 @@ export async function GET(request: Request) {
       serviceCounts[key].count++
     }
 
-    const serviceUpserts = Object.entries(serviceCounts).map(([key, val]) => {
+    // Group services by month/year before limiting to top 5
+    const monthYearMap: Record<string, Record<string, number>> = {}
+
+    for (const [key, val] of Object.entries(serviceCounts)) {
       const [service, month, year] = key.split('||')
-      return {
-        user_id: user.id,
-        service_name: service,
-        bookings: val.count,
-        report_month: month,
-        report_year: parseInt(year),
-        created_at: new Date().toISOString(),
+      const combo = `${month}||${year}`
+      if (!monthYearMap[combo]) monthYearMap[combo] = {}
+      monthYearMap[combo][service] = val.count
+    }
+
+    const finalUpserts: any[] = []
+    for (const [combo, services] of Object.entries(monthYearMap)) {
+      const [month, yearStr] = combo.split('||')
+      const year = parseInt(yearStr)
+      const sorted = Object.entries(services).sort((a, b) => b[1] - a[1])
+      const top5 = sorted.slice(0, 5)
+      const others = sorted.slice(5)
+
+      let otherCount = 0
+      for (const [, count] of others) otherCount += count
+
+      for (const [service, count] of top5) {
+        finalUpserts.push({
+          user_id: user.id,
+          service_name: service,
+          bookings: count,
+          report_month: month,
+          report_year: year,
+          created_at: new Date().toISOString(),
+        })
       }
+
+      if (otherCount > 0) {
+        finalUpserts.push({
+          user_id: user.id,
+          service_name: 'Other',
+          bookings: otherCount,
+          report_month: month,
+          report_year: year,
+          created_at: new Date().toISOString(),
+        })
+      }
+    }
+
+    await supabase.from('service_bookings').upsert(finalUpserts, {
+      onConflict: 'user_id,service_name,report_month,report_year',
     })
 
-    const { error: bookingsError } = await supabase
-      .from('service_bookings')
-      .upsert(serviceUpserts, { onConflict: 'user_id,service_name,report_month,report_year' })
-
-    if (bookingsError) console.error('❌ Failed to update service_bookings:', bookingsError)
-    else console.log('✅ service_bookings table updated successfully!')
-
-    // --- Top clients
+    // --- Top clients (supports clients with email, phone, or neither)
     const monthlyClientMap: Record<
       string,
-      Record<string, { client_name: string; email: string; total_paid: number; num_visits: number; month: string; year: number }>
+      Record<
+        string,
+        {
+          client_name: string
+          email: string | null
+          phone: string | null
+          client_key: string
+          total_paid: number
+          num_visits: number
+          month: string
+          year: number
+        }
+      >
     > = {}
 
     for (const appt of appointmentsToProcess) {
-      const email = appt.email?.toLowerCase() || ''
-      if (!email) continue
-
       const date = new Date(appt.datetime)
       const month = MONTHS[date.getUTCMonth()]
-      const year = date.getUTCFullYear()
+      const year = date.getFullYear()
       const key = `${year}||${month}`
 
+      const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}` : 'Unknown'
+      const email = appt.email?.toLowerCase().trim() || null
+      const phone = appt.phone?.replace(/\D/g, '') || null
+
+      // Generate deterministic fallback key
+      const clientKeySource = `${email || ''}|${phone || ''}|${name.toLowerCase()}`
+      const clientKey = crypto
+        .createHash('md5')
+        .update(clientKeySource)
+        .digest('hex')
+
       if (!monthlyClientMap[key]) monthlyClientMap[key] = {}
-      if (!monthlyClientMap[key][email]) {
-        monthlyClientMap[key][email] = {
-          client_name: appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}` : 'Unknown',
+      if (!monthlyClientMap[key][clientKey]) {
+        monthlyClientMap[key][clientKey] = {
+          client_name: name,
           email,
+          phone,
+          client_key: clientKey,
           total_paid: 0,
           num_visits: 0,
           month,
@@ -239,15 +326,17 @@ export async function GET(request: Request) {
         }
       }
 
-      monthlyClientMap[key][email].total_paid += parseFloat(appt.priceSold || '0')
-      monthlyClientMap[key][email].num_visits += 1
+      monthlyClientMap[key][clientKey].total_paid += parseFloat(appt.priceSold || '0')
+      monthlyClientMap[key][clientKey].num_visits += 1
     }
 
     for (const [key, clients] of Object.entries(monthlyClientMap)) {
-      const upsertClients = Object.values(clients).map((c) => ({
+      const upsertClients = Object.values(clients).map(c => ({
         user_id: user.id,
         client_name: c.client_name,
         email: c.email,
+        phone: c.phone,
+        client_key: c.client_key,
         total_paid: c.total_paid,
         num_visits: c.num_visits,
         month: c.month,
@@ -255,12 +344,9 @@ export async function GET(request: Request) {
         updated_at: new Date().toISOString(),
       }))
 
-      const { error: clientsError } = await supabase
-        .from('report_top_clients')
-        .upsert(upsertClients, { onConflict: 'user_id,month,year,email' })
-
-      if (clientsError) console.error(`❌ Failed to upsert clients for ${key}:`, clientsError)
-      else console.log(`✅ Upserted ${upsertClients.length} clients for ${key} successfully!`)
+      await supabase.from('report_top_clients').upsert(upsertClients, {
+        onConflict: 'user_id,month,year,client_key',
+      })
     }
   }
 
