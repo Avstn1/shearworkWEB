@@ -41,7 +41,7 @@ function getAllDatesInMonth(monthName: string, year: number): string[] {
 
   const dates: string[] = []
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    dates.push(d.toISOString().split('T')[0])
+    dates.push(d.toLocaleDateString('en-CA'))
   }
   return dates
 }
