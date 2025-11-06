@@ -20,6 +20,9 @@ import Navbar from '@/components/Navbar'
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 import WeeklyComparisonReports from '@/components/WeeklyComparisonReports'
 import MonthlyExpensesCard from '@/components/MonthlyExpensesCard'
+import { Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
+import YearDropdown from '@/components/YearDropdown'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -50,10 +53,9 @@ export default function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(CURRENT_MONTH)
   const [selectedYear, setSelectedYear] = useState<number>(CURRENT_YEAR)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [monthlyDataCache, setMonthlyDataCache] = useState<Record<string, any>>({})
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
-
-  const navLinksBase = [{ href: '/dashboard', label: 'Dashboard' }]
 
   // 🔹 Load user + profile
   useEffect(() => {
@@ -87,27 +89,37 @@ export default function DashboardPage() {
     fetchUserAndProfile()
   }, [])
 
-  // 🔹 Fetch only the selected month (not the full year)
+  // 🔹 Fetch and refresh data when month/year changes
   useEffect(() => {
-    if (!user || !selectedMonth || !selectedYear) return
+    if (!user) return
 
-    const fetchSelectedMonth = async () => {
-      const cacheKey = `${selectedYear}-${selectedMonth}`
-      if (monthlyDataCache[cacheKey]) return // already cached
+    const fetchMonthData = async () => {
+      setIsRefreshing(true)
+      const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
 
       try {
-        console.log(`🔄 Fetching Acuity appointments for ${selectedMonth} ${selectedYear}...`)
+        console.log(`🔄 Syncing Acuity data for ${selectedMonth} ${selectedYear}...`)
         const res = await fetch(
           `/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`
         )
+
+        if (!res.ok) throw new Error('Acuity data fetch failed')
         const data = await res.json()
-        setMonthlyDataCache(prev => ({ ...prev, [cacheKey]: data }))
+        console.log('✅ Acuity data synced:', data)
+
+        // Bump refresh key so components update
+        setRefreshKey(prev => prev + 1)
+
+        toast.success(`Data updated for ${selectedMonth} ${selectedYear}`, { id: toastId })
       } catch (err) {
-        console.error(`❌ Failed to fetch ${selectedMonth} ${selectedYear}:`, err)
+        console.error('❌ Error syncing data:', err)
+        toast.error('Error fetching Acuity data.', { id: toastId })
+      } finally {
+        setIsRefreshing(false)
       }
     }
 
-    fetchSelectedMonth()
+    fetchMonthData()
   }, [user, selectedMonth, selectedYear])
 
   if (loading)
@@ -124,50 +136,6 @@ export default function DashboardPage() {
       </div>
     )
 
-  const renderMobileMenu = () => {
-    const navLinks = isAdmin
-      ? navLinksBase.filter(link => link.href !== '/dashboard').concat({
-          href: '/admin/dashboard',
-          label: 'Admin Dashboard',
-        })
-      : navLinksBase
-
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col">
-        <div
-          className="absolute inset-0 backdrop-blur-sm bg-black/40"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-        <div className="relative bg-[var(--accent-2)] p-4 w-64 shadow-lg z-50 flex flex-col min-h-full">
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-[var(--highlight)] text-2xl font-bold">✂️ ShearWork</span>
-            <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-[var(--text-bright)] text-xl"
-            >
-              ✕
-            </button>
-          </div>
-          <nav className="flex flex-col space-y-3 flex-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-[var(--text-bright)] text-lg font-semibold hover:text-[var(--highlight)]"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="mt-auto w-full">
-            <SignOutButton className="w-full" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   const cardClass =
     'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
 
@@ -178,7 +146,7 @@ export default function DashboardPage() {
       animate="visible"
     >
       {/* HEADER */}
-      <motion.div variants={fadeInUp} custom={0} className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+      <motion.div variants={fadeInUp} className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-3">
         <div>
           <h1 className={`font-bold bg-gradient-to-r from-amber-200 to-lime-400 bg-clip-text text-transparent ${isMobile ? 'text-xl' : 'text-2xl'} animate-gradient`}>
             Welcome back!
@@ -188,89 +156,94 @@ export default function DashboardPage() {
 
         {/* Month + Year Selector */}
         <div className="flex flex-wrap gap-2 mt-2 sm:mt-0 items-center">
+          {isRefreshing && (
+            <div className="flex items-center gap-1 text-xs text-[#fffb85] animate-pulse ml-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Syncing...</span>
+            </div>
+          )}
           {MONTHS.map((m) => (
             <button
               key={m}
-              onClick={() => setSelectedMonth(m)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                selectedMonth === m
-                  ? 'bg-amber-300 text-black'
+              onClick={() => !isRefreshing && setSelectedMonth(m)}
+              disabled={isRefreshing}
+              className={`
+                px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200
+                ${selectedMonth === m
+                  ? 'bg-gradient-to-r from-amber-300 to-lime-300 text-black'
                   : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+                }
+                ${isRefreshing
+                  ? 'cursor-not-allowed opacity-80 animate-pulse shadow-[0_0_8px_#fffb85]'
+                  : 'hover:scale-105 active:scale-95'
+                }
+              `}
             >
               {m.slice(0,3)}
             </button>
           ))}
-          <select
-            value={selectedYear ?? ''}
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="appearance-none pr-10 pl-4 py-2 rounded-full bg-gradient-to-r from-amber-500/30 to-orange-500/30 text-black font-semibold text-sm border border-white/20 shadow-md focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 hover:scale-105 transition-all"
-          >
-            {YEARS.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+          <YearDropdown
+            years={YEARS}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            disabled={isRefreshing}
+          />
+
         </div>
       </motion.div>
 
       {/* GRID */}
       <motion.div
         className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'} flex-1`}
-        style={{ overflow: 'visible' }}
       >
-        {/* --- LEFT --- */}
+        {/* LEFT COLUMN */}
         <div className="flex flex-col gap-4 pr-1">
-          {/* Row with Yearly Revenue + Monthly Expenses */}
           <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-4">
             <div className={cardClass}>
-              <YearlyRevenueCard userId={user?.id} year={selectedYear} />
+              <YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} />
             </div>
             <div className={cardClass}>
-              <MonthlyExpensesCard userId={user?.id} month={selectedMonth} year={selectedYear} />
+              <MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} />
             </div>
           </motion.div>
 
-          {/* Row with Monthly Revenue + Average Ticket */}
           <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <motion.div className={cardClass}>
-              <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
+              <MonthlyRevenueCard key={`revenue-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
             </motion.div>
             <motion.div className={cardClass}>
-              <AverageTicketCard userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
+              <AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
             </motion.div>
           </motion.div>
 
           <motion.div variants={fadeInUp} className={cardClass}>
-            <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={selectedYear ?? CURRENT_YEAR}/>
+            <ServiceBreakdownChart key={`services-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} />
           </motion.div>
         </div>
 
-
-        {/* --- MIDDLE --- */}
+        {/* MIDDLE COLUMN */}
         <div className="flex flex-col gap-4 px-1">
-          <motion.div variants={fadeInUp} custom={4} className={cardClass}>
-            <TopClientsCard userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} />
+          <motion.div variants={fadeInUp} className={cardClass}>
+            <TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} />
           </motion.div>
-          <motion.div variants={fadeInUp} custom={5} className={cardClass}>
-            <MarketingFunnelsChart barberId={user?.id} month={selectedMonth} year={selectedYear ?? CURRENT_YEAR}/>
+          <motion.div variants={fadeInUp} className={cardClass}>
+            <MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} />
           </motion.div>
         </div>
 
-        {/* --- RIGHT --- */}
+        {/* RIGHT COLUMN */}
         <div className="flex flex-col gap-4 pl-1">
-          <motion.div variants={fadeInUp} custom={6} className={cardClass}>
+          <motion.div variants={fadeInUp} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
-            <MonthlyReports userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+            <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </motion.div>
-          <motion.div variants={fadeInUp} custom={7} className={cardClass}>
+          <motion.div variants={fadeInUp} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
-            <WeeklyReports userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+            <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </motion.div>
-          <motion.div variants={fadeInUp} custom={8} className={cardClass}>
+          <motion.div variants={fadeInUp} className={cardClass}>
             <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison Reports</h2>
-            <WeeklyComparisonReports userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+            <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </motion.div>
         </div>
       </motion.div>
@@ -282,7 +255,25 @@ export default function DashboardPage() {
       <Navbar />
       {isMobile ? (
         <>
-          {mobileMenuOpen && renderMobileMenu()}
+          {mobileMenuOpen && (
+            <div className="fixed inset-0 z-50 flex flex-col">
+              <div className="absolute inset-0 backdrop-blur-sm bg-black/40" onClick={() => setMobileMenuOpen(false)} />
+              <div className="relative bg-[var(--accent-2)] p-4 w-64 shadow-lg z-50 flex flex-col min-h-full">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-[var(--highlight)] text-2xl font-bold">✂️ ShearWork</span>
+                  <button onClick={() => setMobileMenuOpen(false)} className="text-[var(--text-bright)] text-xl">✕</button>
+                </div>
+                <nav className="flex flex-col space-y-3 flex-1">
+                  <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-[var(--text-bright)] text-lg font-semibold hover:text-[var(--highlight)]">
+                    Dashboard
+                  </Link>
+                </nav>
+                <div className="mt-auto w-full">
+                  <SignOutButton className="w-full" />
+                </div>
+              </div>
+            </div>
+          )}
           {content}
         </>
       ) : (
