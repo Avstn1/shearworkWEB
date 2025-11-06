@@ -54,12 +54,11 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
 
   return (
     <div
-      className="top-clients-card rounded-lg shadow-md p-4 flex-1 border flex flex-col"
+      className="top-clients-card rounded-lg shadow-md p-4 flex-1 border flex flex-col min-h-[320px] max-h-[480px]"
       style={{
         background: 'var(--card-topclients-bg)',
         borderColor: 'var(--card-revenue-border)',
         color: 'var(--foreground)',
-        height: '370px',
       }}
     >
       <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
@@ -117,11 +116,24 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
 
       <style jsx>{`
         @media (max-width: 768px) {
+          .top-clients-card {
+            min-height: auto;
+            max-height: none;
+            height: auto;
+            width: 100%;
+            overflow-y: visible;
+          }
+
           table {
+            display: block;
+            overflow-x: auto;
+            width: 100%;
             font-size: 0.75rem;
           }
+
           th,
           td {
+            white-space: nowrap;
             padding: 0.25rem 0.5rem;
           }
         }
