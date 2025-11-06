@@ -55,14 +55,14 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
         // ✅ Fetch current month revenue from monthly_data
         const { data: currentData, error: currentError } = await supabase
           .from('monthly_data')
-          .select('total_revenue')
+          .select('final_revenue')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
           .eq('year', currentYear)
           .maybeSingle()
 
         if (currentError) console.error('Error fetching current month:', currentError)
-        setRevenue(currentData?.total_revenue ?? null)
+        setRevenue(currentData?.final_revenue ?? null)
 
         // ✅ Determine previous month/year
         const currentIndex = MONTHS.indexOf(selectedMonth)
@@ -77,14 +77,14 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
         // ✅ Fetch previous month revenue from monthly_data
         const { data: prevData, error: prevError } = await supabase
           .from('monthly_data')
-          .select('total_revenue')
+          .select('final_revenue')
           .eq('user_id', userId)
           .eq('month', prevMonth)
           .eq('year', prevYear)
           .maybeSingle()
 
         if (prevError) console.error('Error fetching previous month:', prevError)
-        setPrevRevenue(prevData?.total_revenue ?? null)
+        setPrevRevenue(prevData?.final_revenue ?? null)
       } catch (err) {
         console.error('Error fetching revenues:', err)
       } finally {
