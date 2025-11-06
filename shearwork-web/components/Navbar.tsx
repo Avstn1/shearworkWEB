@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, Grid, UserCog } from 'lucide-react'
+import { Menu, X, Grid, UserCog, CreditCard } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
+import TipsDropdown from '@/components/TipsDropdown'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -105,9 +106,26 @@ export default function Navbar() {
                   User Editor
                 </span>
               </Link>
+
+              {/* Expenses icon */}
+              <Link
+                href="/expenses"
+                className="relative flex flex-col items-center group"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.2, rotate: 10 }}
+                  className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors"
+                >
+                  <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
+                </motion.div>
+
+                <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none text-sm text-white bg-white/10 backdrop-blur-md border border-white/20 px-2 py-1 rounded-lg whitespace-nowrap shadow-lg">
+                  Expenses
+                </span>
+              </Link>
             </>
           )}
-
+          {user && <TipsDropdown barberId={user.id}/>}
           {user && <UserProfile />}
 
           <button className="md:hidden" onClick={() => setOpen(!open)}>
@@ -156,6 +174,7 @@ export default function Navbar() {
               <>
                 <Link href="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
                 <Link href="/user-editor" onClick={() => setOpen(false)}>User Editor</Link>
+                <Link href="/expenses" onClick={() => setOpen(false)}>Expenses</Link>
               </>
             )}
           </div>
