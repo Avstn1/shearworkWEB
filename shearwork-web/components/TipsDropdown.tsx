@@ -101,7 +101,15 @@ export default function TipsDropdown({ barberId }: { barberId: string }) {
         onClick={() => setIsOpen(prev => !prev)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="px-4 py-2 bg-gradient-to-r from-amber-400/30 to-lime-500/30 border border-white/10 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all backdrop-blur-md"
+        className="
+          px-4 py-2 sm:px-5 sm:py-2.5 
+          bg-gradient-to-r from-amber-400/30 to-lime-500/30 
+          border border-white/10 text-white font-semibold 
+          rounded-xl shadow-md hover:shadow-lg 
+          transition-all backdrop-blur-md
+          text-sm sm:text-base
+          active:scale-95
+        "
       >
         💰 Manage Tips
       </motion.button>
