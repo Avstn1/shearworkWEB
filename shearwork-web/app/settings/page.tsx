@@ -296,8 +296,8 @@ export default function SettingsPage() {
         </motion.div>
 
         {/* Connect Acuity Card */}
-        {/* <motion.div variants={fadeInUp} custom={3} className={cardClass}>
-          <ConnectAcuityButton />
+        <motion.div variants={fadeInUp} custom={3} className={cardClass}>
+          <ConnectAcuityButton onConnectSuccess={handleFullAcuitySync} />
           <div className="flex flex-col gap-2 mt-4">
             <label className="text-sm text-[#bdbdbd] font-semibold">Select Year to Sync</label>
             <select
@@ -322,8 +322,8 @@ export default function SettingsPage() {
           >
             {syncing ? `Syncing ${selectedYear}...` : `Sync ${selectedYear} Data`}
           </button>
-        </motion.div> */}
-
+        </motion.div>
+        
         {/* Sign Out Card */}
         <motion.div variants={fadeInUp} custom={4} className={cardClass}>
           <SignOutButton className="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-full transition" />

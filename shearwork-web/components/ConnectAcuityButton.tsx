@@ -2,17 +2,24 @@
 
 import { useEffect, useState } from 'react'
 
-export default function ConnectAcuityButton() {
+interface ConnectAcuityButtonProps {
+  onConnectSuccess?: () => void
+}
+
+export default function ConnectAcuityButton({ onConnectSuccess }: ConnectAcuityButtonProps) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // ✅ Check if user is already connected to Acuity
+  // Track initial connection state
+  const [initialConnected, setInitialConnected] = useState<boolean | null>(null)
+
   useEffect(() => {
     const fetchConnectionStatus = async () => {
       try {
         const res = await fetch('/api/acuity/status')
         const data = await res.json()
         setConnected(data.connected)
+        setInitialConnected(data.connected) // save initial state
       } catch (err) {
         console.error('Error checking Acuity connection:', err)
       } finally {
@@ -24,6 +31,7 @@ export default function ConnectAcuityButton() {
   }, [])
 
   const handleConnect = async () => {
+    // Redirect to Acuity OAuth
     window.location.href = '/api/acuity/authorize'
   }
 
@@ -39,6 +47,14 @@ export default function ConnectAcuityButton() {
       alert('Error disconnecting Acuity.')
     }
   }
+
+  // 🔹 Detect first successful connection after initial state
+  useEffect(() => {
+    if (connected && initialConnected === false && onConnectSuccess) {
+      // First time connecting
+      onConnectSuccess()
+    }
+  }, [connected, initialConnected, onConnectSuccess])
 
   if (loading) {
     return <button className="px-4 py-2 bg-gray-400 text-white rounded-lg">Loading...</button>
