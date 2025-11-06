@@ -12,7 +12,7 @@
     "@netlify/plugin-nextjs": "^5.14.3",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.76.1",
+    "@supabase/supabase-js": "^2.79.0",
     "@tinymce/tinymce-react": "^6.3.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.24",
