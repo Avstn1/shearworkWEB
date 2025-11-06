@@ -198,7 +198,7 @@ export default function DashboardPage() {
       >
         {/* LEFT COLUMN */}
         <div className="flex flex-col gap-4 pr-1">
-          <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-4">
+          <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className={cardClass}>
               <YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} />
             </div>
