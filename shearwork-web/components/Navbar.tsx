@@ -44,7 +44,7 @@ export default function Navbar() {
     return () => subscription.subscription.unsubscribe()
   }, [])
 
-  // Close menu when clicking outside
+  // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -61,17 +61,17 @@ export default function Navbar() {
 
   const desktopIcons = (
     <>
-      <Link href="/dashboard" className="relative flex flex-col items-center group md:flex hidden">
+      <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
         <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
           <Grid className="w-6 h-6 text-[var(--foreground)]" />
         </div>
       </Link>
-      <Link href="/user-editor" className="relative flex flex-col items-center group md:flex hidden">
+      <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
         <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
           <UserCog className="w-6 h-6 text-[var(--foreground)]" />
         </div>
       </Link>
-      <Link href="/expenses" className="relative flex flex-col items-center group md:flex hidden">
+      <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
         <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
           <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
         </div>
@@ -81,13 +81,13 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-[var(--navbar)]/90 backdrop-blur-md shadow-sm">
-      <div className="w-full px-4 py-4 flex justify-between items-center relative">
+      <div className="w-full px-6 py-4 flex justify-between items-center relative">
         {/* --- LEFT: Logo --- */}
         <Link href="/" className="text-2xl font-bold text-[var(--highlight)]">
           ✂️ ShearWork
         </Link>
 
-        {/* --- CENTER: Desktop links --- */}
+        {/* --- CENTER: Links (only when signed out) --- */}
         {!user && (
           <div className="hidden md:flex gap-8 text-[var(--foreground)] absolute left-1/2 -translate-x-1/2">
             <a href="#features" className="hover:text-[var(--highlight)]">Features</a>
@@ -96,14 +96,47 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* --- RIGHT: Desktop icons + user --- */}
+        {/* --- RIGHT SIDE --- */}
         <div className="flex items-center gap-4 ml-auto">
-          {desktopIcons}
-          {user && <TipsDropdown barberId={user.id} />}
-          {user && <UserProfile />}
-          <button className="md:hidden p-2 rounded hover:bg-[var(--highlight)] transition-colors" onClick={() => setOpen(!open)}>
-            {open ? <X /> : <Menu />}
-          </button>
+          {user ? (
+            <>
+              {desktopIcons}
+              <TipsDropdown barberId={user.id} />
+              <UserProfile />
+              <button
+                className="md:hidden p-2 rounded hover:bg-[var(--highlight)] transition-colors"
+                onClick={() => setOpen(!open)}
+              >
+                {open ? <X /> : <Menu />}
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Sign In / Sign Up (right side desktop) */}
+              <div className="hidden md:flex items-center gap-4">
+                <Link
+                  href="/login"
+                  className="hover:text-[var(--highlight)] transition font-medium"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="bg-[var(--highlight)] text-[var(--accent-4)] px-5 py-2 rounded-md font-semibold hover:scale-105 transition"
+                >
+                  Sign Up
+                </Link>
+              </div>
+
+              {/* Mobile menu toggle */}
+              <button
+                className="md:hidden p-2 rounded hover:bg-[var(--highlight)] transition-colors"
+                onClick={() => setOpen(!open)}
+              >
+                {open ? <X /> : <Menu />}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
