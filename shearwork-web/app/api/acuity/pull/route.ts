@@ -185,8 +185,8 @@ export async function GET(request: Request) {
     const groupedByMonth: Record<string, any[]> = {}
     for (const appt of appointmentsToProcess) {
       const date = new Date(appt.datetime)
-      const monthName = MONTHS[date.getUTCMonth()]
-      const year = date.getUTCFullYear()
+      const monthName = MONTHS[date.getMonth()]
+      const year = date.getFullYear()
       const key = `${year}||${monthName}`
       if (!groupedByMonth[key]) groupedByMonth[key] = []
       groupedByMonth[key].push(appt)
@@ -223,8 +223,8 @@ export async function GET(request: Request) {
     for (const appt of appointmentsToProcess) {
       const service = appt.type || 'Unknown'
       const date = new Date(appt.datetime)
-      const month = MONTHS[date.getUTCMonth()]
-      const year = date.getUTCFullYear()
+      const month = MONTHS[date.getMonth()]
+      const year = date.getFullYear()
       const key = `${service}||${month}||${year}`
       if (!serviceCounts[key]) serviceCounts[key] = { month, year, count: 0 }
       serviceCounts[key].count++
@@ -298,7 +298,7 @@ export async function GET(request: Request) {
 
     for (const appt of appointmentsToProcess) {
       const date = new Date(appt.datetime)
-      const month = MONTHS[date.getUTCMonth()]
+      const month = MONTHS[date.getMonth()]
       const year = date.getFullYear()
       const key = `${year}||${month}`
 
@@ -356,8 +356,8 @@ export async function GET(request: Request) {
         if (!appt.forms || !Array.isArray(appt.forms)) continue;
 
         const date = new Date(appt.datetime);
-        const month = MONTHS[date.getUTCMonth()];
-        const year = date.getUTCFullYear();
+        const month = MONTHS[date.getMonth()];
+        const year = date.getFullYear();
         const key = `${month}||${year}`;
 
         for (const form of appt.forms) {
