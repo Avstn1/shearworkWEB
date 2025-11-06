@@ -18,6 +18,7 @@ export default function UserProfile() {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // 🔹 Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -28,6 +29,7 @@ export default function UserProfile() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // 🔹 Fetch profile info
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -63,80 +65,91 @@ export default function UserProfile() {
   }
 
   return (
-    <div className="relative flex items-center">
-      <div ref={dropdownRef} className="relative group">
-        {/* Avatar Button */}
-        <motion.button
-          whileHover={{ scale: 1.15, rotate: 5, boxShadow: '0 8px 20px rgba(0,0,0,0.2)' }}
-          className="rounded-full focus:outline-none p-1"
-          onClick={() => setOpen(!open)}
-        >
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt="Avatar"
-              className="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-[var(--accent-2)] transition"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-[var(--accent-2)] flex items-center justify-center text-[var(--text-bright)] font-bold cursor-pointer hover:ring-2 hover:ring-[var(--accent-3)] transition">
-              {profile?.full_name?.[0] || 'U'}
-            </div>
-          )}
-        </motion.button>
+    <div className="relative flex items-center" ref={dropdownRef}>
+      {/* Avatar button */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setOpen(!open)}
+        className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden bg-gradient-to-r from-amber-400/30 to-lime-500/30 border border-white/10 shadow-md hover:shadow-lg backdrop-blur-md transition-all"
+      >
+        {profile?.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt="Avatar"
+            className="w-full h-full object-cover rounded-full"
+          />
+        ) : (
+          <span className="text-white font-bold text-lg">
+            {profile?.full_name?.[0]?.toUpperCase() || 'U'}
+          </span>
+        )}
+      </motion.button>
 
-        {/* Hover popup text */}
-        <motion.span
-          initial={{ opacity: 0, y: 6 }}
-          whileHover={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="absolute top-full mt-2 left-1/2 -translate-x-1/2 text-sm text-white bg-black/85 backdrop-blur-sm border border-black/50 px-3 py-1 rounded-lg whitespace-nowrap shadow-lg pointer-events-none"
-        >
-          Profile
-        </motion.span>
-
-        {/* Dropdown menu */}
-        <AnimatePresence>
-          {open && (
+      {/* Dropdown menu */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial="closed"
+            animate="open"
+            exit="closed"
+            variants={menuVariants}
+            ref={dropdownRef}
+            className="absolute top-full right-0 mt-3 w-72 bg-[#1a1e18]/90 border border-white/10 rounded-2xl shadow-2xl p-4 z-[9999] backdrop-blur-xl origin-top-right"
+            style={{
+              transformOrigin: 'top right',
+              maxWidth: 'calc(100vw - 1rem)', // ensures it never overflows screen width
+            }}
+          >
             <motion.div
-              initial="closed"
-              animate="open"
-              exit="closed"
-              variants={menuVariants}
-              className="absolute right-0 mt-3 w-64 bg-black/90 backdrop-blur-sm border border-black/60 rounded-2xl shadow-2xl z-50 p-4 flex flex-col space-y-4"
+              variants={itemVariants}
+              className="flex flex-col items-center text-[var(--text-bright)] space-y-1"
             >
-              <motion.div
-                variants={itemVariants}
-                className="flex flex-col text-[var(--foreground)]"
-              >
-                <span className="font-semibold text-lg text-[var(--accent-3)]">{profile?.full_name || 'User'}</span>
-                <span className="text-[var(--text-muted)] text-sm">{profile?.role || 'Barber'}</span>
-                <span className="text-[var(--text-muted)] text-sm break-words">{profile?.email || ''}</span>
-              </motion.div>
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-r from-lime-400/30 to-amber-400/30 border border-white/10 shadow-md mb-2">
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-xl text-white font-bold">
+                    {profile?.full_name?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </div>
 
-              <motion.div variants={itemVariants}>
-                <Link
-                  href="/settings"
-                  className="block bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] font-semibold py-2 px-3 rounded-lg text-center transition transform hover:scale-105 shadow-md"
-                >
-                  Settings
-                </Link>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <SignOutButton className="w-full transform hover:scale-105" />
-              </motion.div>
+              <span className="font-semibold text-lg text-amber-200">
+                {profile?.full_name || 'User'}
+              </span>
+              <span className="text-xs text-gray-400 uppercase tracking-wide">
+                {profile?.role || 'Barber'}
+              </span>
+              <span className="text-sm text-lime-200/80 break-words">
+                {profile?.email || ''}
+              </span>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
 
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn { animation: fadeIn 0.15s ease-out; }
-      `}</style>
+            <motion.hr
+              variants={itemVariants}
+              className="my-3 border-white/10"
+            />
+
+            <motion.div variants={itemVariants}>
+              <Link
+                href="/settings"
+                className="block w-full text-center py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-400/30 to-lime-500/30 border border-white/10 text-white hover:shadow-md hover:scale-[1.02] transition-all"
+              >
+                ⚙️ Settings
+              </Link>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <SignOutButton className="w-full bg-white/10 border border-white/10 text-white py-2 rounded-lg text-sm font-semibold hover:bg-white/20 hover:scale-[1.02] transition-all" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

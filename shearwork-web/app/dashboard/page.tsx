@@ -19,6 +19,7 @@ import MarketingFunnelsChart from '@/components/MarketingFunnelsChart'
 import Navbar from '@/components/Navbar'
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 import WeeklyComparisonReports from '@/components/WeeklyComparisonReports'
+import MonthlyExpensesCard from '@/components/MonthlyExpensesCard'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -221,11 +222,18 @@ export default function DashboardPage() {
       >
         {/* --- LEFT --- */}
         <div className="flex flex-col gap-4 pr-1">
-          <motion.div variants={fadeInUp} custom={1} className={cardClass}>
-            <YearlyRevenueCard userId={user?.id} year={selectedYear} />
+          {/* Row with Yearly Revenue + Monthly Expenses */}
+          <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-4">
+            <div className={cardClass}>
+              <YearlyRevenueCard userId={user?.id} year={selectedYear} />
+            </div>
+            <div className={cardClass}>
+              <MonthlyExpensesCard userId={user?.id} month={selectedMonth} year={selectedYear} />
+            </div>
           </motion.div>
 
-          <motion.div variants={fadeInUp} custom={2} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Row with Monthly Revenue + Average Ticket */}
+          <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <motion.div className={cardClass}>
               <MonthlyRevenueCard userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} />
             </motion.div>
@@ -234,10 +242,11 @@ export default function DashboardPage() {
             </motion.div>
           </motion.div>
 
-          <motion.div variants={fadeInUp} custom={3} className={cardClass}>
+          <motion.div variants={fadeInUp} className={cardClass}>
             <ServiceBreakdownChart barberId={user?.id} month={selectedMonth} year={selectedYear ?? CURRENT_YEAR}/>
           </motion.div>
         </div>
+
 
         {/* --- MIDDLE --- */}
         <div className="flex flex-col gap-4 px-1">
