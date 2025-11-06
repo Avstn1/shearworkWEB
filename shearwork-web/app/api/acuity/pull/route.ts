@@ -348,6 +348,76 @@ export async function GET(request: Request) {
       await supabase.from('report_top_clients').upsert(upsertClients, {
         onConflict: 'user_id,month,year,client_key',
       })
+      // --- 🧭 MARKETING FUNNELS: Extract and Aggregate Referral Sources ---
+      const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok'];
+      const funnelMap: Record<string, Record<string, { newClients: number; returningClients: number; totalRevenue: number; totalVisits: number }>> = {};
+
+      for (const appt of appointmentsToProcess) {
+        if (!appt.forms || !Array.isArray(appt.forms)) continue;
+
+        const date = new Date(appt.datetime);
+        const month = MONTHS[date.getUTCMonth()];
+        const year = date.getUTCFullYear();
+        const key = `${month}||${year}`;
+
+        for (const form of appt.forms) {
+          if (!form.values || !Array.isArray(form.values)) continue;
+
+          for (const field of form.values) {
+            const fieldName = field.name?.toLowerCase() || '';
+            if (referralKeywords.some(k => fieldName.includes(k))) {
+              const source = (field.value || 'Unknown').trim() || 'Unknown';
+
+              if (!funnelMap[key]) funnelMap[key] = {};
+              if (!funnelMap[key][source]) {
+                funnelMap[key][source] = { newClients: 0, returningClients: 0, totalRevenue: 0, totalVisits: 0 };
+              }
+
+              // Estimate new vs returning
+              const isReturning = appointmentsToProcess.some(
+                (other) =>
+                  other.email === appt.email &&
+                  new Date(other.datetime) < new Date(appt.datetime)
+              );
+
+              if (isReturning) funnelMap[key][source].returningClients++;
+              else funnelMap[key][source].newClients++;
+
+              funnelMap[key][source].totalRevenue += parseFloat(appt.priceSold || '0');
+              funnelMap[key][source].totalVisits++;
+            }
+          }
+        }
+      }
+
+      // Convert aggregated funnel data to upsert format
+      const funnelUpserts = Object.entries(funnelMap).flatMap(([key, sources]) => {
+        const [month, yearStr] = key.split('||');
+        const report_year = parseInt(yearStr);
+
+        return Object.entries(sources).map(([source, stats]) => ({
+          user_id: user.id,
+          source,
+          new_clients: stats.newClients,
+          returning_clients: stats.returningClients,
+          retention:
+            stats.newClients + stats.returningClients > 0
+              ? (stats.returningClients / (stats.newClients + stats.returningClients)) * 100
+              : 0,
+          avg_ticket:
+            stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
+          report_month: month,
+          report_year,
+          created_at: new Date().toISOString(),
+        }));
+      });
+
+      if (funnelUpserts.length > 0) {
+        console.log(`🧭 Upserting ${funnelUpserts.length} marketing funnel records...`);
+        await supabase.from('marketing_funnels').upsert(funnelUpserts, {
+          onConflict: 'user_id,source,report_month,report_year',
+        });
+      }
     }
   }
 
