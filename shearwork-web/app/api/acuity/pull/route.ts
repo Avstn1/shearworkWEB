@@ -193,16 +193,17 @@ export async function GET(request: Request) {
     }
 
     // --- Revenue calculations
+    // --- Count number of appointments per month
     const revenueByMonth: Record<string, number> = {}
-    const avgTicketByMonth: Record<string, number> = {}
+    const numAppointmentsByMonth: Record<string, number> = {}
     for (const [key, appts] of Object.entries(groupedByMonth)) {
       const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
-      const avgTicket = appts.length > 0 ? totalRevenue / appts.length : 0
       revenueByMonth[key] = totalRevenue
-      avgTicketByMonth[key] = parseFloat(avgTicket.toFixed(2))
+      numAppointmentsByMonth[key] = appts.length
     }
 
-    // --- Upsert monthly_data
+
+    // --- Upsert monthly_data with total_revenue and num_appointments
     const upsertRows = Object.keys(revenueByMonth).map(key => {
       const [year, month] = key.split('||')
       return {
@@ -210,7 +211,7 @@ export async function GET(request: Request) {
         month,
         year: parseInt(year),
         total_revenue: revenueByMonth[key],
-        avg_ticket: avgTicketByMonth[key],
+        num_appointments: numAppointmentsByMonth[key],
         updated_at: new Date().toISOString(),
       }
     })
