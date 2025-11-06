@@ -81,7 +81,7 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
               <tr className="text-left border-b border-[#444]">
                 <th className="py-2 px-3 min-w-[30px]">#</th>
                 <th className="py-2 px-3 min-w-[120px]">Client</th>
-                <th className="py-2 px-3 min-w-[80px]">Total Paid</th>
+                <th className="py-2 px-3 min-w-[80px]">Service Totals</th>
                 <th className="py-2 px-3 min-w-[60px]">Visits</th>
                 <th className="py-2 px-3 min-w-[100px]">Notes</th>
               </tr>
