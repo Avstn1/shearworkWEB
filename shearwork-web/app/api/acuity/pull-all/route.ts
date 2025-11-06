@@ -84,25 +84,28 @@ export async function POST(req: Request) {
       }
     }
 
-    // --- Fetch appointments
+    // --- Fetch appointments (for all months this year)
     let allData: any[] = []
     try {
-      const dates = getAllDatesInMonth(requestedMonth, requestedYear)
-      for (const day of dates) {
-        const url = new URL('https://acuityscheduling.com/api/v1/appointments')
-        url.searchParams.set('minDate', day)
-        url.searchParams.set('maxDate', day)
-        url.searchParams.set('max', '100')
-        const res = await fetch(url.toString(), {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-        const dayData = await res.json()
-        if (res.ok && Array.isArray(dayData)) allData.push(...dayData)
+      for (const monthName of MONTHS) {
+        const dates = getAllDatesInMonth(monthName, requestedYear)
+        for (const day of dates) {
+          const url = new URL('https://acuityscheduling.com/api/v1/appointments')
+          url.searchParams.set('minDate', day)
+          url.searchParams.set('maxDate', day)
+          url.searchParams.set('max', '100')
+          const res = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          })
+          const dayData = await res.json()
+          if (res.ok && Array.isArray(dayData)) allData.push(...dayData)
+        }
       }
     } catch (err) {
       results[userId] = { error: 'Failed to fetch Acuity data', details: String(err) }
       continue
     }
+
 
     // --- Process appointments
     if (endpoint === 'appointments' && allData.length > 0) {
