@@ -3,6 +3,7 @@
 import { useState, useEffect, ChangeEvent } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
+import { motion } from 'framer-motion'
 
 interface AdminExpensesEditorProps {
   barberId: string
@@ -16,7 +17,6 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
   const [action, setAction] = useState<'add' | 'replace'>('add')
   const [loading, setLoading] = useState(false)
   const [currentTotal, setCurrentTotal] = useState<number>(0)
-
   const [uploadingFile, setUploadingFile] = useState<File | null>(null)
   const [receiptLabel, setReceiptLabel] = useState<string>('')
 
@@ -36,10 +36,12 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
     fetchCurrentTotal()
   }, [barberId, month, year])
 
-  // Live total
-  const newTotal = expenseAmount === '' ? currentTotal :
-    action === 'add' ? currentTotal + Number(expenseAmount) :
-    Number(expenseAmount)
+  const newTotal =
+    expenseAmount === ''
+      ? currentTotal
+      : action === 'add'
+      ? currentTotal + Number(expenseAmount)
+      : Number(expenseAmount)
 
   // Save expense
   const handleSaveExpense = async () => {
@@ -60,7 +62,7 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
       toast.success(`Expenses ${action === 'add' ? 'updated' : 'saved'}!`)
       setCurrentTotal(newTotal)
       setExpenseAmount('')
-      if (onUpdate) onUpdate()
+      onUpdate?.()
     } catch (err) {
       console.error(err)
       toast.error('Failed to save expenses')
@@ -68,12 +70,11 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
     setLoading(false)
   }
 
-  // Handle initial file selection
+  // Handle file select
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
-    const file = e.target.files[0]
-    setUploadingFile(file)
-    setReceiptLabel('') // reset label
+    setUploadingFile(e.target.files[0])
+    setReceiptLabel('')
   }
 
   // Confirm upload
@@ -81,13 +82,9 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
     if (!uploadingFile) return
     const fileName = `${barberId}/${year}-${month}-${Date.now()}-${uploadingFile.name}`
     const label = receiptLabel.trim() || new Date().toLocaleDateString()
-
     try {
-      // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage.from('receipts').upload(fileName, uploadingFile)
       if (uploadError) throw uploadError
-
-      // Insert DB record with label
       const { error: dbError } = await supabase.from('monthly_receipts').insert({
         user_id: barberId,
         month,
@@ -96,63 +93,94 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
         label,
       })
       if (dbError) throw dbError
-
       toast.success('Receipt uploaded!')
       setUploadingFile(null)
       setReceiptLabel('')
-      if (onUpdate) onUpdate()
+      onUpdate?.()
     } catch (err) {
       console.error('[UPLOAD] Failed to upload receipt:', err)
       toast.error('Failed to upload receipt')
     }
   }
 
-  // Cancel upload
   const handleUploadCancel = () => {
     setUploadingFile(null)
     setReceiptLabel('')
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Input + Actions */}
-      <div className="flex gap-2 flex-wrap">
+    <div className="flex flex-col gap-5">
+      {/* Expense Input + Toggle */}
+      <div className="flex flex-wrap gap-3 items-center">
         <input
-          type="number"
+          type="text"
+          inputMode="decimal"
+          pattern="[0-9]*"
           value={expenseAmount}
-          onChange={e => setExpenseAmount(e.target.value === '' ? '' : Number(e.target.value))}
+          onChange={e => {
+            const value = e.target.value
+            if (/^\d*\.?\d*$/.test(value)) setExpenseAmount(value === '' ? '' : Number(value))
+          }}
           placeholder="Enter expense amount"
-          className="px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all flex-1"
+          className="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 
+                     focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all min-w-[180px]
+                     appearance-none"
         />
-        <button
-          onClick={() => setAction('replace')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-            action === 'replace' ? 'bg-amber-400/30 text-amber-100 border border-amber-300/30' : 'bg-white/10 text-white/70 hover:bg-white/20'
-          }`}
-        >
-          Replace
-        </button>
-        <button
-          onClick={() => setAction('add')}
-          className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-            action === 'add' ? 'bg-lime-400/30 text-lime-100 border border-lime-300/30' : 'bg-white/10 text-white/70 hover:bg-white/20'
-          }`}
-        >
-          Add
-        </button>
-        <button
+
+        {/* Modern Toggle (matching TipsDropdown) */}
+        <div className="relative flex bg-white/10 rounded-lg p-1 text-xs font-semibold overflow-hidden border border-white/10 w-32">
+          <motion.div
+            layout
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className={`absolute top-1 bottom-1 left-1 w-1/2 rounded-md ${
+              action === 'add'
+                ? 'translate-x-full bg-lime-400/30'
+                : 'translate-x-0 bg-amber-400/30'
+            }`}
+          />
+          <button
+            onClick={() => setAction('replace')}
+            className={`flex-1 py-1 z-10 transition-colors ${
+              action === 'replace' ? 'text-amber-100' : 'text-white/70 hover:text-white/90'
+            }`}
+          >
+            Replace
+          </button>
+          <button
+            onClick={() => setAction('add')}
+            className={`flex-1 py-1 z-10 transition-colors ${
+              action === 'add' ? 'text-lime-100' : 'text-white/70 hover:text-white/90'
+            }`}
+          >
+            Add
+          </button>
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleSaveExpense}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-lime-400/40 to-amber-400/40 text-white font-semibold hover:shadow-md transition-all"
+          disabled={loading}
+          className="px-4 py-2 rounded-lg bg-gradient-to-r from-lime-400/40 to-amber-400/40 
+                     text-white font-semibold hover:shadow-md transition-all"
         >
           {loading ? 'Saving...' : 'Save'}
-        </button>
+        </motion.button>
       </div>
 
-      {/* Live Preview */}
-      <p className="text-white text-sm">
-        Current Total: <span className="text-lime-300 font-bold">${currentTotal.toFixed(2)}</span><br />
-        {expenseAmount !== '' && <>New Total: <span className="text-amber-300 font-bold">${newTotal.toFixed(2)}</span></>}
-      </p>
+      {/* Live Total */}
+      <div className="text-white text-sm">
+        <p>
+          Current Total:{' '}
+          <span className="text-lime-300 font-bold">${currentTotal.toFixed(2)}</span>
+        </p>
+        {expenseAmount !== '' && (
+          <p>
+            New Total:{' '}
+            <span className="text-amber-300 font-bold">${newTotal.toFixed(2)}</span>
+          </p>
+        )}
+      </div>
 
       {/* Upload Receipt */}
       <label className="w-full flex justify-center items-center px-4 py-2 bg-white/10 text-white rounded-lg cursor-pointer hover:bg-white/20 transition">
@@ -160,10 +188,10 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
         <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
       </label>
 
-      {/* Label Modal */}
+      {/* Upload Modal */}
       {uploadingFile && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 rounded-lg p-6 w-[90%] max-w-md text-white flex flex-col gap-4">
+          <div className="bg-zinc-900 rounded-lg p-6 w-[90%] max-w-md text-white flex flex-col gap-4 border border-white/10 shadow-xl">
             <h2 className="text-lg font-semibold">Label your receipt</h2>
             <p className="text-sm text-gray-400">Leave blank to default to today's date.</p>
             <input
@@ -171,7 +199,8 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
               value={receiptLabel}
               onChange={e => setReceiptLabel(e.target.value)}
               placeholder="Enter receipt label"
-              className="px-3 py-2 rounded-lg bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all w-full"
+              className="px-3 py-2 rounded-lg bg-white/10 text-white border border-white/20 
+                         focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all w-full"
             />
             <div className="flex justify-end gap-2">
               <button

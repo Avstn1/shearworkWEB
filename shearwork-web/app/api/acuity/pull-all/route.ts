@@ -9,17 +9,21 @@ const MONTHS = [
   'July','August','September','October','November','December'
 ]
 
+// ✅ Helper to safely get all days of a month in UTC context
 function getAllDatesInMonth(monthName: string, year: number): string[] {
-  const start = new Date(`${monthName} 1, ${year}`)
-  const end = new Date(start)
-  end.setMonth(end.getMonth() + 1)
-  end.setDate(0)
+  const monthIndex = MONTHS.indexOf(monthName)
+  const start = new Date(Date.UTC(year, monthIndex, 1))
+  const end = new Date(Date.UTC(year, monthIndex + 1, 0))
   const today = new Date()
-  if (end > today) end.setFullYear(today.getFullYear(), today.getMonth(), today.getDate())
+
+  // if this month goes into the future, clamp to today
+  if (end > today) {
+    end.setUTCFullYear(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  }
 
   const dates: string[] = []
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    dates.push(d.toLocaleDateString('en-CA'))
+  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    dates.push(d.toISOString().split('T')[0]) // YYYY-MM-DD in UTC
   }
   return dates
 }
@@ -27,18 +31,18 @@ function getAllDatesInMonth(monthName: string, year: number): string[] {
 export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient()
 
-  // ✅ Automatically set current month and year
+  // ✅ Auto-use current month/year
   const now = new Date()
-  const requestedYear = now.getFullYear()
-  const requestedMonth = MONTHS[now.getMonth()]
-  const endpoint = 'appointments' // Always appointments for now
+  const requestedYear = now.getUTCFullYear()
+  const requestedMonth = MONTHS[now.getUTCMonth()]
+  const endpoint = 'appointments'
 
-  // 1️⃣ Fetch all users with Acuity tokens
+  // 1️⃣ Fetch all connected users
   const { data: tokenRows, error: tokenError } = await supabase
     .from('acuity_tokens')
     .select('*')
 
-  if (tokenError || !tokenRows || tokenRows.length === 0) {
+  if (tokenError || !tokenRows?.length) {
     return NextResponse.json({ error: 'No Acuity connections found' }, { status: 400 })
   }
 
@@ -49,7 +53,7 @@ export async function POST(req: Request) {
     let accessToken = tokenRow.access_token
     const nowTs = Math.floor(Date.now() / 1000)
 
-    // --- Refresh token if expired
+    // 🔁 Refresh token if expired
     if (tokenRow.expires_at && tokenRow.expires_at < nowTs) {
       try {
         const refreshRes = await fetch('https://acuityscheduling.com/oauth2/token', {
@@ -84,7 +88,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // --- Fetch appointments (for all months this year)
+    // 📅 Fetch appointments for every month this year
     let allData: any[] = []
     try {
       for (const monthName of MONTHS) {
@@ -106,17 +110,14 @@ export async function POST(req: Request) {
       continue
     }
 
-
-    // --- Process appointments
+    // 🧮 Process data
     if (endpoint === 'appointments' && allData.length > 0) {
-      const appointmentsToProcess = allData
-
-      // --- Monthly revenue & appointment count
       const groupedByMonth: Record<string, any[]> = {}
-      for (const appt of appointmentsToProcess) {
+
+      for (const appt of allData) {
         const date = new Date(appt.datetime)
-        const monthName = MONTHS[date.getMonth()]
-        const yearNum = date.getFullYear()
+        const monthName = MONTHS[date.getUTCMonth()] // ✅ FIX: use UTC month
+        const yearNum = date.getUTCFullYear()
         const key = `${yearNum}||${monthName}`
         if (!groupedByMonth[key]) groupedByMonth[key] = []
         groupedByMonth[key].push(appt)
@@ -124,6 +125,7 @@ export async function POST(req: Request) {
 
       const revenueByMonth: Record<string, number> = {}
       const numAppointmentsByMonth: Record<string, number> = {}
+
       for (const [key, appts] of Object.entries(groupedByMonth)) {
         const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
         revenueByMonth[key] = totalRevenue
@@ -143,13 +145,13 @@ export async function POST(req: Request) {
       })
       await supabase.from('monthly_data').upsert(upsertRows, { onConflict: 'user_id,month,year' })
 
-      // --- Service bookings
+      // 🧾 Service Bookings
       const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
-      for (const appt of appointmentsToProcess) {
+      for (const appt of allData) {
         const service = appt.type || 'Unknown'
         const date = new Date(appt.datetime)
-        const monthName = MONTHS[date.getMonth()]
-        const yearNum = date.getFullYear()
+        const monthName = MONTHS[date.getUTCMonth()] // ✅ FIX
+        const yearNum = date.getUTCFullYear()
         const key = `${service}||${monthName}||${yearNum}`
         if (!serviceCounts[key]) serviceCounts[key] = { month: monthName, year: yearNum, count: 0 }
         serviceCounts[key].count++
@@ -194,16 +196,18 @@ export async function POST(req: Request) {
           })
         }
       }
+
       await supabase.from('service_bookings').upsert(finalUpserts, {
         onConflict: 'user_id,service_name,report_month,report_year',
       })
 
-      // --- Top clients
+      // 🧍 Top Clients
       const monthlyClientMap: Record<string, Record<string, any>> = {}
-      for (const appt of appointmentsToProcess) {
+
+      for (const appt of allData) {
         const date = new Date(appt.datetime)
-        const monthName = MONTHS[date.getMonth()]
-        const yearNum = date.getFullYear()
+        const monthName = MONTHS[date.getUTCMonth()] // ✅ FIX
+        const yearNum = date.getUTCFullYear()
         const key = `${yearNum}||${monthName}`
 
         const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}` : 'Unknown'
@@ -222,7 +226,7 @@ export async function POST(req: Request) {
             total_paid: 0,
             num_visits: 0,
             month: monthName,
-            year: yearNum
+            year: yearNum,
           }
         }
 
@@ -248,15 +252,15 @@ export async function POST(req: Request) {
         })
       }
 
-      // --- Marketing funnels
+      // 📈 Marketing Funnels
       const referralKeywords = ['referral','referred','hear','heard','source','social','instagram','facebook','tiktok']
       const funnelMap: Record<string, Record<string, any>> = {}
 
-      for (const appt of appointmentsToProcess) {
+      for (const appt of allData) {
         if (!appt.forms || !Array.isArray(appt.forms)) continue
         const date = new Date(appt.datetime)
-        const monthName = MONTHS[date.getMonth()]
-        const yearNum = date.getFullYear()
+        const monthName = MONTHS[date.getUTCMonth()] // ✅ FIX
+        const yearNum = date.getUTCFullYear()
         const key = `${monthName}||${yearNum}`
 
         for (const form of appt.forms) {
@@ -268,9 +272,10 @@ export async function POST(req: Request) {
               if (!funnelMap[key]) funnelMap[key] = {}
               if (!funnelMap[key][source]) funnelMap[key][source] = { newClients: 0, returningClients: 0, totalRevenue: 0, totalVisits: 0 }
 
-              const isReturning = appointmentsToProcess.some(
+              const isReturning = allData.some(
                 (other) => other.email === appt.email && new Date(other.datetime) < new Date(appt.datetime)
               )
+
               if (isReturning) funnelMap[key][source].returningClients++
               else funnelMap[key][source].newClients++
 
@@ -289,9 +294,10 @@ export async function POST(req: Request) {
           source,
           new_clients: stats.newClients,
           returning_clients: stats.returningClients,
-          retention: stats.newClients + stats.returningClients > 0
-            ? (stats.returningClients / (stats.newClients + stats.returningClients)) * 100
-            : 0,
+          retention:
+            stats.newClients + stats.returningClients > 0
+              ? (stats.returningClients / (stats.newClients + stats.returningClients)) * 100
+              : 0,
           avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
           report_month: monthName,
           report_year,
@@ -311,18 +317,17 @@ export async function POST(req: Request) {
     }
   }
 
-  // Log to Supabase (after all users processed)
+  // 🪵 Log Cron
   try {
     await supabase.from('cron_logs').insert({
       job_name: 'weekly_acuity_sync',
       success: true,
       processed_users: tokenRows.length,
-      details: results
+      details: results,
     })
   } catch (logErr) {
     console.error('Failed to log cron run:', logErr)
   }
-
 
   return NextResponse.json({
     message: `Processed ${tokenRows.length} users`,

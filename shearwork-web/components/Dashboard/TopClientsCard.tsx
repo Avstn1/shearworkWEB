@@ -82,7 +82,7 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
                 <th className="py-2 px-3 min-w-[120px]">Client</th>
                 <th className="py-2 px-3 min-w-[80px]">Service Totals</th>
                 <th className="py-2 px-3 min-w-[60px]">Visits</th>
-                <th className="py-2 px-3 min-w-[100px]">Notes</th>
+                {/* <th className="py-2 px-3 min-w-[100px]">Notes</th> */}
               </tr>
             </thead>
             <tbody>
@@ -104,9 +104,9 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
                   <td className="py-2 px-3 font-semibold text-yellow-400">
                     {client.num_visits ?? '-'}
                   </td>
-                  <td className="py-2 px-3 italic text-gray-300 truncate">
+                  {/* <td className="py-2 px-3 italic text-gray-300 truncate">
                     {client.notes ?? '-'}
-                  </td>
+                  </td> */}
                 </tr>
               ))}
             </tbody>

@@ -52,7 +52,15 @@ export default function MarketingFunnelsChart({
         return
       }
 
-      setData(funnels as MarketingFunnel[])
+      // 🧠 Filter out unwanted funnel sources
+      const filtered = (funnels as MarketingFunnel[]).filter(
+        (f) =>
+          f.source &&
+          f.source !== 'Unknown' &&
+          f.source !== 'Returning Client'
+      )
+
+      setData(filtered)
     }
 
     fetchData()
@@ -90,17 +98,17 @@ export default function MarketingFunnelsChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={{ top: 20, right: 20, left: 0, bottom: 60 }} // extra bottom margin for rotated labels
+            margin={{ top: 20, right: 20, left: 0, bottom: 60 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
 
             <XAxis
               dataKey="source"
               stroke="#E8EDC7"
-              angle={-35} // rotate labels for readability
+              angle={-35}
               textAnchor="end"
-              interval={0} // show all labels
-              height={60} // make space for rotated labels
+              interval={0}
+              height={60}
               style={{ fontSize: '12px' }}
             />
             <YAxis stroke="#E8EDC7" />

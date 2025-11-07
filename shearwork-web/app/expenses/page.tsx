@@ -6,7 +6,7 @@ import { supabase } from '@/utils/supabaseClient'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import AdminExpensesEditor from '@/components/AdminExpensesEditor'
+import AdminExpensesEditor from '@/components/AdminComponents/AdminExpensesEditor'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CURRENT_YEAR = new Date().getFullYear()

@@ -5,22 +5,18 @@ import { motion } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-]
-
-export default function TipsDropdown({ barberId }: { barberId: string }) {
+export default function DailyTipsDropdown({ barberId, onRefresh }: { barberId: string, onRefresh?: () => void }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()])
-  const [year, setYear] = useState<number>(new Date().getFullYear())
+  const today = new Date()
   const [tipAmount, setTipAmount] = useState<number | ''>('')
   const [currentTips, setCurrentTips] = useState<number>(0)
-  const [action, setAction] = useState<'replace' | 'add'>('add') // 🟢 default to ADD
+  const [action, setAction] = useState<'replace' | 'add'>('add') // default = add
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i)
+  const dateStr = today.toISOString().split('T')[0] // "YYYY-MM-DD"
+  const month = today.toLocaleString('default', { month: 'long' })
+  const year = today.getFullYear()
 
   // 🔹 Close dropdown when clicking outside
   useEffect(() => {
@@ -33,31 +29,30 @@ export default function TipsDropdown({ barberId }: { barberId: string }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // 🔹 Fetch existing tips
+  // 🔹 Fetch today's tips
   useEffect(() => {
-    if (!barberId || !month || !year) return
+    if (!barberId) return
     const fetchTips = async () => {
       const { data, error } = await supabase
-        .from('monthly_data')
+        .from('daily_data')
         .select('tips')
         .eq('user_id', barberId)
-        .eq('month', month)
-        .eq('year', year)
+        .eq('date', dateStr)
         .maybeSingle()
 
       if (error) {
         console.error(error)
-        toast.error('Failed to load tips data.')
+        toast.error('Failed to load today’s tips.')
       } else {
         setCurrentTips(data?.tips || 0)
       }
     }
     fetchTips()
-  }, [barberId, month, year])
+  }, [barberId, dateStr])
 
   async function handleSaveTips() {
-    if (!month || !year || tipAmount === '') {
-      toast.error('Please select month, year, and enter a tip amount.')
+    if (tipAmount === '') {
+      toast.error('Please enter a tip amount.')
       return
     }
 
@@ -69,24 +64,27 @@ export default function TipsDropdown({ barberId }: { barberId: string }) {
           : Number(tipAmount)
 
       const { error } = await supabase
-        .from('monthly_data')
+        .from('daily_data')
         .upsert(
           {
             user_id: barberId,
-            month,
-            year,
+            date: dateStr,
             tips: newTotal,
             updated_at: new Date().toISOString(),
+            year,
+            month,
+            final_revenue: 0, // will be auto-calculated by trigger
           },
-          { onConflict: 'user_id,month,year' }
+          { onConflict: 'user_id,date' }
         )
 
       if (error) throw error
 
       setCurrentTips(newTotal)
-      toast.success(`Tips for ${month} ${year} ${action === 'add' ? 'updated' : 'saved'}!`)
+      toast.success(`Today's tips ${action === 'add' ? 'updated' : 'saved'}!`)
       setIsOpen(false)
       setTipAmount('')
+      if (onRefresh) onRefresh()
     } catch (err: any) {
       console.error(err)
       toast.error('Failed to save tips.')
@@ -102,16 +100,16 @@ export default function TipsDropdown({ barberId }: { barberId: string }) {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         className="
-          px-4 py-2 sm:px-5 sm:py-2.5 
+          px-3 py-1.5 sm:px-4 sm:py-2
           bg-gradient-to-r from-amber-400/30 to-lime-500/30 
           border border-white/10 text-white font-semibold 
           rounded-xl shadow-md hover:shadow-lg 
           transition-all backdrop-blur-md
-          text-sm sm:text-base
+          text-xs sm:text-sm
           active:scale-95
         "
       >
-        💰 Manage Tips
+        💰 Manage Today's Tips
       </motion.button>
 
       {isOpen && (
@@ -122,43 +120,14 @@ export default function TipsDropdown({ barberId }: { barberId: string }) {
         >
           <div className="flex flex-col space-y-3 text-[var(--text-bright)]">
             <h3 className="text-amber-200 font-semibold text-sm mb-1">
-              Tips for {month} {year}
+              Tips for {month} {today.getDate()}, {year}
             </h3>
 
-            {/* 🔹 Highlight current total */}
             <div className="text-center py-2 rounded-lg bg-gradient-to-r from-lime-500/20 to-amber-400/20 border border-lime-300/20">
               <p className="text-xs text-gray-400">Current Total</p>
               <p className="text-2xl font-bold text-lime-300 drop-shadow-md">
                 ${currentTips.toFixed(2)}
               </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-slate-400">Month</label>
-                <select
-                  value={month}
-                  onChange={e => setMonth(e.target.value)}
-                  className="bg-white/10 border border-white/10 text-white rounded-lg px-2 py-1 text-sm w-full"
-                >
-                  {MONTHS.map(m => (
-                    <option className="bg-white/40 border border-white/10 text-black rounded-lg px-2 py-1 w-full text-sm" key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-400">Year</label>
-                <select
-                  value={year}
-                  onChange={e => setYear(Number(e.target.value))}
-                  className="bg-white/10 border border-white/10 text-white rounded-lg px-2 py-1 text-sm w-full"
-                >
-                  {years.map(y => (
-                    <option className="bg-white/40 border border-white/10 text-black rounded-lg px-2 py-1 w-full text-sm" key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div>
@@ -172,27 +141,33 @@ export default function TipsDropdown({ barberId }: { barberId: string }) {
               />
             </div>
 
-            {/* 🔹 Default = Add to Total */}
-            <div className="flex gap-2 mt-2">
+            <div className="relative flex bg-white/10 rounded-lg p-1 mt-3 text-xs font-semibold overflow-hidden border border-white/10">
+              <motion.div
+                layout
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className={`absolute top-1 bottom-1 left-1 w-1/2 rounded-md ${
+                  action === 'add'
+                    ? 'translate-x-full bg-lime-400/30'
+                    : 'translate-x-0 bg-amber-400/30'
+                }`}
+              />
+
               <button
                 onClick={() => setAction('replace')}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  action === 'replace'
-                    ? 'bg-amber-400/30 text-amber-100 border border-amber-300/30'
-                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                className={`flex-1 py-1 z-10 transition-colors ${
+                  action === 'replace' ? 'text-amber-100' : 'text-white/70 hover:text-white/90'
                 }`}
               >
-                Replace Total
+                Replace
               </button>
+
               <button
                 onClick={() => setAction('add')}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  action === 'add'
-                    ? 'bg-lime-400/40 text-lime-100 border border-lime-300/40 shadow-inner'
-                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                className={`flex-1 py-1 z-10 transition-colors ${
+                  action === 'add' ? 'text-lime-100' : 'text-white/70 hover:text-white/90'
                 }`}
               >
-                Add to Total
+                Add
               </button>
             </div>
 
