@@ -12,6 +12,7 @@ import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 import SignOutButton from '@/components/SignOutButton'
 
 import YearDropdown from '@/components/YearDropdown'
+import MonthDropdown from '@/components/MonthDropdown'
 import TipsDropdown from '@/components/TipsDropdown'
 
 import WeeklyReports from '@/components/Dashboard/WeeklyReports'
@@ -199,7 +200,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Month + Year Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+      <div className="flex flex-col flex-row sm:flex-row sm:items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
         {isRefreshing && (
           <div className="flex items-center gap-1 text-xs text-[#fffb85] animate-pulse ml-2">
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -207,29 +208,12 @@ export default function DashboardPage() {
           </div>
         )}
         
-        {/* Months container */}
-        <div className="flex flex-wrap gap-2">
-          {MONTHS.map(m => (
-            <button
-              key={m}
-              onClick={() => !isRefreshing && setSelectedMonth(m)}
-              disabled={isRefreshing}
-              className={`
-                flex justify-center items-center
-                min-w-[36px] max-w-[60px] h-7
-                px-2 py-1
-                rounded-full font-semibold text-sm
-                transition-all duration-200
-                ${selectedMonth === m
-                  ? 'bg-gradient-to-r from-amber-300 to-lime-300 text-black shadow-[0_0_4px_#fffb85]'
-                  : 'bg-white/10 text-white hover:bg-white/20'}
-              `}
-            >
-              {m.slice(0, 3)}
-            </button>
-          ))}
-        </div>
-
+        {/* Month dropdown */}
+        <MonthDropdown
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          disabled={isRefreshing}
+        />
 
         {/* Year dropdown */}
         <YearDropdown
