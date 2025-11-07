@@ -104,7 +104,7 @@ export default function Navbar() {
           {user ? (
             <>
               {desktopIcons}
-              <TipsDropdown barberId={user.id} />
+              {/* <TipsDropdown barberId={user.id} /> */}
               <UserProfile />
               <button
                 className="md:hidden p-[clamp(4px,1vw,8px)] rounded hover:bg-[var(--highlight)] transition-colors"

@@ -8,14 +8,14 @@ import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
-import AdminRevenueEditor from '@/components/AdminRevenueEditor'
-import TopClientsEditor from '@/components/TopClientsEditor'
-import AdminAverageTicketEditor from '@/components/AdminAverageTicketEditor'
-import AdminServiceBreakdownEditor from '@/components/AdminServiceBreakdownEditor'
-import AdminMarketingFunnelsEditor from '@/components/AdminMarketingFunnelsEditor'
-import WeeklyReports from '@/components/WeeklyReports'
-import WeeklyComparisonReports from '@/components/WeeklyComparisonReports'
-import MonthlyReports from '@/components/MonthlyReports'
+import AdminRevenueEditor from '@/components/AdminComponents/AdminRevenueEditor'
+import TopClientsEditor from '@/components/AdminComponents/TopClientsEditor'
+import AdminAverageTicketEditor from '@/components/AdminComponents/AdminAverageTicketEditor'
+import AdminServiceBreakdownEditor from '@/components/AdminComponents/AdminServiceBreakdownEditor'
+import AdminMarketingFunnelsEditor from '@/components/AdminComponents/AdminMarketingFunnelsEditor'
+import WeeklyReports from '@/components/Dashboard/WeeklyReports'
+import WeeklyComparisonReports from '@/components/Dashboard/WeeklyComparisonReports'
+import MonthlyReports from '@/components/Dashboard/MonthlyReports'
 import UserProfile from '@/components/UserProfile'
 
 const MONTHS = [
@@ -156,7 +156,6 @@ export default function UserEditorPage() {
           {[
             { key: 'revenue', label: 'Revenue' },
             { key: 'clients', label: 'Top Clients' },
-            { key: 'ticket', label: 'Average Ticket' },
             { key: 'breakdown', label: 'Service Breakdown' },
             { key: 'funnels', label: 'Marketing Funnels' },
           ].map(tab => (
@@ -188,11 +187,11 @@ export default function UserEditorPage() {
             </div>
           )}
 
-          {activeTab === 'ticket' && (
+          {/* {activeTab === 'ticket' && (
             <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6">
               <AdminAverageTicketEditor month={selectedMonth} barberId={user.id} />
             </div>
-          )}
+          )} */}
 
           {activeTab === 'breakdown' && (
             <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6">

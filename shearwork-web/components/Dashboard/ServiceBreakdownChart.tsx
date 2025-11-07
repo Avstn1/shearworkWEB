@@ -71,7 +71,12 @@ export default function ServiceBreakdownChart({
         return
       }
 
-      setData(bookings as ServiceBooking[])
+      // Sort data by number of bookings (descending)
+      const sortedData = (bookings as ServiceBooking[]).sort(
+        (a, b) => (b.bookings || 0) - (a.bookings || 0)
+      )
+
+      setData(sortedData)
     }
 
     fetchData()
