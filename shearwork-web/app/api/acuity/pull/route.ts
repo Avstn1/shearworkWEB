@@ -557,7 +557,7 @@ export async function GET(request: Request) {
           returning_clients: stats.returningClients,
           retention:
             stats.newClients + stats.returningClients > 0
-              ? (stats.returningClients / (stats.newClients + stats.returningClients)) * 100
+              ? (stats.returningClients / stats.newClients) * 100
               : 0,
           avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
           report_month: month,
