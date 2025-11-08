@@ -185,7 +185,19 @@ export async function GET(request: Request) {
         if (Array.isArray(dayData)) allData.push(...dayData)
       }
 
-      console.log(`🗓️ Fetched appointments for ${requestedMonth} ${requestedYear}:`, allData.length)
+      // 🕒 Filter out future appointments (keep only those that have occurred)
+      const now = new Date()
+      const pastAppointments = allData.filter(appt => {
+        const parsed = parseDateStringSafe(appt.datetime)
+        if (!parsed) return false
+        const apptDate = new Date(appt.datetime)
+        return apptDate <= now
+      })
+
+      console.log(`🗓️ Fetched ${allData.length} appointments → keeping ${pastAppointments.length} past ones`)
+
+      // Replace allData with filtered version
+      allData = pastAppointments
     } else {
       const baseUrl = new URL(`https://acuityscheduling.com/api/v1/${endpoint}`)
       baseUrl.searchParams.set('max', '100')
