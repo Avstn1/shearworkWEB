@@ -8,8 +8,7 @@ import EditableAvatar from '@/components/EditableAvatar';
 const ROLE_OPTIONS = [
   { label: 'Barber (Commission)', role: 'Barber', barber_type: 'commission' },
   { label: 'Barber (Chair Rental)', role: 'Barber', barber_type: 'rental' },
-  // Future roles can be added here, e.g.,
-  // { label: 'Owner', role: 'owner', barber_type: null }
+  // { label: 'Owner', role: 'owner', barber_type: null },
 ];
 
 export default function OnboardingPage() {
@@ -18,6 +17,7 @@ export default function OnboardingPage() {
 
   const [fullName, setFullName] = useState('');
   const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS[0]);
+  const [commissionRate, setCommissionRate] = useState<number | ''>('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -48,15 +48,25 @@ export default function OnboardingPage() {
         avatarUrl = urlData.publicUrl;
       }
 
+      const profileUpdate: any = {
+        full_name: fullName,
+        role: selectedRole.role,
+        barber_type: selectedRole.barber_type,
+        avatar_url: avatarUrl,
+        onboarded: true,
+      };
+
+      // Include commission_rate only if commission role is selected
+      if (selectedRole.barber_type === 'commission') {
+        if (commissionRate === '' || commissionRate < 0 || commissionRate > 1) {
+          throw new Error('Please enter a valid commission rate between 0 and 1');
+        }
+        profileUpdate.commission_rate = commissionRate;
+      }
+
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          full_name: fullName,
-          role: selectedRole.role,
-          barber_type: selectedRole.barber_type,
-          avatar_url: avatarUrl,
-          onboarded: true,
-        })
+        .update(profileUpdate)
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
@@ -90,6 +100,7 @@ export default function OnboardingPage() {
           onChange={e => e.target.files?.[0] && handleAvatarChange(e.target.files[0])}
         />
 
+        {/* Full Name */}
         <div className="w-full">
           <label className="block mb-1 font-semibold">Full Name</label>
           <input
@@ -101,6 +112,7 @@ export default function OnboardingPage() {
           />
         </div>
 
+        {/* Role Selection */}
         <div className="w-full">
           <label className="block mb-1 font-semibold">Role</label>
           <select
@@ -112,11 +124,33 @@ export default function OnboardingPage() {
             className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
           >
             {ROLE_OPTIONS.map(r => (
-              <option key={r.label} value={r.label}>{r.label}</option>
+              <option key={r.label} value={r.label}>
+                {r.label}
+              </option>
             ))}
           </select>
         </div>
 
+        {/* Commission Rate Input (only if commission role) */}
+        {selectedRole.barber_type === 'commission' && (
+          <div className="w-full">
+            <label className="block mb-1 font-semibold">
+              Commission Rate <span className="text-sm text-gray-400">(0 to 1)</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={commissionRate}
+              onChange={e => setCommissionRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+              className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+              required
+            />
+          </div>
+        )}
+
+        {/* Submit Button */}
         <button
           type="submit"
           className="w-full py-3 bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] font-semibold rounded-lg transition"

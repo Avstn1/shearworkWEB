@@ -20,28 +20,32 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
   const [prevRevenue, setPrevRevenue] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [barberType, setBarberType] = useState<'rental' | 'commission' | undefined>()
+  const [commissionRate, setCommissionRate] = useState<number | null>(null)
   const { label } = useBarberLabel(barberType)
 
   useEffect(() => {
     if (!userId || !selectedMonth) return
 
-    const fetchBarberType = async () => {
+    const fetchProfile = async () => {
       try {
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
-          .select('role, barber_type')
+          .select('role, barber_type, commission_rate')
           .eq('user_id', userId)
           .maybeSingle()
 
+        if (error) throw error
+
         if (profile?.role?.toLowerCase() === 'barber') {
-          setBarberType(profile.barber_type ?? 'commission')
+          setBarberType(profile.barber_type ?? undefined)
+          setCommissionRate(profile.commission_rate ?? null)
         }
       } catch (err) {
-        console.error('Error fetching barber type:', err)
+        console.error('Error fetching profile:', err)
       }
     }
 
-    fetchBarberType()
+    fetchProfile()
   }, [userId])
 
   useEffect(() => {
@@ -52,19 +56,28 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       try {
         const currentYear = year ?? new Date().getFullYear()
 
-        // ✅ Fetch current month revenue from monthly_data
+        // Fetch current month totals
         const { data: currentData, error: currentError } = await supabase
           .from('monthly_data')
-          .select('final_revenue')
+          .select('total_revenue, tips')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
           .eq('year', currentYear)
           .maybeSingle()
+        if (currentError) console.error(currentError)
 
-        if (currentError) console.error('Error fetching current month:', currentError)
-        setRevenue(currentData?.final_revenue ?? null)
+        let finalRevenue = null
+        if (currentData) {
+          const total = currentData.total_revenue ?? 0
+          const tips = currentData.tips ?? 0
+          finalRevenue =
+            barberType === 'commission' && commissionRate !== null
+              ? total * commissionRate + tips
+              : total
+        }
+        setRevenue(finalRevenue)
 
-        // ✅ Determine previous month/year
+        // Fetch previous month totals
         const currentIndex = MONTHS.indexOf(selectedMonth)
         let prevIndex = currentIndex - 1
         let prevYear = currentYear
@@ -74,17 +87,24 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
         }
         const prevMonth = MONTHS[prevIndex]
 
-        // ✅ Fetch previous month revenue from monthly_data
         const { data: prevData, error: prevError } = await supabase
           .from('monthly_data')
-          .select('final_revenue')
+          .select('total_revenue, tips')
           .eq('user_id', userId)
           .eq('month', prevMonth)
           .eq('year', prevYear)
           .maybeSingle()
+        if (prevError) console.error(prevError)
 
-        if (prevError) console.error('Error fetching previous month:', prevError)
-        setPrevRevenue(prevData?.final_revenue ?? null)
+        if (prevData) {
+          const total = prevData.total_revenue ?? 0
+          const tips = prevData.tips ?? 0
+          const prevFinal =
+            barberType === 'commission' && commissionRate !== null
+              ? total * commissionRate + tips
+              : total
+          setPrevRevenue(prevFinal)
+        }
       } catch (err) {
         console.error('Error fetching revenues:', err)
       } finally {
@@ -93,51 +113,33 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
     }
 
     fetchRevenue()
-  }, [userId, selectedMonth, year])
+  }, [userId, selectedMonth, year, barberType, commissionRate])
 
   const formatCurrency = (amount: number) =>
     `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   const calculateChange = (): number | null => {
     if (revenue === null || prevRevenue === null || prevRevenue === 0) return null
-    const diff = revenue - prevRevenue
-    const percent = (diff / prevRevenue) * 100
-    return parseFloat(percent.toFixed(2)) // keep 2 decimal places
+    return parseFloat((((revenue - prevRevenue) / prevRevenue) * 100).toFixed(2))
   }
 
   const change = calculateChange()
 
   return (
-    <div className="p-4 rounded-lg shadow-md relative flex flex-col flex-1 border ..." style={{ background: 'var(--card-revenue-bg)' }}>
-
+    <div className="p-4 rounded-lg shadow-md relative flex flex-col flex-1 border border-[color:var(--card-revenue-border)]"
+      style={{ background: 'var(--card-revenue-bg)' }}>
       <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
-
       <div className="flex-1 flex items-center">
-        <p className="text-3xl md:text-3xl sm:text-2xl font-bold text-[#F5E6C5]">
-          {loading
-            ? 'Loading...'
-            : revenue !== null
-              ? formatCurrency(revenue)
-              : 'N/A'}
+        <p className="text-3xl font-bold text-[#F5E6C5]">
+          {loading ? 'Loading...' : revenue !== null ? formatCurrency(revenue) : 'N/A'}
         </p>
       </div>
-
-      <div className="flex justify-start mt-auto">
+      <div className="mt-auto">
         {change !== null ? (
-          <p
-            className={`text-sm font-semibold ${
-              change > 0
-                ? 'text-green-400'
-                : change < 0
-                  ? 'text-red-400'
-                  : 'text-gray-400'
-            }`}
-          >
-            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-gray-400">(vs. prior month)</span>
+          <p className={`text-sm font-semibold ${change > 0 ? 'text-green-400' : change < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-gray-400">(vs. prior month)</span>
           </p>
-        ) : (
-          <p className="text-sm text-gray-500">—</p>
-        )}
+        ) : <p className="text-sm text-gray-500">—</p>}
       </div>
     </div>
   )

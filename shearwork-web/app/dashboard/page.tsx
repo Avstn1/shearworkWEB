@@ -251,7 +251,7 @@ export default function DashboardPage() {
           <motion.div className={cardClass}>
             <DailyRevenueCard
               key={`daily-${refreshKey}`}
-              userId={user?.id}
+              userId={user.id}
               selectedDate={`${selectedYear}-${String(MONTHS.indexOf(selectedMonth)+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`}
             />
           </motion.div>
@@ -302,7 +302,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.4 }}
         >
           {showProfitLoss
-            ? <ProfitLossDashboard userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} globalRefreshKey={refreshKey} />
+            ? <ProfitLossDashboard userId={user.id} selectedMonth={selectedMonth} selectedYear={selectedYear} selectedDay={selectedDay} globalRefreshKey={refreshKey} />
             : <MainDashboard />
           }
         </motion.div>

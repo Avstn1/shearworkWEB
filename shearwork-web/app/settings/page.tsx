@@ -124,6 +124,8 @@ export default function SettingsPage() {
   const [syncing, setSyncing] = useState(false)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
 
+  const [commissionRate, setCommissionRate] = useState<number | null>(null)
+  const [editingCommission, setEditingCommission] = useState(false)
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
@@ -142,6 +144,7 @@ export default function SettingsPage() {
           email: user.email ?? '',
         })
         setFullName(data.full_name ?? '')
+        setCommissionRate(data.commission_rate ?? null)
       }
       setLoading(false)
     }
@@ -178,45 +181,42 @@ export default function SettingsPage() {
     setEditable(false)
   }
 
+  const handleCommissionUpdate = async () => {
+    if (!profile) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    await supabase.from('profiles').update({ commission_rate: commissionRate }).eq('user_id', user.id)
+    toast.success('Commission rate updated!')
+    setEditingCommission(false)
+  }
+
   const handleFullAcuitySync = async () => {
     if (!profile) return
     const { data: { user } } = await supabase.auth.getUser()
     if (!user || !selectedYear) return
 
-    setSyncing(true) // ⬅️ Start syncing mode
+    setSyncing(true)
     toast.loading(`Syncing ${selectedYear} data...`, { id: 'acuity-sync' })
 
     try {
-      const monthsToFetch = [...MONTHS]
-
-      for (const month of monthsToFetch) {
-        const cacheKey = `${selectedYear}-${month}`
-
+      for (const month of MONTHS) {
         try {
-          console.log(`🔄 Fetching Acuity appointments for ${month} ${selectedYear}...`)
-          const res = await fetch(
-            `/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(month)}&year=${selectedYear}`
-          )
+          const res = await fetch(`/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(month)}&year=${selectedYear}`)
           const data = await res.json()
-
-          if (!res.ok) {
-            console.error(`❌ Failed to fetch ${month} ${selectedYear}:`, data)
-            throw new Error(data.error || 'Acuity fetch failed')
-          }
+          if (!res.ok) throw new Error(data.error || 'Acuity fetch failed')
         } catch (err) {
-          console.error(`❌ Error fetching ${month} ${selectedYear}:`, err)
+          console.error(`Error fetching ${month}:`, err)
         }
       }
-
       toast.success(`✅ Successfully synced ${selectedYear} data!`, { id: 'acuity-sync' })
     } catch (err: any) {
-      console.error('❌ Full year sync failed:', err)
+      console.error('Full year sync failed:', err)
       toast.error(`Failed to sync ${selectedYear} data.`, { id: 'acuity-sync' })
     } finally {
-      setSyncing(false) // ⬅️ Stop syncing mode
+      setSyncing(false)
     }
   }
-
 
   if (loading)
     return <div className="flex justify-center items-center h-screen text-white">Loading profile...</div>
@@ -249,12 +249,10 @@ export default function SettingsPage() {
         animate="visible"
         className="min-h-screen flex flex-col p-4 pt-[100px] bg-gradient-to-br from-[#0e100f] via-[#1a1e18] to-[#2b3a29] text-[var(--foreground)] gap-4"
       >
-        {/* Header */}
         <motion.h1 variants={fadeInUp} custom={0} className={`font-bold text-[var(--highlight)] ${isMobile ? 'text-xl' : 'text-3xl'}`}>
           Settings
         </motion.h1>
 
-        {/* Avatar & Name Card */}
         <motion.div variants={fadeInUp} custom={1} className={cardClass}>
           <EditableAvatar avatarUrl={profile?.avatar_url} fullName={profile?.full_name} onClick={() => document.getElementById('avatar-input')?.click()} size={isMobile ? 90 : 110} />
           <input type="file" accept="image/*" id="avatar-input" className="hidden" onChange={handleUpload} />
@@ -281,13 +279,37 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Commission Rate Input */}
+          <div className="mt-4 flex flex-col gap-2">
+            <label className="text-sm text-[#bdbdbd] font-semibold">Commission Rate (%)</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                value={commissionRate ?? ''}
+                onChange={(e) => setCommissionRate(Number(e.target.value))}
+                readOnly={!editingCommission}
+                min={0}
+                max={100}
+                step={0.01}
+                className={`flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] ${editingCommission ? '' : 'opacity-70'}`}
+              />
+              <button className="text-[var(--accent-2)] hover:text-[var(--highlight)] transition" onClick={() => setEditingCommission(!editingCommission)} title={editingCommission ? 'Cancel' : 'Edit'}>
+                <FaCog />
+              </button>
+              {editingCommission && (
+                <button onClick={handleCommissionUpdate} className="px-3 py-1 bg-[var(--highlight)] text-black text-xs font-semibold rounded-full hover:opacity-90 transition">
+                  Save
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="text-sm text-[#bdbdbd] mt-3 space-y-1">
             <p>Role: {profile?.role}</p>
             <p>Email: {profile?.email}</p>
           </div>
         </motion.div>
 
-        {/* Change Password Card */}
         <motion.div variants={fadeInUp} custom={2} className={cardClass}>
           <button onClick={() => setShowChangePassword(!showChangePassword)} className="w-full bg-white/10 text-white py-2 rounded-full hover:bg-white/20 transition mb-3">
             {showChangePassword ? 'Cancel Password Change' : 'Change Password'}
@@ -295,7 +317,6 @@ export default function SettingsPage() {
           {showChangePassword && <ChangePasswordForm onSuccess={() => setShowChangePassword(false)} />}
         </motion.div>
 
-        {/* Connect Acuity Card */}
         <motion.div variants={fadeInUp} custom={3} className={cardClass}>
           <ConnectAcuityButton onConnectSuccess={handleFullAcuitySync} />
           <div className="flex flex-col gap-2 mt-4">
@@ -307,11 +328,7 @@ export default function SettingsPage() {
             >
               {Array.from({ length: 6 }, (_, i) => {
                 const y = new Date().getFullYear() - i
-                return (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                )
+                return <option key={y} value={y}>{y}</option>
               })}
             </select>
           </div>
@@ -323,8 +340,7 @@ export default function SettingsPage() {
             {syncing ? `Syncing ${selectedYear}...` : `Sync ${selectedYear} Data`}
           </button>
         </motion.div>
-        
-        {/* Sign Out Card */}
+
         <motion.div variants={fadeInUp} custom={4} className={cardClass}>
           <SignOutButton className="w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-full transition" />
         </motion.div>
