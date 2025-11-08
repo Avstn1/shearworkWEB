@@ -137,7 +137,7 @@ export default function DashboardPage() {
     const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
     try {
       const res = await fetch(`/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`)
-      if (!res.ok) throw new Error('Acuity data fetch failed')
+      // if (!res.ok) throw new Error('Acuity data fetch failed')
       await res.json()
       setRefreshKey(prev => prev + 1)
       toast.success(`Data updated for ${selectedMonth} ${selectedYear}`, { id: toastId })
@@ -238,7 +238,13 @@ export default function DashboardPage() {
 
   // -------------------- MAIN DASHBOARD --------------------
   const MainDashboard = () => (
-    <motion.div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[3fr_1.5fr_1fr]'} flex-1`}>
+    <motion.div
+      className={`grid gap-4 flex-1 ${
+        isMobile
+          ? 'grid-cols-1'
+          : 'grid-cols-[minmax(200px,3fr)_minmax(150px,1.5fr)_minmax(100px,1fr)]'
+      }`}
+    >
       {/* LEFT COLUMN */}
       <div className="flex flex-col gap-4 pr-1">
         <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">

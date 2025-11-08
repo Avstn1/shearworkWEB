@@ -1,47 +1,21 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts'
 import { supabase } from '@/utils/supabaseClient'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 const COLORS = [
-  '#F6E27F', // soft gold
-  '#E7B7A3', // muted rose
-  '#A7C7E7', // powder blue
-  '#C6D8A8', // sage green
-  '#9AD1C9', // teal pastel
-  '#B7A0E3', // lavender
-  '#F5D6C6', // peach
-  '#F7C9D2', // blush pink
-  '#C9E5D3', // mint pastel
-  '#D6D6D6', // soft gray
-  '#E1D5F3', // light violet
-  '#FFE3A3', // pale yellow
-  '#A3D0FF', // soft sky blue
-  '#B0E0E6', // pale cyan
-  '#D0C9FF', // lilac
-  '#F0E2D6', // cream beige
-  '#C5F0C5', // light green
-  '#FFB3B3', // pastel coral
-  '#D3F4FF', // icy blue
-  '#E3C5FF', // pastel purple
-  '#FFE0B2', // light apricot
-  '#B2FFD9', // minty turquoise
-  '#F2B2FF', // soft neon pink
-  '#C4C4C4', // steel gray
+  '#F6E27F', '#E7B7A3', '#A7C7E7', '#C6D8A8', '#9AD1C9',
+  '#B7A0E3', '#F5D6C6', '#F7C9D2', '#C9E5D3', '#D6D6D6',
+  '#E1D5F3', '#FFE3A3', '#A3D0FF', '#B0E0E6', '#D0C9FF',
+  '#F0E2D6', '#C5F0C5', '#FFB3B3', '#D3F4FF', '#E3C5FF',
+  '#FFE0B2', '#B2FFD9', '#F2B2FF', '#C4C4C4',
 ]
 
 export interface ServiceBooking {
   service_name: string
   bookings: number
-  [key: string]: string | number | undefined
+  [key: string]: string | number
 }
 
 interface ServiceBreakdownChartProps {
@@ -67,22 +41,21 @@ export default function ServiceBreakdownChart({
         .eq('report_year', year)
 
       if (error) {
-        console.error('Error fetching service bookings:', error)
+        console.error(error)
         return
       }
 
-      // Sort data by number of bookings (descending)
-      const sortedData = (bookings as ServiceBooking[]).sort(
-        (a, b) => (b.bookings || 0) - (a.bookings || 0)
+      setData(
+        (bookings as ServiceBooking[]).sort(
+          (a, b) => (b.bookings || 0) - (a.bookings || 0)
+        )
       )
-
-      setData(sortedData)
     }
 
     fetchData()
   }, [barberId, month, year])
 
-  if (data.length === 0)
+  if (!data.length)
     return (
       <div
         className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[360px]"
@@ -109,51 +82,72 @@ export default function ServiceBreakdownChart({
         💈 Service Breakdown
       </h2>
 
-      <div className="flex-1 flex items-center justify-center overflow-visible">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart margin={{ top: 0, right: 0, bottom: 40, left: 0 }}>
-            <Pie
-              data={data}
-              dataKey="bookings"
-              nameKey="service_name"
-              outerRadius="80%"
-              isAnimationActive={false}
-              labelLine={false}
-              label={false}
+      {/* Responsive flex: column on mobile, row on md+ */}
+      <div className="flex flex-col md:flex-row gap-4 h-full">
+        {/* Chart */}
+        <div className="flex-1 max-w-[600px] min-h-[260px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="bookings"
+                nameKey="service_name"
+                outerRadius="90%"
+                innerRadius="50%"
+                labelLine={false}
+                isAnimationActive={false}
+              >
+                {data.map((_, index) => (
+                  <Cell
+                    key={index}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1E1E1C',
+                  border: '1px solid #C8B653',
+                  borderRadius: '8px',
+                  color: '#F5F5DC',
+                  padding: '8px 12px',
+                }}
+                itemStyle={{ color: '#E8EDC7', fontWeight: 500 }}
+                labelStyle={{ color: '#C8B653', fontWeight: 600 }}
+                formatter={(value, name) => [`${value} bookings`, name]}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Legend */}
+        <div
+          className="flex-shrink-0 flex flex-wrap gap-2 mt-4 md:mt-0 md:flex-col overflow-hidden"
+          style={{
+            color: '#E8EDC7',
+            fontSize: '1rem',
+            maxWidth: '100%',
+          }}
+        >
+          {data.map((item, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-2 flex-shrink-0"
+              style={{ minWidth: '80px', wordBreak: 'break-word' }}
             >
-              {data.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#1E1E1C',
-                border: '1px solid #C8B653',
-                borderRadius: '8px',
-                boxShadow: '0 0 10px rgba(200, 182, 83, 0.3)',
-                color: '#F5F5DC',
-                padding: '8px 12px',
-              }}
-              itemStyle={{ color: '#E8EDC7', fontWeight: 500 }}
-              labelStyle={{ color: '#C8B653', fontWeight: 600 }}
-              formatter={(value, name) => [`${value} bookings`, name]}
-            />
-
-            <Legend
-              layout="horizontal"
-              verticalAlign="bottom"
-              align="center"
-              iconType="circle"
-              wrapperStyle={{
-                color: '#E8EDC7',
-                fontSize: '0.85rem',
-                flexWrap: 'wrap',
-                marginTop: '12px',
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+              <span
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: COLORS[index % COLORS.length],
+                  display: 'inline-block',
+                }}
+              />
+              <span style={{ fontSize: '0.95rem' }}>{item.service_name}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

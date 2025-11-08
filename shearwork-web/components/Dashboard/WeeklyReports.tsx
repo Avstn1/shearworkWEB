@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { MoreVertical } from 'lucide-react'
+import { MoreVertical, FileText } from 'lucide-react'
 import ReportModal from './ReportModal'
 import toast from 'react-hot-toast'
 import { createPortal } from 'react-dom'
@@ -92,26 +92,34 @@ export default function WeeklyReports({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-3">
         {filteredReports.length > 0 ? (
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative rounded-lg p-4 border transition-all duration-300 ease-out transform hover:-translate-y-1 hover:scale-[1.02]"
+              className="relative rounded-xl p-3 border transition-all duration-300 transform cursor-pointer
+                hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl"
               style={{
                 background: 'var(--card-weekly-bg)',
                 borderColor: 'var(--card-weekly-border)',
                 boxShadow: `0 3px 10px var(--card-weekly-shadow)`,
                 color: 'var(--foreground)',
               }}
+              onClick={() => {
+                setSelectedReport(r)
+                setIsEditing(false)
+              }}
             >
               {isAdmin && (
                 <>
                   <button
-                    onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setOpenMenu(openMenu === r.id ? null : r.id)
+                    }}
                     className="absolute top-2 right-2 p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
                   >
-                    <MoreVertical size={18} />
+                    <MoreVertical size={16} />
                   </button>
 
                   {openMenu === r.id && (
@@ -125,13 +133,13 @@ export default function WeeklyReports({
                     >
                       <button
                         onClick={() => handleEdit(r)}
-                        className="block w-full text-left px-3 py-2 text-sm"
+                        className="block w-full text-left px-3 py-1 text-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(r.id)}
-                        className="block w-full text-left px-3 py-2 text-sm text-red-300"
+                        className="block w-full text-left px-3 py-1 text-sm text-red-300"
                       >
                         Delete
                       </button>
@@ -140,35 +148,13 @@ export default function WeeklyReports({
                 </>
               )}
 
-              <div
-                onClick={() => {
-                  setSelectedReport(r)
-                  setIsEditing(false)
-                }}
-                className="cursor-pointer"
-              >
-                <p className="font-semibold">
-                  Week {r.week_number} - {r.month} {r.year}
-                </p>
-
-                <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
-                  <div
-                    className="prose prose-sm"
-                    dangerouslySetInnerHTML={{
-                      __html: r.content
-                        ? r.content.length > 100
-                          ? r.content.slice(0, 100) + '...'
-                          : r.content
-                        : 'No content available.',
-                    }}
-                  />
-                  <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[var(--card-weekly-bg)] to-transparent" />
-                </div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--highlight)]">
+                <FileText size={16} /> Week {r.week_number} - {r.month} {r.year}
               </div>
             </div>
           ))
         ) : (
-          <div className="text-[#bdbdbd] text-sm mt-2 col-span-full">
+          <div className="text-[#bdbdbd] text-sm mt-2 col-span-full text-center">
             No weekly reports available for this month/year.
           </div>
         )}
