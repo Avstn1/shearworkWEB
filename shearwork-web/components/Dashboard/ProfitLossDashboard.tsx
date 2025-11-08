@@ -7,6 +7,7 @@ import MonthlyExpensesCard from '@/components/Dashboard/MonthlyExpensesCard'
 import MonthlyProfitCard from '@/components/Dashboard/MonthlyProfitCard'
 import ProfitLossTrendChart from '@/components/Dashboard/ProfitLossTrendChart'
 import ProfitMarginPieChart from '@/components/Dashboard/ProfitMarginPieChart'
+import DailyRevenueCard from '@/components/Dashboard/DailyRevenueCard'
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -46,6 +47,12 @@ export default function ProfitLossDashboard({
     >
       <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <motion.div className={cardClass}>
+          <DailyRevenueCard
+            key={`revenue-${refreshKey}`}
+            userId={userId}
+          />
+        </motion.div>
+        <motion.div className={cardClass}>
           <MonthlyRevenueCard
             key={`revenue-${refreshKey}`}
             userId={userId}
@@ -53,6 +60,9 @@ export default function ProfitLossDashboard({
             year={selectedYear}
           />
         </motion.div>
+      </motion.div>
+
+      <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <motion.div className={cardClass}>
           <MonthlyProfitCard
             key={`profit-${refreshKey}`}
@@ -61,15 +71,14 @@ export default function ProfitLossDashboard({
             year={selectedYear}
           />
         </motion.div>
-      </motion.div>
-
-      <motion.div className={cardClass}>
-        <MonthlyExpensesCard
-          key={`expenses-${refreshKey}`}
-          userId={userId}
-          month={selectedMonth}
-          year={selectedYear}
-        />
+        <motion.div className={cardClass}>
+          <MonthlyExpensesCard
+            key={`expenses-${refreshKey}`}
+            userId={userId}
+            month={selectedMonth}
+            year={selectedYear}
+          />
+        </motion.div>
       </motion.div>
 
       <motion.div className={cardClass}>

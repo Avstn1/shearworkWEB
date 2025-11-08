@@ -19,6 +19,7 @@ import WeeklyReports from '@/components/Dashboard/WeeklyReports'
 import MonthlyReports from '@/components/Dashboard/MonthlyReports'
 import WeeklyComparisonReports from '@/components/Dashboard/WeeklyComparisonReports'
 import MonthlyRevenueCard from '@/components/Dashboard/MonthlyRevenueCard'
+import DailyRevenueCard from '@/components/Dashboard/DailyRevenueCard'
 import MonthlyExpensesCard from '@/components/Dashboard/MonthlyExpensesCard'
 import TopClientsCard from '@/components/Dashboard/TopClientsCard'
 import YearlyRevenueCard from '@/components/Dashboard/YearlyRevenueCard'
@@ -31,8 +32,8 @@ import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
 ]
 
 const MOBILE_BREAKPOINT = 768
@@ -180,7 +181,7 @@ export default function DashboardPage() {
           <h1 className={`font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent ${isMobile ? 'text-xl' : 'text-2xl'} animate-gradient`}>
             Welcome back!
           </h1>
-          <p className="text-xs text-[#bdbdbd]">Here’s your local monthly summary.</p>
+          <p className="text-xs text-[#bdbdbd]">Here’s your local daily & monthly summary.</p>
         </div>
 
         {/* Controls — stacked nicely on mobile */}
@@ -208,14 +209,12 @@ export default function DashboardPage() {
           </div>
         )}
         
-        {/* Month dropdown */}
         <MonthDropdown
           selectedMonth={selectedMonth}
           setSelectedMonth={setSelectedMonth}
           disabled={isRefreshing}
         />
 
-        {/* Year dropdown */}
         <YearDropdown
           years={Array.from({ length: 5 }, (_, i) => getLocalMonthYear().year - 2 + i)}
           selectedYear={selectedYear}
@@ -231,13 +230,14 @@ export default function DashboardPage() {
     <motion.div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'} flex-1`}>
       {/* LEFT COLUMN */}
       <div className="flex flex-col gap-4 pr-1">
+        <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <motion.div className={cardClass}><DailyRevenueCard key={`daily-${refreshKey}`} userId={user?.id} /></motion.div>
+          <motion.div className={cardClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
+          <motion.div className={cardClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
+        </motion.div>
         <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <motion.div className={cardClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} /></motion.div>
           <motion.div className={cardClass}><AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
-        </motion.div>
-        <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <motion.div className={cardClass}><MonthlyRevenueCard key={`revenue-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
-          <motion.div className={cardClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
         </motion.div>
         <motion.div variants={fadeInUp} className={cardClass}><ServiceBreakdownChart key={`services-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
       </div>
