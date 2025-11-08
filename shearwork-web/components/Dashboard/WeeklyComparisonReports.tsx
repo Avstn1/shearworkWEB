@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, FileText } from 'lucide-react';
 import ReportModal from './ReportModal';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
@@ -62,7 +62,7 @@ export default function WeeklyComparisonReports({
   const filteredReports = reports.filter((r) => {
     return (!filterMonth || r.month === filterMonth) &&
            (!filterYear || r.year === filterYear)
-  })
+  });
 
   const handleEdit = (report: WeeklyComparisonReport) => {
     setSelectedReport(report);
@@ -114,12 +114,14 @@ export default function WeeklyComparisonReports({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* single-column grid */}
+      <div className="grid grid-cols-1 gap-4">
         {filteredReports.length > 0 ? (
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative rounded-lg p-4 border transition-all duration-300 ease-out transform hover:-translate-y-1 hover:scale-[1.02] cursor-default"
+              className="relative rounded-xl p-4 border transition-all duration-300 transform cursor-pointer
+                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-2xl hover:bg-[rgba(255,255,255,0.05)]"
               style={{
                 background: 'var(--card-weekly-bg)',
                 borderColor: 'var(--card-weekly-border)',
@@ -127,38 +129,39 @@ export default function WeeklyComparisonReports({
                 color: 'var(--foreground)',
               }}
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start gap-2">
                 <div
                   onClick={() => {
                     setSelectedReport(r);
                     setIsEditing(false);
                   }}
-                  className="cursor-pointer flex-1"
+                  className="flex-1 flex flex-col gap-1"
                 >
-                  <p className="font-semibold">
-                    Weekly Comparison - {r.month} {r.year}
-                  </p>
-                  <div className="text-sm text-[var(--text-subtle)] max-h-12 overflow-hidden relative">
+                  <div className="flex items-center gap-1 text-sm font-semibold text-[var(--highlight)]">
+                    <FileText size={16} /> Weekly Comparison - {r.month} {r.year}
+                  </div>
+                  <div className="text-xs text-[var(--text-subtle)] max-h-20 overflow-hidden relative">
                     <div
                       className="prose prose-sm"
                       dangerouslySetInnerHTML={{
                         __html: r.content
-                          ? r.content.length > 100
-                            ? r.content.slice(0, 100) + '...'
+                          ? r.content.length > 150
+                            ? r.content.slice(0, 150) + '...'
                             : r.content
-                          : 'No content available.',
+                          : '<em>No content available.</em>',
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 w-full h-4 bg-gradient-to-t from-[var(--card-weekly-bg)] to-transparent" />
+                    <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-[var(--card-weekly-bg)] to-transparent" />
                   </div>
                 </div>
 
                 {isAdmin && (
                   <div className="relative">
                     <button
-                      onClick={() =>
-                        setMenuOpenId(menuOpenId === r.id ? null : r.id)
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuOpenId(menuOpenId === r.id ? null : r.id);
+                      }}
                       className="p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
                     >
                       <MoreVertical size={18} />
@@ -193,7 +196,7 @@ export default function WeeklyComparisonReports({
             </div>
           ))
         ) : (
-          <div className="text-[#bdbdbd] text-sm mt-2 col-span-2">
+          <div className="text-[#bdbdbd] text-sm mt-2 col-span-1 text-center">
             No weekly comparison reports for this month/year.
           </div>
         )}

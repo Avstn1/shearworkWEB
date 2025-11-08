@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  LabelList,
 } from 'recharts'
 import { supabase } from '@/utils/supabaseClient'
 
@@ -52,7 +53,6 @@ export default function MarketingFunnelsChart({
         return
       }
 
-      // 🧠 Filter out unwanted funnel sources
       const filtered = (funnels as MarketingFunnel[]).filter(
         (f) =>
           f.source &&
@@ -139,24 +139,48 @@ export default function MarketingFunnelsChart({
               }}
             />
 
+            {/* New Clients Bar with numbers */}
             <Bar
               dataKey="new_clients"
               name="New Clients"
               fill={COLORS[1]}
               radius={[8, 8, 0, 0]}
-            />
+            >
+              <LabelList
+                dataKey="new_clients"
+                position="top"
+                style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+              />
+            </Bar>
+
+            {/* Returning Clients Bar with numbers */}
             <Bar
               dataKey="returning_clients"
               name="Returning Clients"
               fill={COLORS[3]}
               radius={[8, 8, 0, 0]}
-            />
+            >
+              <LabelList
+                dataKey="returning_clients"
+                position="top"
+                style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+              />
+            </Bar>
+
+            {/* Retention Bar with percentages */}
             <Bar
               dataKey="retention"
               name="Retention"
               fill={COLORS[2]}
               radius={[8, 8, 0, 0]}
-            />
+            >
+              <LabelList
+                dataKey="retention"
+                position="top"
+                formatter={(val) => `${val}%`}
+                style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>

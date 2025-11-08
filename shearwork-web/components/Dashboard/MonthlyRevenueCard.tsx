@@ -108,10 +108,8 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
   const change = calculateChange()
 
   return (
-    <div
-      className="p-4 rounded-lg shadow-md relative flex flex-col min-h-[140px] border border-[color:var(--card-revenue-border)]"
-      style={{ background: 'var(--card-revenue-bg)' }}
-    >
+    <div className="p-4 rounded-lg shadow-md relative flex flex-col flex-1 border ..." style={{ background: 'var(--card-revenue-bg)' }}>
+
       <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
 
       <div className="flex-1 flex items-center">
