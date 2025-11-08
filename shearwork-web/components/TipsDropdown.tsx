@@ -22,7 +22,11 @@ export default function DailyTipsDropdown({
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const dateStr = selectedDate.toISOString().split('T')[0]
+    // Convert selectedDate to local YYYY-MM-DD
+  const dateStr = `${selectedDate.getFullYear()}-${String(
+    selectedDate.getMonth() + 1
+  ).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+
   const month = selectedDate.toLocaleString('default', { month: 'long' })
   const year = selectedDate.getFullYear()
 
@@ -38,25 +42,32 @@ export default function DailyTipsDropdown({
   }, [])
 
   // 🔹 Fetch tips for the selected date
+  // 🔹 Fetch tips when dropdown opens or date changes
   useEffect(() => {
-    if (!barberId) return
-    const fetchTips = async () => {
-      const { data, error } = await supabase
-        .from('daily_data')
-        .select('tips')
-        .eq('user_id', barberId)
-        .eq('date', dateStr)
-        .maybeSingle()
+    if (!barberId || !isOpen) return // only fetch when dropdown is open
 
-      if (error) {
-        console.error(error)
+    const fetchTips = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('daily_data')
+          .select('tips')
+          .eq('user_id', barberId)
+          .eq('date', dateStr)
+          .maybeSingle()
+
+        if (error) throw error
+
+        setCurrentTips(data?.tips ?? 0)
+      } catch (err) {
+        console.error(err)
         toast.error('Failed to load tips for that date.')
-      } else {
-        setCurrentTips(data?.tips || 0)
       }
     }
+
     fetchTips()
-  }, [barberId, dateStr])
+  }, [barberId, dateStr, isOpen])
+
+
 
   // 🔹 Save or update tips for the selected date
   async function handleSaveTips() {
