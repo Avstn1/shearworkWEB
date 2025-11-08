@@ -238,7 +238,7 @@ export default function DashboardPage() {
 
   // -------------------- MAIN DASHBOARD --------------------
   const MainDashboard = () => (
-    <motion.div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_1fr]'} flex-1`}>
+    <motion.div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[3fr_1.5fr_1fr]'} flex-1`}>
       {/* LEFT COLUMN */}
       <div className="flex flex-col gap-4 pr-1">
         <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
