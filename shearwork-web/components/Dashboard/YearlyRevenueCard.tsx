@@ -12,7 +12,7 @@ interface YearlyRevenueCardProps {
 export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardProps) {
   const [total, setTotal] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [barberType, setBarberType] = useState<'rental' | 'commission' | undefined>(undefined)
+  const [barberType, setBarberType] = useState<'rental' | 'commission' | undefined>()
   const { label } = useBarberLabel(barberType)
 
   useEffect(() => {
@@ -21,30 +21,45 @@ export default function YearlyRevenueCard({ userId, year }: YearlyRevenueCardPro
     const fetchTotal = async () => {
       setLoading(true)
       try {
-        // Fetch profile info
+        const currentYear = year ?? new Date().getFullYear()
+
+        // Fetch profile info including commission_rate
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('role, barber_type')
+          .select('role, barber_type, commission_rate')
           .eq('user_id', userId)
           .maybeSingle()
         if (profileError) throw profileError
-        if (profileData?.role?.toLowerCase() === 'barber') {
-          setBarberType(profileData.barber_type ?? undefined)
-        }
 
-        const currentYear = year ?? new Date().getFullYear()
+        let finalTotal = 0
 
-        // Fetch yearly revenue directly
-        const { data, error } = await supabase
+        // Fetch yearly revenue
+        const { data: yearlyData, error: yearlyError } = await supabase
           .from('yearly_revenue')
-          .select('total_revenue')
+          .select('total_revenue, tips, final_revenue')
           .eq('user_id', userId)
           .eq('year', currentYear)
           .maybeSingle()
+        if (yearlyError) throw yearlyError
 
-        if (error) throw error
+        if (profileData?.role?.toLowerCase() === 'barber') {
+          setBarberType(profileData.barber_type ?? undefined)
 
-        setTotal(data?.total_revenue ?? 0)
+          if (profileData.barber_type === 'commission') {
+            // Commission barber: calculate final earnings
+            const totalRevenue = yearlyData?.total_revenue ?? 0
+            const tips = yearlyData?.tips ?? 0
+            const commissionRate = profileData.commission_rate ?? 1
+            finalTotal = totalRevenue * commissionRate + tips
+          } else {
+            // Rental or other types: just use final_revenue
+            finalTotal = yearlyData?.final_revenue ?? 0
+          }
+        } else {
+          finalTotal = yearlyData?.final_revenue ?? 0
+        }
+
+        setTotal(finalTotal)
       } catch (err) {
         console.error('Error fetching yearly revenue:', err)
       } finally {
