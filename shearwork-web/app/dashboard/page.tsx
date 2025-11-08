@@ -13,6 +13,7 @@ import SignOutButton from '@/components/SignOutButton'
 
 import YearDropdown from '@/components/YearDropdown'
 import MonthDropdown from '@/components/MonthDropdown'
+import DailySelector from '@/components/Dashboard/DailySelector'
 import TipsDropdown from '@/components/TipsDropdown'
 
 import WeeklyReports from '@/components/Dashboard/WeeklyReports'
@@ -64,6 +65,7 @@ export default function DashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [showProfitLoss, setShowProfitLoss] = useState(false)
+  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate())
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const hasSyncedInitially = useRef(false)
@@ -215,6 +217,15 @@ export default function DashboardPage() {
           disabled={isRefreshing}
         />
 
+        <DailySelector
+          userId={user.id}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          selectedDay={selectedDay}
+          setSelectedDay={setSelectedDay}
+          disabled={isRefreshing}
+        />
+
         <YearDropdown
           years={Array.from({ length: 5 }, (_, i) => getLocalMonthYear().year - 2 + i)}
           selectedYear={selectedYear}
@@ -227,11 +238,17 @@ export default function DashboardPage() {
 
   // -------------------- MAIN DASHBOARD --------------------
   const MainDashboard = () => (
-    <motion.div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_2fr]'} flex-1`}>
+    <motion.div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-[2fr_1.5fr_1fr]'} flex-1`}>
       {/* LEFT COLUMN */}
       <div className="flex flex-col gap-4 pr-1">
         <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <motion.div className={cardClass}><DailyRevenueCard key={`daily-${refreshKey}`} userId={user?.id} /></motion.div>
+          <motion.div className={cardClass}>
+            <DailyRevenueCard
+              key={`daily-${refreshKey}`}
+              userId={user?.id}
+              selectedDate={`${selectedYear}-${String(MONTHS.indexOf(selectedMonth)+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`}
+            />
+          </motion.div>
           <motion.div className={cardClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
           <motion.div className={cardClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
         </motion.div>

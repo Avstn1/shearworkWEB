@@ -18,6 +18,11 @@ const fadeInUp = {
   }),
 }
 
+const MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+]
+
 export default function ProfitLossDashboard({
   userId,
   selectedMonth,
@@ -30,6 +35,7 @@ export default function ProfitLossDashboard({
   globalRefreshKey?: number
 }) {
   const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate())
 
   // Whenever parent triggers sync or month/year changes → refresh children
   useEffect(() => {
@@ -47,10 +53,11 @@ export default function ProfitLossDashboard({
     >
       <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <motion.div className={cardClass}>
-          <DailyRevenueCard
-            key={`revenue-${refreshKey}`}
-            userId={userId}
-          />
+            <DailyRevenueCard
+              key={`daily-${refreshKey}`}
+              userId={userId}
+              selectedDate={`${selectedYear}-${String(MONTHS.indexOf(selectedMonth)+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`}
+            />
         </motion.div>
         <motion.div className={cardClass}>
           <MonthlyRevenueCard
