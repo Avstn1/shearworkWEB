@@ -148,8 +148,19 @@ export default function DailyTipsDropdown({
               <Calendar
                 onChange={date => setSelectedDate(date as Date)}
                 value={selectedDate}
-                maxDate={new Date()} // optional: prevent future dates
-                className="!bg-transparent !text-white !border-none [&_.react-calendar__tile]:!text-white [&_.react-calendar__tile--active]:!bg-lime-400/40 [&_.react-calendar__tile--now]:!bg-amber-400/30 [&_.react-calendar__tile--active]:!text-black"
+                maxDate={new Date()}
+                className="
+                  !bg-transparent !text-white !border-none
+                  [&_.react-calendar__tile]:!text-white
+                  [&_.react-calendar__tile--active]:!bg-lime-400/40
+                  [&_.react-calendar__tile--now]:!bg-amber-400/30
+                  [&_.react-calendar__tile--active]:!text-black
+
+                  /* Disabled dates — very dark */
+                  [&_.react-calendar__tile:disabled]:!text-gray-800
+                  [&_.react-calendar__tile:disabled]:!bg-[#101210] /* very dark tone */
+                  [&_.react-calendar__tile:disabled]:!cursor-not-allowed
+                "
               />
             </div>
 
