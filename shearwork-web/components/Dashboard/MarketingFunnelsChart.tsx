@@ -115,7 +115,8 @@ export default function MarketingFunnelsChart({
 
             <Tooltip
               formatter={(value: any, name: string) => {
-                if (name === 'Retention') return [`${value}%`, name]
+                if (name === 'Retention')
+                  return [`${Number(value).toFixed(2)}%`, name]
                 return [value, name]
               }}
               contentStyle={{
@@ -139,7 +140,7 @@ export default function MarketingFunnelsChart({
               }}
             />
 
-            {/* New Clients Bar with numbers */}
+            {/* New Clients Bar */}
             <Bar
               dataKey="new_clients"
               name="New Clients"
@@ -153,7 +154,7 @@ export default function MarketingFunnelsChart({
               />
             </Bar>
 
-            {/* Returning Clients Bar with numbers */}
+            {/* Returning Clients Bar */}
             <Bar
               dataKey="returning_clients"
               name="Returning Clients"
@@ -167,7 +168,7 @@ export default function MarketingFunnelsChart({
               />
             </Bar>
 
-            {/* Retention Bar with percentages */}
+            {/* Retention Bar (2 decimals) */}
             <Bar
               dataKey="retention"
               name="Retention"
@@ -177,7 +178,11 @@ export default function MarketingFunnelsChart({
               <LabelList
                 dataKey="retention"
                 position="top"
-                formatter={(val) => `${val}%`}
+                formatter={(val: any) =>
+                  val !== undefined && val !== null
+                    ? `${Number(val).toFixed(2)}%`
+                    : ''
+                }
                 style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
               />
             </Bar>

@@ -70,30 +70,31 @@ export default function ServiceBreakdownChart({
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
+      className="p-2 rounded-lg shadow-md border flex flex-col flex-1"
       style={{
         borderColor: 'var(--card-revenue-border)',
         background: 'var(--card-revenue-bg)',
         minHeight: '360px',
-        maxHeight: '420px',
       }}
     >
       <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
         💈 Service Breakdown
       </h2>
 
-      {/* Responsive flex: column on mobile, row on md+ */}
-      <div className="flex flex-col md:flex-row gap-4 h-full">
+      <div
+        className="flex flex-col md:flex-row gap-2 md:items-center flex-1"
+        style={{ overflow: 'hidden' }}
+      >
         {/* Chart */}
-        <div className="flex-1 max-w-[600px] min-h-[260px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="flex-1 flex items-center justify-center min-h-[300px] md:min-h-[320px]">
+          <ResponsiveContainer width="100%" height={340}>
             <PieChart>
               <Pie
                 data={data}
                 dataKey="bookings"
                 nameKey="service_name"
-                outerRadius="90%"
-                innerRadius="50%"
+                outerRadius="80%"
+                innerRadius="45%"
                 labelLine={false}
                 isAnimationActive={false}
               >
@@ -122,18 +123,18 @@ export default function ServiceBreakdownChart({
 
         {/* Legend */}
         <div
-          className="flex-shrink-0 flex flex-wrap gap-2 mt-4 md:mt-0 md:flex-col overflow-hidden"
+          className="flex flex-wrap md:flex-col gap-3 justify-center md:justify-start md:pl-4 text-[#E8EDC7]"
           style={{
-            color: '#E8EDC7',
-            fontSize: '1rem',
-            maxWidth: '100%',
+            fontSize: '0.95rem',
+            lineHeight: 1.3,
+            flexShrink: 0,
           }}
         >
           {data.map((item, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 flex-shrink-0"
-              style={{ minWidth: '80px', wordBreak: 'break-word' }}
+              className="flex items-center gap-2"
+              style={{ minWidth: '110px', wordBreak: 'break-word' }}
             >
               <span
                 style={{
@@ -144,7 +145,7 @@ export default function ServiceBreakdownChart({
                   display: 'inline-block',
                 }}
               />
-              <span style={{ fontSize: '0.95rem' }}>{item.service_name}</span>
+              <span>{item.service_name}</span>
             </div>
           ))}
         </div>
