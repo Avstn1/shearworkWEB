@@ -13,7 +13,7 @@ interface AdminExpensesEditorProps {
 }
 
 export default function AdminExpensesEditor({ barberId, month, year, onUpdate }: AdminExpensesEditorProps) {
-  const [expenseAmount, setExpenseAmount] = useState<number | ''>('')
+  const [expenseAmount, setExpenseAmount] = useState<string>('')
   const [action, setAction] = useState<'add' | 'replace'>('add')
   const [loading, setLoading] = useState(false)
   const [currentTotal, setCurrentTotal] = useState<number>(0)
@@ -40,8 +40,8 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
     expenseAmount === ''
       ? currentTotal
       : action === 'add'
-      ? currentTotal + Number(expenseAmount)
-      : Number(expenseAmount)
+      ? currentTotal + parseFloat(expenseAmount)
+      : parseFloat(expenseAmount)
 
   // Save expense
   const handleSaveExpense = async () => {
@@ -115,11 +115,11 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
         <input
           type="text"
           inputMode="decimal"
-          pattern="[0-9]*"
           value={expenseAmount}
           onChange={e => {
             const value = e.target.value
-            if (/^\d*\.?\d*$/.test(value)) setExpenseAmount(value === '' ? '' : Number(value))
+            // Allow empty, numbers, and up to 2 decimals
+            if (/^\d*\.?\d{0,2}$/.test(value)) setExpenseAmount(value)
           }}
           placeholder="Enter expense amount"
           className="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 
@@ -127,7 +127,7 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
                      appearance-none"
         />
 
-        {/* Modern Toggle (matching TipsDropdown) */}
+        {/* Modern Toggle */}
         <div className="relative flex bg-white/10 rounded-lg p-1 text-xs font-semibold overflow-hidden border border-white/10 w-32">
           <motion.div
             layout

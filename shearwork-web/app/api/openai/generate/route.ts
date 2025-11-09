@@ -1,229 +1,254 @@
 'use server'
 
-import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { openai } from "@/lib/openaiClient";
+import { NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { openai } from '@/lib/openaiClient'
+import { prompts } from '../prompts'
+
+interface DailyRow {
+  date: string
+  total_revenue: number
+  tips?: number
+  expenses?: number
+  num_appointments?: number
+  new_clients?: number
+  returning_clients?: number
+  [key: string]: any
+}
+
+interface WeeklyRow {
+  week_number: number
+  start_date: string
+  end_date: string
+  total_revenue: number
+  tips: number
+  final_revenue: number
+  expenses: number
+  num_appointments: number
+  new_clients: number
+  returning_clients: number
+  [key: string]: any
+}
 
 export async function GET(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const url = new URL(req.url);
+    const supabase = await createSupabaseServerClient()
+    const url = new URL(req.url)
 
-    const type = url.searchParams.get("type") || "monthly";
-    const user_id = url.searchParams.get("user_id");
-    const month =
-      url.searchParams.get("month") ||
-      new Date().toLocaleString("default", { month: "long" });
-    const year = parseInt(
-      url.searchParams.get("year") || String(new Date().getFullYear()),
-      10
-    );
+    const typeParam = url.searchParams.get('type') || 'monthly/rental'
+    const [type, barber_type] = typeParam.split('/')
+    const user_id = url.searchParams.get('user_id')
 
     if (!user_id) {
-      return NextResponse.json(
-        { success: false, error: "Missing user_id" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Missing user_id' }, { status: 400 })
     }
 
-    // 🧮 Week number only for weekly reports
-    const week_number = Math.ceil(new Date().getDate() / 7);
+    // ✅ Allow passing any week_number via query param
+    const weekNumberParam = url.searchParams.get('week_number')
+    const week_number = weekNumberParam ? parseInt(weekNumberParam, 10) : null
 
-    // 🧲 name
-    const { data: userName, error: nameError } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("user_id", user_id)
-    .single();
+    let month =
+      url.searchParams.get('month') ||
+      new Date().toLocaleString('default', { month: 'long' })
+    const year = parseInt(
+      url.searchParams.get('year') || String(new Date().getFullYear()),
+      10
+    )
 
-    if (nameError) throw nameError;
+    // 🧲 Fetch barber’s full name & commission rate
+    const { data: userData, error: nameError } = await supabase
+      .from('profiles')
+      .select('full_name, commission_rate')
+      .eq('user_id', user_id)
+      .single()
+    if (nameError) throw nameError
 
-    // 🧲 1️⃣ monthly_data
-    const { data: monthlyData, error: monthlyError } = await supabase
-      .from("monthly_data")
-      .select("*")
-      .eq("user_id", user_id)
-      .eq("month", month)
-      .eq("year", year)
-      .maybeSingle();
+    const userName = userData?.full_name || 'Unknown Barber'
+    const commissionRate =
+      barber_type === 'commission' ? userData?.commission_rate || 0 : null
 
-    if (monthlyError) throw monthlyError;
+    // Standardize month capitalization
+    const monthNames = [
+      'January','February','March','April','May','June',
+      'July','August','September','October','November','December'
+    ]
+    const monthIndex = monthNames.findIndex((m) => m.toLowerCase() === month.toLowerCase())
+    if (monthIndex === -1) throw new Error(`Invalid month: ${month}`)
+    month = monthNames[monthIndex]
 
-    // 🧲 2️⃣ service_bookings
-    const { data: services, error: serviceError } = await supabase
-      .from("service_bookings")
-      .select("*")
-      .eq("user_id", user_id)
-      .eq("report_month", month)
-      .eq("report_year", year);
+    const firstDayOfMonth = new Date(year, monthIndex, 1)
+    const lastDayOfMonth = new Date(year, monthIndex + 1, 0)
 
-    if (serviceError) throw serviceError;
-
-    // 🔹 Calculate percentage of each service
-    let services_percentage: { name: string; bookings: number; percentage: number }[] = [];
-    if (services && services.length > 0) {
-      const totalBookings = services.reduce((sum, s) => sum + (s.bookings || 0), 0);
-      services_percentage = services.map((s) => ({
-        name: s.service_name,
-        bookings: s.bookings || 0,
-        percentage: totalBookings > 0 ? ((s.bookings || 0) / totalBookings) * 100 : 0,
-      }));
-    }
-
-    // 🧲 3️⃣ marketing_funnels
-    const { data: funnels, error: funnelError } = await supabase
-      .from("marketing_funnels")
-      .select("*")
-      .eq("user_id", user_id)
-      .eq("report_month", month)
-      .eq("report_year", year);
-
-    if (funnelError) throw funnelError;
-
-    // 🧲 3️⃣ top_clients
-    const { data: topClients, error: topClientsError } = await supabase
-      .from('report_top_clients')
-      .select('id, client_name, total_paid, num_visits, notes')
+    // 🧮 Fetch daily data
+    const { data: allDailyRows, error: allDailyError } = await supabase
+      .from('daily_data')
+      .select('*')
       .eq('user_id', user_id)
       .eq('month', month)
-      .order('total_paid', { ascending: false });
+      .eq('year', year)
+    if (allDailyError) throw allDailyError
 
-    if (topClientsError) throw topClientsError;
+    const dailyPoints: DailyRow[] = allDailyRows || []
 
-    // 🧩 Structured dataset
+    let summaryData: any = null
+    let weekly_rows: WeeklyRow[] | WeeklyRow | null = null
+
+    // 🧮 Monthly summary
+    if (type.startsWith('monthly')) {
+      const { data, error } = await supabase
+        .from('monthly_data')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+        .maybeSingle()
+      if (error) throw error
+
+      summaryData = {
+        ...data,
+        daily_points: dailyPoints,
+        start_date: firstDayOfMonth.toISOString().split('T')[0],
+        end_date: lastDayOfMonth.toISOString().split('T')[0],
+      }
+    }
+
+    // 🧮 Weekly summary (supports week_number)
+    else if (type.startsWith('weekly')) {
+      const { data: weeklyData, error: weeklyError } = await supabase
+        .from('weekly_data')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+        .order('week_number', { ascending: true })
+      if (weeklyError) throw weeklyError
+      if (!weeklyData || weeklyData.length === 0) throw new Error('No weekly data found')
+
+      // ✅ Comparison mode uses full weekly dataset
+      if (type.includes('comparison')) {
+        weekly_rows = weeklyData as WeeklyRow[]
+        summaryData = null
+      } else {
+        // ✅ Pick the specific week number if provided
+        const selectedWeek =
+          week_number != null
+            ? weeklyData.find((w) => w.week_number === week_number)
+            : weeklyData[weeklyData.length - 1] // default to last week if not specified
+
+        if (!selectedWeek)
+          throw new Error(`Week ${week_number} not found for ${month} ${year}`)
+
+        weekly_rows = selectedWeek
+        summaryData = selectedWeek
+      }
+
+      // ✅ Only use daily_points to highlight best day in that week
+      const filteredDailyPoints = dailyPoints.filter((d) => {
+        if (!summaryData || Array.isArray(weekly_rows)) return false
+        return d.date >= summaryData.start_date && d.date <= summaryData.end_date
+      })
+
+      const bestDay: DailyRow | null =
+        filteredDailyPoints.length > 0
+          ? filteredDailyPoints.reduce((prev, curr) =>
+              (curr.total_revenue || 0) > (prev.total_revenue || 0) ? curr : prev
+            )
+          : null
+
+      if (!Array.isArray(weekly_rows)) summaryData.best_day = bestDay
+    }
+
+    // 🧩 Fetch services
+    const { data: services } = await supabase
+      .from('service_bookings')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('report_month', month)
+      .eq('report_year', year)
+
+    const totalBookings = services?.reduce((sum, s) => sum + (s.bookings || 0), 0) || 0
+    const services_percentage = (services || []).map((s) => ({
+      name: s.service_name,
+      bookings: s.bookings || 0,
+      percentage: totalBookings ? ((s.bookings || 0) / totalBookings) * 100 : 0,
+    }))
+
+    // 🧩 Fetch marketing funnels
+    const { data: funnels } = await supabase
+      .from('marketing_funnels')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('report_month', month)
+      .eq('report_year', year)
+
+    // 🧩 Fetch top clients (weekly or monthly)
+    const { data: topClients } = await supabase
+      .from(type.startsWith('weekly') ? 'weekly_top_clients' : 'report_top_clients')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('month', month)
+      .eq('year', year)
+      .order('total_paid', { ascending: false })
+
+    // 🧠 Build dataset for OpenAI
     const dataset = {
       month,
       year,
-      monthly_summary: monthlyData || {},
-      services: services || [],
-      services_percentage, // <--- added this
-      marketing_funnels: funnels || [],
-      top_clients: topClients || [],
+      week_number: type.startsWith('weekly') && !Array.isArray(weekly_rows) ? summaryData?.week_number : null,
       user_name: userName,
-    };
+      summary: summaryData,
+      daily_rows: dailyPoints,
+      weekly_rows,
+      services,
+      services_percentage,
+      marketing_funnels: funnels,
+      top_clients: topClients,
+      ...(barber_type === 'commission' && { commission_rate: commissionRate }),
+    }
 
-    // 🧠 Define prompts for each report type
-    const prompts = {
-      monthly: `
-You are a professional analytics assistant creating a monthly performance report for a barbershop professional. 
-Be a little fun and use some emojis, especially in section headers.
+    const promptKey = `${type}/${barber_type}`
+    const promptTemplate =
+      prompts[promptKey as keyof typeof prompts] || prompts['monthly/rental']
 
-Dataset (JSON):
-${JSON.stringify(dataset, null, 2)}
-
-Generate a detailed monthly report in HTML suitable for TinyMCE. Include sections:
-1. <h1>${month} ${year} Business Report</h1>
-2. Quick Overview (from monthly_data)
-    - Display table with columns: Metric, Value.
-    - In the same table with rows: Total Clients, New Clients, Returning Clients, Average Ticket, Total Revenue, Personal Earnings, Date Range
-    - **After the table**, write a short summary paragraph (2–3 sentences) that naturally interprets these metrics.
-      Example style:
-      "<strong>${month}</strong> was a strong month for ${userName} — [X] total clients with [Y]% new bookings. 
-      Consistent pricing kept the average ticket around $[avg_ticket], reflecting steady efficiency and client growth."
-      Make it sound natural, insightful, and encouraging, but concise.
-3. Service Breakdown (from service_bookings) 
-    - Include % of each service relative to total bookings
-4. Marketing Funnels (from marketing_funnels) 
-    - Display table with columns: Source, New Clients, Returning, Retention, and Avg Ticket 
-    - Highlights
-5. Top Clients (from top_clients)
-    - Display table with columns: Rank (medal emojis for top 3 ranks), Client, Total Paid, Visit, Notes
-    - Top 10 clients generated... (summary)
-6. Frequency Highlights (from top_clients)
-    - Display table sorted by Visits with columns: Client, Visits, Total Paid, Notes (but more summarized)
-7. Key Takeaways (emojis beside every point rather than bullets)
-
-Use <h2>/<h3> for headings, <p> for text, <ul><li> for lists, <table> for tables. If any section has no data, write: "No data available for this section." Output only HTML body, no triple backticks.
-      `,
-      weekly: `
-You are a professional analytics assistant creating a weekly performance report for a barbershop professional.
-
-Dataset (JSON):
-${JSON.stringify(dataset, null, 2)}
-
-Generate a detailed weekly report in HTML for TinyMCE. Include sections:
-1. <h1>Week ${week_number} - ${month} ${year} Performance Report</h1>
-2. Quick Overview (from monthly_data)
-3. Service Breakdown (from service_bookings) 
-    - Include % of each service relative to total bookings
-4. Marketing Funnels (from marketing_funnels) 
-    - Key Insights
-    - Action Items
-5. AI Tips & Recommendations
-6. Summary
-
-Use proper HTML headings, paragraphs, bullet lists, and tables. If a section has no data, write: "No data available for this section." Output only HTML body, no triple backticks.
-      `,
-      weekly_comparison: `
-You are a professional analytics assistant creating a weekly comparison report for a barbershop professional.
-
-Dataset (JSON):
-${JSON.stringify(dataset, null, 2)}
-
-Generate a detailed weekly comparison report in HTML for TinyMCE. Compare current week to previous week. Include sections:
-1. <h1>Week ${week_number} Comparison Report - ${month} ${year}</h1>
-2. Overview and week-over-week trends
-3. Service Breakdown Comparison 
-    - Include % of each service relative to total bookings
-4. Marketing Insights Comparison
-5. AI Recommendations based on trends
-6. Summary
-
-Use headings, paragraphs, lists, tables. If a section has no data, write: "No data available for this section." Output only HTML body, no triple backticks.
-      `,
-    };
-
-    // Assign prompt based on report type
-    const prompt = prompts[type as keyof typeof prompts] || prompts.monthly;
-
-    // 🤖 Call OpenAI
+    // 🧠 Generate report via OpenAI
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      temperature: 0.7,
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      temperature: 0.5,
       messages: [
         {
-          role: "system",
+          role: 'system',
           content:
-            "You are an expert analytics report writer specializing in barbershop business performance summaries.",
+            'You are an expert analytics report writer specializing in barbershop business performance summaries.',
         },
-        { role: "user", content: prompt },
+        { role: 'user', content: promptTemplate(dataset, userName, month, year) },
       ],
-    });
+    })
 
-    const htmlReport = response.choices?.[0]?.message?.content?.trim() || "";
+    const htmlReport = response.choices?.[0]?.message?.content?.trim() || ''
 
-    // 📊 Rollup metrics
-    const total_revenue = monthlyData?.total_revenue || 0;
-    const avg_ticket = monthlyData?.avg_ticket || 0;
-    const total_cuts =
-      services?.reduce((sum, s) => sum + (s.bookings || 0), 0) || 0;
-
-    // 💾 Save in reports table
+    // 🧾 Store report in DB
     const { data: newReport, error: insertError } = await supabase
-      .from("reports")
+      .from('reports')
       .insert({
         user_id,
         type,
+        barber_type,
         month,
-        week_number: type === "weekly" ? week_number : null,
+        week_number: dataset.week_number,
         year,
         content: htmlReport,
-        total_cuts,
-        total_revenue,
-        avg_ticket,
         created_at: new Date().toISOString(),
       })
       .select()
-      .single();
+      .single()
+    if (insertError) throw insertError
 
-    if (insertError) throw insertError;
-
-    return NextResponse.json({ success: true, report: newReport });
+    return NextResponse.json({ success: true, report: newReport })
   } catch (err: any) {
-    console.error("❌ Report generation error:", err);
+    console.error('❌ Report generation error:', err)
     return NextResponse.json(
-      { success: false, error: err.message || "Unknown error" },
+      { success: false, error: err.message || 'Unknown error' },
       { status: 500 }
-    );
+    )
   }
 }

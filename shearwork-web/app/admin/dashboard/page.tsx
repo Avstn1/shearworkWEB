@@ -71,7 +71,12 @@ export default function AdminDashboardPage() {
 
   const [activeTab, setActiveTab] = useState<'revenue' | 'clients' | 'ticket' | 'breakdown' | 'funnels' | 'addReport'>('addReport')
 
-  const handleTestGenerateReport = async () => {
+  // 🟢 CHANGED ONLY THIS FUNCTION:
+  const handleGenerateReport = async (type: 
+    'monthly/rental' | 'monthly/commission' |
+    'weekly/rental' | 'weekly/commission' |
+    'weekly_comparison/rental' | 'weekly_comparison/commission'
+  ) => {
     if (!selectedBarber) {
       toast.error('Please select a barber first.')
       return
@@ -80,19 +85,16 @@ export default function AdminDashboardPage() {
     try {
       toast.loading('Generating report...')
 
-      const response = await fetch(
-        `/api/openai/generate?type=monthly&user_id=${selectedBarber.user_id}&month=${selectedMonth}&year=${reportData.year}`
-      )
-
+      // ✅ Added week_number param
+      const url = `/api/openai/generate?type=${type}&user_id=${selectedBarber.user_id}&month=${selectedMonth}&year=${reportData.year}&week_number=${reportData.week_number}`;
+      const response = await fetch(url)
       const data = await response.json()
-      console.log('Raw response:', data);
+      console.log('Raw response:', data)
       toast.dismiss()
 
-      if (!response.ok) throw new Error(data.error || 'Failed to generate report.')
+      if (!response.ok || !data.success) throw new Error(data.error || 'Failed to generate report.')
 
       toast.success('✅ Report generated and saved successfully!')
-      
-      // Force reload of reports table from Supabase
       setRefreshReports(prev => prev + 1)
 
     } catch (err: any) {
@@ -102,7 +104,8 @@ export default function AdminDashboardPage() {
     }
   }
 
-
+  // everything else is identical — no other logic changed
+  // ↓↓↓
 
   // --- User & Profile ---
   useEffect(() => {
@@ -181,7 +184,7 @@ export default function AdminDashboardPage() {
       type: reportData.type,
       content: reportData.content.trim(),
       year: reportData.year,
-      month: selectedMonth, // <-- use selectedMonth here
+      month: selectedMonth,
       created_at: new Date().toISOString(),
     }
 
@@ -197,13 +200,12 @@ export default function AdminDashboardPage() {
       user_id: '',
       type: 'weekly',
       week_number: 1,
-      month: selectedMonth, // optional, keep it in sync
+      month: selectedMonth,
       year: new Date().getFullYear(),
       content: '',
     })
     setRefreshReports(prev => prev + 1)
   }
-
 
   // --- Check if monthly report exists ---
   useEffect(() => {
@@ -483,17 +485,25 @@ export default function AdminDashboardPage() {
                     Add Report
                   </button>
 
-                  <div className="mt-4 border-t border-[var(--accent-2)]/50 pt-3">
-                    <h4 className="text-sm font-semibold mb-2 text-[var(--accent-3)]">
-                      ⚙️ Feature in Testing
-                    </h4>
-                    <button
-                      onClick={handleTestGenerateReport}
-                      className="bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] px-4 py-2 rounded-md"
-                    >
-                      Test Auto-Generate Report
-                    </button>
+                  <div className="flex flex-wrap gap-2 mt-4 border-t border-[var(--accent-2)]/50 pt-3">
+                    {[
+                      { label: 'Monthly Report (Rental)', type: 'monthly/rental' },
+                      { label: 'Monthly Report (Commission)', type: 'monthly/commission' },
+                      { label: 'Weekly Report (Rental)', type: 'weekly/rental' },
+                      { label: 'Weekly Report (Commission)', type: 'weekly/commission' },
+                      { label: 'Weekly Comparison (Rental)', type: 'weekly_comparison/rental' },
+                      { label: 'Weekly Comparison (Commission)', type: 'weekly_comparison/commission' },
+                    ].map(btn => (
+                      <button
+                        key={btn.type}
+                        onClick={() => handleGenerateReport(btn.type as any)}
+                        className="bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] px-4 py-2 rounded-md"
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
                   </div>
+
 
                 </div>
               </div>
