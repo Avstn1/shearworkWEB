@@ -160,11 +160,13 @@ export default function MarketingFunnelsChart({
               name="Returning Clients"
               fill={COLORS[3]}
               radius={[8, 8, 0, 0]}
+              
             >
               <LabelList
                 dataKey="returning_clients"
                 position="top"
                 style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+                dy={-15}
               />
             </Bar>
 
@@ -178,12 +180,13 @@ export default function MarketingFunnelsChart({
               <LabelList
                 dataKey="retention"
                 position="top"
+                dx={5} // shift labels slightly up
                 formatter={(val: any) =>
                   val !== undefined && val !== null
                     ? `${Number(val).toFixed(2)}%`
                     : ''
                 }
-                style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+                style={{ fill: '#E8EDC7', fontSize: 8, fontWeight: 'bold' }}
               />
             </Bar>
           </BarChart>
