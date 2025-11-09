@@ -34,6 +34,10 @@ export default function WeeklyReports({
   const [reports, setReports] = useState<WeeklyReport[]>([])
   const [selectedReport, setSelectedReport] = useState<WeeklyReport | null>(null)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  })
   const [isEditing, setIsEditing] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -58,19 +62,23 @@ export default function WeeklyReports({
     fetchReports()
   }, [userId, refresh])
 
-  const filteredReports = reports.filter((r) => {
-    return (!filterMonth || r.month === filterMonth) &&
-           (!filterYear || r.year === filterYear)
-  })
+  const filteredReports = reports.filter(
+    (r) =>
+      (!filterMonth || r.month === filterMonth) &&
+      (!filterYear || r.year === filterYear)
+  )
 
-  const handleEdit = (report: WeeklyReport) => {
+  const handleEdit = (e: React.MouseEvent, report: WeeklyReport) => {
+    e.stopPropagation()
+    setOpenMenu(null)
     setSelectedReport(report)
     setIsEditing(true)
-    setOpenMenu(null)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
     if (!confirm('Are you sure you want to delete this report?')) return
+
     const { error } = await supabase.from('reports').delete().eq('id', id)
     if (error) toast.error('Failed to delete')
     else {
@@ -92,13 +100,12 @@ export default function WeeklyReports({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-3 relative">
         {filteredReports.length > 0 ? (
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative rounded-xl p-3 border transition-all duration-300 transform cursor-pointer
-                hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl"
+              className="relative rounded-xl p-3 border transition-all duration-300 cursor-pointer hover:shadow-xl"
               style={{
                 background: 'var(--card-weekly-bg)',
                 borderColor: 'var(--card-weekly-border)',
@@ -115,36 +122,14 @@ export default function WeeklyReports({
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
+                      const rect = (e.target as HTMLElement).getBoundingClientRect()
+                      setMenuPosition({ top: rect.bottom + window.scrollY, left: rect.right - 120 })
                       setOpenMenu(openMenu === r.id ? null : r.id)
                     }}
                     className="absolute top-2 right-2 p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
                   >
                     <MoreVertical size={16} />
                   </button>
-
-                  {openMenu === r.id && (
-                    <div
-                      ref={menuRef}
-                      className="absolute top-8 right-2 rounded-md shadow-md w-28 z-50"
-                      style={{
-                        background: 'var(--card-weekly-border)',
-                        color: 'var(--text-bright)',
-                      }}
-                    >
-                      <button
-                        onClick={() => handleEdit(r)}
-                        className="block w-full text-left px-3 py-1 text-sm"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(r.id)}
-                        className="block w-full text-left px-3 py-1 text-sm text-red-300"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
                 </>
               )}
 
@@ -160,6 +145,39 @@ export default function WeeklyReports({
         )}
       </div>
 
+      {/* ✅ Portal Dropdown Menu (always on top of all cards) */}
+      {openMenu &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="fixed rounded-md shadow-lg w-28 z-[99999]"
+            style={{
+              top: `${menuPosition.top}px`,
+              left: `${menuPosition.left}px`,
+              background: 'var(--card-weekly-border)',
+              color: 'var(--text-bright)',
+            }}
+          >
+            <button
+              onClick={(e) => {
+                const report = reports.find((r) => r.id === openMenu)
+                if (report) handleEdit(e, report)
+              }}
+              className="block w-full text-left px-3 py-1 text-sm hover:bg-[var(--card-weekly-bg)]/50"
+            >
+              Edit
+            </button>
+            <button
+              onClick={(e) => handleDelete(e, openMenu)}
+              className="block w-full text-left px-3 py-1 text-sm text-red-300 hover:bg-red-900/20"
+            >
+              Delete
+            </button>
+          </div>,
+          document.body
+        )}
+
+      {/* 🧾 Modal */}
       {selectedReport &&
         createPortal(
           <ReportModal
