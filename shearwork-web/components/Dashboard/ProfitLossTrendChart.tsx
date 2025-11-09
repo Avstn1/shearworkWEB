@@ -144,22 +144,22 @@ export default function ProfitLossTrendChart({
           />
 
           <Legend />
-          <Line
+          {/* <Line
             type="monotone"
             dataKey="revenue"
             stroke="#aeea00"
             strokeWidth={2}
             name="Revenue"
             dot={false}
-          />
-          <Line
+          /> */}
+          {/* <Line
             type="monotone"
             dataKey="expenses"
             stroke="#ff6d00"
             strokeWidth={2}
             name="Expenses"
             dot={false}
-          />
+          /> */}
           <Line
             type="monotone"
             dataKey="profit"
