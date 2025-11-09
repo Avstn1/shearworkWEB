@@ -10,9 +10,6 @@ import { createPortal } from 'react-dom'
 type MonthlyReport = {
   id: string
   month: string
-  total_cuts: number
-  total_revenue: number
-  chair_rent_paid: boolean
   notes: string
   content: string
   year: number
@@ -54,9 +51,6 @@ export default function MonthlyReports({
       (data || []).map((r: any) => ({
         id: r.id,
         month: r.month,
-        total_cuts: Number(r.total_cuts) || 0,
-        total_revenue: Number(r.total_revenue) || 0,
-        chair_rent_paid: r.chair_rent_paid,
         notes: r.notes || '',
         content: r.content || '',
         year: r.year || new Date().getFullYear(),
@@ -162,43 +156,47 @@ export default function MonthlyReports({
                   </div>
                 </div>
 
-                {isAdmin && (
-                  <div className="relative ml-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setMenuOpenId(menuOpenId === r.id ? null : r.id)
-                      }}
-                      className="p-1 rounded-md hover:bg-[var(--card-monthly-border)]/20 transition"
-                    >
-                      <MoreVertical size={18} />
-                    </button>
+              {isAdmin && (
+                <div className="relative ml-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMenuOpenId(menuOpenId === r.id ? null : r.id)
+                    }}
+                    className="p-1 rounded-md hover:bg-[var(--card-monthly-border)]/20 transition"
+                  >
+                    <MoreVertical size={18} />
+                  </button>
 
-                    {menuOpenId === r.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-0 mt-1 rounded-md shadow-lg z-50 w-28"
-                        style={{
-                          background: 'var(--card-monthly-border)',
-                          color: 'var(--text-bright)',
-                        }}
+                  {menuOpenId === r.id && (
+                    <div
+                      ref={(el) => {
+                        if (el) menuRef.current = el
+                      }}
+                      className="absolute right-0 mt-1 rounded-md shadow-lg z-50 w-28"
+                      style={{
+                        background: 'var(--card-monthly-border)',
+                        color: 'var(--text-bright)',
+                      }}
+                      onClick={(e) => e.stopPropagation()} // prevent parent click from closing menu
+                    >
+                      <button
+                        onClick={() => handleEdit(r)}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm"
                       >
-                        <button
-                          onClick={() => handleEdit(r)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm"
-                        >
-                          <Edit size={14} /> Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(r.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-300"
-                        >
-                          <Trash2 size={14} /> Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                        <Edit size={14} /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-300"
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               </div>
             </div>
           ))

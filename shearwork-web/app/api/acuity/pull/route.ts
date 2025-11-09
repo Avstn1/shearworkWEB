@@ -9,49 +9,10 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-// Helper to compute start/end dates of selected month/year
-function getMonthRange(monthName: string, year: number) {
-  const start = new Date(`${monthName} 1, ${year}`)
-  const end = new Date(start)
-  end.setMonth(start.getMonth() + 1)
-  end.setDate(0) // last day of the month
-
-  const today = new Date()
-  if (end > today) {
-    end.setFullYear(today.getFullYear(), today.getMonth(), today.getDate())
-    end.setHours(today.getHours(), today.getMinutes(), today.getSeconds(), today.getMilliseconds())
-  }
-
-  const minDate = start.toISOString().split('T')[0]
-  const maxDate = end.toISOString().split('T')[0]
-  return { minDate, maxDate }
-}
-
-// Helper to get array of all dates in a month (stops at today)
-function getAllDatesInMonth(monthName: string, year: number): string[] {
-  const start = new Date(`${monthName} 1, ${year}`)
-  const end = new Date(start)
-  end.setMonth(end.getMonth() + 1)
-  end.setDate(0)
-
-  const today = new Date()
-  if (end > today) {
-    end.setFullYear(today.getFullYear(), today.getMonth(), today.getDate())
-  }
-
-  const dates: string[] = []
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    dates.push(d.toLocaleDateString('en-CA'))
-  }
-  return dates
-}
-
-// Safe date parsing helper: avoids timezone shifting by parsing YYYY-MM-DD
 function parseDateStringSafe(datetime: string | undefined | null) {
-  // Accepts ISO-like strings such as "2025-11-01T12:34:56Z" or "2025-11-01"
   if (!datetime) return null
   try {
-    const datePart = datetime.split('T')[0] // "YYYY-MM-DD"
+    const datePart = datetime.split('T')[0]
     const [yStr, mStr, dStr] = datePart.split('-')
     const y = Number(yStr)
     const m = Number(mStr)
@@ -60,8 +21,7 @@ function parseDateStringSafe(datetime: string | undefined | null) {
     const monthName = MONTHS[m - 1] || 'Unknown'
     const dayKey = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     return { year: y, monthIndex: m, monthName, dayKey, day: d }
-  } catch (err) {
-    // fallback to Date object if parsing fails
+  } catch {
     try {
       const dt = new Date(datetime)
       const y = dt.getUTCFullYear()
@@ -70,10 +30,58 @@ function parseDateStringSafe(datetime: string | undefined | null) {
       const monthName = MONTHS[m - 1] || 'Unknown'
       const dayKey = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
       return { year: y, monthIndex: m, monthName, dayKey, day: d }
-    } catch (e) {
+    } catch {
       return null
     }
   }
+}
+
+// WEEK HELPERS
+function getSundayStart(d: Date) {
+  const day = d.getDay()
+  const sunday = new Date(d)
+  sunday.setDate(d.getDate() - day)
+  sunday.setHours(0, 0, 0, 0)
+  return sunday
+}
+function toISODate(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+function getFirstSundayOfMonth(monthIndex: number, year: number) {
+  const first = new Date(year, monthIndex, 1)
+  const day = first.getDay()
+  if (day === 0) return new Date(first.setHours(0, 0, 0, 0))
+  const daysUntilSunday = 7 - day
+  const sunday = new Date(first)
+  sunday.setDate(first.getDate() + daysUntilSunday)
+  sunday.setHours(0, 0, 0, 0)
+  return sunday
+}
+function getWeekNumberForWeekStart(weekStartDate: Date) {
+  const monthIndex = weekStartDate.getMonth()
+  const year = weekStartDate.getFullYear()
+  let firstSunday = getFirstSundayOfMonth(monthIndex, year)
+  if (weekStartDate < firstSunday) {
+    const prevMonthDate = new Date(year, monthIndex - 1, 1)
+    firstSunday = getFirstSundayOfMonth(prevMonthDate.getMonth(), prevMonthDate.getFullYear())
+  }
+  const diffDays = Math.round((weekStartDate.getTime() - firstSunday.getTime()) / (1000 * 60 * 60 * 24))
+  const weekOffset = diffDays >= 0 ? Math.floor(diffDays / 7) : 0
+  return weekOffset + 1
+}
+function getWeekMetaForDate(dateLike: string | Date) {
+  const dt = typeof dateLike === 'string' ? new Date(dateLike) : dateLike
+  const weekStart = getSundayStart(dt)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 6)
+  const weekMonthIndex = weekStart.getMonth()
+  const weekMonthName = MONTHS[weekMonthIndex]
+  const weekYear = weekStart.getFullYear()
+  const weekNumber = getWeekNumberForWeekStart(weekStart)
+  return { weekStartISO: toISODate(weekStart), weekEndISO: toISODate(weekEnd), weekNumber, month: weekMonthName, year: weekYear }
 }
 
 export async function GET(request: Request) {
@@ -81,32 +89,19 @@ export async function GET(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
-  }
+  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const endpoint = searchParams.get('endpoint') || 'appointments'
   const requestedMonth = searchParams.get('month') || null
   const requestedYear = searchParams.get('year') ? parseInt(searchParams.get('year') as string, 10) : null
 
-  // 2️⃣ Fetch token from DB
-  const { data: tokenRow, error: tokenError } = await supabase
-    .from('acuity_tokens')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
+  // Fetch token
+  const { data: tokenRow } = await supabase.from('acuity_tokens').select('*').eq('user_id', user.id).single()
+  if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
 
-  if (tokenError || !tokenRow) {
-    return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
-  }
-
-  // 3️⃣ Refresh token if expired
   let accessToken = tokenRow.access_token
-  const now = Math.floor(Date.now() / 1000)
-
-  if (tokenRow.expires_at && tokenRow.expires_at < now) {
+  const nowSec = Math.floor(Date.now() / 1000)
+  if (tokenRow.expires_at && tokenRow.expires_at < nowSec) {
     try {
       const refreshRes = await fetch('https://acuityscheduling.com/oauth2/token', {
         method: 'POST',
@@ -118,477 +113,257 @@ export async function GET(request: Request) {
           client_secret: process.env.ACUITY_CLIENT_SECRET!,
         }),
       })
-
       const newTokens = await refreshRes.json()
-
       if (refreshRes.ok) {
         accessToken = newTokens.access_token
-        await supabase
-          .from('acuity_tokens')
-          .update({
-            access_token: newTokens.access_token,
-            refresh_token: newTokens.refresh_token ?? tokenRow.refresh_token,
-            expires_at: now + newTokens.expires_in,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id)
-      } else {
-        console.error('Token refresh failed:', newTokens)
-        return NextResponse.json({ error: 'Token refresh failed', details: newTokens }, { status: 500 })
-      }
+        await supabase.from('acuity_tokens').update({
+          access_token: newTokens.access_token,
+          refresh_token: newTokens.refresh_token ?? tokenRow.refresh_token,
+          expires_at: nowSec + newTokens.expires_in,
+          updated_at: new Date().toISOString(),
+        }).eq('user_id', user.id)
+      } else return NextResponse.json({ error: 'Token refresh failed', details: newTokens }, { status: 500 })
     } catch (err) {
       return NextResponse.json({ error: 'Failed to refresh token', details: String(err) })
     }
   }
 
-  // 4️⃣ Validate endpoint
-  const ALLOWED_ENDPOINTS = [
-    'appointments',
-    'clients',
-    'calendars',
-    'appointment-types',
-    'availability',
-    'blocks',
-    'categories',
-    'forms',
-    'packages',
-    'products',
-  ]
-
-  if (!ALLOWED_ENDPOINTS.includes(endpoint)) {
-    return NextResponse.json({ error: `Invalid endpoint '${endpoint}'` }, { status: 400 })
-  }
-
-  // 5️⃣ Fetch data from Acuity
+  // Fetch appointments
   let allData: any[] = []
+  if (requestedMonth && requestedYear) {
+    const start = new Date(`${requestedMonth} 1, ${requestedYear}`)
+    const end = new Date(start)
+    end.setMonth(end.getMonth() + 1)
+    end.setDate(0)
+    const today = new Date()
+    if (end > today) end.setFullYear(today.getFullYear(), today.getMonth(), today.getDate())
 
-  try {
-    if (endpoint === 'appointments' && requestedMonth && requestedYear) {
-      const dates = getAllDatesInMonth(requestedMonth, requestedYear)
-
-      for (const day of dates) {
-        const dayUrl = new URL(`https://acuityscheduling.com/api/v1/appointments`)
-        dayUrl.searchParams.set('minDate', day)
-        dayUrl.searchParams.set('maxDate', day)
-        dayUrl.searchParams.set('max', '100')
-
-        const dayRes = await fetch(dayUrl.toString(), {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-
-        const dayData = await dayRes.json()
-        if (!dayRes.ok) {
-          console.error('❌ Failed fetching appointments for', day, dayData)
-          continue
-        }
-
-        if (Array.isArray(dayData)) allData.push(...dayData)
-      }
-
-      // 🕒 Filter out future appointments (keep only those that have occurred)
-      const now = new Date()
-      const pastAppointments = allData.filter(appt => {
-        const parsed = parseDateStringSafe(appt.datetime)
-        if (!parsed) return false
-        const apptDate = new Date(appt.datetime)
-        return apptDate <= now
-      })
-
-      console.log(`🗓️ Fetched ${allData.length} appointments → keeping ${pastAppointments.length} past ones`)
-
-      // Replace allData with filtered version
-      allData = pastAppointments
-    } else {
-      const baseUrl = new URL(`https://acuityscheduling.com/api/v1/${endpoint}`)
-      baseUrl.searchParams.set('max', '100')
-      const pageRes = await fetch(baseUrl.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      const pageData = await pageRes.json()
-      if (!pageRes.ok) {
-        console.error('❌ Failed to fetch from Acuity:', pageData)
-        return NextResponse.json({ error: 'Failed to fetch from Acuity', details: pageData }, { status: 500 })
-      }
-      if (Array.isArray(pageData)) allData.push(...pageData)
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dayStr = d.toISOString().split('T')[0]
+      const dayUrl = new URL('https://acuityscheduling.com/api/v1/appointments')
+      dayUrl.searchParams.set('minDate', dayStr)
+      dayUrl.searchParams.set('maxDate', dayStr)
+      dayUrl.searchParams.set('max', '100')
+      const dayRes = await fetch(dayUrl.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
+      const dayData = await dayRes.json()
+      if (Array.isArray(dayData)) allData.push(...dayData)
     }
-  } catch (err) {
-    console.error('❌ Error fetching Acuity data:', err)
-    return NextResponse.json({ error: 'Failed to fetch data', details: String(err) }, { status: 500 })
   }
 
-  const acuityData = allData
-  console.log('💧 Total fetched:', acuityData.length)
+  const now = new Date()
+  const appointments = allData.filter(a => new Date(a.datetime) <= now)
 
+  // ---------------- Single loop aggregation ----------------
+  const monthlyAgg: Record<string, { revenue: number; count: number }> = {}
+  const dailyAgg: Record<string, { revenue: number; count: number }> = {}
+  const weeklyAgg: Record<string, { meta: any; revenue: number; tips: number; expenses: number; numAppointments: number; clientVisitMap: Record<string, number> }> = {}
+  const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
+  const topClientsMap: Record<string, Record<string, any>> = {}
+  const funnelMap: Record<string, Record<string, any>> = {}
+  const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok']
 
-  // 6️⃣ Process appointments
-  if (endpoint === 'appointments' && Array.isArray(acuityData)) {
-    const appointmentsToProcess = acuityData
+  for (const appt of appointments) {
+    const parsed = parseDateStringSafe(appt.datetime)
+    const apptDate = parsed ? new Date(`${parsed.dayKey}T00:00:00`) : new Date(appt.datetime)
+    if (!apptDate || isNaN(apptDate.getTime())) continue
 
-    // --- Group by month and day (using safe parsing)
-    const groupedByMonth: Record<string, any[]> = {}
-    const groupedByDay: Record<string, any[]> = {}
+    const year = parsed?.year || apptDate.getFullYear()
+    const monthName = parsed?.monthName || MONTHS[apptDate.getMonth()]
+    const dayKey = parsed?.dayKey || apptDate.toISOString().split('T')[0]
 
-    for (const appt of appointmentsToProcess) {
-      const parsed = parseDateStringSafe(appt.datetime)
-      if (!parsed) {
-        console.warn('⚠️ Could not parse datetime for appointment, falling back to Date:', appt.datetime)
-        // fallback to Date if needed
-        const fallback = new Date(appt.datetime)
-        const monthName = MONTHS[fallback.getMonth()]
-        const year = fallback.getFullYear()
-        const dayKey = fallback.toISOString().split('T')[0]
-        const monthKey = `${year}||${monthName}`
-        if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = []
-        groupedByMonth[monthKey].push(appt)
+    // 1️⃣ Monthly
+    const monthKey = `${year}||${monthName}`
+    if (!monthlyAgg[monthKey]) monthlyAgg[monthKey] = { revenue: 0, count: 0 }
+    const price = parseFloat(appt.priceSold || '0')
+    monthlyAgg[monthKey].revenue += price
+    monthlyAgg[monthKey].count++
 
-        if (!groupedByDay[dayKey]) groupedByDay[dayKey] = []
-        groupedByDay[dayKey].push(appt)
-        continue
-      }
+    // 2️⃣ Daily
+    if (!dailyAgg[dayKey]) dailyAgg[dayKey] = { revenue: 0, count: 0 }
+    dailyAgg[dayKey].revenue += price
+    dailyAgg[dayKey].count++
 
-      const { year, monthName, dayKey } = { year: parsed.year, monthName: parsed.monthName, dayKey: parsed.dayKey }
-
-      // debug log so you can see parsed dates
-      console.log('Parsed date →', appt.datetime, '→', dayKey, monthName, year)
-
-      const monthKey = `${year}||${monthName}`
-      if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = []
-      groupedByMonth[monthKey].push(appt)
-
-      if (!groupedByDay[dayKey]) groupedByDay[dayKey] = []
-      groupedByDay[dayKey].push(appt)
+    // 3️⃣ Weekly
+    const weekMeta = getWeekMetaForDate(apptDate)
+    const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2, '0')}||${weekMeta.weekStartISO}`
+    if (!weeklyAgg[weekKey]) weeklyAgg[weekKey] = {
+      meta: weekMeta, revenue: 0, tips: 0, expenses: 0, numAppointments: 0, clientVisitMap: {}
     }
+    const wEntry = weeklyAgg[weekKey]
+    wEntry.revenue += price
+    wEntry.numAppointments++
+    const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
+    const email = appt.email?.toLowerCase().trim() || ''
+    const phone = appt.phone?.replace(/\D/g, '') || ''
 
-    // --- Monthly revenue & appointments
-    const revenueByMonth: Record<string, number> = {}
-    const numAppointmentsByMonth: Record<string, number> = {}
+    // Skip entirely if no identifying info
+    if (!name && !email && !phone) continue
 
-    for (const [key, appts] of Object.entries(groupedByMonth)) {
-      const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
-      revenueByMonth[key] = totalRevenue
-      numAppointmentsByMonth[key] = appts.length
-    }
+    const clientKey = crypto.createHash('md5').update(`${email}|${phone}|${name.toLowerCase()}`).digest('hex')
 
-    const monthlyUpserts = Object.keys(revenueByMonth).map(key => {
-      const [yearStr, month] = key.split('||')
-      return {
-        user_id: user.id,
-        month,
-        year: parseInt(yearStr),
-        total_revenue: revenueByMonth[key],
-        num_appointments: numAppointmentsByMonth[key],
-        updated_at: new Date().toISOString(),
-      }
-    })
+    // Then continue as usual
+    if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
+    wEntry.clientVisitMap[clientKey]++
 
-    await supabase.from('monthly_data').upsert(monthlyUpserts, { onConflict: 'user_id,month,year' })
+    wEntry.clientVisitMap[clientKey]++
 
-    // --- Daily upserts (ADDITIVE): select existing row, then update totals (don't overwrite)
-    for (const [day, appts] of Object.entries(groupedByDay)) {
-      const totalRevenue = appts.reduce((sum, a) => sum + parseFloat(a.priceSold || '0'), 0)
-      const numAppointments = appts.length
+    // 4️⃣ Service bookings
+    const svcKey = `${appt.type || 'Unknown'}||${monthName}||${year}`
+    if (!serviceCounts[svcKey]) serviceCounts[svcKey] = { month: monthName, year, count: 0 }
+    serviceCounts[svcKey].count++
 
-      // Use safe parsing to get month/year from 'day' (YYYY-MM-DD)
-      const [y, m] = day.split('-').map(Number)
-      const month = MONTHS[m - 1]
-      const year = y
+    // 5️⃣ Top clients
+    if (!topClientsMap[monthKey]) topClientsMap[monthKey] = {}
+    if (!topClientsMap[monthKey][clientKey]) topClientsMap[monthKey][clientKey] = { client_name: name, email, phone, client_key: clientKey, total_paid: 0, num_visits: 0, month: monthName, year }
+    topClientsMap[monthKey][clientKey].total_paid += price
+    topClientsMap[monthKey][clientKey].num_visits++
 
-      // Debug parse
-      console.log('Parsed dayKey →', day, 'month/year →', month, year)
-
-      // fetch existing daily row
-      const { data: existingRows, error: selectErr } = await supabase
-        .from('daily_data')
-        .select('id, total_revenue, num_appointments')
-        .eq('user_id', user.id)
-        .eq('date', day)
-        .maybeSingle()
-
-      if (selectErr) {
-        console.error('❌ Error selecting existing daily row:', selectErr)
-        // attempt to insert as fallback
-        const { data: insertData, error: insertErr } = await supabase.from('daily_data').insert([{
-          user_id: user.id,
-          date: day,
-          total_revenue: totalRevenue,
-          num_appointments: numAppointments,
-          month,
-          year,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }])
-        if (insertErr) console.error('❌ Error inserting fallback daily row:', insertErr)
-        else console.log('🆕 Inserted daily_data (fallback):', insertData)
-        continue
-      }
-
-        if (existingRows && existingRows.id) {
-          // Overwrite existing values with fresh daily totals (not additive)
-          const { data: updData, error: updErr } = await supabase
-            .from('daily_data')
-            .update({
-              total_revenue: totalRevenue,
-              num_appointments: numAppointments,
-              month,
-              year,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existingRows.id)
-
-          if (updErr) console.error('❌ Error updating daily_data:', updErr)
-          else console.log(`✅ Replaced daily_data for ${day}: revenue=${totalRevenue}, appts=${numAppointments}`)
-        }
-        else {
-        // Insert new
-        const { data: insData, error: insErr } = await supabase.from('daily_data').insert([{
-          user_id: user.id,
-          date: day,
-          total_revenue: totalRevenue,
-          num_appointments: numAppointments,
-          month,
-          year,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }])
-
-        if (insErr) console.error('❌ Error inserting daily data:', insErr)
-        else console.log(`🆕 Inserted daily_data for ${day}:`, insData)
-      }
-    }
-
-    // --- Service bookings (monthly top 5 + other)
-    const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
-    for (const appt of appointmentsToProcess) {
-      const parsed = parseDateStringSafe(appt.datetime)
-      let monthName = 'Unknown'
-      let year = new Date().getFullYear()
-      if (parsed) {
-        monthName = parsed.monthName
-        year = parsed.year
-      } else {
-        const fallback = new Date(appt.datetime)
-        monthName = MONTHS[fallback.getMonth()]
-        year = fallback.getFullYear()
-      }
-
-      const service = appt.type || 'Unknown'
-      const key = `${service}||${monthName}||${year}`
-      if (!serviceCounts[key]) serviceCounts[key] = { month: monthName, year, count: 0 }
-      serviceCounts[key].count++
-    }
-
-    // Group services by month/year before limiting to top 5
-    const monthYearMap: Record<string, Record<string, number>> = {}
-    for (const [key, val] of Object.entries(serviceCounts)) {
-      const [service, month, year] = key.split('||')
-      const combo = `${month}||${year}`
-      if (!monthYearMap[combo]) monthYearMap[combo] = {}
-      monthYearMap[combo][service] = val.count
-    }
-
-    const finalUpserts: any[] = []
-    for (const [combo, services] of Object.entries(monthYearMap)) {
-      const [month, yearStr] = combo.split('||')
-      const year = parseInt(yearStr)
-      const sorted = Object.entries(services).sort((a, b) => b[1] - a[1])
-      const top5 = sorted.slice(0, 5)
-      const others = sorted.slice(5)
-
-      let otherCount = 0
-      for (const [, count] of others) otherCount += count
-
-      for (const [service, count] of top5) {
-        finalUpserts.push({
-          user_id: user.id,
-          service_name: service,
-          bookings: count,
-          report_month: month,
-          report_year: year,
-          created_at: new Date().toISOString(),
-        })
-      }
-
-      if (otherCount > 0) {
-        finalUpserts.push({
-          user_id: user.id,
-          service_name: 'Other',
-          bookings: otherCount,
-          report_month: month,
-          report_year: year,
-          created_at: new Date().toISOString(),
-        })
-      }
-    }
-
-    await supabase.from('service_bookings').upsert(finalUpserts, {
-      onConflict: 'user_id,service_name,report_month,report_year',
-    })
-
-    // --- Top clients & marketing funnels ---
-    const monthlyClientMap: Record<string, Record<string, any>> = {}
-
-    for (const appt of appointmentsToProcess) {
-      const parsed = parseDateStringSafe(appt.datetime)
-      let monthName = 'Unknown'
-      let year = new Date().getFullYear()
-      if (parsed) {
-        monthName = parsed.monthName
-        year = parsed.year
-      } else {
-        const fallback = new Date(appt.datetime)
-        monthName = MONTHS[fallback.getMonth()]
-        year = fallback.getFullYear()
-      }
-
-      const key = `${year}||${monthName}`
-
-      const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}` : 'Unknown'
-      const email = appt.email?.toLowerCase().trim() || null
-      const phone = appt.phone?.replace(/\D/g, '') || null
-
-      const clientKeySource = `${email || ''}|${phone || ''}|${name.toLowerCase()}`
-      const clientKey = crypto.createHash('md5').update(clientKeySource).digest('hex')
-
-      if (!monthlyClientMap[key]) monthlyClientMap[key] = {}
-      if (!monthlyClientMap[key][clientKey]) {
-        monthlyClientMap[key][clientKey] = {
-          client_name: name,
-          email,
-          phone,
-          client_key: clientKey,
-          total_paid: 0,
-          num_visits: 0,
-          month: monthName,
-          year,
-        }
-      }
-
-      monthlyClientMap[key][clientKey].total_paid += parseFloat(appt.priceSold || '0')
-      monthlyClientMap[key][clientKey].num_visits += 1
-    }
-
-    for (const [key, clients] of Object.entries(monthlyClientMap)) {
-      const upsertClients = Object.values(clients).map(c => ({
-        user_id: user.id,
-        client_name: c.client_name,
-        email: c.email,
-        phone: c.phone,
-        client_key: c.client_key,
-        total_paid: c.total_paid,
-        num_visits: c.num_visits,
-        month: c.month,
-        year: c.year,
-        updated_at: new Date().toISOString(),
-      }))
-
-      await supabase.from('report_top_clients').upsert(upsertClients, {
-        onConflict: 'user_id,month,year,client_key',
-      })
-
-      // --- Marketing funnels
-      const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok'];
-      const funnelMap: Record<string, Record<string, any>> = {}
-
-      for (const appt of appointmentsToProcess) {
-        // parse date safely
-        const parsed = parseDateStringSafe(appt.datetime)
-        let monthName = 'Unknown'
-        let year = new Date().getFullYear()
-        if (parsed) {
-          monthName = parsed.monthName
-          year = parsed.year
-        } else {
-          const fallback = new Date(appt.datetime)
-          monthName = MONTHS[fallback.getMonth()]
-          year = fallback.getFullYear()
-        }
-
-        const key = `${monthName}||${year}`
-
-        if (!appt.forms || !Array.isArray(appt.forms)) continue
-
-        for (const form of appt.forms) {
-          if (!form.values || !Array.isArray(form.values)) continue
-
-          let foundReferral = false
-
-          for (const field of form.values) {
-            const fieldName = field.name?.toLowerCase() || ''
-            if (referralKeywords.some(k => fieldName.includes(k))) {
-              const rawValue = (field.value || '').trim()
-              if (!rawValue) continue
-
-              // 🚫 Skip if contains multiple comma-separated values
-              if (rawValue.includes(',')) {
-                console.log(`Skipping multi-response value: "${rawValue}"`)
-                continue
-              }
-
-              const source = rawValue || 'Unknown'
-              console.log(`source: ${source}`)
-
-              if (!funnelMap[key]) funnelMap[key] = {}
-              if (!funnelMap[key][source]) {
-                funnelMap[key][source] = { newClients: 0, returningClients: 0, totalRevenue: 0, totalVisits: 0 }
-              }
-
-              // Estimate new vs returning
-              const isReturning = appointmentsToProcess.some(
-                (other) =>
-                  other.email === appt.email &&
-                  (() => {
-                    const pOther = parseDateStringSafe(other.datetime)
-                    const pThis = parseDateStringSafe(appt.datetime)
-                    if (pOther && pThis) return pOther.dayKey < pThis.dayKey
-                    return new Date(other.datetime) < new Date(appt.datetime)
-                  })()
-              )
-
-              if (isReturning) funnelMap[key][source].returningClients++
-              else funnelMap[key][source].newClients++
-
-              funnelMap[key][source].totalRevenue += parseFloat(appt.priceSold || '0')
-              funnelMap[key][source].totalVisits++
-
-              foundReferral = true
-              break // ✅ stop after first valid referral field
-            }
-          }
-
-          if (foundReferral) break // ✅ stop after first valid form per appointment
-        }
-      }
-
-      const funnelUpserts = Object.entries(funnelMap).flatMap(([key, sources]) => {
-        const [month, yearStr] = key.split('||')
-        const report_year = parseInt(yearStr)
-        return Object.entries(sources).map(([source, stats]) => ({
-          user_id: user.id,
-          source,
-          new_clients: stats.newClients,
-          returning_clients: stats.returningClients,
-          retention:
-            stats.newClients + stats.returningClients > 0
-              ? (stats.returningClients / stats.newClients) * 100
-              : 0,
-          avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
-          report_month: month,
-          report_year,
-          created_at: new Date().toISOString(),
-        }))
-      })
-
-      if (funnelUpserts.length > 0) {
-        await supabase.from('marketing_funnels').upsert(funnelUpserts, {
-          onConflict: 'user_id,source,report_month,report_year',
-        })
+    // 6️⃣ Marketing funnels
+    if (!appt.forms || !Array.isArray(appt.forms)) continue
+    for (const form of appt.forms) {
+      if (!form.values || !Array.isArray(form.values)) continue
+      for (const field of form.values) {
+        const fieldName = field.name?.toLowerCase() || ''
+        if (!referralKeywords.some(k => fieldName.includes(k))) continue
+        const rawValue = (field.value || '').trim()
+        if (!rawValue || rawValue.includes(',')) continue
+        if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
+        if (!funnelMap[monthKey][rawValue]) funnelMap[monthKey][rawValue] = { newClients: 0, returningClients: 0, totalRevenue: 0, totalVisits: 0 }
+        const isReturning = appointments.some(other => other.email === appt.email && new Date(other.datetime) < apptDate)
+        if (isReturning) funnelMap[monthKey][rawValue].returningClients++ 
+        else funnelMap[monthKey][rawValue].newClients++
+        funnelMap[monthKey][rawValue].totalRevenue += price
+        funnelMap[monthKey][rawValue].totalVisits++
+        break
       }
     }
   }
 
-  return NextResponse.json({
-    endpoint,
-    fetched_at: new Date().toISOString(),
-    acuity_data: acuityData,
+  // ---------------- Batch upserts ----------------
+  // Monthly
+  const monthlyUpserts = Object.entries(monthlyAgg).map(([key, val]) => {
+    const [yearStr, month] = key.split('||')
+    return { user_id: user.id, month, year: parseInt(yearStr), total_revenue: val.revenue, num_appointments: val.count, updated_at: new Date().toISOString() }
   })
+  await supabase.from('monthly_data').upsert(monthlyUpserts, { onConflict: 'user_id,month,year' })
+
+  // Daily
+  for (const [day, val] of Object.entries(dailyAgg)) {
+    const [y, m] = day.split('-').map(Number)
+    const month = MONTHS[m - 1]
+    const year = y
+    const existing = await supabase.from('daily_data').select('id').eq('user_id', user.id).eq('date', day).maybeSingle()
+    if (existing.data?.id) {
+      await supabase.from('daily_data').update({ total_revenue: val.revenue, num_appointments: val.count, month, year, updated_at: new Date().toISOString() }).eq('id', existing.data.id)
+    } else {
+      await supabase.from('daily_data').insert([{ user_id: user.id, date: day, total_revenue: val.revenue, num_appointments: val.count, month, year, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
+    }
+  }
+
+  // Weekly
+  const weeklyUpserts = Object.values(weeklyAgg).map(w => {
+    let newClients = 0, returningClients = 0
+    for (const v of Object.values(w.clientVisitMap)) v >= 2 ? returningClients++ : newClients++
+    const c = new Date().toISOString()
+    return { user_id: user.id, week_number: w.meta.weekNumber, start_date: w.meta.weekStartISO, end_date: w.meta.weekEndISO, total_revenue: w.revenue, expenses: w.expenses, num_appointments: w.numAppointments, new_clients: newClients, returning_clients: returningClients, year: w.meta.year, month: w.meta.month, created_at: c, updated_at: c }
+  })
+  await supabase.from('weekly_data').upsert(weeklyUpserts, { onConflict: 'user_id,start_date,week_number,month,year' })
+
+// ---------------- Weekly Top Clients (corrected total_paid) ----------------
+for (const w of Object.values(weeklyAgg)) {
+  const weekMeta = w.meta
+  const c = new Date().toISOString()
+  const weekStart = new Date(weekMeta.weekStartISO)
+  const weekEnd = new Date(weekMeta.weekEndISO)
+
+  // Filter appointments that fall into this week
+  const weekAppointments = appointments.filter(appt => {
+    const apptDate = new Date(appt.datetime)
+    return apptDate >= weekStart && apptDate <= weekEnd
+  })
+
+  const monthKey = `${weekMeta.year}||${weekMeta.month}`
+
+  const weeklyClientUpserts = Object.entries(w.clientVisitMap).map(([clientKey, visits]) => {
+    // Sum total_paid for this client in this week only
+    const totalPaid = weekAppointments
+      .filter(appt => {
+        const email = appt.email?.toLowerCase().trim() || ''
+        const phone = appt.phone?.replace(/\D/g, '') || ''
+        const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.toLowerCase() : 'unknown'
+        const key = crypto.createHash('md5').update(`${email}|${phone}|${name}`).digest('hex')
+        return key === clientKey
+      })
+      .reduce((sum, appt) => sum + parseFloat(appt.priceSold || '0'), 0)
+
+    const apptClient = weekAppointments.find(appt => {
+      const email = appt.email?.toLowerCase().trim() || ''
+      const phone = appt.phone?.replace(/\D/g, '') || ''
+      const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.toLowerCase() : 'unknown'
+      const key = crypto.createHash('md5').update(`${email}|${phone}|${name}`).digest('hex')
+      return key === clientKey
+    })
+
+    return {
+      user_id: user.id,
+      client_name: apptClient ? `${apptClient.firstName || ''} ${apptClient.lastName || ''}`.trim() : 'Unknown',
+      total_paid: totalPaid,
+      num_visits: visits,
+      email: apptClient?.email ?? '',
+      phone: apptClient?.phone ?? '',
+      client_key: clientKey,
+      week_number: weekMeta.weekNumber,
+      start_date: weekMeta.weekStartISO,
+      end_date: weekMeta.weekEndISO,
+      month: weekMeta.month,
+      year: weekMeta.year,
+      updated_at: c,
+      created_at: c,
+      notes: apptClient?.notes ?? null,
+      client_id: apptClient?.client_id ?? null,
+      report_id: null,
+    }
+  })
+
+  if (weeklyClientUpserts.length > 0) {
+    const { error } = await supabase
+      .from('weekly_top_clients')
+      .upsert(weeklyClientUpserts, { onConflict: 'user_id,week_number,month,year,client_key' })
+    if (error) console.error('Weekly top clients upsert failed:', error)
+  }
+}
+
+
+
+  // Service bookings
+  const serviceUpserts = Object.entries(serviceCounts).map(([key, val]) => {
+    const [service, month, yearStr] = key.split('||')
+    return { user_id: user.id, service_name: service, bookings: val.count, report_month: month, report_year: parseInt(yearStr), created_at: new Date().toISOString() }
+  })
+  await supabase.from('service_bookings').upsert(serviceUpserts, { onConflict: 'user_id,service_name,report_month,report_year' })
+
+  // Top clients
+  for (const clients of Object.values(topClientsMap)) {
+    const upserts = Object.values(clients).map(c => ({ ...c, user_id: user.id, updated_at: new Date().toISOString() }))
+    await supabase.from('report_top_clients').upsert(upserts, { onConflict: 'user_id,month,year,client_key' })
+  }
+
+  // Marketing funnels
+  const funnelUpserts = Object.entries(funnelMap).flatMap(([monthKey, sources]) => {
+    const [yearStr, month] = monthKey.split('||')
+    return Object.entries(sources).map(([source, stats]) => ({
+      user_id: user.id,
+      source,
+      new_clients: stats.newClients,
+      returning_clients: stats.returningClients,
+      retention: stats.newClients + stats.returningClients > 0 ? (stats.returningClients / stats.newClients) * 100 : 0,
+      avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
+      report_month: month,
+      report_year: parseInt(yearStr),
+      created_at: new Date().toISOString(),
+    }))
+  })
+  await supabase.from('marketing_funnels').upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+
+  return NextResponse.json({ endpoint: 'appointments', fetched_at: new Date().toISOString(), acuity_data: appointments })
 }

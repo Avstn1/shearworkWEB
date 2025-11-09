@@ -100,15 +100,22 @@ export default function ReportModal({
                   p, li { margin-bottom: 0.75rem; }
                   img { max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
 
+                  /* ===== TABLES ===== */
                   table {
                     border-collapse: collapse;
-                    width: 100%;
-                    display: block;
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
-                    font-size: 0.6rem;
+                    width: max-content; /* allow horizontal scroll */
+                    min-width: 100%;    /* at least full width of container */
                     margin-bottom: 1rem;
                   }
+
+                  /* Wrap tables to allow horizontal scroll */
+                  table {
+                    display: table;
+                  }
+                  table.wrapper {
+                    overflow-x: auto;
+                  }
+
                   td, th {
                     border: 1px solid #ddd;
                     padding: 0.5rem;
