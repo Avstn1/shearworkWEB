@@ -37,52 +37,62 @@ function parseDateStringSafe(datetime: string | undefined | null) {
 }
 
 // WEEK HELPERS
-function getSundayStart(d: Date) {
-  const day = d.getDay()
-  const sunday = new Date(d)
-  sunday.setDate(d.getDate() - day)
-  sunday.setHours(0, 0, 0, 0)
-  return sunday
+function getMondayStart(d: Date) {
+  const day = d.getDay() // Sunday=0, Monday=1, ...
+  const diff = (day === 0 ? -6 : 1 - day) // shift back to Monday
+  const monday = new Date(d)
+  monday.setDate(d.getDate() + diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
 }
+
 function toISODate(d: Date) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
-function getFirstSundayOfMonth(monthIndex: number, year: number) {
+function getFirstMondayOfMonth(monthIndex: number, year: number) {
   const first = new Date(year, monthIndex, 1)
   const day = first.getDay()
-  if (day === 0) return new Date(first.setHours(0, 0, 0, 0))
-  const daysUntilSunday = 7 - day
-  const sunday = new Date(first)
-  sunday.setDate(first.getDate() + daysUntilSunday)
-  sunday.setHours(0, 0, 0, 0)
-  return sunday
+  const diff = day === 0 ? 1 : (8 - day) % 7 // next Monday if day != Monday
+  const monday = new Date(first)
+  monday.setDate(first.getDate() + diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
 }
+
 function getWeekNumberForWeekStart(weekStartDate: Date) {
   const monthIndex = weekStartDate.getMonth()
   const year = weekStartDate.getFullYear()
-  let firstSunday = getFirstSundayOfMonth(monthIndex, year)
-  if (weekStartDate < firstSunday) {
+  let firstMonday = getFirstMondayOfMonth(monthIndex, year)
+  if (weekStartDate < firstMonday) {
     const prevMonthDate = new Date(year, monthIndex - 1, 1)
-    firstSunday = getFirstSundayOfMonth(prevMonthDate.getMonth(), prevMonthDate.getFullYear())
+    firstMonday = getFirstMondayOfMonth(prevMonthDate.getMonth(), prevMonthDate.getFullYear())
   }
-  const diffDays = Math.round((weekStartDate.getTime() - firstSunday.getTime()) / (1000 * 60 * 60 * 24))
+  const diffDays = Math.round((weekStartDate.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24))
   const weekOffset = diffDays >= 0 ? Math.floor(diffDays / 7) : 0
   return weekOffset + 1
 }
+
 function getWeekMetaForDate(dateLike: string | Date) {
   const dt = typeof dateLike === 'string' ? new Date(dateLike) : dateLike
-  const weekStart = getSundayStart(dt)
+  const weekStart = getMondayStart(dt)
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
   const weekMonthIndex = weekStart.getMonth()
   const weekMonthName = MONTHS[weekMonthIndex]
   const weekYear = weekStart.getFullYear()
   const weekNumber = getWeekNumberForWeekStart(weekStart)
-  return { weekStartISO: toISODate(weekStart), weekEndISO: toISODate(weekEnd), weekNumber, month: weekMonthName, year: weekYear }
+  return { 
+    weekStartISO: toISODate(weekStart), 
+    weekEndISO: toISODate(weekEnd), 
+    weekNumber, 
+    month: weekMonthName, 
+    year: weekYear 
+  }
 }
+
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient()
