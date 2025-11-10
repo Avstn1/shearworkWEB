@@ -242,42 +242,68 @@ export async function GET(request: Request) {
 
     // 6️⃣ Marketing funnels (only for the requested month)
     if (!appt.forms || !Array.isArray(appt.forms)) continue
-    for (const form of appt.forms) {
-      if (!form.values || !Array.isArray(form.values)) continue
-      for (const field of form.values) {
-        const fieldName = field.name?.toLowerCase() || ''
-        if (!referralKeywords.some(k => fieldName.includes(k))) continue
-        const rawValue = (field.value || '').trim()
-        if (!rawValue || rawValue.includes(',')) continue
-        if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
-        if (!funnelMap[monthKey][rawValue]) funnelMap[monthKey][rawValue] = { newClients: 0, returningClients: 0, totalRevenue: 0, totalVisits: 0 }
-        // Only consider appointments in the same month
-        const isReturning = appointments.some(other => {
-          const parsedOther = parseDateStringSafe(other.datetime)
-          if (!parsedOther) return false
-          const otherMonthKey = `${parsedOther.year}||${parsedOther.monthName}`
-          if (otherMonthKey !== monthKey) return false
+      for (const form of appt.forms) {
+        if (!form.values || !Array.isArray(form.values)) continue
 
-          const otherDate = new Date(other.datetime)
-          if (otherDate >= apptDate) return false
+        for (const field of form.values) {
+          const fieldName = field.name?.toLowerCase() || ''
+          if (!referralKeywords.some(k => fieldName.includes(k))) continue
 
-          const sameEmail = appt.email && other.email && other.email.toLowerCase() === appt.email.toLowerCase()
-          const samePhone = appt.phone && other.phone && other.phone.replace(/\D/g, '') === appt.phone.replace(/\D/g, '')
-          const sameName = appt.firstName && appt.lastName && other.firstName && other.lastName &&
-                          `${other.firstName} ${other.lastName}`.trim().toLowerCase() ===
-                          `${appt.firstName} ${appt.lastName}`.trim().toLowerCase()
+          const rawValue = (field.value || '').trim()
+          if (!rawValue || rawValue.includes(',')) continue
 
-          return sameEmail || samePhone || sameName
-        })
+          if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
+          if (!funnelMap[monthKey][rawValue]) {
+            funnelMap[monthKey][rawValue] = {
+              newClients: 0,
+              returningClients: 0,
+              totalRevenue: 0,
+              totalVisits: 0,
+              seenClients: new Set<string>() // 👈 track unique clients
+            }
+          }
 
-        if (isReturning) funnelMap[monthKey][rawValue].returningClients++ 
-        else funnelMap[monthKey][rawValue].newClients++
+          const funnel = funnelMap[monthKey][rawValue]
+          const clientId =
+            (appt.email?.toLowerCase() ||
+            appt.phone?.replace(/\D/g, '') ||
+            `${appt.firstName} ${appt.lastName}`.trim().toLowerCase())
 
-        funnelMap[monthKey][rawValue].totalRevenue += price
-        funnelMap[monthKey][rawValue].totalVisits++
-        break
+          if (!clientId) continue
+
+          // ✅ Add to "new clients" if first time this client appears in this funnel
+          if (!funnel.seenClients.has(clientId)) {
+            funnel.newClients++
+            funnel.seenClients.add(clientId)
+          }
+
+          // ✅ Check if this client has any *past* appointments (returning logic)
+          const isReturning = appointments.some(other => {
+            const parsedOther = parseDateStringSafe(other.datetime)
+            if (!parsedOther) return false
+            const otherMonthKey = `${parsedOther.year}||${parsedOther.monthName}`
+            if (otherMonthKey !== monthKey) return false
+
+            const otherDate = new Date(other.datetime)
+            if (otherDate >= apptDate) return false
+
+            const sameEmail = appt.email && other.email && other.email.toLowerCase() === appt.email.toLowerCase()
+            const samePhone = appt.phone && other.phone && other.phone.replace(/\D/g, '') === appt.phone.replace(/\D/g, '')
+            const sameName = appt.firstName && appt.lastName && other.firstName && other.lastName &&
+                            `${other.firstName} ${other.lastName}`.trim().toLowerCase() ===
+                            `${appt.firstName} ${appt.lastName}`.trim().toLowerCase()
+
+            return sameEmail || samePhone || sameName
+          })
+
+          if (isReturning) funnel.returningClients++ // 👈 Now a subset, not alternative
+
+          funnel.totalRevenue += price
+          funnel.totalVisits++
+          break
+        }
       }
-    }
+
   }
 
   // ---------------- Batch upserts ----------------
