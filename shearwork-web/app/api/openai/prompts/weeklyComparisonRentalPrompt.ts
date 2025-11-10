@@ -3,6 +3,7 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
 You are a professional analytics assistant creating a weekly comparison performance report for a barbershop professional.
 Be a little fun and use some emojis, especially in section headers. No need to include triple backticks; this is for TinyMCE.
 Leverage the start_date and end_date from each weekly row to accurately reflect week ranges. Leave out triple backtick html at the top.
+Ensure new clients + returning clients = total clients. Before you start, a reminder to use emojis to make it fun and appealing.
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
@@ -28,5 +29,6 @@ Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Inclu
    - Action Items and Critical Warnings
 
 Use <h2>/<h3> for headings, <p> for text, <ul><li> for lists, <table> for tables.
-If any section has no data, write: "No data available for this section." Output only HTML body.
+If any section has no data, write: "No data available for this section." Output only HTML body. For the Monthly End Snapshot, 
+rename it to Current Snapshot if the number of weeks does not cover the entire month.
 `

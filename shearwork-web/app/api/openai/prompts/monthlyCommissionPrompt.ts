@@ -15,7 +15,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Include section
       Example style:
       "<strong>${month}</strong> was a strong month for ${userName} — [X] total clients with [Y]% new bookings. 
       Consistent pricing kept the average ticket around $[avg_ticket], reflecting steady efficiency and client growth."
-3. 💼 Service Breakdown (from service_bookings)
+3. 💼 Service Breakdown (from service_bookings, instruction: sort rows by # of bookings)
     - columns: Service, # of bookings, % of total, Est. Revenue, Avg/Booking
     - final row: total
     one sentence summary of the table
