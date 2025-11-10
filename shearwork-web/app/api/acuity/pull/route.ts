@@ -37,52 +37,62 @@ function parseDateStringSafe(datetime: string | undefined | null) {
 }
 
 // WEEK HELPERS
-function getSundayStart(d: Date) {
-  const day = d.getDay()
-  const sunday = new Date(d)
-  sunday.setDate(d.getDate() - day)
-  sunday.setHours(0, 0, 0, 0)
-  return sunday
+function getMondayStart(d: Date) {
+  const day = d.getDay() // Sunday=0, Monday=1, ...
+  const diff = (day === 0 ? -6 : 1 - day) // shift back to Monday
+  const monday = new Date(d)
+  monday.setDate(d.getDate() + diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
 }
+
 function toISODate(d: Date) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
-function getFirstSundayOfMonth(monthIndex: number, year: number) {
+function getFirstMondayOfMonth(monthIndex: number, year: number) {
   const first = new Date(year, monthIndex, 1)
   const day = first.getDay()
-  if (day === 0) return new Date(first.setHours(0, 0, 0, 0))
-  const daysUntilSunday = 7 - day
-  const sunday = new Date(first)
-  sunday.setDate(first.getDate() + daysUntilSunday)
-  sunday.setHours(0, 0, 0, 0)
-  return sunday
+  const diff = day === 0 ? 1 : (8 - day) % 7 // next Monday if day != Monday
+  const monday = new Date(first)
+  monday.setDate(first.getDate() + diff)
+  monday.setHours(0, 0, 0, 0)
+  return monday
 }
+
 function getWeekNumberForWeekStart(weekStartDate: Date) {
   const monthIndex = weekStartDate.getMonth()
   const year = weekStartDate.getFullYear()
-  let firstSunday = getFirstSundayOfMonth(monthIndex, year)
-  if (weekStartDate < firstSunday) {
+  let firstMonday = getFirstMondayOfMonth(monthIndex, year)
+  if (weekStartDate < firstMonday) {
     const prevMonthDate = new Date(year, monthIndex - 1, 1)
-    firstSunday = getFirstSundayOfMonth(prevMonthDate.getMonth(), prevMonthDate.getFullYear())
+    firstMonday = getFirstMondayOfMonth(prevMonthDate.getMonth(), prevMonthDate.getFullYear())
   }
-  const diffDays = Math.round((weekStartDate.getTime() - firstSunday.getTime()) / (1000 * 60 * 60 * 24))
+  const diffDays = Math.round((weekStartDate.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24))
   const weekOffset = diffDays >= 0 ? Math.floor(diffDays / 7) : 0
   return weekOffset + 1
 }
+
 function getWeekMetaForDate(dateLike: string | Date) {
   const dt = typeof dateLike === 'string' ? new Date(dateLike) : dateLike
-  const weekStart = getSundayStart(dt)
+  const weekStart = getMondayStart(dt)
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 6)
   const weekMonthIndex = weekStart.getMonth()
   const weekMonthName = MONTHS[weekMonthIndex]
   const weekYear = weekStart.getFullYear()
   const weekNumber = getWeekNumberForWeekStart(weekStart)
-  return { weekStartISO: toISODate(weekStart), weekEndISO: toISODate(weekEnd), weekNumber, month: weekMonthName, year: weekYear }
+  return { 
+    weekStartISO: toISODate(weekStart), 
+    weekEndISO: toISODate(weekEnd), 
+    weekNumber, 
+    month: weekMonthName, 
+    year: weekYear 
+  }
 }
+
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient()
@@ -232,42 +242,68 @@ export async function GET(request: Request) {
 
     // 6️⃣ Marketing funnels (only for the requested month)
     if (!appt.forms || !Array.isArray(appt.forms)) continue
-    for (const form of appt.forms) {
-      if (!form.values || !Array.isArray(form.values)) continue
-      for (const field of form.values) {
-        const fieldName = field.name?.toLowerCase() || ''
-        if (!referralKeywords.some(k => fieldName.includes(k))) continue
-        const rawValue = (field.value || '').trim()
-        if (!rawValue || rawValue.includes(',')) continue
-        if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
-        if (!funnelMap[monthKey][rawValue]) funnelMap[monthKey][rawValue] = { newClients: 0, returningClients: 0, totalRevenue: 0, totalVisits: 0 }
-        // Only consider appointments in the same month
-        const isReturning = appointments.some(other => {
-          const parsedOther = parseDateStringSafe(other.datetime)
-          if (!parsedOther) return false
-          const otherMonthKey = `${parsedOther.year}||${parsedOther.monthName}`
-          if (otherMonthKey !== monthKey) return false
+      for (const form of appt.forms) {
+        if (!form.values || !Array.isArray(form.values)) continue
 
-          const otherDate = new Date(other.datetime)
-          if (otherDate >= apptDate) return false
+        for (const field of form.values) {
+          const fieldName = field.name?.toLowerCase() || ''
+          if (!referralKeywords.some(k => fieldName.includes(k))) continue
 
-          const sameEmail = appt.email && other.email && other.email.toLowerCase() === appt.email.toLowerCase()
-          const samePhone = appt.phone && other.phone && other.phone.replace(/\D/g, '') === appt.phone.replace(/\D/g, '')
-          const sameName = appt.firstName && appt.lastName && other.firstName && other.lastName &&
-                          `${other.firstName} ${other.lastName}`.trim().toLowerCase() ===
-                          `${appt.firstName} ${appt.lastName}`.trim().toLowerCase()
+          const rawValue = (field.value || '').trim()
+          if (!rawValue || rawValue.includes(',')) continue
 
-          return sameEmail || samePhone || sameName
-        })
+          if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
+          if (!funnelMap[monthKey][rawValue]) {
+            funnelMap[monthKey][rawValue] = {
+              newClients: 0,
+              returningClients: 0,
+              totalRevenue: 0,
+              totalVisits: 0,
+              seenClients: new Set<string>() // 👈 track unique clients
+            }
+          }
 
-        if (isReturning) funnelMap[monthKey][rawValue].returningClients++ 
-        else funnelMap[monthKey][rawValue].newClients++
+          const funnel = funnelMap[monthKey][rawValue]
+          const clientId =
+            (appt.email?.toLowerCase() ||
+            appt.phone?.replace(/\D/g, '') ||
+            `${appt.firstName} ${appt.lastName}`.trim().toLowerCase())
 
-        funnelMap[monthKey][rawValue].totalRevenue += price
-        funnelMap[monthKey][rawValue].totalVisits++
-        break
+          if (!clientId) continue
+
+          // ✅ Add to "new clients" if first time this client appears in this funnel
+          if (!funnel.seenClients.has(clientId)) {
+            funnel.newClients++
+            funnel.seenClients.add(clientId)
+          }
+
+          // ✅ Check if this client has any *past* appointments (returning logic)
+          const isReturning = appointments.some(other => {
+            const parsedOther = parseDateStringSafe(other.datetime)
+            if (!parsedOther) return false
+            const otherMonthKey = `${parsedOther.year}||${parsedOther.monthName}`
+            if (otherMonthKey !== monthKey) return false
+
+            const otherDate = new Date(other.datetime)
+            if (otherDate >= apptDate) return false
+
+            const sameEmail = appt.email && other.email && other.email.toLowerCase() === appt.email.toLowerCase()
+            const samePhone = appt.phone && other.phone && other.phone.replace(/\D/g, '') === appt.phone.replace(/\D/g, '')
+            const sameName = appt.firstName && appt.lastName && other.firstName && other.lastName &&
+                            `${other.firstName} ${other.lastName}`.trim().toLowerCase() ===
+                            `${appt.firstName} ${appt.lastName}`.trim().toLowerCase()
+
+            return sameEmail || samePhone || sameName
+          })
+
+          if (isReturning) funnel.returningClients++ // 👈 Now a subset, not alternative
+
+          funnel.totalRevenue += price
+          funnel.totalVisits++
+          break
+        }
       }
-    }
+
   }
 
   // ---------------- Batch upserts ----------------
