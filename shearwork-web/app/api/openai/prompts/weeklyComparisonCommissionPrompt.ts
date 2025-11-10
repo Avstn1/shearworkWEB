@@ -7,15 +7,15 @@ export const weeklyComparisonCommissionPrompt = (dataset: any, userName: string,
     : 'Current Period Snapshot 🧾';
 
   return `
-You are a professional analytics assistant creating a weekly comparison performance report for a barbershop professional on commission named ${userName}.
+IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a weekly comparison performance report for a barbershop professional on commission named ${userName}.
 Be a little fun and use emojis, especially in section headers. Use start_date and end_date from each week in weekly_rows to accurately reflect weekly ranges.
 Use all data from weekly_rows and daily_rows to calculate totals and averages. Make sure all totals match the dataset. Do not leave instructions as raw text—compute all metrics.
-Ensure there is not the triple back tick  html at the top of the file.
+NOTICE: Before you start, a reminder to use emojis to make it fun and appealing.
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
 
-Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Fill in all data in []s. Include:
+Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Fill in all data in []s. DO NOT WRAP WITH '''html. Include:
 
 1. <h1>Weekly Comparison Report (${month} ${year})</h1>
 
@@ -43,7 +43,7 @@ Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Fill 
        </tr>
        <tr>
          <td>Total Clients</td>
-         ${dataset.weekly_rows?.map((w: any) => `<td>${w.num_appointments || 0}</td>`).join('')}
+         ${dataset.weekly_rows?.map((w: any) => `<td>${w.new_clients + w.returning_clients || 0}</td>`).join('')}
          <td>${dataset.weekly_rows.length > 1 ? ((dataset.weekly_rows[dataset.weekly_rows.length - 1].num_appointments || 0) - (dataset.weekly_rows[dataset.weekly_rows.length - 2].num_appointments || 0)) : '--'}</td>
          <td>${dataset.weekly_rows.length > 1 ? ((((dataset.weekly_rows[dataset.weekly_rows.length - 1].num_appointments || 0) - (dataset.weekly_rows[dataset.weekly_rows.length - 2].num_appointments || 0)) / (dataset.weekly_rows[dataset.weekly_rows.length - 2].num_appointments || 1)) * 100).toFixed(1) + '%' : '--'}</td>
        </tr>

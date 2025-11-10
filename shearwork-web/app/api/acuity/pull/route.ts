@@ -160,16 +160,21 @@ export async function GET(request: Request) {
   const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
   const topClientsMap: Record<string, Record<string, any>> = {}
   const funnelMap: Record<string, Record<string, any>> = {}
+  const monthlyClientMap: Record<string, Record<string, number>> = {}
   const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok']
 
   for (const appt of appointments) {
     const parsed = parseDateStringSafe(appt.datetime)
     const apptDate = parsed ? new Date(`${parsed.dayKey}T00:00:00`) : new Date(appt.datetime)
     if (!apptDate || isNaN(apptDate.getTime())) continue
+    // Skip appointments not in the requested month
+    if (apptDate.getMonth() !== MONTHS.indexOf(requestedMonth!)) continue
 
-    const year = parsed?.year || apptDate.getFullYear()
-    const monthName = parsed?.monthName || MONTHS[apptDate.getMonth()]
+    // Use the requested month/year as the canonical ones
+    const year = requestedYear!
+    const monthName = requestedMonth!
     const dayKey = parsed?.dayKey || apptDate.toISOString().split('T')[0]
+
 
     // 1️⃣ Monthly
     const monthKey = `${year}||${monthName}`
@@ -185,7 +190,7 @@ export async function GET(request: Request) {
 
     // 3️⃣ Weekly
     const weekMeta = getWeekMetaForDate(apptDate)
-    const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2, '0')}||${weekMeta.weekStartISO}`
+    const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
     if (!weeklyAgg[weekKey]) weeklyAgg[weekKey] = {
       meta: weekMeta, revenue: 0, tips: 0, expenses: 0, numAppointments: 0, clientVisitMap: {}
     }
@@ -193,18 +198,23 @@ export async function GET(request: Request) {
     wEntry.revenue += price
     wEntry.numAppointments++
     const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
-    const email = appt.email?.toLowerCase().trim() || ''
-    const phone = appt.phone?.replace(/\D/g, '') || ''
+    const email = (appt.email || '').toLowerCase().trim()
+    const phone = (appt.phone || '').replace(/\D/g, '')
 
     // Skip entirely if no identifying info
     if (!name && !email && !phone) continue
 
-    const clientKey = crypto.createHash('md5').update(`${email}|${phone}|${name.toLowerCase()}`).digest('hex')
+    const rawKey = `${email}|${phone}|${name}`
+    const clientKey = crypto.createHash('sha256').update(rawKey).digest('hex')
+
+    // Track visits per client for the month
+    if (!monthlyClientMap[monthKey]) monthlyClientMap[monthKey] = {}
+    if (!monthlyClientMap[monthKey][clientKey]) monthlyClientMap[monthKey][clientKey] = 0
+    monthlyClientMap[monthKey][clientKey]++
+
 
     // Then continue as usual
     if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
-    wEntry.clientVisitMap[clientKey]++
-
     wEntry.clientVisitMap[clientKey]++
 
     // 4️⃣ Service bookings
@@ -218,7 +228,9 @@ export async function GET(request: Request) {
     topClientsMap[monthKey][clientKey].total_paid += price
     topClientsMap[monthKey][clientKey].num_visits++
 
-    // 6️⃣ Marketing funnels
+
+
+    // 6️⃣ Marketing funnels (only for the requested month)
     if (!appt.forms || !Array.isArray(appt.forms)) continue
     for (const form of appt.forms) {
       if (!form.values || !Array.isArray(form.values)) continue
@@ -229,9 +241,28 @@ export async function GET(request: Request) {
         if (!rawValue || rawValue.includes(',')) continue
         if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
         if (!funnelMap[monthKey][rawValue]) funnelMap[monthKey][rawValue] = { newClients: 0, returningClients: 0, totalRevenue: 0, totalVisits: 0 }
-        const isReturning = appointments.some(other => other.email === appt.email && new Date(other.datetime) < apptDate)
+        // Only consider appointments in the same month
+        const isReturning = appointments.some(other => {
+          const parsedOther = parseDateStringSafe(other.datetime)
+          if (!parsedOther) return false
+          const otherMonthKey = `${parsedOther.year}||${parsedOther.monthName}`
+          if (otherMonthKey !== monthKey) return false
+
+          const otherDate = new Date(other.datetime)
+          if (otherDate >= apptDate) return false
+
+          const sameEmail = appt.email && other.email && other.email.toLowerCase() === appt.email.toLowerCase()
+          const samePhone = appt.phone && other.phone && other.phone.replace(/\D/g, '') === appt.phone.replace(/\D/g, '')
+          const sameName = appt.firstName && appt.lastName && other.firstName && other.lastName &&
+                          `${other.firstName} ${other.lastName}`.trim().toLowerCase() ===
+                          `${appt.firstName} ${appt.lastName}`.trim().toLowerCase()
+
+          return sameEmail || samePhone || sameName
+        })
+
         if (isReturning) funnelMap[monthKey][rawValue].returningClients++ 
         else funnelMap[monthKey][rawValue].newClients++
+
         funnelMap[monthKey][rawValue].totalRevenue += price
         funnelMap[monthKey][rawValue].totalVisits++
         break
@@ -243,8 +274,27 @@ export async function GET(request: Request) {
   // Monthly
   const monthlyUpserts = Object.entries(monthlyAgg).map(([key, val]) => {
     const [yearStr, month] = key.split('||')
-    return { user_id: user.id, month, year: parseInt(yearStr), total_revenue: val.revenue, num_appointments: val.count, updated_at: new Date().toISOString() }
+
+    // calculate new and returning clients
+    const clientVisits = monthlyClientMap[key] || {}
+    let newClients = 0, returningClients = 0
+    for (const visits of Object.values(clientVisits)) {
+      if (visits >= 2) returningClients++
+      else newClients++
+    }
+
+    return {
+      user_id: user.id,
+      month,
+      year: parseInt(yearStr),
+      total_revenue: val.revenue,
+      num_appointments: val.count,
+      new_clients: newClients,
+      returning_clients: returningClients,
+      updated_at: new Date().toISOString()
+    }
   })
+
   await supabase.from('monthly_data').upsert(monthlyUpserts, { onConflict: 'user_id,month,year' })
 
   // Daily
@@ -261,52 +311,79 @@ export async function GET(request: Request) {
   }
 
   // Weekly
-  const weeklyUpserts = Object.values(weeklyAgg).map(w => {
-    let newClients = 0, returningClients = 0
-    for (const v of Object.values(w.clientVisitMap)) v >= 2 ? returningClients++ : newClients++
-    const c = new Date().toISOString()
-    return { user_id: user.id, week_number: w.meta.weekNumber, start_date: w.meta.weekStartISO, end_date: w.meta.weekEndISO, total_revenue: w.revenue, expenses: w.expenses, num_appointments: w.numAppointments, new_clients: newClients, returning_clients: returningClients, year: w.meta.year, month: w.meta.month, created_at: c, updated_at: c }
-  })
+  const weeklyUpserts = Object.values(weeklyAgg)
+    .filter(w => w.meta.month === requestedMonth) // ✅ skip weeks not in requested month
+    .map(w => {
+      let newClients = 0, returningClients = 0
+      for (const v of Object.values(w.clientVisitMap)) v >= 2 ? returningClients++ : newClients++
+      const c = new Date().toISOString()
+      const weekMonth = w.meta.month
+      const weekYear = w.meta.year
+      return { 
+        user_id: user.id, 
+        week_number: w.meta.weekNumber, 
+        start_date: w.meta.weekStartISO, 
+        end_date: w.meta.weekEndISO, 
+        total_revenue: w.revenue, 
+        expenses: w.expenses, 
+        num_appointments: w.numAppointments, 
+        new_clients: newClients, 
+        returning_clients: returningClients, 
+        year: weekYear, 
+        month: weekMonth, 
+        created_at: c, 
+        updated_at: c 
+      }
+    })
+
   await supabase.from('weekly_data').upsert(weeklyUpserts, { onConflict: 'user_id,start_date,week_number,month,year' })
+
 
 // ---------------- Weekly Top Clients (corrected total_paid) ----------------
 for (const w of Object.values(weeklyAgg)) {
   const weekMeta = w.meta
   const c = new Date().toISOString()
-  const weekStart = new Date(weekMeta.weekStartISO)
-  const weekEnd = new Date(weekMeta.weekEndISO)
+  if (weekMeta.month !== requestedMonth) continue
 
   // Filter appointments that fall into this week
   const weekAppointments = appointments.filter(appt => {
-    const apptDate = new Date(appt.datetime)
-    return apptDate >= weekStart && apptDate <= weekEnd
+    const parsed = parseDateStringSafe(appt.datetime)
+    if (!parsed) return false
+    // Compare ISO strings instead of full dates
+    return parsed.dayKey >= weekMeta.weekStartISO && parsed.dayKey <= weekMeta.weekEndISO
   })
-
-  const monthKey = `${weekMeta.year}||${weekMeta.month}`
 
   const weeklyClientUpserts = Object.entries(w.clientVisitMap).map(([clientKey, visits]) => {
     // Sum total_paid for this client in this week only
     const totalPaid = weekAppointments
       .filter(appt => {
-        const email = appt.email?.toLowerCase().trim() || ''
-        const phone = appt.phone?.replace(/\D/g, '') || ''
-        const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.toLowerCase() : 'unknown'
-        const key = crypto.createHash('md5').update(`${email}|${phone}|${name}`).digest('hex')
+        const email = (appt.email || '').toLowerCase().trim()
+        const phone = (appt.phone || '').replace(/\D/g, '')
+        const name = appt.firstName && appt.lastName
+          ? `${appt.firstName} ${appt.lastName}`.trim()
+          : ''
+
+        const rawKey = `${email}|${phone}|${name}`
+        const key = crypto.createHash('sha256').update(rawKey).digest('hex')
         return key === clientKey
       })
       .reduce((sum, appt) => sum + parseFloat(appt.priceSold || '0'), 0)
 
     const apptClient = weekAppointments.find(appt => {
-      const email = appt.email?.toLowerCase().trim() || ''
-      const phone = appt.phone?.replace(/\D/g, '') || ''
-      const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.toLowerCase() : 'unknown'
-      const key = crypto.createHash('md5').update(`${email}|${phone}|${name}`).digest('hex')
+      const email = (appt.email || '').toLowerCase().trim()
+      const phone = (appt.phone || '').replace(/\D/g, '')
+      const name = appt.firstName && appt.lastName
+        ? `${appt.firstName} ${appt.lastName}`.trim()
+        : ''
+      const rawKey = `${email}|${phone}|${name}`
+      const key = crypto.createHash('sha256').update(rawKey).digest('hex')
       return key === clientKey
     })
-
     return {
       user_id: user.id,
-      client_name: apptClient ? `${apptClient.firstName || ''} ${apptClient.lastName || ''}`.trim() : 'Unknown',
+      client_name: apptClient
+        ? `${apptClient.firstName || ''} ${apptClient.lastName || ''}`.trim()
+        : 'Unknown',
       total_paid: totalPaid,
       num_visits: visits,
       email: apptClient?.email ?? '',
@@ -315,13 +392,11 @@ for (const w of Object.values(weeklyAgg)) {
       week_number: weekMeta.weekNumber,
       start_date: weekMeta.weekStartISO,
       end_date: weekMeta.weekEndISO,
-      month: weekMeta.month,
-      year: weekMeta.year,
+      month: requestedMonth,
+      year: requestedYear,
       updated_at: c,
       created_at: c,
       notes: apptClient?.notes ?? null,
-      client_id: apptClient?.client_id ?? null,
-      report_id: null,
     }
   })
 

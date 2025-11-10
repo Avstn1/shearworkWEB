@@ -1,6 +1,7 @@
 export const weeklyRentalPrompt = (dataset: any, userName: string, month: string, year: number) => `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional named ${userName}.
-Be a little fun and use some emojis, especially in section headers. Keep the writing conversational but data-driven.
+Be a little fun and use some emojis, especially in section headers. Keep the writing conversational but data-driven. DO NOT WRAP
+the document with '''html '''
 
 You are given a JSON dataset that includes:
 - summary: metrics for the current week (includes totals, start_date, end_date, averages, final_revenue)
@@ -20,7 +21,7 @@ If avg_ticket is missing, calculate it as **final_revenue / num_appointments**.
 
 Include sections:
 
-1. <h1>Weekly Report - [summary.start_date] → [summary.end_date] (${year})</h1>
+1. <h1>Weekly Report - [summary.start_date] → [summary.end_date]</h1>
 
 2. <h2>Weekly Summary</h2>
    - Total Clients: [summary.num_appointments]
@@ -41,7 +42,7 @@ Include sections:
    </ul>
 
 4. <h2>Top Clients 💈</h2>
-   List top clients by loyalty or total_paid using top_clients. 
+   List top 10 clients by service totals using top_clients. 
    If top_clients is empty, say “No data available for this section.”
 
 5. <h2>Insights 🔍</h2>
