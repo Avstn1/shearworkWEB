@@ -24,7 +24,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Include section
     - columns: type, amount
     - for now assume only expense type is Rent(Fixed)
     - final row (for type): Net Profit
-5. 📣 Marketing Funnels (from marketing_funnels)
+5. 📣 Marketing Funnels (from marketing_funnels, instruction: sort rows by new clients)
     - columns: Source, New Clients, Returning, Total, Retention, Avg Ticket
     Highlights: (pinpoint highlights in table)
 6. 👑 Top Clients (from top_clients)
