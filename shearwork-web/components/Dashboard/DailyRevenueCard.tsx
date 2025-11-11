@@ -70,24 +70,28 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
         // Yesterday
         const { data: prevData, error } = await supabase
           .from('daily_data')
-          .select('total_revenue, tips, date')
+          .select('final_revenue, tips, date')
           .eq('user_id', userId)
           .lt('date', todayStr)
           .order('date', { ascending: false })
           .limit(1)
           .maybeSingle()
 
-        setPrevDataDate(prevData.date)
+        // ✅ Guard against null
+        setPrevDataDate(prevData?.date ?? null)
 
         if (prevData) {
-          const total = prevData.total_revenue ?? 0
+          const total = prevData.final_revenue ?? 0
           const tips = prevData.tips ?? 0
           const prevFinal =
             barberType === 'commission' && commissionRate !== null
               ? total * commissionRate + tips
               : total
           setPrevRevenue(prevFinal)
+        } else {
+          setPrevRevenue(null)
         }
+
       } catch (err) {
         console.error(err)
       } finally {
