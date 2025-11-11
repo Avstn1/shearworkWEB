@@ -144,7 +144,7 @@ export async function GET(request: Request) {
     const start = new Date(`${requestedMonth} 1, ${requestedYear}`)
     const end = new Date(start)
     end.setMonth(end.getMonth() + 1)
-    end.setDate(0)
+    end.setDate(7) // Fetch up to the 7th of the next month to catch overlapping weeks
     const today = new Date()
     if (end > today) end.setFullYear(today.getFullYear(), today.getMonth(), today.getDate())
 
@@ -177,36 +177,11 @@ export async function GET(request: Request) {
     const parsed = parseDateStringSafe(appt.datetime)
     const apptDate = parsed ? new Date(`${parsed.dayKey}T00:00:00`) : new Date(appt.datetime)
     if (!apptDate || isNaN(apptDate.getTime())) continue
-    // Skip appointments not in the requested month
-    if (apptDate.getMonth() !== MONTHS.indexOf(requestedMonth!)) continue
-
     // Use the requested month/year as the canonical ones
     const year = requestedYear!
     const monthName = requestedMonth!
     const dayKey = parsed?.dayKey || apptDate.toISOString().split('T')[0]
-
-
-    // 1️⃣ Monthly
-    const monthKey = `${year}||${monthName}`
-    if (!monthlyAgg[monthKey]) monthlyAgg[monthKey] = { revenue: 0, count: 0 }
     const price = parseFloat(appt.priceSold || '0')
-    monthlyAgg[monthKey].revenue += price
-    monthlyAgg[monthKey].count++
-
-    // 2️⃣ Daily
-    if (!dailyAgg[dayKey]) dailyAgg[dayKey] = { revenue: 0, count: 0 }
-    dailyAgg[dayKey].revenue += price
-    dailyAgg[dayKey].count++
-
-    // 3️⃣ Weekly
-    const weekMeta = getWeekMetaForDate(apptDate)
-    const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
-    if (!weeklyAgg[weekKey]) weeklyAgg[weekKey] = {
-      meta: weekMeta, revenue: 0, tips: 0, expenses: 0, numAppointments: 0, clientVisitMap: {}
-    }
-    const wEntry = weeklyAgg[weekKey]
-    wEntry.revenue += price
-    wEntry.numAppointments++
     const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
     const email = (appt.email || '').toLowerCase().trim()
     const phone = (appt.phone || '').replace(/\D/g, '')
@@ -217,15 +192,39 @@ export async function GET(request: Request) {
     const rawKey = `${email}|${phone}|${name}`
     const clientKey = crypto.createHash('sha256').update(rawKey).digest('hex')
 
+    // 3️⃣ Weekly
+    const weekMeta = getWeekMetaForDate(apptDate)
+    const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
+    console.log("Appt: ", apptDate,"for: ", weekKey)
+    if (!weeklyAgg[weekKey]) weeklyAgg[weekKey] = {
+      meta: weekMeta, revenue: 0, tips: 0, expenses: 0, numAppointments: 0, clientVisitMap: {}
+    }
+    const wEntry = weeklyAgg[weekKey]
+    wEntry.revenue += price
+    wEntry.numAppointments++
+   
+    if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
+    wEntry.clientVisitMap[clientKey]++
+
+    // Skip appointments not in the requested month
+    if (apptDate.getMonth() !== MONTHS.indexOf(requestedMonth!)) continue
+
+    // 1️⃣ Monthly
+    const monthKey = `${year}||${monthName}`
+    if (!monthlyAgg[monthKey]) monthlyAgg[monthKey] = { revenue: 0, count: 0 }
+    
+    monthlyAgg[monthKey].revenue += price
+    monthlyAgg[monthKey].count++
+
+    // 2️⃣ Daily
+    if (!dailyAgg[dayKey]) dailyAgg[dayKey] = { revenue: 0, count: 0 }
+    dailyAgg[dayKey].revenue += price
+    dailyAgg[dayKey].count++
+
     // Track visits per client for the month
     if (!monthlyClientMap[monthKey]) monthlyClientMap[monthKey] = {}
     if (!monthlyClientMap[monthKey][clientKey]) monthlyClientMap[monthKey][clientKey] = 0
     monthlyClientMap[monthKey][clientKey]++
-
-
-    // Then continue as usual
-    if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
-    wEntry.clientVisitMap[clientKey]++
 
     // 4️⃣ Service bookings
     const svcKey = `${appt.type || 'Unknown'}||${monthName}||${year}`
@@ -237,8 +236,6 @@ export async function GET(request: Request) {
     if (!topClientsMap[monthKey][clientKey]) topClientsMap[monthKey][clientKey] = { client_name: name, email, phone, client_key: clientKey, total_paid: 0, num_visits: 0, month: monthName, year }
     topClientsMap[monthKey][clientKey].total_paid += price
     topClientsMap[monthKey][clientKey].num_visits++
-
-
 
     // 6️⃣ Marketing funnels (only for the requested month)
     if (!appt.forms || !Array.isArray(appt.forms)) continue
@@ -347,14 +344,30 @@ export async function GET(request: Request) {
   }
 
   // Weekly
+  // Instead of filtering out weeks outside the requestedMonth,
+  // include any week that *intersects* with the requested month range.
   const weeklyUpserts = Object.values(weeklyAgg)
-    .filter(w => w.meta.month === requestedMonth) // ✅ skip weeks not in requested month
+    .filter(w => {
+      const weekStart = new Date(w.meta.weekStartISO)
+      const weekEnd = new Date(w.meta.weekEndISO)
+      const startOfMonth = new Date(`${requestedMonth} 1, ${requestedYear}`)
+      const endOfMonth = new Date(startOfMonth)
+      endOfMonth.setMonth(endOfMonth.getMonth() + 1)
+      endOfMonth.setDate(0)
+
+      // ✅ Include only weeks that *start* inside the month
+      // but may extend (overflow) into the next month.
+      return weekStart >= startOfMonth && weekStart <= endOfMonth
+    })
     .map(w => {
       let newClients = 0, returningClients = 0
       for (const v of Object.values(w.clientVisitMap)) v >= 2 ? returningClients++ : newClients++
       const c = new Date().toISOString()
-      const weekMonth = w.meta.month
-      const weekYear = w.meta.year
+
+      // Keep the canonical year/month for labeling
+      const weekMonth = requestedMonth
+      const weekYear = requestedYear
+
       return { 
         user_id: user.id, 
         week_number: w.meta.weekNumber, 
