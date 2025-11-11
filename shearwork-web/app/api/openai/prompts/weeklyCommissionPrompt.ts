@@ -25,7 +25,7 @@ Include sections:
 1. <h1>Weekly Report - [summary.start_date] → [summary.end_date] (${year})</h1>
 
 2. <h2>Weekly Summary 💰</h2>
-   - Total Clients: [summary.num_appointments]
+   - Total Clients: [summary.new_clients + summary.returning_clients]
    - New Clients: [summary.new_clients] | Returning: [summary.returning_clients]
    - Gross Revenue ≈ [$summary.total_revenue]
    - Average Ticket: [$summary.avg_ticket] (or calculate as final_revenue / num_appointments)
