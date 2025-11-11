@@ -25,57 +25,52 @@ if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
 
 // This is going to run every 12am on the first day of the month, effectively generating the report for the previous month
+// CRON JOB ---- 0 0 1 * * ----
 Deno.serve(async (req) => {
   try {
-    // Report generation
-    let type = 'monthly/rental'
+    let prevMonthIndex = now.getMonth() - 1
+    let selectedYear = prevMonthIndex < 0 ? now.getFullYear() - 1 : now.getFullYear()
+    prevMonthIndex = prevMonthIndex < 0 ? 11 : prevMonthIndex
+    let selectedMonth = monthNames[prevMonthIndex]
 
-    // Determine the previous month and year
-    let selectedMonth = monthNames[(now.getMonth() - 1) < 0 ? 11 : (now.getMonth() - 1)];
-    let selectedYear = selectedMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
-    
-    let reportData = {
-      week_number: null,
-    }
+    const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
 
-    console.log(`Generating report for ${selectedMonth} ${selectedYear}`)
-    
+    const url = `https://shearwork-web-git-cron-jobs-austin-bartolomes-projects.vercel.app/api/openai/generate`
+    const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
+    // Create an array to hold all responses
+    const results: any[] = []
+
     for (const barber of barberData) {
-      // const localURL = http://192.168.56.1:3000
-      const supabaseURL = Deno.env.get("NEXT_PUBLIC_SUPABASE_URL")
-
-      const url = `${supabaseURL}/api/openai/generate`
-      const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
+      let type = 'monthly/rental' // change this to be dynamic later
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'x-vercel-protection-bypass': BYPASS_TOKEN
         },
         body: JSON.stringify({
           type,
           user_id: barber.user_id,
           month: selectedMonth,
           year: selectedYear,
-          week_number: reportData.week_number,
+          week_number: null,
         }),
       })
 
-      const data = await response.json()
-      console.log('Raw response:', data)
+      const text = await response.text()
+      try {
+        const data = JSON.parse(text)
+        console.log('Raw response:', data)
+        results.push(data)
+      } catch {
+        console.error('❌ Not JSON, got:', text)
+        results.push({ error: 'Invalid JSON', raw: text })
+      }
     }
 
-    // Adding the report to the database
-    const { data, error: insertError } = await supabase.from('test_table').insert({
-      name: 'Test Name',
-    })
-
-    if (insertError) {
-      throw insertError
-    }
-
-    return new Response(JSON.stringify({ data }), {
+    return new Response(JSON.stringify({ results }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
