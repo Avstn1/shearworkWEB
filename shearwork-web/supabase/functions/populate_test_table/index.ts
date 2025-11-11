@@ -11,7 +11,7 @@ console.log("Populating test_table in Functions!")
 Deno.serve(async (req) => {
   try {
     const supabase = createClient(
-      Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? '', 
+      Deno.env.get("DOCKER_URL") ?? '', 
       Deno.env.get("PUBLISHABLE_KEY") ?? '', 
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
