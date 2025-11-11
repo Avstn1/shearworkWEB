@@ -1,48 +1,231 @@
-export const monthlyCommissionPrompt = (dataset: any, userName: string, month: string, year: number) => `
-You are a professional analytics assistant creating a monthly performance report for a barbershop professional. 
-Be a little fun and use some emojis, especially in section headers. Use emojis beside any jot notes you use or
-beside any brief summaries in each section.
+export const monthlyCommissionPrompt = (dataset: any, userName: string, month: string, year: number) => {
+  const summary = dataset.summary || {}
+  const startDate = summary.start_date || ''
+  const endDate = summary.end_date || ''
+  const services = dataset.services || []
+  const funnels = dataset.marketing_funnels || []
+  const topClients = dataset.top_clients || []
+  const weeklyRows = dataset.weekly_rows || []
+  const totalRevenue = summary.total_revenue || 0
+  const personalEarnings = totalRevenue * summary.commission_rate || 0
+  const avgTicket =
+    summary.num_appointments && summary.num_appointments > 0
+      ? (summary.final_revenue || 0) / summary.num_appointments
+      : 0
+
+  // Weekly snapshot calculations
+  let totalClients = 0
+  let totalWeeklyRevenue = 0
+  let bestWeek: any = null
+  let worstWeek: any = null
+  let weeklyAvgTickets: number[] = []
+
+  weeklyRows.forEach((w: any) => {
+    const clients = w.num_appointments || 0
+    const revenue = w.total_revenue || 0
+    const avg = clients ? revenue / clients : 0
+    totalClients += clients
+    totalWeeklyRevenue += revenue
+    weeklyAvgTickets.push(avg)
+
+    if (!bestWeek || revenue > bestWeek.total_revenue) bestWeek = w
+    if (!worstWeek || revenue < worstWeek.total_revenue) worstWeek = w
+  })
+
+  const avgWeeklyRevenue = weeklyRows.length ? totalWeeklyRevenue / weeklyRows.length : 0
+
+  return `
+  IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a monthly performance report for a barbershop professional on booth rental named ${userName}.
+Be a little fun and use emojis, especially in section headers and bullet points. Use start_date and end_date from monthly_data to reflect the full date range.
+Use data from summary, services, funnels, top_clients, and weekly_rows to calculate totals and insights. Make sure all totals match the dataset.
+
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
+  Generate a detailed monthly report in HTML suitable for TinyMCE. STRICTLY DO NOT WRAP WITH '''html ''' 
+  Include sections:
+<h1>${month} ${year} Business Report</h1>
 
-Generate a detailed monthly report in HTML suitable for TinyMCE. Include sections:
-1. <h1>${month} ${year} Business Report</h1>
-2. 🧐 Quick Overview (from monthly_data)
-    - Display table with columns: Metric, Value.
-    - In the same table with rows: Total Clients, New Clients, Returning Clients, Average Ticket, Total Revenue, Personal Earnings, Date Range
-    - **After the table**, write a short summary paragraph (2–3 sentences) that naturally interprets these metrics.
-      Example style:
-      "<strong>${month}</strong> was a strong month for ${userName} — [X] total clients with [Y]% new bookings. 
-      Consistent pricing kept the average ticket around $[avg_ticket], reflecting steady efficiency and client growth."
-3. 💼 Service Breakdown (from service_bookings, instruction: sort rows by # of bookings)
-    - columns: Service, # of bookings, % of total, Est. Revenue, Avg/Booking
-    - final row: total
-    one sentence summary of the table
-4. 💰 Earnings Summary
-    - columns: Week, Total Revenue, Personal Earnings (approx.)
-    - final row: Total Month
-    one sentence summary of the table
-5. 📣 Marketing Funnels (from marketing_funnels, instruction: sort rows by new clients)
-    - columns: Source, New Clients, Returning, Total, Retention, Avg Ticket
-    Highlights: (pinpoint highlights in table)
-6. 👑 Top Clients (from top_clients)
-    - Rank (give emojis to top 3), Client, Total Paid, Visits, Notes
-    (short summary of table - highlight revenue of top clients, percentage of total)
-7. ↻ Frequency Highlights (from top_clients)
-    - columns: Client, Visits, Total Paid, Notes
-    (short summary of table)
-7. 📊 Weekly Performance Snapshot
-8. ✨ Key Takeaways (use emojis beside each sentence)
-    - [total client summary]
-    - [approx. take home]
-    - [best marketing funnel]
-    - [average ticket comparison]
-    - [any other notable marketing funnel]
-    - [any weekly records or revenue comparisons]
-    - [number of multi visit clients]
-    - [any other cool insights you can provide]
+<h2>🧐 Quick Overview</h2>
+<table>
+  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Total Clients</td><td>${summary.new_clients + summary.returning_clients}</td></tr>
+    <tr><td>New Clients</td><td>${summary.new_clients || 0}</td></tr>
+    <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
+    <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
+    <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
+    <tr><td>Personal Earnings</td><td>$${(totalRevenue * dataset.commission_rate).toFixed(2)}</td></tr>
+    <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
+  </tbody>
+</table>
+<p><strong>${month}</strong> was a strong month for ${userName} — ${summary.total_clients || 0} total clients with ${(summary.new_clients && summary.total_clients) ? ((summary.new_clients / summary.total_clients) * 100).toFixed(1) : 0}% new bookings. Consistent pricing kept the average ticket around $${avgTicket.toFixed(2)}, reflecting steady efficiency and client growth. 💪</p>
 
-Use <h2>/<h3> for headings, <p> for text, <ul><li> for lists, <table> for tables. 
-If any section has no data, write: "No data available for this section." Output only HTML body, no triple backticks.
+<h2>💼 Service Breakdown</h2>
+${
+  services.length
+    ? `<table>
+         <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
+         <tbody>
+           ${services
+             .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
+             .map(
+               (s: any) =>
+                 `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.total_revenue || 0).toFixed(2)}</td><td>$${(s.total_revenue / s.bookings || 0).toFixed(2)}</td></tr>`
+             )
+             .join('')}
+           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>--</td></tr>
+         </tbody>
+       </table>
+       <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing strong client demand.</p>`
+    : `<p>No data available for this section.</p>`
+}
+
+<h2>💰 Earnings Summary</h2>
+${
+  weeklyRows.length
+    ? `<table>
+         <thead><tr><th>Week</th><th>Total Revenue</th><th>Personal Earnings</th></tr></thead>
+         <tbody>
+           ${weeklyRows
+             .map(
+               (w: any) => `<tr>
+                               <td>Week ${w.week_number}</td>
+                               <td>$${(w.total_revenue || 0).toFixed(2)}</td>
+                               <td>$${((w.total_revenue || 0) * (dataset.commission_rate || 0)).toFixed(2)}</td>
+                             </tr>`
+             )
+             .join('')}
+           <tr>
+             <td><strong>Total Month</strong></td>
+             <td>$${totalWeeklyRevenue.toFixed(2)}</td>
+             <td>$${(totalWeeklyRevenue * dataset.commission_rate).toFixed(2)}</td>
+           </tr>
+         </tbody>
+       </table>
+       <p>💵 Personal earnings are calculated based on ${dataset.commission_rate || 0}% commission on weekly revenues.</p>`
+    : `<p>No data available for this section.</p>`
+}
+
+<h2>📣 Marketing Funnels</h2>
+${
+  funnels.length
+    ? `<table>
+         <thead><tr><th>Source</th><th>New Clients</th><th>Returning</th><th>Total</th><th>Retention</th><th>Avg Ticket</th></tr></thead>
+         <tbody>
+           ${funnels
+             .filter((f: any) => f.funnel_name !== 'Returning Client')
+             .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
+             .map(
+               (f: any) => `<tr>
+                               <td>${f.funnel_name}</td>
+                               <td>${f.new_clients || 0}</td>
+                               <td>${f.returning_clients || 0}</td>
+                               <td>${(f.new_clients || 0) + (f.returning_clients || 0)}</td>
+                               <td>${f.retention_rate ? f.retention_rate.toFixed(1) + '%' : '--'}</td>
+                               <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
+                             </tr>`
+             )
+             .join('')}
+         </tbody>
+       </table>
+       <p>🌟 Top funnel: <strong>${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.funnel_name || 'N/A'}</strong> drove the most new clients this month.</p>`
+    : `<p>No data available for this section.</p>`
+}
+
+<h2>👑 Top Clients</h2>
+${
+  topClients.length
+    ? `<table>
+         <thead><tr><th>Rank</th><th>Client</th><th>Total Paid</th><th>Visits</th><th>Notes</th></tr></thead>
+         <tbody>
+           ${topClients
+             .slice(0, 5)
+             .map((c: any, i: number) => {
+               const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''
+               return `<tr>
+                         <td>${medal || i + 1}</td>
+                         <td>${c.client_name}</td>
+                         <td>$${(c.total_paid || 0).toFixed(2)}</td>
+                         <td>${c.visits || 0}</td>
+                         <td>${c.notes || ''}</td>
+                       </tr>`
+             })
+             .join('')}
+         </tbody>
+       </table>
+       <p>💎 Top clients contributed significantly to total revenue, showing strong loyalty and repeat visits.</p>`
+    : `<p>No data available for this section.</p>`
+}
+
+<h2>↻ Frequency Highlights</h2>
+${
+  topClients.length
+    ? `<table>
+         <thead><tr><th>Client</th><th>Visits</th><th>Total Paid</th><th>Notes</th></tr></thead>
+         <tbody>
+           ${topClients
+             .sort((a: any, b: any) => (b.visits || 0) - (a.visits || 0))
+             .slice(0, 5)
+             .map(
+               (c: any) => `<tr>
+                               <td>${c.client_name}</td>
+                               <td>${c.visits || 0}</td>
+                               <td>$${(c.total_paid || 0).toFixed(2)}</td>
+                               <td>${c.notes || ''}</td>
+                             </tr>`
+             )
+             .join('')}
+         </tbody>
+       </table>
+       <p>🔁 Frequent visitors highlight strong client retention and satisfaction.</p>`
+    : `<p>No data available for this section.</p>`
+}
+
+<h2>📊 Weekly Performance Snapshot</h2>
+${
+  weeklyRows.length
+    ? (() => {
+        const consistentTicket = Math.min(...weeklyAvgTickets)
+        return `
+          <table>
+            <thead><tr><th>Week</th><th>Revenue</th><th>Clients</th><th>Avg Ticket</th></tr></thead>
+            <tbody>
+              ${weeklyRows
+                .map(
+                  (w: any) => `<tr>
+                                  <td>Week ${w.week_number}</td>
+                                  <td>$${(w.total_revenue || 0).toFixed(2)}</td>
+                                  <td>${w.num_appointments || 0}</td>
+                                  <td>$${w.num_appointments ? ((w.total_revenue || 0) / w.num_appointments).toFixed(2) : '0.00'}</td>
+                                </tr>`
+                )
+                .join('')}
+              <tr>
+                <td><strong>Total</strong></td>
+                <td>$${totalWeeklyRevenue.toFixed(2)}</td>
+                <td>${totalClients}</td>
+                <td>$${(totalClients ? (totalWeeklyRevenue / totalClients).toFixed(2) : '0.00')}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>📈 Best Week: Week ${bestWeek.week_number} — $${bestWeek.total_revenue.toFixed(2)} revenue with ${bestWeek.num_appointments} clients and $${(bestWeek.total_revenue / bestWeek.num_appointments).toFixed(2)} average ticket</p>
+          <p>📉 Lightest Week: Week ${worstWeek.week_number} — $${worstWeek.total_revenue.toFixed(2)} revenue with ${worstWeek.num_appointments} clients</p>
+          <p>💰 Average Weekly Revenue: $${avgWeeklyRevenue.toFixed(2)}</p>
+          <p>⚡ Premium ticket consistency: Lowest weekly average ticket was $${consistentTicket.toFixed(2)} — shows overall pricing stability</p>
+        `
+      })()
+    : `<p>No weekly breakdown available for this month.</p>`
+}
+
+<h2>✨ Key Takeaways</h2>
+<ul>
+  <li>👥 Total Clients: ${summary.total_clients || 0} — strong base of loyal and new clients.</li>
+  <li>💵 Approx. Take Home: $${personalEarnings.toFixed(2)} net profit.</li>
+  <li>🎯 Best Marketing Funnel: ${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.funnel_name || 'N/A'} performed best for new leads.</li>
+  <li>💳 Average Ticket: $${avgTicket.toFixed(2)} showing stable revenue per client.</li>
+  <li>💈 Multi-visit Clients: ${topClients.filter((c:any)=>(c.visits||0)>1).length} returned more than once — great loyalty!</li>
+  <li>🚀 Keep growing by leveraging top-performing services and funnels next month!</li>
+</ul>
 `
+}

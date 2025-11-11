@@ -95,6 +95,7 @@ export async function GET(req: Request) {
 
     // 🧮 Monthly summary
     if (type.startsWith('monthly')) {
+      // Fetch summary from monthly_data
       const { data, error } = await supabase
         .from('monthly_data')
         .select('*')
@@ -110,7 +111,50 @@ export async function GET(req: Request) {
         start_date: firstDayOfMonth.toISOString().split('T')[0],
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
+
+      // Also generate weekly_rows
+      const weeklyRows: WeeklyRow[] = []
+      let weekNumber = 1
+      let weekStart = new Date(firstDayOfMonth)
+      const end = new Date(lastDayOfMonth)
+
+      while (weekStart <= end) {
+        const weekEnd = new Date(weekStart)
+        weekEnd.setDate(weekEnd.getDate() + 6)
+        if (weekEnd > end) weekEnd.setDate(end.getDate())
+
+        const weekDaily = dailyPoints.filter(
+          (d) => new Date(d.date) >= weekStart && new Date(d.date) <= weekEnd
+        )
+
+        if (weekDaily.length > 0) {
+          const total_revenue = weekDaily.reduce((sum, d) => sum + (d.total_revenue || 0), 0)
+          const num_appointments = weekDaily.reduce((sum, d) => sum + (d.num_appointments || 0), 0)
+          const new_clients = weekDaily.reduce((sum, d) => sum + (d.new_clients || 0), 0)
+          const returning_clients = weekDaily.reduce((sum, d) => sum + (d.returning_clients || 0), 0)
+
+          weeklyRows.push({
+            week_number: weekNumber,
+            start_date: weekStart.toISOString().split('T')[0],
+            end_date: weekEnd.toISOString().split('T')[0],
+            total_revenue,
+            tips: 0,
+            final_revenue: total_revenue,
+            expenses: 0,
+            num_appointments,
+            new_clients,
+            returning_clients,
+          })
+        }
+
+        weekStart.setDate(weekStart.getDate() + 7)
+        weekNumber += 1
+      }
+
+      weekly_rows = weeklyRows
     }
+
+
 
     // 🧮 Weekly summary (supports week_number)
     else if (type.startsWith('weekly')) {

@@ -1,6 +1,7 @@
 export const weeklyCommissionPrompt = (dataset: any, userName: string, month: string, year: number) => `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional on commission named ${userName}.
-Be a little fun and use some emojis, especially in section headers. Keep tone encouraging but analytical. Also no html with 3 backticks at top.
+Be a little fun and use some emojis, especially in section headers. Keep tone encouraging but analytical. 
+Important: Also do not wrap with ''' html or 3 backticks at top and bottom.
 
 You are given a JSON dataset that includes:
 - summary: weekly metrics (includes totals, start_date, end_date, averages, final_revenue)
@@ -16,7 +17,7 @@ ${JSON.stringify(dataset, null, 2)}
 
 Generate a detailed weekly report in **HTML** suitable for TinyMCE.
 Fill in [] with the correct data from the dataset (do not invent values). 
-- Personal earnings = (summary.total_revenue * commission_rate / 100) + tips
+- Personal earnings = (summary.total_revenue * commission_rate) + tips
 - Average Ticket: if missing, calculate as personal earnings / num_appointments
 
 Include sections:
@@ -24,11 +25,11 @@ Include sections:
 1. <h1>Weekly Report - [summary.start_date] → [summary.end_date] (${year})</h1>
 
 2. <h2>Weekly Summary 💰</h2>
-   - Total Clients: [summary.num_appointments]
+   - Total Clients: [summary.new_clients + summary.returning_clients]
    - New Clients: [summary.new_clients] | Returning: [summary.returning_clients]
    - Gross Revenue ≈ [$summary.total_revenue]
    - Average Ticket: [$summary.avg_ticket] (or calculate as final_revenue / num_appointments)
-   - Personal Earnings ≈ [$summary.total_revenue * commission_rate / 100]
+   - Personal Earnings ≈ [$summary.total_revenue * commission_rate]
 
 3. <h2>Highlights & Notes 📝</h2>
    <ul>

@@ -6,7 +6,8 @@ import { supabase } from '@/utils/supabaseClient'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
-import AdminExpensesEditor from '@/components/AdminComponents/AdminExpensesEditor'
+import ExpensesViewer from '@/components/ExpensesViewer'
+import AdminRecurringExpenses from '@/components/AdminComponents/AdminRecurringExpenses'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CURRENT_YEAR = new Date().getFullYear()
@@ -61,6 +62,7 @@ export default function UserExpensesPage() {
   const fetchData = async () => {
     if (!user) return
     try {
+      // Monthly expense
       const { data: expenseData, error: expenseError } = await supabase
         .from('monthly_data')
         .select('expenses')
@@ -68,8 +70,48 @@ export default function UserExpensesPage() {
         .eq('month', selectedMonth)
         .eq('year', selectedYear)
         .maybeSingle()
-      if (!expenseError) setCurrentExpense(expenseData?.expenses || 0)
+      let totalExpense = expenseData?.expenses || 0
 
+      // Add recurring expenses due this month
+      const { data: recurringData, error: recurringError } = await supabase
+        .from('recurring_expenses')
+        .select('*')
+        .eq('user_id', user.id)
+      if (!recurringError && recurringData) {
+        const monthIndex = MONTHS.indexOf(selectedMonth)
+        const now = new Date(selectedYear, monthIndex, 1)
+        recurringData.forEach((rec: any) => {
+          const start = new Date(rec.start_date)
+          const end = rec.end_date ? new Date(rec.end_date) : null
+          if (now >= start && (!end || now <= end)) {
+            switch (rec.frequency) {
+              case 'once':
+                const expDate = new Date(rec.start_date)
+                if (expDate.getMonth() === monthIndex && expDate.getFullYear() === selectedYear) totalExpense += rec.amount
+                break
+              case 'weekly':
+                const daysOfWeek = rec.weekly_days || []
+                const daysInMonth = new Date(selectedYear, monthIndex + 1, 0).getDate()
+                for (let d = 1; d <= daysInMonth; d++) {
+                  const date = new Date(selectedYear, monthIndex, d)
+                  const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]
+                  if (daysOfWeek.includes(dayName)) totalExpense += rec.amount
+                }
+                break
+              case 'monthly':
+                if (rec.monthly_day && rec.monthly_day <= new Date(selectedYear, monthIndex + 1, 0).getDate()) totalExpense += rec.amount
+                break
+              case 'yearly':
+                if (rec.yearly_month === monthIndex && rec.yearly_day <= new Date(selectedYear, monthIndex + 1, 0).getDate()) totalExpense += rec.amount
+                break
+            }
+          }
+        })
+      }
+
+      setCurrentExpense(totalExpense)
+
+      // Receipts
       const { data: receiptData, error: receiptError } = await supabase
         .from('monthly_receipts')
         .select('id,image_url,label')
@@ -88,6 +130,7 @@ export default function UserExpensesPage() {
         )
         setReceipts(urls.filter(r => r.url))
       }
+
     } catch (err) {
       console.error('Error fetching data:', err)
       toast.error('Failed to fetch expenses or receipts')
@@ -129,7 +172,7 @@ export default function UserExpensesPage() {
         <motion.div variants={fadeInUp} className="flex flex-wrap justify-between items-center gap-4 mb-6">
           <div>
             <h1 className="font-bold bg-gradient-to-r from-amber-200 to-lime-400 bg-clip-text text-transparent text-2xl animate-gradient">Monthly Expenses</h1>
-            <p className="text-xs text-[#bdbdbd]">Track your expenses and receipts per month.</p>
+            <p className="text-xs text-[#bdbdbd]">Track your one-off and recurring expenses per month.</p>
           </div>
         </motion.div>
 
@@ -158,10 +201,13 @@ export default function UserExpensesPage() {
           <p className="text-white font-semibold text-lg">Current Total: <span className="text-lime-300 font-bold">${currentExpense.toFixed(2)}</span></p>
         </motion.div>
 
-        {/* Expenses Editor */}
-        <motion.div variants={fadeInUp} className="grid gap-6">
+        {/* Expenses + Recurring Editors */}
+        <motion.div variants={fadeInUp} className="grid gap-6 md:grid-cols-2">
           <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6">
-            <AdminExpensesEditor barberId={user.id} month={selectedMonth} year={selectedYear} onUpdate={fetchData} />
+            <ExpensesViewer barberId={user.id} month={selectedMonth} year={selectedYear.toString()} onUpdate={fetchData} />
+          </div>
+          <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6">
+            <AdminRecurringExpenses barberId={user.id} month={selectedMonth} year={selectedYear} onUpdate={fetchData} />
           </div>
         </motion.div>
 
