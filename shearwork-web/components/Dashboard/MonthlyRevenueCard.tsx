@@ -59,7 +59,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
         // Fetch current month totals
         const { data: currentData, error: currentError } = await supabase
           .from('monthly_data')
-          .select('total_revenue, tips')
+          .select('final_revenue, tips')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
           .eq('year', currentYear)
@@ -68,7 +68,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
 
         let finalRevenue = null
         if (currentData) {
-          const total = currentData.total_revenue ?? 0
+          const total = currentData.final_revenue ?? 0
           const tips = currentData.tips ?? 0
           finalRevenue =
             barberType === 'commission' && commissionRate !== null

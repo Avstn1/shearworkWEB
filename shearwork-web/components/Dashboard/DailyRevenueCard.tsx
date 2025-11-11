@@ -12,17 +12,13 @@ interface DailyRevenueCardProps {
 export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueCardProps) {
   const [revenue, setRevenue] = useState<number | null>(null)
   const [prevRevenue, setPrevRevenue] = useState<number | null>(null)
+  const [prevDataDate, setPrevDataDate] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [barberType, setBarberType] = useState<'rental' | 'commission' | undefined>()
   const [commissionRate, setCommissionRate] = useState<number | null>(null)
   const { label } = useBarberLabel(barberType)
 
   const todayStr = selectedDate ?? new Date().toISOString().slice(0, 10)
-  const yesterdayStr = (() => {
-    const d = new Date(todayStr)
-    d.setDate(d.getDate() - 1)
-    return d.toISOString().slice(0, 10)
-  })()
 
   useEffect(() => {
     if (!userId) return
@@ -56,13 +52,13 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
         // Today
         const { data: todayData } = await supabase
           .from('daily_data')
-          .select('total_revenue, tips')
+          .select('final_revenue, tips')
           .eq('user_id', userId)
           .eq('date', todayStr)
           .maybeSingle()
 
         if (todayData) {
-          const total = todayData.total_revenue ?? 0
+          const total = todayData.final_revenue ?? 0
           const tips = todayData.tips ?? 0
           const final =
             barberType === 'commission' && commissionRate !== null
@@ -72,22 +68,30 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
         }
 
         // Yesterday
-        const { data: prevData } = await supabase
+        const { data: prevData, error } = await supabase
           .from('daily_data')
-          .select('total_revenue, tips')
+          .select('final_revenue, tips, date')
           .eq('user_id', userId)
-          .eq('date', yesterdayStr)
+          .lt('date', todayStr)
+          .order('date', { ascending: false })
+          .limit(1)
           .maybeSingle()
 
+        // ✅ Guard against null
+        setPrevDataDate(prevData?.date ?? null)
+
         if (prevData) {
-          const total = prevData.total_revenue ?? 0
+          const total = prevData.final_revenue ?? 0
           const tips = prevData.tips ?? 0
           const prevFinal =
             barberType === 'commission' && commissionRate !== null
               ? total * commissionRate + tips
               : total
           setPrevRevenue(prevFinal)
+        } else {
+          setPrevRevenue(null)
         }
+
       } catch (err) {
         console.error(err)
       } finally {
@@ -96,7 +100,7 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
     }
 
     fetchRevenue()
-  }, [userId, todayStr, yesterdayStr, barberType, commissionRate])
+  }, [userId, todayStr, barberType, commissionRate])
 
   const formatCurrency = (amount: number) =>
     `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -118,7 +122,7 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
       <div className="mt-auto">
         {change !== null ? (
           <p className={`text-sm font-semibold ${change > 0 ? 'text-green-400' : change < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-gray-400">(vs. yesterday)</span>
+            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-gray-400">(vs. last record: {prevDataDate})</span>
           </p>
         ) : <p className="text-sm text-gray-500">—</p>}
       </div>
