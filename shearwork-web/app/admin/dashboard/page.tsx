@@ -86,10 +86,26 @@ export default function AdminDashboardPage() {
       toast.loading('Generating report...')
 
       // ✅ Added week_number param
-      const url = `/api/openai/generate?type=${type}&user_id=${selectedBarber.user_id}&month=${selectedMonth}&year=${reportData.year}&week_number=${reportData.week_number}`;
-      const response = await fetch(url)
+      const url = `/api/openai/generate`
+      const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type,
+          user_id: selectedBarber.user_id,
+          month: selectedMonth,
+          year: reportData.year,
+          week_number: reportData.week_number,
+        }),
+      })
+
       const data = await response.json()
       console.log('Raw response:', data)
+      
       toast.dismiss()
 
       if (!response.ok || !data.success) throw new Error(data.error || 'Failed to generate report.')

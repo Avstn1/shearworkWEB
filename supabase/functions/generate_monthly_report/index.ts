@@ -16,12 +16,13 @@ const supabase = createClient(
 // Get id if the role is a Barber
 const { data: barberData, error: barberError } = await supabase
   .from('profiles')
-  .select('user_id') 
-  .eq('role', 'Barber')          
+  .select('user_id, full_name') 
+  .eq('role', 'Barber')  
+  .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // Gavin Cruz's user_id for testing        
   .limit(2)
+
 if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
-
 
 // This is going to run every 12am on the first day of the month, effectively generating the report for the previous month
 Deno.serve(async (req) => {
@@ -33,10 +34,28 @@ Deno.serve(async (req) => {
     let reportData = {
       week_number: null,
     }
+
+    console.log(`Generating report for ${selectedMonth} ${selectedYear}`)
     
-    for (const barber of barberData || []) {
-      const url = `/api/openai/generate?type=${type}&user_id=${barber.user_id}&month=${selectedMonth}&year=${selectedYear}&week_number=${reportData.week_number}`;
-      const response = await fetch(url)
+    for (const barber of barberData) {
+      const url = `http://192.168.56.1:3000/api/openai/generate`
+      const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type,
+          user_id: barber.user_id,
+          month: selectedMonth,
+          year: selectedYear,
+          week_number: reportData.week_number,
+        }),
+      })
+
       const data = await response.json()
       console.log('Raw response:', data)
     }
