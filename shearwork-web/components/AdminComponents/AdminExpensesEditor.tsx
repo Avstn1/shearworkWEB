@@ -14,13 +14,14 @@ interface AdminExpensesEditorProps {
 
 export default function AdminExpensesEditor({ barberId, month, year, onUpdate }: AdminExpensesEditorProps) {
   const [expenseAmount, setExpenseAmount] = useState<string>('')
+  const [expenseLabel, setExpenseLabel] = useState<string>('') // new label for one-time expense
   const [action, setAction] = useState<'add' | 'replace'>('add')
   const [loading, setLoading] = useState(false)
   const [currentTotal, setCurrentTotal] = useState<number>(0)
   const [uploadingFile, setUploadingFile] = useState<File | null>(null)
   const [receiptLabel, setReceiptLabel] = useState<string>('')
 
-  // Fetch current total
+  // Fetch current total for display purposes only
   useEffect(() => {
     const fetchCurrentTotal = async () => {
       if (!barberId) return
@@ -36,6 +37,7 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
     fetchCurrentTotal()
   }, [barberId, month, year])
 
+  // Compute what the new total would be locally (for display)
   const newTotal =
     expenseAmount === ''
       ? currentTotal
@@ -43,41 +45,42 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
       ? currentTotal + parseFloat(expenseAmount)
       : parseFloat(expenseAmount)
 
-  // Save expense
+  // Save one-time expense
   const handleSaveExpense = async () => {
-    if (expenseAmount === '') return toast.error('Enter an expense amount')
+    if (!expenseAmount.trim()) return toast.error('Enter an expense amount')
+    if (!expenseLabel.trim()) return toast.error('Enter a label for this expense')
+
     setLoading(true)
     try {
-      const { error } = await supabase.from('monthly_data').upsert(
-        {
-          user_id: barberId,
-          month,
-          year,
-          expenses: newTotal,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,month,year' }
-      )
-      if (error) throw error
-      toast.success(`Expenses ${action === 'add' ? 'updated' : 'saved'}!`)
-      setCurrentTotal(newTotal)
+      // Only insert into one_time_expenses
+      const { error: insertError } = await supabase.from('one_time_expenses').insert({
+        user_id: barberId, // must exist in profiles table
+        month,
+        year,
+        label: expenseLabel.trim(),
+        amount: parseFloat(expenseAmount),
+        created_at: new Date().toISOString()
+      })
+      if (insertError) throw insertError
+
+      toast.success('Expense added!')
       setExpenseAmount('')
+      setExpenseLabel('')
       onUpdate?.()
     } catch (err) {
       console.error(err)
-      toast.error('Failed to save expenses')
+      toast.error('Failed to save expense')
     }
     setLoading(false)
   }
 
-  // Handle file select
+  // File upload handlers
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
     setUploadingFile(e.target.files[0])
     setReceiptLabel('')
   }
 
-  // Confirm upload
   const handleUploadConfirm = async () => {
     if (!uploadingFile) return
     const fileName = `${barberId}/${year}-${month}-${Date.now()}-${uploadingFile.name}`
@@ -110,7 +113,7 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Expense Input + Toggle */}
+      {/* Expense Input + Label + Toggle */}
       <div className="flex flex-wrap gap-3 items-center">
         <input
           type="text"
@@ -118,24 +121,28 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
           value={expenseAmount}
           onChange={e => {
             const value = e.target.value
-            // Allow empty, numbers, and up to 2 decimals
             if (/^\d*\.?\d{0,2}$/.test(value)) setExpenseAmount(value)
           }}
           placeholder="Enter expense amount"
           className="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 
-                     focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all min-w-[180px]
-                     appearance-none"
+                     focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all min-w-[120px]"
+        />
+        <input
+          type="text"
+          value={expenseLabel}
+          onChange={e => setExpenseLabel(e.target.value)}
+          placeholder="Label for expense"
+          className="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 
+                     focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all min-w-[120px]"
         />
 
-        {/* Modern Toggle */}
+        {/* Toggle Add / Replace */}
         <div className="relative flex bg-white/10 rounded-lg p-1 text-xs font-semibold overflow-hidden border border-white/10 w-32">
           <motion.div
             layout
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             className={`absolute top-1 bottom-1 left-1 w-1/2 rounded-md ${
-              action === 'add'
-                ? 'translate-x-full bg-lime-400/30'
-                : 'translate-x-0 bg-amber-400/30'
+              action === 'add' ? 'translate-x-full bg-lime-400/30' : 'translate-x-0 bg-amber-400/30'
             }`}
           />
           <button
@@ -168,16 +175,14 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
         </motion.button>
       </div>
 
-      {/* Live Total */}
+      {/* Live Totals */}
       <div className="text-white text-sm">
-        <p>
-          Current Total:{' '}
-          <span className="text-lime-300 font-bold">${currentTotal.toFixed(2)}</span>
-        </p>
         {expenseAmount !== '' && (
           <p>
             New Total:{' '}
-            <span className="text-amber-300 font-bold">${newTotal.toFixed(2)}</span>
+            <span className="text-amber-300 font-bold">
+              ${newTotal.toFixed(2)}
+            </span>
           </p>
         )}
       </div>
