@@ -7,7 +7,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const topClients = dataset.top_clients || []
   const weeklyRows = dataset.weekly_rows || []
   const totalRevenue = summary.total_revenue || 0
-  const personalEarnings = summary.personal_earnings || 0
+  const personalEarnings = totalRevenue * summary.commission_rate || 0
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
       ? (summary.final_revenue || 0) / summary.num_appointments
@@ -42,7 +42,8 @@ Use data from summary, services, funnels, top_clients, and weekly_rows to calcul
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
-  Generate a detailed monthly report in HTML suitable for TinyMCE. DO NOT WRAP WITH '''html ''' Include sections:
+  Generate a detailed monthly report in HTML suitable for TinyMCE. STRICTLY DO NOT WRAP WITH '''html ''' 
+  Include sections:
 <h1>${month} ${year} Business Report</h1>
 
 <h2>🧐 Quick Overview</h2>
@@ -54,7 +55,7 @@ ${JSON.stringify(dataset, null, 2)}
     <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
-    <tr><td>Personal Earnings</td><td>$${personalEarnings.toFixed(2)}</td></tr>
+    <tr><td>Personal Earnings</td><td>$${(totalRevenue * dataset.commission_rate).toFixed(2)}</td></tr>
     <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
   </tbody>
 </table>
@@ -70,10 +71,10 @@ ${
              .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
              .map(
                (s: any) =>
-                 `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.estimated_revenue || 0).toFixed(2)}</td><td>$${(s.avg_booking || 0).toFixed(2)}</td></tr>`
+                 `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.total_revenue || 0).toFixed(2)}</td><td>$${(s.total_revenue / s.bookings || 0).toFixed(2)}</td></tr>`
              )
              .join('')}
-           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.estimated_revenue||0),0).toFixed(2)}</td><td>--</td></tr>
+           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>--</td></tr>
          </tbody>
        </table>
        <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing strong client demand.</p>`
@@ -91,14 +92,14 @@ ${
                (w: any) => `<tr>
                                <td>Week ${w.week_number}</td>
                                <td>$${(w.total_revenue || 0).toFixed(2)}</td>
-                               <td>$${((w.total_revenue || 0) * (dataset.commission_rate || 0) / 100).toFixed(2)}</td>
+                               <td>$${((w.total_revenue || 0) * (dataset.commission_rate || 0)).toFixed(2)}</td>
                              </tr>`
              )
              .join('')}
            <tr>
              <td><strong>Total Month</strong></td>
              <td>$${totalWeeklyRevenue.toFixed(2)}</td>
-             <td>$${personalEarnings.toFixed(2)}</td>
+             <td>$${(totalWeeklyRevenue * dataset.commission_rate).toFixed(2)}</td>
            </tr>
          </tbody>
        </table>
