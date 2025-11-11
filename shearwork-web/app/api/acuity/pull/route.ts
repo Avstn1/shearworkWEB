@@ -167,7 +167,7 @@ export async function GET(request: Request) {
   const monthlyAgg: Record<string, { revenue: number; count: number }> = {}
   const dailyAgg: Record<string, { revenue: number; count: number }> = {}
   const weeklyAgg: Record<string, { meta: any; revenue: number; tips: number; expenses: number; numAppointments: number; clientVisitMap: Record<string, number> }> = {}
-  const serviceCounts: Record<string, { month: string; year: number; count: number }> = {}
+  const serviceCounts: Record<string, { month: string; year: number; count: number; price: number }> = {}
   const topClientsMap: Record<string, Record<string, any>> = {}
   const funnelMap: Record<string, Record<string, any>> = {}
   const monthlyClientMap: Record<string, Record<string, number>> = {}
@@ -229,7 +229,7 @@ export async function GET(request: Request) {
 
     // 4️⃣ Service bookings
     const svcKey = `${appt.type || 'Unknown'}||${monthName}||${year}`
-    if (!serviceCounts[svcKey]) serviceCounts[svcKey] = { month: monthName, year, count: 0 }
+    if (!serviceCounts[svcKey]) serviceCounts[svcKey] = { month: monthName, year, count: 0, price: appt.price }
     serviceCounts[svcKey].count++
 
     // 5️⃣ Top clients
@@ -449,7 +449,7 @@ for (const w of Object.values(weeklyAgg)) {
   // Service bookings
   const serviceUpserts = Object.entries(serviceCounts).map(([key, val]) => {
     const [service, month, yearStr] = key.split('||')
-    return { user_id: user.id, service_name: service, bookings: val.count, report_month: month, report_year: parseInt(yearStr), created_at: new Date().toISOString() }
+    return { user_id: user.id, service_name: service, bookings: val.count, price: val.price, report_month: month, report_year: parseInt(yearStr), created_at: new Date().toISOString() }
   })
   await supabase.from('service_bookings').upsert(serviceUpserts, { onConflict: 'user_id,service_name,report_month,report_year' })
 

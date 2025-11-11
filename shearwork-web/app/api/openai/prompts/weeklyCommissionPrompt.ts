@@ -17,7 +17,7 @@ ${JSON.stringify(dataset, null, 2)}
 
 Generate a detailed weekly report in **HTML** suitable for TinyMCE.
 Fill in [] with the correct data from the dataset (do not invent values). 
-- Personal earnings = (summary.total_revenue * commission_rate / 100) + tips
+- Personal earnings = (summary.total_revenue * commission_rate) + tips
 - Average Ticket: if missing, calculate as personal earnings / num_appointments
 
 Include sections:
@@ -29,7 +29,7 @@ Include sections:
    - New Clients: [summary.new_clients] | Returning: [summary.returning_clients]
    - Gross Revenue ≈ [$summary.total_revenue]
    - Average Ticket: [$summary.avg_ticket] (or calculate as final_revenue / num_appointments)
-   - Personal Earnings ≈ [$summary.total_revenue * commission_rate / 100]
+   - Personal Earnings ≈ [$summary.total_revenue * commission_rate]
 
 3. <h2>Highlights & Notes 📝</h2>
    <ul>
