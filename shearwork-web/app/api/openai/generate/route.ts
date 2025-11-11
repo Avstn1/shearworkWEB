@@ -30,30 +30,30 @@ interface WeeklyRow {
   [key: string]: any
 }
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   try {
     const supabase = await createSupabaseServerClient()
-    const url = new URL(req.url)
+    const authHeader = req.headers.get('authorization')
 
-    const typeParam = url.searchParams.get('type') || 'monthly/rental'
+    if (!authHeader || authHeader !== `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const body = await req.json()
+
+    const typeParam = body.type || 'monthly/rental'
     const [type, barber_type] = typeParam.split('/')
-    const user_id = url.searchParams.get('user_id')
+    const user_id = body.user_id
 
     if (!user_id) {
       return NextResponse.json({ success: false, error: 'Missing user_id' }, { status: 400 })
     }
 
-    // ✅ Allow passing any week_number via query param
-    const weekNumberParam = url.searchParams.get('week_number')
-    const week_number = weekNumberParam ? parseInt(weekNumberParam, 10) : null
+    // ✅ Allow passing any week_number via body
+    const week_number = body.week_number ? Number.parseInt(body.week_number, 10) : null
 
-    let month =
-      url.searchParams.get('month') ||
-      new Date().toLocaleString('default', { month: 'long' })
-    const year = parseInt(
-      url.searchParams.get('year') || String(new Date().getFullYear()),
-      10
-    )
+    let month = body.month || new Date().toLocaleString('default', { month: 'long' })
+    const year = Number.parseInt(body.year || String(new Date().getFullYear()), 10)
 
     // 🧲 Fetch barber’s full name & commission rate
     const { data: userData, error: nameError } = await supabase
