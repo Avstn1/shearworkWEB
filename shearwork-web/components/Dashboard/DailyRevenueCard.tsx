@@ -56,13 +56,13 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
         // Today
         const { data: todayData } = await supabase
           .from('daily_data')
-          .select('total_revenue, tips')
+          .select('final_revenue, tips')
           .eq('user_id', userId)
           .eq('date', todayStr)
           .maybeSingle()
 
         if (todayData) {
-          const total = todayData.total_revenue ?? 0
+          const total = todayData.final_revenue ?? 0
           const tips = todayData.tips ?? 0
           const final =
             barberType === 'commission' && commissionRate !== null
