@@ -94,7 +94,7 @@ Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Fill 
 5. <h2>${snapshotTitle}</h2>
    <ul>
      <li>Total Revenue: $${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0).toFixed(2)}</li>
-     <li>Total Clients: ${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0)}</li>
+     <li>Total Clients: ${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients + w.returning_clients||0),0)}</li>
      <li>New Clients: ${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients||0),0)}</li>
      <li>Returning Clients: ${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.returning_clients||0),0)}</li>
      <li>Average Ticket: $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}</li>
