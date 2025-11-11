@@ -62,7 +62,9 @@ export default function ProfitLossTrendChart({
         const profit = revenue - expenses
 
         // Format date label to show day only (e.g., "Nov 5" or "5")
-        const dateLabel = new Date(d.date).getDate().toString()
+        // const dateLabel = new Date(d.date).getDate().toString()
+
+        const dateLabel = new Date(d.date + 'T00:00:00Z').getUTCDate().toString()
 
         return {
           date: dateLabel,
