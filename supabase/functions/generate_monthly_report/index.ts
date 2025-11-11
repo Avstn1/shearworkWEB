@@ -29,8 +29,11 @@ Deno.serve(async (req) => {
   try {
     // Report generation
     let type = 'monthly/rental'
+
+    // Determine the previous month and year
     let selectedMonth = monthNames[(now.getMonth() - 1) < 0 ? 11 : (now.getMonth() - 1)];
     let selectedYear = selectedMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+    
     let reportData = {
       week_number: null,
     }
@@ -38,7 +41,10 @@ Deno.serve(async (req) => {
     console.log(`Generating report for ${selectedMonth} ${selectedYear}`)
     
     for (const barber of barberData) {
-      const url = `http://192.168.56.1:3000/api/openai/generate`
+      // const localURL = http://192.168.56.1:3000
+      const supabaseURL = Deno.env.get("NEXT_PUBLIC_SUPABASE_URL")
+
+      const url = `${supabaseURL}/api/openai/generate`
       const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
       const response = await fetch(url, {
