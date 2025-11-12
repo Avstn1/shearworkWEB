@@ -86,18 +86,50 @@ ${JSON.stringify(minimalDataset, null, 2)}
     </tr>
     <tr>
       <td>Average Ticket</td>
-      ${minimalDataset.weekly_rows.map((w: any) => `<td>$${w.num_appointments ? (w.final_revenue / w.num_appointments).toFixed(2) : '0.00'}</td>`).join('')}
-      <td>--</td><td>--</td>
+      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${(w.num_appointments?(w.final_revenue/w.num_appointments):0).toFixed(2)}</td>`).join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (()=>{ 
+              const cur = minimalDataset.weekly_rows.at(-1);
+              const prev = minimalDataset.weekly_rows.at(-2);
+              const curAvg = (cur.final_revenue || 0) / (cur.num_appointments || 1);
+              const prevAvg = (prev.final_revenue || 0) / (prev.num_appointments || 1);
+              const delta = curAvg - prevAvg;
+              const pct = ((delta / (prevAvg || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
     </tr>
     <tr>
       <td>Expenses</td>
-      ${minimalDataset.weekly_rows.map((w: any) => `<td>$${(w.expenses || 0).toFixed(2)}</td>`).join('')}
-      <td>--</td><td>--</td>
+      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${(w.expenses||0).toFixed(2)}</td>`).join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (()=>{ 
+              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
+              const delta = (cur.expenses||0) - (prev.expenses||0);
+              const pct = ((delta / (prev.expenses || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
     </tr>
     <tr>
       <td>Net Profit</td>
-      ${minimalDataset.weekly_rows.map((w: any) => `<td>$${((w.total_revenue||0)-(w.expenses||0)).toFixed(2)}</td>`).join('')}
-      <td>--</td><td>--</td>
+      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${((w.total_revenue||0)-(w.expenses||0)).toFixed(2)}</td>`).join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (()=>{ 
+              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
+              const curNet = (cur.total_revenue||0)-(cur.expenses||0);
+              const prevNet = (prev.total_revenue||0)-(prev.expenses||0);
+              const delta = curNet - prevNet;
+              const pct = ((delta / (prevNet || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
     </tr>
   </tbody>
 </table>
@@ -108,7 +140,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
   <li>Client Retention: overall ${retentionRate}%, highlight best retention week.</li>
   <li>Average Ticket: monthly avg $${(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}, range from lowest to highest week.</li>
   <li>Service Breakdown: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>
-  <li>Marketing Funnels: ${dataset.marketing_funnels?.filter((f:any)=>f.source!=='Unknown' || f.source!=='Returning Client').map((f:any)=>f.source + ': ' + f.new_clients + ' new clients (' + (f.percentage||0) + '%)').join(', ')||'No data'}</li>
+  <li>Marketing Funnels: ${dataset.marketing_funnels?.filter((f:any)=>f.source!=='Unknown' && f.source!=='Returning Client').map((f:any)=>f.source + ': ' + f.new_clients + ' new clients (' + (f.percentage||0) + '%)').join(', ')||'No data'}</li>
   <li>Day of Week Performance: highlight best performing days for revenue 💈</li>
 </ul>
 
