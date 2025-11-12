@@ -1,3 +1,5 @@
+// EDGE FUNCTION TESTED WITH SUPABASE CRON JOBS. FULLY FUNCTIONAL BUT ONLY FOR GAVIN. ONCE GREENLIT, WILL REMOVE THE USER_ID FILTER.
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -25,11 +27,11 @@ if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
 
 // This is going to run every 12am every second until last Monday of every month, effectively generating the report for the previous week
-// CRON JOB ---- 0 0 1 * * ----
+// CRON JOB ---- 0 0 * * 1 ----
 Deno.serve(async (req) => {
   try {
     const now = new Date();
-    let todaysDate = 10 //now.getDate();
+    let todaysDate = now.getDate();
     let monthIndex = now.getMonth();
     let selectedYear = now.getFullYear()
 

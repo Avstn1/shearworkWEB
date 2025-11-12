@@ -1,3 +1,5 @@
+// EDGE FUNCTION TESTED WITH SUPABASE CRON JOBS. FULLY FUNCTIONAL BUT ONLY FOR GAVIN. ONCE GREENLIT, WILL REMOVE THE USER_ID FILTER.
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -66,7 +68,7 @@ Deno.serve(async (req) => {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-vercel-protection-bypass': BYPASS_TOKEN
+          'x-vercel-protection-bypass': Deno.env.get('BYPASS_TOKEN')
         },
         body: JSON.stringify({
           type: `weekly/${barber.barber_type}`,
