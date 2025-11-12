@@ -24,14 +24,24 @@ const { data: barberData, error: barberError } = await supabase
 if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
 
-// This is going to run every 12am every Monday, effectively generating the report for the previous week
+// This is going to run every 12am every second until last Monday of every month, effectively generating the report for the previous week
 // CRON JOB ---- 0 0 1 * * ----
 Deno.serve(async (req) => {
   try {
-    let prevMonthIndex = now.getMonth() - 1
-    let selectedYear = prevMonthIndex < 0 ? now.getFullYear() - 1 : now.getFullYear()
-    prevMonthIndex = prevMonthIndex < 0 ? 11 : prevMonthIndex
-    let selectedMonth = monthNames[prevMonthIndex]
+    const now = new Date();
+    let todaysDate = 10 //now.getDate();
+    let monthIndex = now.getMonth();
+    let selectedYear = now.getFullYear()
+
+    let mondays_in_month = getMondaysInMonth(monthIndex, selectedYear);
+
+    if (todaysDate == mondays_in_month[0]) {
+      monthIndex = now.getMonth() - 1
+      selectedYear = monthIndex < 0 ? now.getFullYear() - 1 : now.getFullYear()
+      monthIndex = monthIndex < 0 ? 11 : monthIndex
+    }
+
+    let selectedMonth = monthNames[monthIndex]
 
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
 
@@ -40,7 +50,7 @@ Deno.serve(async (req) => {
     // Create an array to hold all responses
 
     for (const barber of barberData) {
-      let type = 'monthly/rental' // change this to be dynamic later
+      let type = `monthly/${barber.barber_type}` 
       
       const response = await fetch(url, {
         method: 'POST',
@@ -71,3 +81,20 @@ Deno.serve(async (req) => {
   }
 })
 
+function getMondaysInMonth(month: number, year: number): Date[] {
+  const mondays: number[] = []
+  const date = new Date(year, month, 1) 
+
+  // Move to first Monday
+  while (date.getDay() !== 1) {
+    date.setDate(date.getDate() + 1)
+  }
+
+  // Collect all Mondays
+  while (date.getMonth() === month) {
+    mondays.push(date.getDate())
+    date.setDate(date.getDate() + 7)
+  }
+
+  return mondays
+}

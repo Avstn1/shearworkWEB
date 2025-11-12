@@ -58,17 +58,6 @@ Deno.serve(async (req) => {
         }),
       })
 
-      // const results: any[] = []
-      // const text = await response.text()
-      // try {
-      //   const data = JSON.parse(text)
-      //   console.log('Raw response:', data)
-      //   results.push(data)
-      // } catch {
-      //   console.error('❌ Not JSON, got:', text)
-      //   results.push({ error: 'Invalid JSON', raw: text })
-      // }
-
       const data = await response.json()
       console.log('Raw response:', data)
     }

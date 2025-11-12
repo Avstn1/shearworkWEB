@@ -1,24 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-function getMondaysInMonth(month: number, year: number): Date[] {
-  const mondays: number[] = []
-  const date = new Date(year, month, 1) 
-
-  // Move to first Monday
-  while (date.getDay() !== 1) {
-    date.setDate(date.getDate() + 1)
-  }
-
-  // Collect all Mondays
-  while (date.getMonth() === month) {
-    mondays.push(date.getDate())
-    date.setDate(date.getDate() + 7)
-  }
-
-  return mondays
-}
-
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -108,3 +90,20 @@ Deno.serve(async (req) => {
   }
 })
 
+function getMondaysInMonth(month: number, year: number): Date[] {
+  const mondays: number[] = []
+  const date = new Date(year, month, 1) 
+
+  // Move to first Monday
+  while (date.getDay() !== 1) {
+    date.setDate(date.getDate() + 1)
+  }
+
+  // Collect all Mondays
+  while (date.getMonth() === month) {
+    mondays.push(date.getDate())
+    date.setDate(date.getDate() + 7)
+  }
+
+  return mondays
+}
