@@ -35,10 +35,9 @@ Deno.serve(async (req) => {
 
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
 
-    const url = `https://shearwork-web-git-cron-jobs-austin-bartolomes-projects.vercel.app/api/openai/generate`
+    const url = `https://shearwork-web.vercel.app/api/openai/generate`
     const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
     // Create an array to hold all responses
-    const results: any[] = []
 
     for (const barber of barberData) {
       let type = 'monthly/rental' // change this to be dynamic later
@@ -59,18 +58,22 @@ Deno.serve(async (req) => {
         }),
       })
 
-      const text = await response.text()
-      try {
-        const data = JSON.parse(text)
-        console.log('Raw response:', data)
-        results.push(data)
-      } catch {
-        console.error('❌ Not JSON, got:', text)
-        results.push({ error: 'Invalid JSON', raw: text })
-      }
+      // const results: any[] = []
+      // const text = await response.text()
+      // try {
+      //   const data = JSON.parse(text)
+      //   console.log('Raw response:', data)
+      //   results.push(data)
+      // } catch {
+      //   console.error('❌ Not JSON, got:', text)
+      //   results.push({ error: 'Invalid JSON', raw: text })
+      // }
+
+      const data = await response.json()
+      console.log('Raw response:', data)
     }
 
-    return new Response(JSON.stringify({ results }), {
+    return new Response(JSON.stringify({ }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
