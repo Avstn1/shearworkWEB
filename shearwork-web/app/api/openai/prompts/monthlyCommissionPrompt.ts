@@ -39,7 +39,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a monthly performance report for a barbershop professional on booth rental named ${userName}.
 Be a little fun and use emojis, especially in section headers and bullet points. Use start_date and end_date from monthly_data to reflect the full date range.
 Use data from summary, services, funnels, top_clients, and weekly_rows to calculate totals and insights. Make sure all totals match the dataset.
-
+Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE.
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
