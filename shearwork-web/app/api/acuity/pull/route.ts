@@ -93,6 +93,90 @@ function getWeekMetaForDate(dateLike: string | Date) {
   }
 }
 
+function getClientKey(appt: any) {
+  const email = (appt.email || '').toLowerCase().trim()
+  const phone = (appt.phone || '').replace(/\D/g, '')
+  const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
+  const rawKey = `${email}|${phone}|${name}`
+  return crypto.createHash('sha256').update(rawKey).digest('hex')
+}
+
+async function isReturningClient(
+  supabase: any,
+  userId: string,
+  email?: string,
+  phone?: string,
+  firstName?: string,
+  lastName?: string
+) {
+  if (!email && !phone && !(firstName && lastName)) return false;
+
+  // Normalize
+  const normEmail = email?.toLowerCase().trim();
+  const normPhone = phone?.replace(/\D/g, '');
+  const normFirst = firstName?.trim().toLowerCase();
+  const normLast = lastName?.trim().toLowerCase();
+
+  let data: any[] = [];
+
+  try {
+    // 1️⃣ Try email first
+    if (normEmail) {
+      const { data: emailData, error } = await supabase
+        .from('acuity_clients')
+        .select('total_appointments')
+        .eq('user_id', userId)
+        .eq('email', normEmail)
+        .limit(1);
+
+      if (error) throw error;
+      if (emailData && emailData.length > 0) {
+        data = emailData;
+      }
+    }
+
+    // 2️⃣ If no email match, try phone
+    if (data.length === 0 && normPhone) {
+      const { data: phoneData, error } = await supabase
+        .from('acuity_clients')
+        .select('total_appointments')
+        .eq('user_id', userId)
+        .eq('phone', normPhone)
+        .limit(1);
+
+      if (error) throw error;
+      if (phoneData && phoneData.length > 0) {
+        data = phoneData;
+      }
+    }
+
+    // 3️⃣ If no email or phone match, try first + last name
+    if (data.length === 0 && normFirst && normLast) {
+      const { data: nameData, error } = await supabase
+        .from('acuity_clients')
+        .select('total_appointments')
+        .eq('user_id', userId)
+        .eq('first_name', normFirst)
+        .eq('last_name', normLast)
+        .limit(1);
+
+      if (error) throw error;
+      if (nameData && nameData.length > 0) {
+        data = nameData;
+      }
+    }
+
+    // No match → new client
+    if (!data || data.length === 0) return false;
+
+    // Returning if total_appointments > 1
+    return data.some((row: any) => row.total_appointments > 1);
+  } catch (err: any) {
+    console.error('Error checking client visits:', err);
+    return false;
+  }
+}
+
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient()
@@ -185,12 +269,10 @@ export async function GET(request: Request) {
     const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
     const email = (appt.email || '').toLowerCase().trim()
     const phone = (appt.phone || '').replace(/\D/g, '')
-
     // Skip entirely if no identifying info
     if (!name && !email && !phone) continue
-
-    const rawKey = `${email}|${phone}|${name}` 
-    const clientKey = crypto.createHash('sha256').update(rawKey).digest('hex')
+    const clientKey = getClientKey(appt)
+    const returning = await isReturningClient(supabase, user.id, email, phone, appt.firstName, appt.lastName)
 
     // 3️⃣ Weekly
     const weekMeta = getWeekMetaForDate(apptDate)
@@ -201,6 +283,9 @@ export async function GET(request: Request) {
     const wEntry = weeklyAgg[weekKey]
     wEntry.revenue += price
     wEntry.numAppointments++
+    
+    if (returning) wEntry.returning++
+    else wEntry.new++
    
     if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
     wEntry.clientVisitMap[clientKey]++
@@ -214,6 +299,8 @@ export async function GET(request: Request) {
     
     monthlyAgg[monthKey].revenue += price
     monthlyAgg[monthKey].count++
+    if (returning) monthlyAgg[monthKey].returning++
+    else monthlyAgg[monthKey].new++
 
     // 2️⃣ Daily
     if (!dailyAgg[dayKey]) dailyAgg[dayKey] = { revenue: 0, count: 0 }
@@ -238,6 +325,7 @@ export async function GET(request: Request) {
 
     // 6️⃣ Marketing funnels (only for the requested month)
     if (!appt.forms || !Array.isArray(appt.forms)) continue
+    if (returning) continue
     for (const form of appt.forms) {
       if (!form.values || !Array.isArray(form.values)) continue
 
