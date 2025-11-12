@@ -278,6 +278,8 @@ export async function GET(request: Request) {
     const clientKey = getClientKey(appt)
     const returning = await isReturningClient(supabase, user.id, email, phone, appt.firstName, appt.lastName)
 
+    console.log(appt);
+
     // 3️⃣ Weekly
     const weekMeta = getWeekMetaForDate(apptDate)
     const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
@@ -317,9 +319,27 @@ export async function GET(request: Request) {
     monthlyClientMap[monthKey][clientKey]++
 
     // 4️⃣ Service bookings
-    const svcKey = `${appt.type || 'Unknown'}||${monthName}||${year}`
-    if (!serviceCounts[svcKey]) serviceCounts[svcKey] = { month: monthName, year, count: 0, price: appt.price }
+    // Make everything lowercase, remove leading/trailing/multiple spaces, capitalize first letters
+    let cleanApptType = `${appt.type}`
+      .toLowerCase()
+      .trim() // No leading/trailing spaces
+      .replace(/\s+/g, ' ') // Single spaces only
+      .replace(/\b\w/g, c => c.toUpperCase()) // Capitalize first letters
+
+    const svcKey = `${cleanApptType || 'Unknown'}||${monthName}||${year}`
+
+    // Always count the original service
+    if (!serviceCounts[svcKey])
+      serviceCounts[svcKey] = { month: monthName, year, count: 0, price: appt.price }
     serviceCounts[svcKey].count++
+
+    // If it includes "haircut", also count it toward "Haircut"
+    if (cleanApptType.toLowerCase().includes('haircut')) {
+      const haircutKey = `Haircut||${monthName}||${year}`
+      if (!serviceCounts[haircutKey])
+        serviceCounts[haircutKey] = { month: monthName, year, count: 0, price: appt.price }
+      serviceCounts[haircutKey].count++
+    }
 
     // 5️⃣ Top clients
     if (!topClientsMap[monthKey]) topClientsMap[monthKey] = {}
@@ -428,115 +448,115 @@ export async function GET(request: Request) {
   // Weekly
   // Instead of filtering out weeks outside the requestedMonth,
   // include any week that *intersects* with the requested month range.
-const weeklyUpserts = Object.values(weeklyAgg)
-  .filter(w => {
-    const weekStart = new Date(w.meta.weekStartISO);
-    const startOfMonth = new Date(`${requestedMonth} 1, ${requestedYear}`);
-    const endOfMonth = new Date(startOfMonth);
-    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
-    endOfMonth.setDate(0);
+  const weeklyUpserts = Object.values(weeklyAgg)
+    .filter(w => {
+      const weekStart = new Date(w.meta.weekStartISO);
+      const startOfMonth = new Date(`${requestedMonth} 1, ${requestedYear}`);
+      const endOfMonth = new Date(startOfMonth);
+      endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+      endOfMonth.setDate(0);
 
-    // Truncate all to UTC midnight
-    const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate());
-    const monthStartDay = Date.UTC(startOfMonth.getUTCFullYear(), startOfMonth.getUTCMonth(), startOfMonth.getUTCDate());
-    const monthEndDay = Date.UTC(endOfMonth.getUTCFullYear(), endOfMonth.getUTCMonth(), endOfMonth.getUTCDate());
+      // Truncate all to UTC midnight
+      const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate());
+      const monthStartDay = Date.UTC(startOfMonth.getUTCFullYear(), startOfMonth.getUTCMonth(), startOfMonth.getUTCDate());
+      const monthEndDay = Date.UTC(endOfMonth.getUTCFullYear(), endOfMonth.getUTCMonth(), endOfMonth.getUTCDate());
 
-    return weekStartDay >= monthStartDay && weekStartDay <= monthEndDay;
-  })
-    .map(w => {
-      const c = new Date().toISOString()
-      // Keep the canonical year/month for labeling
-      const weekMonth = requestedMonth
-      const weekYear = requestedYear
-
-      return { 
-        user_id: user.id, 
-        week_number: w.meta.weekNumber, 
-        start_date: w.meta.weekStartISO, 
-        end_date: w.meta.weekEndISO, 
-        total_revenue: w.revenue, 
-        expenses: w.expenses, 
-        num_appointments: w.numAppointments, 
-        new_clients: w.new, 
-        returning_clients: w.returning, 
-        year: weekYear, 
-        month: weekMonth, 
-        created_at: c, 
-        updated_at: c 
-      }
+      return weekStartDay >= monthStartDay && weekStartDay <= monthEndDay;
     })
+      .map(w => {
+        const c = new Date().toISOString()
+        // Keep the canonical year/month for labeling
+        const weekMonth = requestedMonth
+        const weekYear = requestedYear
+
+        return { 
+          user_id: user.id, 
+          week_number: w.meta.weekNumber, 
+          start_date: w.meta.weekStartISO, 
+          end_date: w.meta.weekEndISO, 
+          total_revenue: w.revenue, 
+          expenses: w.expenses, 
+          num_appointments: w.numAppointments, 
+          new_clients: w.new, 
+          returning_clients: w.returning, 
+          year: weekYear, 
+          month: weekMonth, 
+          created_at: c, 
+          updated_at: c 
+        }
+      })
 
   await supabase.from('weekly_data').upsert(weeklyUpserts, { onConflict: 'user_id,start_date,week_number,month,year' })
 
 
 // ---------------- Weekly Top Clients (corrected total_paid) ----------------
-for (const w of Object.values(weeklyAgg)) {
-  const weekMeta = w.meta
-  const c = new Date().toISOString()
-  if (weekMeta.month !== requestedMonth) continue
+  for (const w of Object.values(weeklyAgg)) {
+    const weekMeta = w.meta
+    const c = new Date().toISOString()
+    if (weekMeta.month !== requestedMonth) continue
 
-  // Filter appointments that fall into this week
-  const weekAppointments = appointments.filter(appt => {
-    const parsed = parseDateStringSafe(appt.datetime)
-    if (!parsed) return false
-    // Compare ISO strings instead of full dates
-    return parsed.dayKey >= weekMeta.weekStartISO && parsed.dayKey <= weekMeta.weekEndISO
-  })
+    // Filter appointments that fall into this week
+    const weekAppointments = appointments.filter(appt => {
+      const parsed = parseDateStringSafe(appt.datetime)
+      if (!parsed) return false
+      // Compare ISO strings instead of full dates
+      return parsed.dayKey >= weekMeta.weekStartISO && parsed.dayKey <= weekMeta.weekEndISO
+    })
 
-  const weeklyClientUpserts = Object.entries(w.clientVisitMap).map(([clientKey, visits]) => {
-    // Sum total_paid for this client in this week only
-    const totalPaid = weekAppointments
-      .filter(appt => {
+    const weeklyClientUpserts = Object.entries(w.clientVisitMap).map(([clientKey, visits]) => {
+      // Sum total_paid for this client in this week only
+      const totalPaid = weekAppointments
+        .filter(appt => {
+          const email = (appt.email || '').toLowerCase().trim()
+          const phone = (appt.phone || '').replace(/\D/g, '')
+          const name = appt.firstName && appt.lastName
+            ? `${appt.firstName} ${appt.lastName}`.trim()
+            : ''
+
+          const rawKey = `${email}|${phone}|${name}`
+          const key = crypto.createHash('sha256').update(rawKey).digest('hex')
+          return key === clientKey
+        })
+        .reduce((sum, appt) => sum + parseFloat(appt.priceSold || '0'), 0)
+
+      const apptClient = weekAppointments.find(appt => {
         const email = (appt.email || '').toLowerCase().trim()
         const phone = (appt.phone || '').replace(/\D/g, '')
         const name = appt.firstName && appt.lastName
           ? `${appt.firstName} ${appt.lastName}`.trim()
           : ''
-
         const rawKey = `${email}|${phone}|${name}`
         const key = crypto.createHash('sha256').update(rawKey).digest('hex')
         return key === clientKey
       })
-      .reduce((sum, appt) => sum + parseFloat(appt.priceSold || '0'), 0)
-
-    const apptClient = weekAppointments.find(appt => {
-      const email = (appt.email || '').toLowerCase().trim()
-      const phone = (appt.phone || '').replace(/\D/g, '')
-      const name = appt.firstName && appt.lastName
-        ? `${appt.firstName} ${appt.lastName}`.trim()
-        : ''
-      const rawKey = `${email}|${phone}|${name}`
-      const key = crypto.createHash('sha256').update(rawKey).digest('hex')
-      return key === clientKey
+      return {
+        user_id: user.id,
+        client_name: apptClient
+          ? `${apptClient.firstName || ''} ${apptClient.lastName || ''}`.trim()
+          : 'Unknown',
+        total_paid: totalPaid,
+        num_visits: visits,
+        email: apptClient?.email ?? '',
+        phone: apptClient?.phone ?? '',
+        client_key: clientKey,
+        week_number: weekMeta.weekNumber,
+        start_date: weekMeta.weekStartISO,
+        end_date: weekMeta.weekEndISO,
+        month: requestedMonth,
+        year: requestedYear,
+        updated_at: c,
+        created_at: c,
+        notes: apptClient?.notes ?? null,
+      }
     })
-    return {
-      user_id: user.id,
-      client_name: apptClient
-        ? `${apptClient.firstName || ''} ${apptClient.lastName || ''}`.trim()
-        : 'Unknown',
-      total_paid: totalPaid,
-      num_visits: visits,
-      email: apptClient?.email ?? '',
-      phone: apptClient?.phone ?? '',
-      client_key: clientKey,
-      week_number: weekMeta.weekNumber,
-      start_date: weekMeta.weekStartISO,
-      end_date: weekMeta.weekEndISO,
-      month: requestedMonth,
-      year: requestedYear,
-      updated_at: c,
-      created_at: c,
-      notes: apptClient?.notes ?? null,
-    }
-  })
 
-  if (weeklyClientUpserts.length > 0) {
-    const { error } = await supabase
-      .from('weekly_top_clients')
-      .upsert(weeklyClientUpserts, { onConflict: 'user_id,week_number,month,year,client_key' })
-    if (error) console.error('Weekly top clients upsert failed:', error)
+    if (weeklyClientUpserts.length > 0) {
+      const { error } = await supabase
+        .from('weekly_top_clients')
+        .upsert(weeklyClientUpserts, { onConflict: 'user_id,week_number,month,year,client_key' })
+      if (error) console.error('Weekly top clients upsert failed:', error)
+    }
   }
-}
 
   // Service bookings
   const serviceUpserts = Object.entries(serviceCounts).map(([key, val]) => {

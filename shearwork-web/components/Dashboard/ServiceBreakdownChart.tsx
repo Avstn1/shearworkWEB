@@ -78,7 +78,10 @@ export default function ServiceBreakdownChart({
       }}
     >
       <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
-        💈 Service Breakdown
+        💈 Service Breakdown 
+        <span className="text-sm text-gray-500 italic ml-2">
+          (All services that include a haircut are included in the "Haircut" count)
+        </span>
       </h2>
 
       <div
