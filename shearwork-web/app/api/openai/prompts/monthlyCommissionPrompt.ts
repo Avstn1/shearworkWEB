@@ -8,6 +8,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const weeklyRows = dataset.weekly_rows || []
   const totalRevenue = summary.total_revenue || 0
   const personalEarnings = totalRevenue * summary.commission_rate || 0
+  const expenses = dataset.expenses
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
       ? (summary.final_revenue || 0) / summary.num_appointments
@@ -38,7 +39,10 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a monthly performance report for a barbershop professional on booth rental named ${userName}.
 Be a little fun and use emojis, especially in section headers and bullet points. Use start_date and end_date from monthly_data to reflect the full date range.
 Use data from summary, services, funnels, top_clients, and weekly_rows to calculate totals and insights. Make sure all totals match the dataset.
+Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE.
 
+After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
+ANALYSIS AND DESCRIPTION!
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
@@ -56,10 +60,11 @@ ${JSON.stringify(dataset, null, 2)}
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
     <tr><td>Personal Earnings</td><td>$${(totalRevenue * dataset.commission_rate).toFixed(2)}</td></tr>
+    <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
     <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
   </tbody>
 </table>
-<p><strong>${month}</strong> was a strong month for ${userName} — ${summary.total_clients || 0} total clients with ${(summary.new_clients && summary.total_clients) ? ((summary.new_clients / summary.total_clients) * 100).toFixed(1) : 0}% new bookings. Consistent pricing kept the average ticket around $${avgTicket.toFixed(2)}, reflecting steady efficiency and client growth. 💪</p>
+Instructions: creative analysis/generation of above
 
 <h2>💼 Service Breakdown</h2>
 ${
@@ -77,7 +82,7 @@ ${
            <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>--</td></tr>
          </tbody>
        </table>
-       <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing strong client demand.</p>`
+       Instructions: creative analysis/generation of above`
     : `<p>No data available for this section.</p>`
 }
 
@@ -103,7 +108,7 @@ ${
            </tr>
          </tbody>
        </table>
-       <p>💵 Personal earnings are calculated based on ${dataset.commission_rate || 0}% commission on weekly revenues.</p>`
+       Instructions: creative analysis/generation of above`
     : `<p>No data available for this section.</p>`
 }
 
@@ -129,7 +134,7 @@ ${
              .join('')}
          </tbody>
        </table>
-       <p>🌟 Top funnel: <strong>${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.funnel_name || 'N/A'}</strong> drove the most new clients this month.</p>`
+       Instructions: creative analysis/generation of above`
     : `<p>No data available for this section.</p>`
 }
 
@@ -137,7 +142,7 @@ ${
 ${
   topClients.length
     ? `<table>
-         <thead><tr><th>Rank</th><th>Client</th><th>Total Paid</th><th>Visits</th><th>Notes</th></tr></thead>
+         <thead><tr><th>Rank</th><th>Client</th><th>Total Paid</th><th>Visits</th></tr></thead>
          <tbody>
            ${topClients
              .slice(0, 5)
@@ -148,13 +153,12 @@ ${
                          <td>${c.client_name}</td>
                          <td>$${(c.total_paid || 0).toFixed(2)}</td>
                          <td>${c.visits || 0}</td>
-                         <td>${c.notes || ''}</td>
                        </tr>`
              })
              .join('')}
          </tbody>
        </table>
-       <p>💎 Top clients contributed significantly to total revenue, showing strong loyalty and repeat visits.</p>`
+       Instructions: creative analysis/generation of above`
     : `<p>No data available for this section.</p>`
 }
 
@@ -162,7 +166,7 @@ ${
 ${
   topClients.length
     ? `<table>
-         <thead><tr><th>Client</th><th>Visits</th><th>Total Paid</th><th>Notes</th></tr></thead>
+         <thead><tr><th>Client</th><th>Visits</th><th>Total Paid</th></tr></thead>
          <tbody>
            ${topClients
              .sort((a: any, b: any) => (b.visits || 0) - (a.visits || 0))
@@ -172,13 +176,12 @@ ${
                                <td>${c.client_name}</td>
                                <td>${c.visits || 0}</td>
                                <td>$${(c.total_paid || 0).toFixed(2)}</td>
-                               <td>${c.notes || ''}</td>
                              </tr>`
              )
              .join('')}
          </tbody>
        </table>
-       <p>🔁 Frequent visitors highlight strong client retention and satisfaction.</p>`
+       Instructions: creative analysis/generation of above`
     : `<p>No data available for this section.</p>`
 }
 
@@ -209,10 +212,10 @@ ${
               </tr>
             </tbody>
           </table>
-          <p>📈 Best Week: Week ${bestWeek.week_number} — $${bestWeek.total_revenue.toFixed(2)} revenue with ${bestWeek.num_appointments} clients and $${(bestWeek.total_revenue / bestWeek.num_appointments).toFixed(2)} average ticket</p>
-          <p>📉 Lightest Week: Week ${worstWeek.week_number} — $${worstWeek.total_revenue.toFixed(2)} revenue with ${worstWeek.num_appointments} clients</p>
-          <p>💰 Average Weekly Revenue: $${avgWeeklyRevenue.toFixed(2)}</p>
-          <p>⚡ Premium ticket consistency: Lowest weekly average ticket was $${consistentTicket.toFixed(2)} — shows overall pricing stability</p>
+          <li>📈 Best Week: Week ${bestWeek.week_number} — $${bestWeek.total_revenue.toFixed(2)} revenue with ${bestWeek.num_appointments} clients and $${(bestWeek.total_revenue / bestWeek.num_appointments).toFixed(2)} average ticket</li>
+          <li>📉 Lightest Week: Week ${worstWeek.week_number} — $${worstWeek.total_revenue.toFixed(2)} revenue with ${worstWeek.num_appointments} clients</li>
+          <li>💰 Average Weekly Revenue: $${avgWeeklyRevenue.toFixed(2)}</li>
+          <li>⚡ Premium ticket consistency: Lowest weekly average ticket was $${consistentTicket.toFixed(2)} — shows overall pricing stability</li>
         `
       })()
     : `<p>No weekly breakdown available for this month.</p>`

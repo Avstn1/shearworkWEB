@@ -1,7 +1,7 @@
 export const weeklyRentalPrompt = (dataset: any, userName: string, month: string, year: number) => `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional named ${userName}.
 Be a little fun and use some emojis, especially in section headers. Keep the writing conversational but data-driven. DO NOT WRAP
-the document with '''html '''
+the document with '''html '''. Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE.
 
 You are given a JSON dataset that includes:
 - summary: metrics for the current week (includes totals, start_date, end_date, averages, final_revenue)
@@ -24,9 +24,10 @@ Include sections:
 1. <h1>Weekly Report - [summary.start_date] → [summary.end_date]</h1>
 
 2. <h2>Weekly Summary</h2>
-   - Total Clients: [summary.new_clients + summary.returning_clients]
+   - Total Clients: [summary.num_appointments]
    - New Clients: [summary.new_clients] | Returning: [summary.returning_clients]
-   - Revenue ≈ [$summary.total_revenue]
+   - Revenue ≈ [$summary.final_revenue]
+   - Tips ≈ [$summary.tips]
    - Average Ticket: [$summary.avg_ticket] (or calculate as final_revenue / num_appointments)
    - Expenses: [$summary.expenses] (if available)
    - Net Profit: [$summary.final_revenue] (if available)

@@ -40,6 +40,11 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
 IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a monthly performance report for a barbershop professional on booth rental named ${userName}.
 Be a little fun and use emojis, especially in section headers and bullet points. Use start_date and end_date from monthly_data to reflect the full date range.
 Use data from summary, services, funnels, top_clients, and weekly_rows to calculate totals and insights. Make sure all totals match the dataset.
+Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE. After each section generate a 3-4 sentence CREATIVE AND LIVELY
+ANALYSIS AND DESCRIPTION!
+
+After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
+ANALYSIS AND DESCRIPTION!
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
@@ -62,7 +67,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
        <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
      </tbody>
    </table>
-   <p><strong>${month}</strong> was a strong month for ${userName} — ${summary.total_clients || 0} total clients with ${(summary.new_clients && summary.total_clients) ? ((summary.new_clients / summary.total_clients) * 100).toFixed(1) : 0}% new bookings. Consistent pricing kept the average ticket around $${avgTicket.toFixed(2)}, reflecting steady performance and client growth. 💪</p>
+   
 
 3. <h2>💼 Service Breakdown</h2>
    ${
@@ -117,7 +122,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
                 .join('')}
             </tbody>
           </table>
-          <p>🌟 The best performing funnel this month was <strong>${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.funnel_name || 'N/A'}</strong>, driving the most new clients into the business.</p>`
+          Instructions: creative analysis/generation`
        : `<p>No data available for this section.</p>`
    }
 
@@ -125,7 +130,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
    ${
      topClients.length
        ? `<table>
-            <thead><tr><th>Rank</th><th>Client</th><th>Total Paid</th><th>Visits</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Client</th><th>Total Paid</th><th>Visits</th></tr></thead>
             <tbody>
                 ${topClients
                 .slice(0, 5)
@@ -136,13 +141,12 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
                             <td>${c.client_name}</td>
                             <td>$${(c.total_paid || 0).toFixed(2)}</td>
                             <td>${c.visits || 0}</td>
-                            <td>${c.notes || ''}</td>
                             </tr>`
                 })
                 .join('')}
             </tbody>
           </table>
-          <p>💎 The top three clients contributed a strong share of total revenue, showing the value of client loyalty and repeat visits.</p>`
+          Instructions: creative analysis/generation`
        : `<p>No data available for this section.</p>`
    }
 
@@ -150,19 +154,19 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
    ${
      topClients.length
        ? `<table>
-            <thead><tr><th>Client</th><th>Visits</th><th>Total Paid</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Client</th><th>Visits</th><th>Total Paid</th></tr></thead>
             <tbody>
               ${topClients
                 .sort((a: any, b: any) => (b.visits || 0) - (a.visits || 0))
                 .slice(0, 5)
                 .map(
                   (c: any) =>
-                    `<tr><td>${c.client_name}</td><td>${c.visits || 0}</td><td>$${(c.total_paid || 0).toFixed(2)}</td><td>${c.notes || ''}</td></tr>`
+                    `<tr><td>${c.client_name}</td><td>${c.visits || 0}</td><td>$${(c.total_paid || 0).toFixed(2)}</td></tr>`
                 )
                 .join('')}
             </tbody>
           </table>
-          <p>🔁 Frequent visitors highlight strong client retention and satisfaction.</p>`
+          Instructions: creative analysis/generation`
        : `<p>No data available for this section.</p>`
    }
 
@@ -214,10 +218,10 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
                 </tr>
             </tbody>
             </table>
-            <p>📈 Best Week: Week ${bestWeek.week_number} — $${bestWeek.total_revenue.toFixed(2)} revenue with ${bestWeek.num_appointments} clients and $${(bestWeek.total_revenue / bestWeek.num_appointments).toFixed(2)} average ticket</p>
-            <p>📉 Lightest Week: Week ${worstWeek.week_number} — $${worstWeek.total_revenue.toFixed(2)} revenue with ${worstWeek.num_appointments} clients</p>
-            <p>💰 Average Weekly Revenue: $${avgWeeklyRevenue.toFixed(2)}</p>
-            <p>⚡ Premium ticket consistency: Lowest weekly average ticket was $${consistentTicket.toFixed(2)} — shows overall pricing stability</p>
+            <li>📈 Best Week: Week ${bestWeek.week_number} — $${bestWeek.total_revenue.toFixed(2)} revenue with ${bestWeek.num_appointments} clients and $${(bestWeek.total_revenue / bestWeek.num_appointments).toFixed(2)} average ticket</li>
+            <li>📉 Lightest Week: Week ${worstWeek.week_number} — $${worstWeek.total_revenue.toFixed(2)} revenue with ${worstWeek.num_appointments} clients</li>
+            <li>💰 Average Weekly Revenue: $${avgWeeklyRevenue.toFixed(2)}</li>
+            <li>⚡ Premium ticket consistency: Lowest weekly average ticket was $${consistentTicket.toFixed(2)} — shows overall pricing stability</li>
             `
         })()
         : `<p>No weekly breakdown available for this month.</p>`
