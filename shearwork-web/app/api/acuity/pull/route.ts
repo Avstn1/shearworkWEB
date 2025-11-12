@@ -36,6 +36,10 @@ function parseDateStringSafe(datetime: string | undefined | null) {
   }
 }
 
+function normalizeDateUTC(d: Date) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
 // WEEK HELPERS
 function getMondayStart(d: Date) {
   const day = d.getDay() // Sunday=0, Monday=1, ...
@@ -424,24 +428,23 @@ export async function GET(request: Request) {
   // Weekly
   // Instead of filtering out weeks outside the requestedMonth,
   // include any week that *intersects* with the requested month range.
-  const weeklyUpserts = Object.values(weeklyAgg)
-    .filter(w => {
-      const weekStart = new Date(w.meta.weekStartISO)
-      const weekEnd = new Date(w.meta.weekEndISO)
-      const startOfMonth = new Date(`${requestedMonth} 1, ${requestedYear}`)
-      const endOfMonth = new Date(startOfMonth)
-      endOfMonth.setMonth(endOfMonth.getMonth() + 1)
-      endOfMonth.setDate(0)
+const weeklyUpserts = Object.values(weeklyAgg)
+  .filter(w => {
+    const weekStart = new Date(w.meta.weekStartISO);
+    const startOfMonth = new Date(`${requestedMonth} 1, ${requestedYear}`);
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+    endOfMonth.setDate(0);
 
-      // ✅ Include only weeks that *start* inside the month
-      // but may extend (overflow) into the next month.
-      return weekStart >= startOfMonth && weekStart <= endOfMonth
-    })
+    // Truncate all to UTC midnight
+    const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate());
+    const monthStartDay = Date.UTC(startOfMonth.getUTCFullYear(), startOfMonth.getUTCMonth(), startOfMonth.getUTCDate());
+    const monthEndDay = Date.UTC(endOfMonth.getUTCFullYear(), endOfMonth.getUTCMonth(), endOfMonth.getUTCDate());
+
+    return weekStartDay >= monthStartDay && weekStartDay <= monthEndDay;
+  })
     .map(w => {
-      let newClients = 0, returningClients = 0
-      for (const v of Object.values(w.clientVisitMap)) v >= 2 ? returningClients++ : newClients++
       const c = new Date().toISOString()
-
       // Keep the canonical year/month for labeling
       const weekMonth = requestedMonth
       const weekYear = requestedYear

@@ -1,4 +1,4 @@
-// ✅ Updated Weekly Comparison Rental Prompt (templated like Commission version)
+// ✅ Updated Weekly Comparison Rental Prompt (with enhanced Critical Opportunities)
 export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, month: string, year: number) => {
   const lastWeekEnd = dataset.weekly_rows?.[dataset.weekly_rows.length - 1]?.end_date;
   const monthEndDate = new Date(year, new Date(`${month} 1, ${year}`).getMonth() + 1, 0);
@@ -7,6 +7,20 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
     lastWeekEndDate && lastWeekEndDate.getDate() === monthEndDate.getDate()
       ? 'Month End Snapshot 🧾'
       : 'Current Period Snapshot 🧾';
+
+  // Compute basic stats for Critical Opportunities
+  const totalNewClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients||0),0);
+  const totalReturningClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.returning_clients||0),0);
+  const totalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0);
+  const totalAppointments = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0);
+  const retentionRate = totalAppointments > 0 ? ((totalReturningClients / totalAppointments) * 100).toFixed(1) : '0.0';
+  const bestWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue>a.total_revenue?b:a),dataset.weekly_rows[0]);
+  const worstWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue<a.total_revenue?b:a),dataset.weekly_rows[0]);
+
+  // Compute weeks below / above average revenue
+  const averageRevenue = totalRevenue / (dataset.weekly_rows?.length || 1);
+  const lowRevenueWeeks = (dataset.weekly_rows || []).filter((w: any) => (w.total_revenue || 0) < averageRevenue * 0.75);
+  const highRevenueWeeks = (dataset.weekly_rows || []).filter((w: any) => (w.total_revenue || 0) > averageRevenue * 1.25);
 
   return `
 IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a weekly comparison performance report for a barbershop professional on booth rental named ${userName}.
@@ -83,8 +97,8 @@ Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Fill 
 
 4. <h2>Key Insights & Trends 🔍</h2>
    <ul>
-     <li>Revenue Performance: total revenue $${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0).toFixed(2)}, best week: Week ${dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue>a.total_revenue?b:a),dataset.weekly_rows[0]).week_number}, worst week: Week ${dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue<a.total_revenue?b:a),dataset.weekly_rows[0]).week_number}</li>
-     <li>Client Retention: overall ${(dataset.weekly_rows.reduce((s:number,w:any)=>s+(w.returning_clients||0),0)/(dataset.weekly_rows.reduce((s:number,w:any)=>s+(w.num_appointments||1),0))*100).toFixed(1)}%, highlight best retention week.</li>
+     <li>Revenue Performance: total revenue $${totalRevenue.toFixed(2)}, best week: Week ${bestWeekRevenue.week_number}, worst week: Week ${worstWeekRevenue.week_number}</li>
+     <li>Client Retention: overall ${retentionRate}%, highlight best retention week.</li>
      <li>Average Ticket: monthly avg $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}, range from lowest to highest week.</li>
      <li>Service Breakdown: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>
      <li>Marketing Funnels: ${dataset.marketing_funnels?.filter((f:any)=>f.funnel_name!=='Unknown').map((f:any)=>f.funnel_name + ': ' + f.new_clients + ' new clients (' + (f.percentage||0) + '%)').join(', ')||'No data'}</li>
@@ -93,10 +107,10 @@ Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Fill 
 
 5. <h2>${snapshotTitle}</h2>
    <ul>
-     <li>Total Revenue: $${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0).toFixed(2)}</li>
-     <li>Total Clients: ${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients + w.returning_clients||0),0)}</li>
-     <li>New Clients: ${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients||0),0)}</li>
-     <li>Returning Clients: ${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.returning_clients||0),0)}</li>
+     <li>Total Revenue: $${totalRevenue.toFixed(2)}</li>
+     <li>Total Clients: ${totalNewClients + totalReturningClients}</li>
+     <li>New Clients: ${totalNewClients}</li>
+     <li>Returning Clients: ${totalReturningClients}</li>
      <li>Average Ticket: $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}</li>
      <li>Total Expenses: $${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.expenses||0),0).toFixed(2)}</li>
      <li>Net Profit: $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+((w.total_revenue||0)-(w.expenses||0)),0)).toFixed(2)}</li>
@@ -104,10 +118,18 @@ Generate a detailed weekly comparison report in HTML suitable for TinyMCE. Fill 
    </ul>
 
 6. <h2>Critical Opportunities for Growth 🚀</h2>
-   <ul>
-     <li>Focus on improving consistency across weeks to stabilize earnings.</li>
-     <li>Monitor expenses for optimization opportunities.</li>
-     <li>Encourage rebookings to strengthen retention rates.</li>
-   </ul>
+     Instructions for AI: **Using all data in the dataset, generate an original, creative analysis.** Include:  
+     - Strengths and weaknesses in client acquisition and retention  
+     - Surprising trends in revenue, profit, and services  
+     - Actionable recommendations for boosting growth  
+     - Creative emoji use, fun formatting, and human-like tone  
+     - Make each insight dynamic — no hard-coded week numbers or thresholds  
+     - I really need you to be creative in this section, do not just copy the example I gave you, but PLEASE base it off all the data 
+     I provided even QUOTING the data and actual NUMBERS, VERY IMPORTANT.
+     - Be careful with bolding, sometimes wrapping with ** does not register as bold and displays as raw text, do not allow this.
+     Example output (do not include literal placeholders; this is just style guidance):  
+     "<li>💡 Amazing spike in mid-week revenue hitting $2300! Consider adding premium services on those days.</li>  
+      <li>🚨 New client acquisition slower than expected; launch referral and social campaigns.</li>  
+      <li>📊 Average ticket trending up — bundle services for higher value sales.</li>"
   `;
 };
