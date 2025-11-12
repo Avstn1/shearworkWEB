@@ -41,11 +41,12 @@ if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
 
 // This is going to run every 12am every Monday, effectively generating the report for the previous week
+// CRON JOB ---- 0 0 * * 1 ----
 Deno.serve(async (req) => {
   try {
     // Report generation
     const now = new Date();
-    let todaysDate = 10; // now.getDate();
+    let todaysDate = now.getDate();
 
     let selectedMonth = now.getMonth(); // 0-indexed so 0 = January
     let selectedYear = now.getFullYear();
