@@ -234,6 +234,13 @@ export async function POST(req: Request) {
       .eq('year', year)
       .order('total_paid', { ascending: false })
 
+    const {data: expenses } = await supabase
+      .from("monthly_data")
+      .select("expenses")
+      .eq('user_id', user_id)
+      .eq('month', month)
+      .eq('year', year)
+
     // 🧠 Build dataset for OpenAI
     const dataset = {
       month,
@@ -247,6 +254,7 @@ export async function POST(req: Request) {
       services_percentage,
       marketing_funnels: funnels,
       top_clients: topClients,
+      expenses: expenses,
       ...(barber_type === 'commission' && { commission_rate: commissionRate }),
     }
 

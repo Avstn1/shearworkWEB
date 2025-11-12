@@ -193,3 +193,5 @@ html {
 .report-card:hover::after {
   opacity: 0.6;
 }
+
+.b-nonworking-day .b-day-num { color: white; }

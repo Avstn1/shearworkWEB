@@ -123,7 +123,7 @@ export default function SettingsPage() {
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-
+  const [clientSyncing, setClientSyncing] = useState(false)
   const [commissionRate, setCommissionRate] = useState<number | null>(null)
   const [editingCommission, setEditingCommission] = useState(false)
 
@@ -189,6 +189,28 @@ export default function SettingsPage() {
     await supabase.from('profiles').update({ commission_rate: commissionRate }).eq('user_id', user.id)
     toast.success('Commission rate updated!')
     setEditingCommission(false)
+  }
+
+  const handleClientSync = async () => {
+    if (!profile) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || !selectedYear) return
+
+    setClientSyncing(true)
+    toast.loading(`Syncing clients for ${selectedYear}...`, { id: 'client-sync' })
+
+    try {
+      const res = await fetch(`/api/acuity/pull-clients?year=${selectedYear}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Client sync failed')
+
+      toast.success(`✅ Successfully synced ${data.totalClients} clients for ${selectedYear}!`, { id: 'client-sync' })
+    } catch (err: any) {
+      console.error('Client sync failed:', err)
+      toast.error(`Failed to sync clients for ${selectedYear}.`, { id: 'client-sync' })
+    } finally {
+      setClientSyncing(false)
+    }
   }
 
   const handleFullAcuitySync = async () => {
@@ -338,6 +360,28 @@ export default function SettingsPage() {
             className="mt-3 w-full bg-[var(--highlight)] text-black py-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
           >
             {syncing ? `Syncing ${selectedYear}...` : `Sync ${selectedYear} Data`}
+          </button>
+        </motion.div>
+        <motion.div variants={fadeInUp} custom={5} className={cardClass}>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-[#bdbdbd] font-semibold">Select Year for Client Sync</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] border border-white/20"
+            >
+              {Array.from({ length: 6 }, (_, i) => {
+                const y = new Date().getFullYear() - i
+                return <option key={y} value={y}>{y}</option>
+              })}
+            </select>
+          </div>
+          <button
+            onClick={handleClientSync}
+            disabled={clientSyncing}
+            className="mt-3 w-full bg-[var(--highlight)] text-black py-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
+          >
+            {clientSyncing ? `Syncing clients ${selectedYear}...` : `Sync Clients for ${selectedYear}`}
           </button>
         </motion.div>
 

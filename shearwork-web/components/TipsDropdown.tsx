@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import Calendar from 'react-calendar'
-import 'react-calendar/dist/Calendar.css' // basic CSS
+import { DayPicker } from 'react-day-picker'
+import 'react-day-picker/dist/style.css'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 
@@ -22,15 +22,15 @@ export default function DailyTipsDropdown({
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-    // Convert selectedDate to local YYYY-MM-DD
-  const dateStr = `${selectedDate.getFullYear()}-${String(
-    selectedDate.getMonth() + 1
-  ).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+  const currentDate = selectedDate ?? new Date()
 
-  const month = selectedDate.toLocaleString('default', { month: 'long' })
-  const year = selectedDate.getFullYear()
+  const dateStr = `${currentDate.getFullYear()}-${String(
+    currentDate.getMonth() + 1
+  ).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
 
-  // 🔹 Close dropdown when clicking outside
+  const month = currentDate.toLocaleString('default', { month: 'long' })
+  const year = currentDate.getFullYear()
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -41,10 +41,8 @@ export default function DailyTipsDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // 🔹 Fetch tips for the selected date
-  // 🔹 Fetch tips when dropdown opens or date changes
   useEffect(() => {
-    if (!barberId || !isOpen) return // only fetch when dropdown is open
+    if (!barberId || !isOpen) return
 
     const fetchTips = async () => {
       try {
@@ -56,7 +54,6 @@ export default function DailyTipsDropdown({
           .maybeSingle()
 
         if (error) throw error
-
         setCurrentTips(data?.tips ?? 0)
       } catch (err) {
         console.error(err)
@@ -67,9 +64,6 @@ export default function DailyTipsDropdown({
     fetchTips()
   }, [barberId, dateStr, isOpen])
 
-
-
-  // 🔹 Save or update tips for the selected date
   async function handleSaveTips() {
     if (tipAmount === '') {
       toast.error('Please enter a tip amount.')
@@ -89,7 +83,7 @@ export default function DailyTipsDropdown({
           updated_at: new Date().toISOString(),
           year,
           month,
-          final_revenue: 0, // trigger will handle recalculation
+          final_revenue: 0,
         },
         { onConflict: 'user_id,date' }
       )
@@ -98,12 +92,14 @@ export default function DailyTipsDropdown({
 
       setCurrentTips(newTotal)
       toast.success(
-        `Tips for ${month} ${selectedDate.getDate()} ${action === 'add' ? 'updated' : 'saved'}!`
+        `Tips for ${month} ${currentDate.getDate()} ${
+          action === 'add' ? 'updated' : 'saved'
+        }!`
       )
       setIsOpen(false)
       setTipAmount('')
-      if (onRefresh) onRefresh()
-    } catch (err: any) {
+      onRefresh?.()
+    } catch (err) {
       console.error(err)
       toast.error('Failed to save tips.')
     } finally {
@@ -131,40 +127,49 @@ export default function DailyTipsDropdown({
         💰 Manage Tips
       </motion.button>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute right-0 mt-3 w-80 bg-[#1a1e18]/90 border border-white/10 rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl"
-        >
-          <div className="flex flex-col space-y-3 text-[var(--text-bright)]">
-            <h3 className="text-amber-200 font-semibold text-sm mb-1">
-              Tips for {month} {selectedDate.getDate()}, {year}
-            </h3>
+    {/* Dropdown */}
+    {isOpen && (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="
+          absolute left-0 mt-3 
+          w-[20rem] sm:w-[22.5rem] md:w-[25rem] lg:w-[23rem] 
+          bg-[#1a1e18]/90 border border-white/10 
+          rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl
+        "
+      >
+      <div className="flex flex-col space-y-2 text-[var(--text-bright)]">
+        {/* Dropdown title */}
+        <h3 className="text-amber-200 font-semibold text-xs mb-1">
+          Tips for {month} {currentDate.getDate()}, {year}
+        </h3>
 
-            {/* 📅 Calendar Picker */}
-            <div className="bg-white/5 rounded-lg border border-white/10 p-2">
-              <Calendar
-                onChange={date => setSelectedDate(date as Date)}
-                value={selectedDate}
-                maxDate={new Date()}
-                className="
-                  !bg-transparent !text-white !border-none
-                  [&_.react-calendar__tile]:!text-white
-                  [&_.react-calendar__tile--active]:!bg-lime-400/40
-                  [&_.react-calendar__tile--now]:!bg-amber-400/30
-                  [&_.react-calendar__tile--active]:!text-black
+        {/* Calendar Picker */}
+        <div className="bg-white/5 rounded-lg border border-white/10 p-1 w-full">
+          <DayPicker
+            mode="single"
+            selected={selectedDate}
+            onSelect={date => setSelectedDate(date ?? new Date())}
+            disabled={{ after: new Date() }}
+            weekStartsOn={1}
+            showOutsideDays
+            className="
+              bg-transparent text-xs
+              [&_.rdp-day]:text-white [&_.rdp-day]:px-0.5 [&_.rdp-day]:py-0.25 [&_.rdp-day]:min-w-[1.5rem] [&_.rdp-day]:min-h-[1.5rem]
+              [&_.rdp-day--outside]:text-gray-500 [&_.rdp-day--outside]:opacity-50
+              [&_.rdp-day--today]:bg-amber-400/30
+              [&_.rdp-day--selected]:bg-lime-400/40 [&_.rdp-day--selected]:text-black
+              [&_.rdp-day--disabled]:text-gray-800 [&_.rdp-day--disabled]:bg-[#101210] [&_.rdp-day--disabled]:cursor-not-allowed
+              [&_.rdp-day--weekend]:text-white
+              [&_.rdp-caption]:text-white [&_.rdp-caption]:font-semibold
+              [&_.rdp-nav-button]:text-white [&_.rdp-nav-button]:hover:text-lime-400
+              [&_.rdp-day:hover]:bg-white/10
+            "
+          />
+      </div>
 
-                  /* Disabled dates — very dark */
-                  [&_.react-calendar__tile:disabled]:!text-gray-800
-                  [&_.react-calendar__tile:disabled]:!bg-[#101210] /* very dark tone */
-                  [&_.react-calendar__tile:disabled]:!cursor-not-allowed
-                "
-              />
-            </div>
-
-            {/* 💵 Current Tips */}
+            {/* Current Tips */}
             <div className="text-center py-2 rounded-lg bg-gradient-to-r from-lime-500/20 to-amber-400/20 border border-lime-300/20">
               <p className="text-xs text-gray-400">Current Total</p>
               <p className="text-2xl font-bold text-lime-300 drop-shadow-md">
@@ -172,37 +177,31 @@ export default function DailyTipsDropdown({
               </p>
             </div>
 
-            {/* 💰 Input field */}
+            {/* Input field */}
             <div>
               <label className="text-xs text-slate-400">Tip Amount ($)</label>
               <input
                 type="number"
                 value={tipAmount}
-                onChange={e =>
-                  setTipAmount(e.target.value === '' ? '' : Number(e.target.value))
-                }
+                onChange={e => setTipAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="Enter amount"
                 className="bg-white/10 border border-white/10 text-white rounded-lg px-2 py-1 w-full text-sm"
               />
             </div>
 
-            {/* ➕ Replace/Add Toggle */}
+            {/* Replace/Add Toggle */}
             <div className="relative flex bg-white/10 rounded-lg p-1 mt-3 text-xs font-semibold overflow-hidden border border-white/10">
               <motion.div
                 layout
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 className={`absolute top-1 bottom-1 left-1 w-1/2 rounded-md ${
-                  action === 'add'
-                    ? 'translate-x-full bg-lime-400/30'
-                    : 'translate-x-0 bg-amber-400/30'
+                  action === 'add' ? 'translate-x-full bg-lime-400/30' : 'translate-x-0 bg-amber-400/30'
                 }`}
               />
               <button
                 onClick={() => setAction('replace')}
                 className={`flex-1 py-1 z-10 transition-colors ${
-                  action === 'replace'
-                    ? 'text-amber-100'
-                    : 'text-white/70 hover:text-white/90'
+                  action === 'replace' ? 'text-amber-100' : 'text-white/70 hover:text-white/90'
                 }`}
               >
                 Replace
@@ -210,16 +209,14 @@ export default function DailyTipsDropdown({
               <button
                 onClick={() => setAction('add')}
                 className={`flex-1 py-1 z-10 transition-colors ${
-                  action === 'add'
-                    ? 'text-lime-100'
-                    : 'text-white/70 hover:text-white/90'
+                  action === 'add' ? 'text-lime-100' : 'text-white/70 hover:text-white/90'
                 }`}
               >
                 Add
               </button>
             </div>
 
-            {/* 💾 Save Button */}
+            {/* Save Button */}
             <motion.button
               onClick={handleSaveTips}
               disabled={loading}

@@ -8,6 +8,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const weeklyRows = dataset.weekly_rows || []
   const totalRevenue = summary.total_revenue || 0
   const personalEarnings = totalRevenue * summary.commission_rate || 0
+  const expenses = dataset.expenses
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
       ? (summary.final_revenue || 0) / summary.num_appointments
@@ -56,6 +57,7 @@ ${JSON.stringify(dataset, null, 2)}
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
     <tr><td>Personal Earnings</td><td>$${(totalRevenue * dataset.commission_rate).toFixed(2)}</td></tr>
+    <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
     <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
   </tbody>
 </table>

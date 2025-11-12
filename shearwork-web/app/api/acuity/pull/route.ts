@@ -36,6 +36,10 @@ function parseDateStringSafe(datetime: string | undefined | null) {
   }
 }
 
+function normalizeDateUTC(d: Date) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
 // WEEK HELPERS
 function getMondayStart(d: Date) {
   const day = d.getDay() // Sunday=0, Monday=1, ...
@@ -90,6 +94,90 @@ function getWeekMetaForDate(dateLike: string | Date) {
     weekNumber, 
     month: weekMonthName, 
     year: weekYear 
+  }
+}
+
+function getClientKey(appt: any) {
+  const email = (appt.email || '').toLowerCase().trim()
+  const phone = (appt.phone || '').replace(/\D/g, '')
+  const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
+  const rawKey = `${email}|${phone}|${name}`
+  return crypto.createHash('sha256').update(rawKey).digest('hex')
+}
+
+async function isReturningClient(
+  supabase: any,
+  userId: string,
+  email?: string,
+  phone?: string,
+  firstName?: string,
+  lastName?: string
+) {
+  if (!email && !phone && !(firstName && lastName)) return false;
+
+  // Normalize
+  const normEmail = email?.toLowerCase().trim();
+  const normPhone = phone?.replace(/\D/g, '');
+  const normFirst = firstName?.trim().toLowerCase();
+  const normLast = lastName?.trim().toLowerCase();
+
+  let data: any[] = [];
+
+  try {
+    // 1️⃣ Try email first
+    if (normEmail) {
+      const { data: emailData, error } = await supabase
+        .from('acuity_clients')
+        .select('total_appointments')
+        .eq('user_id', userId)
+        .eq('email', normEmail)
+        .limit(1);
+
+      if (error) throw error;
+      if (emailData && emailData.length > 0) {
+        data = emailData;
+      }
+    }
+
+    // 2️⃣ If no email match, try phone
+    if (data.length === 0 && normPhone) {
+      const { data: phoneData, error } = await supabase
+        .from('acuity_clients')
+        .select('total_appointments')
+        .eq('user_id', userId)
+        .eq('phone', normPhone)
+        .limit(1);
+
+      if (error) throw error;
+      if (phoneData && phoneData.length > 0) {
+        data = phoneData;
+      }
+    }
+
+    // 3️⃣ If no email or phone match, try first + last name
+    if (data.length === 0 && normFirst && normLast) {
+      const { data: nameData, error } = await supabase
+        .from('acuity_clients')
+        .select('total_appointments')
+        .eq('user_id', userId)
+        .eq('first_name', normFirst)
+        .eq('last_name', normLast)
+        .limit(1);
+
+      if (error) throw error;
+      if (nameData && nameData.length > 0) {
+        data = nameData;
+      }
+    }
+
+    // No match → new client
+    if (!data || data.length === 0) return false;
+
+    // Returning if total_appointments > 1
+    return data.some((row: any) => row.total_appointments > 1);
+  } catch (err: any) {
+    console.error('Error checking client visits:', err);
+    return false;
   }
 }
 
@@ -164,9 +252,9 @@ export async function GET(request: Request) {
   const appointments = allData.filter(a => new Date(a.datetime) <= now)
 
   // ---------------- Single loop aggregation ----------------
-  const monthlyAgg: Record<string, { revenue: number; count: number }> = {}
+  const monthlyAgg: Record<string, { revenue: number; count: number; returning: number, new: number }> = {}
   const dailyAgg: Record<string, { revenue: number; count: number }> = {}
-  const weeklyAgg: Record<string, { meta: any; revenue: number; tips: number; expenses: number; numAppointments: number; clientVisitMap: Record<string, number> }> = {}
+  const weeklyAgg: Record<string, { meta: any; revenue: number; tips: number; expenses: number; returning: number; new: number; numAppointments: number; clientVisitMap: Record<string, number> }> = {}
   const serviceCounts: Record<string, { month: string; year: number; count: number; price: number }> = {}
   const topClientsMap: Record<string, Record<string, any>> = {}
   const funnelMap: Record<string, Record<string, any>> = {}
@@ -185,23 +273,23 @@ export async function GET(request: Request) {
     const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
     const email = (appt.email || '').toLowerCase().trim()
     const phone = (appt.phone || '').replace(/\D/g, '')
-
     // Skip entirely if no identifying info
     if (!name && !email && !phone) continue
-
-    const rawKey = `${email}|${phone}|${name}`
-    const clientKey = crypto.createHash('sha256').update(rawKey).digest('hex')
+    const clientKey = getClientKey(appt)
+    const returning = await isReturningClient(supabase, user.id, email, phone, appt.firstName, appt.lastName)
 
     // 3️⃣ Weekly
     const weekMeta = getWeekMetaForDate(apptDate)
     const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
-    console.log("Appt: ", apptDate,"for: ", weekKey)
     if (!weeklyAgg[weekKey]) weeklyAgg[weekKey] = {
-      meta: weekMeta, revenue: 0, tips: 0, expenses: 0, numAppointments: 0, clientVisitMap: {}
+      meta: weekMeta, revenue: 0, tips: 0, expenses: 0, numAppointments: 0, returning: 0, new: 0, clientVisitMap: {}
     }
     const wEntry = weeklyAgg[weekKey]
     wEntry.revenue += price
     wEntry.numAppointments++
+    
+    if (returning) wEntry.returning++
+    else wEntry.new++
    
     if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
     wEntry.clientVisitMap[clientKey]++
@@ -211,10 +299,12 @@ export async function GET(request: Request) {
 
     // 1️⃣ Monthly
     const monthKey = `${year}||${monthName}`
-    if (!monthlyAgg[monthKey]) monthlyAgg[monthKey] = { revenue: 0, count: 0 }
+    if (!monthlyAgg[monthKey]) monthlyAgg[monthKey] = { revenue: 0, count: 0, returning: 0, new: 0 } 
     
     monthlyAgg[monthKey].revenue += price
     monthlyAgg[monthKey].count++
+    if (returning) monthlyAgg[monthKey].returning++
+    else monthlyAgg[monthKey].new++
 
     // 2️⃣ Daily
     if (!dailyAgg[dayKey]) dailyAgg[dayKey] = { revenue: 0, count: 0 }
@@ -239,68 +329,68 @@ export async function GET(request: Request) {
 
     // 6️⃣ Marketing funnels (only for the requested month)
     if (!appt.forms || !Array.isArray(appt.forms)) continue
-      for (const form of appt.forms) {
-        if (!form.values || !Array.isArray(form.values)) continue
+    if (returning) continue
+    for (const form of appt.forms) {
+      if (!form.values || !Array.isArray(form.values)) continue
 
-        for (const field of form.values) {
-          const fieldName = field.name?.toLowerCase() || ''
-          if (!referralKeywords.some(k => fieldName.includes(k))) continue
+      for (const field of form.values) {
+        const fieldName = field.name?.toLowerCase() || ''
+        if (!referralKeywords.some(k => fieldName.includes(k))) continue
 
-          const rawValue = (field.value || '').trim()
-          if (!rawValue || rawValue.includes(',')) continue
+        const rawValue = (field.value || '').trim()
+        if (!rawValue || rawValue.includes(',')) continue
 
-          if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
-          if (!funnelMap[monthKey][rawValue]) {
-            funnelMap[monthKey][rawValue] = {
-              newClients: 0,
-              returningClients: 0,
-              totalRevenue: 0,
-              totalVisits: 0,
-              seenClients: new Set<string>() // 👈 track unique clients
-            }
+        if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
+        if (!funnelMap[monthKey][rawValue]) {
+          funnelMap[monthKey][rawValue] = {
+            newClients: 0,
+            returningClients: 0,
+            totalRevenue: 0,
+            totalVisits: 0,
+            seenClients: new Set<string>() // 👈 track unique clients
           }
-
-          const funnel = funnelMap[monthKey][rawValue]
-          const clientId =
-            (appt.email?.toLowerCase() ||
-            appt.phone?.replace(/\D/g, '') ||
-            `${appt.firstName} ${appt.lastName}`.trim().toLowerCase())
-
-          if (!clientId) continue
-
-          // ✅ Add to "new clients" if first time this client appears in this funnel
-          if (!funnel.seenClients.has(clientId)) {
-            funnel.newClients++
-            funnel.seenClients.add(clientId)
-          }
-
-          // ✅ Check if this client has any *past* appointments (returning logic)
-          const isReturning = appointments.some(other => {
-            const parsedOther = parseDateStringSafe(other.datetime)
-            if (!parsedOther) return false
-            const otherMonthKey = `${parsedOther.year}||${parsedOther.monthName}`
-            if (otherMonthKey !== monthKey) return false
-
-            const otherDate = new Date(other.datetime)
-            if (otherDate >= apptDate) return false
-
-            const sameEmail = appt.email && other.email && other.email.toLowerCase() === appt.email.toLowerCase()
-            const samePhone = appt.phone && other.phone && other.phone.replace(/\D/g, '') === appt.phone.replace(/\D/g, '')
-            const sameName = appt.firstName && appt.lastName && other.firstName && other.lastName &&
-                            `${other.firstName} ${other.lastName}`.trim().toLowerCase() ===
-                            `${appt.firstName} ${appt.lastName}`.trim().toLowerCase()
-
-            return sameEmail || samePhone || sameName
-          })
-
-          if (isReturning) funnel.returningClients++ // 👈 Now a subset, not alternative
-
-          funnel.totalRevenue += price
-          funnel.totalVisits++
-          break
         }
-      }
 
+        const funnel = funnelMap[monthKey][rawValue]
+        const clientId =
+          (appt.email?.toLowerCase() ||
+          appt.phone?.replace(/\D/g, '') ||
+          `${appt.firstName} ${appt.lastName}`.trim().toLowerCase())
+
+        if (!clientId) continue
+
+        // ✅ Add to "new clients" if first time this client appears in this funnel
+        if (!funnel.seenClients.has(clientId)) {
+          funnel.newClients++
+          funnel.seenClients.add(clientId)
+        }
+
+        // ✅ Check if this client has any *past* appointments (returning logic)
+        const isReturning = appointments.some(other => {
+          const parsedOther = parseDateStringSafe(other.datetime)
+          if (!parsedOther) return false
+          const otherMonthKey = `${parsedOther.year}||${parsedOther.monthName}`
+          if (otherMonthKey !== monthKey) return false
+
+          const otherDate = new Date(other.datetime)
+          if (otherDate >= apptDate) return false
+
+          const sameEmail = appt.email && other.email && other.email.toLowerCase() === appt.email.toLowerCase()
+          const samePhone = appt.phone && other.phone && other.phone.replace(/\D/g, '') === appt.phone.replace(/\D/g, '')
+          const sameName = appt.firstName && appt.lastName && other.firstName && other.lastName &&
+                          `${other.firstName} ${other.lastName}`.trim().toLowerCase() ===
+                          `${appt.firstName} ${appt.lastName}`.trim().toLowerCase()
+
+          return sameEmail || samePhone || sameName
+        })
+
+        if (isReturning) funnel.returningClients++ // 👈 Now a subset, not alternative
+
+        funnel.totalRevenue += price
+        funnel.totalVisits++
+        break
+      }
+    }
   }
 
   // ---------------- Batch upserts ----------------
@@ -308,22 +398,14 @@ export async function GET(request: Request) {
   const monthlyUpserts = Object.entries(monthlyAgg).map(([key, val]) => {
     const [yearStr, month] = key.split('||')
 
-    // calculate new and returning clients
-    const clientVisits = monthlyClientMap[key] || {}
-    let newClients = 0, returningClients = 0
-    for (const visits of Object.values(clientVisits)) {
-      if (visits >= 2) returningClients++
-      else newClients++
-    }
-
     return {
       user_id: user.id,
       month,
       year: parseInt(yearStr),
       total_revenue: val.revenue,
       num_appointments: val.count,
-      new_clients: newClients,
-      returning_clients: returningClients,
+      new_clients: val.new,
+      returning_clients: val.returning,
       updated_at: new Date().toISOString()
     }
   })
@@ -346,24 +428,23 @@ export async function GET(request: Request) {
   // Weekly
   // Instead of filtering out weeks outside the requestedMonth,
   // include any week that *intersects* with the requested month range.
-  const weeklyUpserts = Object.values(weeklyAgg)
-    .filter(w => {
-      const weekStart = new Date(w.meta.weekStartISO)
-      const weekEnd = new Date(w.meta.weekEndISO)
-      const startOfMonth = new Date(`${requestedMonth} 1, ${requestedYear}`)
-      const endOfMonth = new Date(startOfMonth)
-      endOfMonth.setMonth(endOfMonth.getMonth() + 1)
-      endOfMonth.setDate(0)
+const weeklyUpserts = Object.values(weeklyAgg)
+  .filter(w => {
+    const weekStart = new Date(w.meta.weekStartISO);
+    const startOfMonth = new Date(`${requestedMonth} 1, ${requestedYear}`);
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+    endOfMonth.setDate(0);
 
-      // ✅ Include only weeks that *start* inside the month
-      // but may extend (overflow) into the next month.
-      return weekStart >= startOfMonth && weekStart <= endOfMonth
-    })
+    // Truncate all to UTC midnight
+    const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate());
+    const monthStartDay = Date.UTC(startOfMonth.getUTCFullYear(), startOfMonth.getUTCMonth(), startOfMonth.getUTCDate());
+    const monthEndDay = Date.UTC(endOfMonth.getUTCFullYear(), endOfMonth.getUTCMonth(), endOfMonth.getUTCDate());
+
+    return weekStartDay >= monthStartDay && weekStartDay <= monthEndDay;
+  })
     .map(w => {
-      let newClients = 0, returningClients = 0
-      for (const v of Object.values(w.clientVisitMap)) v >= 2 ? returningClients++ : newClients++
       const c = new Date().toISOString()
-
       // Keep the canonical year/month for labeling
       const weekMonth = requestedMonth
       const weekYear = requestedYear
@@ -376,8 +457,8 @@ export async function GET(request: Request) {
         total_revenue: w.revenue, 
         expenses: w.expenses, 
         num_appointments: w.numAppointments, 
-        new_clients: newClients, 
-        returning_clients: returningClients, 
+        new_clients: w.new, 
+        returning_clients: w.returning, 
         year: weekYear, 
         month: weekMonth, 
         created_at: c, 
@@ -456,8 +537,6 @@ for (const w of Object.values(weeklyAgg)) {
     if (error) console.error('Weekly top clients upsert failed:', error)
   }
 }
-
-
 
   // Service bookings
   const serviceUpserts = Object.entries(serviceCounts).map(([key, val]) => {
