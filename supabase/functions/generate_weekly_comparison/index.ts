@@ -50,8 +50,7 @@ Deno.serve(async (req) => {
     const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
     // Create an array to hold all responses
 
-    console.log(`barberData length: ${barberData.length}`);
-    console.log(`STARTING TO GENERATE. CURRENT TIME: ${new Date()}`);
+    console.log(`STARTING TO GENERATE FOR ${barberData.length} BARBERS. CURRENT TIME: ${new Date()}`);
     
     const CONCURRENCY_LIMIT = 100;
 

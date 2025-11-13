@@ -10,14 +10,14 @@ const { error: insertError } = await supabase
 if (insertError) throw insertError
 
 
-    const { error: insertErrorBefore } = await supabase
-      .from('system_logs')
-      .insert({
-          source: 'SYSTEM',
-          action: 'generate_monthly_report',
-          status: 'pending',
-          details: `Generating ${barberData.length} monthly reports for ${selectedMonth} ${selectedYear}`,
-      })
+const { error: insertErrorBefore } = await supabase
+    .from('system_logs')
+    .insert({
+        source: 'SYSTEM',
+        action: 'generate_monthly_report',
+        status: 'pending',
+        details: `Generating ${barberData.length} monthly reports for ${selectedMonth} ${selectedYear}`,
+    })
 
 if (insertErrorBefore) throw insertErrorBefore
 

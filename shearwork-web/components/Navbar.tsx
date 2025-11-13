@@ -59,6 +59,8 @@ export default function Navbar() {
 
   if (loading) return null
 
+  console.log(user);
+
   const desktopIcons = (
     <>
       <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">

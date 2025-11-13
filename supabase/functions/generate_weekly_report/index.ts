@@ -60,9 +60,7 @@ Deno.serve(async (req) => {
     const url = `https://shearwork-web.vercel.app/api/openai/generate`
     const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
 
-    console.log(`barberData length: ${barberData.length}`);
-    console.log(`STARTING TO GENERATE. CURRENT TIME: ${new Date()}`);
-
+    console.log(`STARTING TO GENERATE FOR ${barberData.length} BARBERS. CURRENT TIME: ${new Date()}`);
     const CONCURRENCY_LIMIT = 100;
 
     async function fireWithConcurrency(items, limit) {
