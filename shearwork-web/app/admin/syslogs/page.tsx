@@ -100,7 +100,7 @@ export default function SystemLogsPage() {
       if (error) throw error
       setLogs(data || [])
       setCurrentPage(1)
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Error fetching logs:', err)
       toast.error(`Failed to fetch system logs${err.message ? `: ${err.message}` : ''}`)
     } finally {
