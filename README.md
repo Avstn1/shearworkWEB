@@ -39,7 +39,7 @@ npm install
 
 ### 3️⃣ Set up environment variables
 
-Duplicate the example file and fill in your Supabase credentials:
+Duplicate the example file and fill in your Supabase credentials. Or the current project lead will provide you with the .env:
 
 ```bash
 cp .env.example .env.local
@@ -54,7 +54,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 If you don’t have these keys yet, please contact the project owner or request access to the **Supabase team** via:
-- Email: [yourname@shearwork.app]  
+- Email: [austinkbartolome@gmail.com] or [trackingvalid@gmail.com]  
 - or open a permissions request in the Supabase project dashboard.
 
 > 🛡️ **Note:** Never commit `.env.local` to the repository — it contains sensitive keys.
