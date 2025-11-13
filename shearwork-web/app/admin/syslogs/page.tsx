@@ -32,7 +32,7 @@ export default function SystemLogsPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
   const [datePreset, setDatePreset] = useState<typeof DATE_PRESETS[number]>('Day')
-  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({})
+  const [customRange, setCustomRange] = useState<Partial<DateRange>>({})
   const [sortField, setSortField] = useState<'timestamp' | 'source' | 'status'>('timestamp')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -242,7 +242,7 @@ export default function SystemLogsPage() {
                 </div>
                 <DayPicker
                   mode="range"
-                  selected={customRange}
+                  selected={customRange as DateRange}
                   onSelect={setCustomRange}
                   className="rounded-lg border border-[#55694b] bg-[#2f3a2d] text-[#F1F5E9]"
                   modifiersClassNames={{
