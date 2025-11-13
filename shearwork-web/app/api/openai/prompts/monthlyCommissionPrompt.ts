@@ -8,7 +8,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const weeklyRows = dataset.weekly_rows || []
   const totalRevenue = summary.total_revenue || 0
   const personalEarnings = totalRevenue * summary.commission_rate || 0
-  const expenses = dataset.expenses
+  const expenses = summary.expenses || 0
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
       ? (summary.final_revenue || 0) / summary.num_appointments
@@ -39,7 +39,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a monthly performance report for a barbershop professional on booth rental named ${userName}.
 Be a little fun and use emojis, especially in section headers and bullet points. Use start_date and end_date from monthly_data to reflect the full date range.
 Use data from summary, services, funnels, top_clients, and weekly_rows to calculate totals and insights. Make sure all totals match the dataset.
-Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE.
+Do NOT use Markdown (** or *) at all to bold text, use <b>Bold Text</b> or <strong>Bold Text</strong> instead. The report will be displayed in TinyMCE.
 
 After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
@@ -48,8 +48,9 @@ Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
 ${JSON.stringify(dataset.daily_rows, null, 2)}
 
-  Generate a detailed monthly report in HTML suitable for TinyMCE. STRICTLY DO NOT WRAP WITH '''html ''' 
-  Include sections:
+Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all data. DO NOT WRAP WITH '''html and
+Do NOT use Markdown (** or *) at all. 
+Include:
 <h1>${month} ${year} Business Report</h1>
 
 <h2>🧐 Quick Overview</h2>
@@ -78,7 +79,7 @@ ${
              .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
              .map(
                (s: any) =>
-                 `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.total_revenue || 0).toFixed(2)}</td><td>$${(s.total_revenue / s.bookings || 0).toFixed(2)}</td></tr>`
+                 `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${((s.price || 0) * s.bookings).toFixed(2)}</td><td>$${(s.price || 0).toFixed(2)}</td></tr>`
              )
              .join('')}
            <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>--</td></tr>
@@ -147,6 +148,7 @@ ${
          <thead><tr><th>Rank</th><th>Client</th><th>Service Totals</th><th>Visits</th></tr></thead>
          <tbody>
            ${topClients
+             .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
              .slice(0, 5)
              .map((c: any, i: number) => {
                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''
@@ -171,6 +173,7 @@ ${
          <thead><tr><th>Client</th><th>Visits</th><th>Service Totals</th></tr></thead>
          <tbody>
            ${topClients
+             .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
              .sort((a: any, b: any) => (b.num_visits || 0) - (a.num_visits || 0))
              .slice(0, 5)
              .map(
