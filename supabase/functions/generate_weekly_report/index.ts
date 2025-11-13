@@ -18,8 +18,7 @@ const { data: barberData, error: barberError } = await supabase
   .from('profiles')
   .select('user_id, full_name, barber_type') 
   .eq('role', 'Barber')  
-  .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // Gavin Cruz's user_id for testing        
-  .limit(2)
+  // .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // Gavin Cruz's user_id for testing        
 
 if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
@@ -30,9 +29,8 @@ Deno.serve(async (req) => {
   try {
     // Report generation
     const now = new Date();
-    let todaysDate = now.getDate();
-
-    let selectedMonth = now.getMonth(); // 0-indexed so 0 = January
+    let todaysDate = 14 // now.getDate();
+    let selectedMonth = 6 // now.getMonth();  TEST FOR JULY 16TH
     let selectedYear = now.getFullYear();
 
     // console.log('Today is:', todaysDate, monthNames[selectedMonth], selectedYear);
@@ -62,26 +60,54 @@ Deno.serve(async (req) => {
     const url = `https://shearwork-web.vercel.app/api/openai/generate`
     const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
 
-    for (const barber of barberData) {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'x-vercel-protection-bypass': Deno.env.get('BYPASS_TOKEN')
-        },
-        body: JSON.stringify({
-          type: `weekly/${barber.barber_type}`,
-          user_id: barber.user_id,
-          month: monthNames[selectedMonth],
-          year: selectedYear,
-          week_number: week_number_to_generate_report,
-        }),
-      })
+    console.log(`barberData length: ${barberData.length}`);
+    console.log(`STARTING TO GENERATE. CURRENT TIME: ${new Date()}`);
 
-      const data = await response.json()
-      console.log('Raw response:', data)
+    const CONCURRENCY_LIMIT = 100;
+
+    async function fireWithConcurrency(items, limit) {
+      let active = 0;
+      let index = 0;
+
+      return new Promise(resolve => {
+        function next() {
+          while (active < limit && index < items.length) {
+            const barber = items[index++];
+            active++;
+
+            fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'x-vercel-protection-bypass': Deno.env.get('BYPASS_TOKEN')
+              },
+              body: JSON.stringify({
+                type: `weekly/${barber.barber_type}`,
+                user_id: barber.user_id,
+                month: monthNames[selectedMonth],
+                year: selectedYear,
+                week_number: week_number_to_generate_report,
+              }),
+            })
+              .catch(err => console.error(`Error for ${barber.user_id}:`, err))
+              .finally(() => {
+                active--;
+                next(); // trigger next when one finishes
+              });
+          }
+
+          if (active === 0 && index >= items.length) resolve();
+        }
+
+        next();
+      });
     }
+
+    await fireWithConcurrency(barberData, CONCURRENCY_LIMIT);
+
+    console.log(`All weekly requests dispatched (with concurrency limit ${CONCURRENCY_LIMIT}).`);
+    console.log(`GENERATION ENDED. CURRENT TIME: ${new Date()}`);
 
     return new Response(JSON.stringify({  }), { // data
       headers: { 'Content-Type': 'application/json' },

@@ -20,8 +20,7 @@ const { data: barberData, error: barberError } = await supabase
   .from('profiles')
   .select('user_id, full_name, barber_type') 
   .eq('role', 'Barber')  
-  .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // Gavin Cruz's user_id for testing        
-  .limit(2)
+  // .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // Gavin Cruz's user_id for testing        
 
 if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
@@ -33,7 +32,7 @@ Deno.serve(async (req) => {
     let prevMonthIndex = now.getMonth() - 1
     let selectedYear = prevMonthIndex < 0 ? now.getFullYear() - 1 : now.getFullYear()
     prevMonthIndex = prevMonthIndex < 0 ? 11 : prevMonthIndex
-    let selectedMonth = monthNames[prevMonthIndex]
+    let selectedMonth = "July" //monthNames[prevMonthIndex]
 
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
 
@@ -41,28 +40,54 @@ Deno.serve(async (req) => {
     const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
     // Create an array to hold all responses
 
-    for (const barber of barberData) {
-      let type = 'monthly/rental' // change this to be dynamic later
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'x-vercel-protection-bypass': BYPASS_TOKEN
-        },
-        body: JSON.stringify({
-          type,
-          user_id: barber.user_id,
-          month: selectedMonth,
-          year: selectedYear,
-          week_number: null,
-        }),
-      })
+    console.log(`barberData length: ${barberData.length}`);
+    console.log(`STARTING TO GENERATE. CURRENT TIME: ${new Date()}`);
 
-      const data = await response.json()
-      console.log('Raw response:', data)
+    const CONCURRENCY_LIMIT = 100;
+
+    async function fireWithConcurrency(items, limit) {
+      let active = 0;
+      let index = 0;
+
+      return new Promise(resolve => {
+        function next() {
+          while (active < limit && index < items.length) {
+            const barber = items[index++];
+            active++;
+
+            fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'x-vercel-protection-bypass': BYPASS_TOKEN
+              },
+              body: JSON.stringify({
+                type: `monthly/${barber.barber_type}`,
+                user_id: barber.user_id,
+                month: selectedMonth,
+                year: selectedYear,
+                week_number: null,
+              }),
+            })
+              .catch(err => console.error(`Error for ${barber.user_id}:`, err))
+              .finally(() => {
+                active--;
+                next(); // trigger next when one finishes
+              });
+          }
+
+          if (active === 0 && index >= items.length) resolve();
+        }
+
+        next();
+      });
     }
+
+    await fireWithConcurrency(barberData, CONCURRENCY_LIMIT);
+
+    console.log(`All requests dispatched (with concurrency limit ${CONCURRENCY_LIMIT}).`);
+    console.log(`GENERATION ENDED. CURRENT TIME: ${new Date()}`);
 
     return new Response(JSON.stringify({ }), {
       headers: { 'Content-Type': 'application/json' },

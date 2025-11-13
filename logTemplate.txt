@@ -1,0 +1,34 @@
+const { error: insertError } = await supabase
+.from('system_logs')
+.insert({
+    source: userProfile.user?.id,
+    action: 'user_login',
+    status: 'success',
+    details: `User ${userProfile.user?.email} logged in.`,
+})
+
+if (insertError) throw insertError
+
+
+    const { error: insertErrorBefore } = await supabase
+      .from('system_logs')
+      .insert({
+          source: 'SYSTEM',
+          action: 'generate_monthly_report',
+          status: 'pending',
+          details: `Generating ${barberData.length} monthly reports for ${selectedMonth} ${selectedYear}`,
+      })
+
+if (insertErrorBefore) throw insertErrorBefore
+
+
+const { error: insertErrorAfter } = await supabase
+    .from('system_logs')
+    .insert({
+        source: 'SYSTEM',
+        action: 'generate_monthly_report',
+        status: 'success',
+        details: `Successfully generated ${barberData.length} monthly reports for ${selectedMonth} ${selectedYear}`,
+    })
+
+if (insertErrorAfter) throw insertErrorAfter
