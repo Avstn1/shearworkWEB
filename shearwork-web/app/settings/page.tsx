@@ -182,7 +182,7 @@ export default function SettingsPage() {
   }
 
   const handleCommissionUpdate = async () => {
-    if (!profile) return
+    if (!profile || commissionRate === null) return;
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -311,7 +311,7 @@ export default function SettingsPage() {
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value === '') {
-                    setCommissionRate('');
+                    setCommissionRate(null);
                   } else if (/^\d{0,3}$/.test(value) && Number(value) <= 100) {
                     setCommissionRate(Number(value));
                   }
