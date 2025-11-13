@@ -11,7 +11,7 @@ interface Props {
 
 interface DayData {
   weekday: string
-  appointment_count: number
+  total_appointments: number
 }
 
 export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
@@ -25,13 +25,20 @@ export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
       try {
         const { data: rows, error } = await supabase
           .from('yearly_appointments_summary')
-          .select('weekday, appointment_count')
+          .select('weekday, total_appointments')
           .eq('user_id', userId)
           .eq('year', year)
         if (error) throw error
 
         const orderedDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-        const mapped = orderedDays.map(day => rows.find(r => r.weekday === day) || { weekday: day, appointment_count: 0 })
+        const mapped: DayData[] = orderedDays.map(day => {
+          const row = rows.find(r => r.weekday === day)
+          return {
+            weekday: day,
+            total_appointments: row ? row.total_appointments : 0
+          }
+        })
+
         setData(mapped)
       } catch (err) {
         console.error('Error fetching weekday appointments:', err)
@@ -60,7 +67,7 @@ export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
                 color: '#F5E6C5',
               }}
             />
-            <Bar dataKey="appointment_count" fill="#c4ff85" radius={[6,6,0,0]} />
+            <Bar dataKey="total_appointments" fill="#c4ff85" radius={[6,6,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
