@@ -8,15 +8,6 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, e
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 
-interface SystemLog {
-  id: string
-  timestamp: string
-  source: string
-  action: string
-  status: 'success' | 'pending' | 'failed'
-  details?: string
-}
-
 const STATUS_OPTIONS = ['success', 'pending', 'failed']
 const SOURCE_OPTIONS = ['SYSTEM', 'USER']
 const ITEMS_OPTIONS = [15, 25, 50, 100]
@@ -87,8 +78,8 @@ export default function SystemLogsPage() {
   const fetchLogs = async () => {
     setLoading(true)
     try {
-      let query = supabase.from<SystemLog>('system_logs').select('id, timestamp, source, action, status, details')
-      
+      let query = supabase.from('system_logs').select('id, timestamp, source, action, status, details')
+
       if (statusFilter) query = query.eq('status', statusFilter)
       if (sourceFilter) {
         if (sourceFilter === 'SYSTEM') query = query.eq('source', 'SYSTEM')
