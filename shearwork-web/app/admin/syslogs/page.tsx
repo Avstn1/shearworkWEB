@@ -1,0 +1,275 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/utils/supabaseClient'
+import Navbar from '@/components/Navbar'
+import toast from 'react-hot-toast'
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subHours } from 'date-fns'
+import { DayPicker } from 'react-day-picker'
+import 'react-day-picker/dist/style.css'
+
+interface SystemLog {
+  id: string
+  timestamp: string
+  source: string
+  action: string
+  status: 'success' | 'pending' | 'failed'
+  details?: string
+}
+
+const STATUS_OPTIONS = ['success', 'pending', 'failed']
+const SOURCE_OPTIONS = ['SYSTEM', 'USER']
+const ITEMS_OPTIONS = [10, 25, 50, 100]
+const DATE_PRESETS = ['Day', 'Week', 'Month', 'Custom'] as const
+
+export default function SystemLogsPage() {
+  const [logs, setLogs] = useState<SystemLog[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null)
+  const [datePreset, setDatePreset] = useState<typeof DATE_PRESETS[number]>('Day')
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({})
+  const [sortField, setSortField] = useState<'timestamp' | 'source' | 'status'>('timestamp')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+
+  const getDateRange = () => {
+    const now = subHours(new Date(), 5)
+    switch (datePreset) {
+      case 'Day':
+        return { from: now, to: now }
+      case 'Week':
+        return { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) }
+      case 'Month':
+        return { from: startOfMonth(now), to: endOfMonth(now) }
+      case 'Custom':
+        // If user selects only one day, use it as both from and to
+        if (customRange.from && !customRange.to) return { from: customRange.from, to: customRange.from }
+        return customRange
+    }
+  }
+
+  const fetchLogs = async () => {
+    setLoading(true)
+    try {
+      let query = supabase.from<SystemLog>('system_logs').select('*')
+
+      if (statusFilter) query = query.eq('status', statusFilter)
+      if (sourceFilter) {
+        if (sourceFilter === 'SYSTEM') query = query.eq('source', 'SYSTEM')
+        else query = query.not('source', 'eq', 'SYSTEM')
+      }
+
+      const range = getDateRange()
+      if (range.from) query = query.gte('timestamp', range.from.toISOString())
+      if (range.to) query = query.lte('timestamp', range.to.toISOString())
+
+      if (searchQuery) {
+        const term = `%${searchQuery}%`
+        query = query.or(`source.ilike.${term},action.ilike.${term},status.ilike.${term},details.ilike.${term}`)
+      }
+
+      query = query.order(sortField, { ascending: sortOrder === 'asc' })
+
+      const { data, error } = await query
+      if (error) throw error
+      setLogs(data || [])
+      setCurrentPage(1)
+    } catch (err: any) {
+      console.error('Error fetching logs:', err)
+      toast.error('Failed to fetch system logs.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogs()
+  }, [searchQuery, statusFilter, sourceFilter, datePreset, customRange, sortField, sortOrder])
+
+  const totalPages = Math.ceil(logs.length / itemsPerPage)
+  const paginatedLogs = logs.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const handleSort = (field: 'timestamp' | 'source' | 'status') => {
+    if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const getStatusBadge = (status: SystemLog['status']) => {
+    const base = 'px-2 py-1 rounded-full text-xs font-semibold'
+    if (status === 'success') return <span className={`${base} bg-green-100 text-green-800`}>Success</span>
+    if (status === 'failed') return <span className={`${base} bg-red-100 text-red-800`}>Failed</span>
+    return <span className={`${base} bg-yellow-100 text-yellow-800`}>Pending</span>
+  }
+
+  const formatTimestamp = (ts: string) => format(new Date(ts), 'MMM d yyyy HH:mm')
+
+  const resetFilters = () => {
+    setSearchQuery('')
+    setStatusFilter(null)
+    setSourceFilter(null)
+    setDatePreset('Day')
+    setCustomRange({})
+    setItemsPerPage(10)
+  }
+
+  const Pagination = () => (
+    totalPages > 1 ? (
+      <div className="flex justify-center items-center gap-3 mt-2">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 rounded-lg bg-[#3a4431] text-[#F1F5E9] disabled:opacity-50 hover:bg-[#4b5a42] transition-colors"
+        >
+          &larr;
+        </button>
+        <span>Page {currentPage} of {totalPages}</span>
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 rounded-lg bg-[#3a4431] text-[#F1F5E9] disabled:opacity-50 hover:bg-[#4b5a42] transition-colors"
+        >
+          &rarr;
+        </button>
+      </div>
+    ) : null
+  )
+
+  return (
+    <>
+      <Navbar />
+      <div className="p-4 sm:p-6 min-h-screen bg-[#1f2420] text-[#F1F5E9]">
+        <h1 className="text-3xl font-bold text-[var(--highlight)] mb-6">System Logs</h1>
+
+        {/* Filters: sticky at top */}
+        <div className="sticky top-0 z-20 bg-[#1f2420] p-3 border-b border-[#55694b] flex flex-wrap gap-4 items-center">
+          <input
+            type="text"
+            placeholder="Search all fields..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 min-w-[200px] px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+          />
+          <select
+            value={statusFilter || ''}
+            onChange={(e) => setStatusFilter(e.target.value || null)}
+            className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+          >
+            <option value="">All Statuses</option>
+            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          </select>
+          <select
+            value={sourceFilter || ''}
+            onChange={(e) => setSourceFilter(e.target.value || null)}
+            className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+          >
+            <option value="">All Sources</option>
+            {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          {/* Date Preset Dropdown */}
+          <div className="relative">
+            <select
+              value={datePreset}
+              onChange={(e) => setDatePreset(e.target.value as typeof DATE_PRESETS[number])}
+              className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+            >
+              {DATE_PRESETS.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+
+            {/* Custom Date Range Picker */}
+            {datePreset === 'Custom' && (
+              <div className="absolute top-full mt-2 z-50 bg-[#2f3a2d] border border-[#55694b] rounded-lg shadow-lg p-2">
+                <DayPicker
+                  mode="range"
+                  selected={customRange}
+                  onSelect={setCustomRange}
+                  className="rounded-lg border border-[#55694b] bg-[#2f3a2d] text-[#F1F5E9]"
+                  modifiersClassNames={{
+                    selected: 'bg-green-600 text-[#F1F5E9] rounded-full',
+                    range_start: 'bg-green-700 text-[#F1F5E9] rounded-l-full',
+                    range_end: 'bg-green-700 text-[#F1F5E9] rounded-r-full',
+                    range_middle: 'bg-green-500 text-[#F1F5E9]',
+                  }}
+                  showOutsideDays
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Items per page */}
+          <select
+            value={itemsPerPage}
+            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+            className="px-3 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+          >
+            {ITEMS_OPTIONS.map(i => <option key={i} value={i}>{i} per page</option>)}
+          </select>
+
+          <button
+            onClick={resetFilters}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg"
+          >
+            Reset
+          </button>
+        </div>
+
+        {/* Top Pagination */}
+        <Pagination />
+
+        {/* Table */}
+        <div className="overflow-x-auto mt-4 bg-[#2a2f27] rounded-xl shadow-md border border-[#55694b]">
+          <table className="min-w-full divide-y divide-[#55694b]">
+            <thead className="bg-[#2f3a2d] sticky z-10">
+              <tr>
+                {['Timestamp', 'Source', 'Status', 'Action', 'Details'].map((col, idx) => (
+                  <th
+                    key={idx}
+                    onClick={() => idx <= 2 && handleSort((['timestamp', 'source', 'status'] as const)[idx])}
+                    className={`px-6 py-3 text-left text-sm font-semibold cursor-pointer select-none ${
+                      idx <= 2 ? 'hover:text-[var(--highlight)]' : ''
+                    }`}
+                  >
+                    {col} {idx <= 2 && sortField === (['timestamp', 'source', 'status'] as const)[idx] ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-6">Loading...</td>
+                </tr>
+              ) : paginatedLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-6">No logs found.</td>
+                </tr>
+              ) : (
+                paginatedLogs.map(log => (
+                  <tr key={log.id} className="hover:bg-[#3a4431] transition-colors">
+                    <td className="px-6 py-3">{formatTimestamp(log.timestamp)}</td>
+                    <td className="px-6 py-3">{log.source}</td>
+                    <td className="px-6 py-3">{getStatusBadge(log.status)}</td>
+                    <td className="px-6 py-3">{log.action}</td>
+                    <td className="px-6 py-3 max-w-xs truncate">{log.details || '-'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Bottom Pagination */}
+        <Pagination />
+      </div>
+    </>
+  )
+}

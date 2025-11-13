@@ -25,7 +25,7 @@ export default function LoginPage() {
       const { error: insertError } = await supabase
         .from('system_logs')
         .insert({
-          source: 'unknown',
+          source: 'Unauthenticated user',
           action: 'user_login',
           status: 'failed',
           details: `${email} login failed.`,
