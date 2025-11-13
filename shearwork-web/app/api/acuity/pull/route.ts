@@ -278,8 +278,6 @@ export async function GET(request: Request) {
     const clientKey = getClientKey(appt)
     const returning = await isReturningClient(supabase, user.id, email, phone, appt.firstName, appt.lastName)
 
-    console.log(appt);
-
     // 3️⃣ Weekly
     const weekMeta = getWeekMetaForDate(apptDate)
     const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
