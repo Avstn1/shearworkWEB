@@ -1,6 +1,4 @@
-Here’s a clean, professional, and developer-friendly README.md for your project ShearWork, customized to reflect a real-world collaborative workflow using Next.js, Supabase, and Vercel:
-
-💈 ShearWork
+**💈 ShearWork**
 
 ShearWork is a modern web application built for barbershops and stylists — offering appointment tracking, client insights, and performance analytics in a sleek, data-driven dashboard.
 
