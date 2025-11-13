@@ -40,7 +40,7 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
 IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a monthly performance report for a barbershop professional on booth rental named ${userName}.
 Be a little fun and use emojis, especially in section headers and bullet points. Use start_date and end_date from monthly_data to reflect the full date range.
 Use data from summary, services, funnels, top_clients, and weekly_rows to calculate totals and insights. Make sure all totals match the dataset.
-Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE. After each section generate a 3-4 sentence CREATIVE AND LIVELY
+The report will be displayed in TinyMCE. After each section generate a 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
 
 After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
@@ -50,7 +50,9 @@ Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
 ${JSON.stringify(dataset.daily_rows, null, 2)}
 
-Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all data. DO NOT WRAP WITH '''html. Include:
+Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all data. DO NOT WRAP WITH '''html and
+Do NOT use Markdown (** or *) at all to bold text, use <b>Bold Text</b> or <strong>Bold Text</strong> instead.
+Include:
 
 1. <h1>${month} ${year} Business Report</h1>
 
@@ -80,10 +82,10 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
                 .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
                 .map(
                   (s: any) =>
-                    `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.estimated_revenue || 0).toFixed(2)}</td><td>$${(s.avg_booking || 0).toFixed(2)}</td></tr>`
+                    `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${((s.price || 0) * s.bookings).toFixed(2)}</td><td>$${(s.price || 0).toFixed(2)}</td></tr>`
                 )
                 .join('')}
-              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.estimated_revenue||0),0).toFixed(2)}</td><td>--</td></tr>
+              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.price||0),0).toFixed(2)}</td><td>--</td></tr>
             </tbody>
           </table>
           <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing consistent client demand and service value.</p>`
@@ -135,6 +137,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
             <tbody>
                 ${topClients
                 .slice(0, 5)
+                .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
                 .map((c: any, i: number) => {
                     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''
                     return `<tr>
