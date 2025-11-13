@@ -47,7 +47,8 @@ After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
 
 Dataset (JSON):
-${JSON.stringify(dataset, null, 2)}
+${JSON.stringify(dataset.weekly_rows, null, 2)}
+${JSON.stringify(dataset.daily_rows, null, 2)}
 
 Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all data. DO NOT WRAP WITH '''html. Include:
 
@@ -106,16 +107,16 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
             <thead><tr><th>Source</th><th>New Clients</th><th>Returning</th><th>Total</th><th>Retention</th><th>Avg Ticket</th></tr></thead>
             <tbody>
               ${funnels
-                .filter((f: any) => f.funnel_name !== 'Returning Client')
+                .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
                 .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
                 .map(
                     (f: any) =>
                     `<tr>
-                        <td>${f.funnel_name}</td>
+                        <td>${f.source}</td>
                         <td>${f.new_clients || 0}</td>
                         <td>${f.returning_clients || 0}</td>
                         <td>${(f.new_clients || 0) + (f.returning_clients || 0)}</td>
-                        <td>${f.retention_rate ? f.retention_rate.toFixed(1) + '%' : '--'}</td>
+                        <td>${(f.returning_clients && f.new_clients) ? (f.returning_clients/f.new_clients).toFixed(1) + '%' : '--'}</td>
                         <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
                     </tr>`
                 )
@@ -130,7 +131,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
    ${
      topClients.length
        ? `<table>
-            <thead><tr><th>Rank</th><th>Client</th><th>Total Paid</th><th>Visits</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Client</th><th>Service Totals</th><th>Visits</th></tr></thead>
             <tbody>
                 ${topClients
                 .slice(0, 5)
@@ -140,7 +141,7 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
                             <td>${medal || i + 1}</td>
                             <td>${c.client_name}</td>
                             <td>$${(c.total_paid || 0).toFixed(2)}</td>
-                            <td>${c.visits || 0}</td>
+                            <td>${c.num_visits || 0}</td>
                             </tr>`
                 })
                 .join('')}
@@ -154,14 +155,14 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
    ${
      topClients.length
        ? `<table>
-            <thead><tr><th>Client</th><th>Visits</th><th>Total Paid</th></tr></thead>
+            <thead><tr><th>Client</th><th>Visits</th><th>Service Totals</th></tr></thead>
             <tbody>
               ${topClients
-                .sort((a: any, b: any) => (b.visits || 0) - (a.visits || 0))
+                .sort((a: any, b: any) => (b.num_visits || 0) - (a.num_visits || 0))
                 .slice(0, 5)
                 .map(
                   (c: any) =>
-                    `<tr><td>${c.client_name}</td><td>${c.visits || 0}</td><td>$${(c.total_paid || 0).toFixed(2)}</td></tr>`
+                    `<tr><td>${c.client_name}</td><td>${c.num_visits || 0}</td><td>$${(c.total_paid || 0).toFixed(2)}</td></tr>`
                 )
                 .join('')}
             </tbody>
@@ -228,13 +229,13 @@ Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all dat
     }
 
 
-9. <h2>✨ Key Takeaways</h2>
+9. <h2>✨ Key Takeaways</h2> (The following is just an example, ai instructions: make it more creative and change it up but use the same data)
    <ul>
      <li>👥 Total Clients: ${summary.total_clients || 0} — strong base of loyal and new clients.</li>
      <li>💵 Approx. Take Home: $${profit.toFixed(2)} net profit.</li>
-     <li>🎯 Best Marketing Funnel: ${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.funnel_name || 'N/A'} performed best for new leads.</li>
+     <li>🎯 Best Marketing Funnel: ${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'N/A'} performed best for new leads.</li>
      <li>💳 Average Ticket: $${avgTicket.toFixed(2)} showing stable revenue per client.</li>
-     <li>💈 Multi-visit Clients: ${topClients.filter((c:any)=>(c.visits||0)>1).length} returned more than once — great loyalty!</li>
+     <li>💈 Multi-visit Clients: ${topClients.filter((c:any)=>(c.num_visits||0)>1).length} returned more than once — great loyalty!</li>
      <li>🚀 Keep growing by leveraging top-performing services and funnels next month!</li>
    </ul>
   `;
