@@ -13,7 +13,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const webhookUrl = process.env.DISCORD_WEBHOOK;
+            const webhookUrl = '${{ secrets.DISCORD_WEBHOOK }}';
             const pr = github.event.pull_request;
 
             let color = 0x00ff00; // green
@@ -29,7 +29,7 @@ jobs:
             }
 
             const embed = {
-              title: `${pr.title}`,
+              title: pr.title,
               url: pr.html_url,
               color: color,
               author: {
@@ -44,4 +44,8 @@ jobs:
               timestamp: new Date()
             };
 
-            await require('axios').default.post(webhookUrl, { embeds: [embed] });
+            await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ embeds: [embed] })
+            });
