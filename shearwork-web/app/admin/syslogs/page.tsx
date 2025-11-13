@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabaseClient'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, subHours } from 'date-fns'
-import { DayPicker } from 'react-day-picker'
+import { DayPicker, DateRange } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 
 interface SystemLog {
