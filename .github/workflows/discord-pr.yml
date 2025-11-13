@@ -1,0 +1,25 @@
+name: Notify Discord on PRs and Reviews
+
+on:
+  pull_request:
+    types: [opened, reopened, closed, merged]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  discord-notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send PR notification to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+          PR_ACTION: ${{ github.event.action }}
+        run: |
+          CONTENT="📣 **${PR_USER}** ${PR_ACTION} pull request: [${PR_TITLE}](${PR_URL})"
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"username\": \"GitHub Bot\", \"content\": \"$CONTENT\"}" \
+               "$DISCORD_WEBHOOK_URL"

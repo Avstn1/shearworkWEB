@@ -9,6 +9,12 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
+function getWeekdayName(date: Date) {
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+  return weekdays[date.getDay()]
+}
+
+
 function parseDateStringSafe(datetime: string | undefined | null) {
   if (!datetime) return null
   try {
@@ -259,6 +265,8 @@ export async function GET(request: Request) {
   const topClientsMap: Record<string, Record<string, any>> = {}
   const funnelMap: Record<string, Record<string, any>> = {}
   const monthlyClientMap: Record<string, Record<string, number>> = {}
+  const monthlyWeekdayAgg: Record<string, number> = {}
+
   const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok']
 
   for (const appt of appointments) {
@@ -277,7 +285,6 @@ export async function GET(request: Request) {
     if (!name && !email && !phone) continue
     const clientKey = getClientKey(appt)
     const returning = await isReturningClient(supabase, user.id, email, phone, appt.firstName, appt.lastName)
-
     // 3️⃣ Weekly
     const weekMeta = getWeekMetaForDate(apptDate)
     const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
@@ -296,6 +303,13 @@ export async function GET(request: Request) {
 
     // Skip appointments not in the requested month
     if (apptDate.getMonth() !== MONTHS.indexOf(requestedMonth!)) continue
+
+        // ---------------- Weekday aggregation for the month ----------------
+    const weekdayKey = parsed ? getWeekdayName(apptDate) : getWeekdayName(new Date(appt.datetime))
+    const monthWeekdayKey = `${user.id}||${requestedYear}||${requestedMonth}||${weekdayKey}`
+
+    if (!monthlyWeekdayAgg[monthWeekdayKey]) monthlyWeekdayAgg[monthWeekdayKey] = 0
+    monthlyWeekdayAgg[monthWeekdayKey]++
 
     // 1️⃣ Monthly
     const monthKey = `${year}||${monthName}`
@@ -585,6 +599,21 @@ export async function GET(request: Request) {
     }))
   })
   await supabase.from('marketing_funnels').upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+
+  const weekdayUpserts = Object.entries(monthlyWeekdayAgg).map(([key, total]) => {
+    const [userId, yearStr, month, weekday] = key.split('||')
+    return {
+      user_id: userId,
+      year: parseInt(yearStr),
+      month,
+      weekday,
+      total_appointments: total,
+      last_updated: new Date().toISOString()
+    }
+  })
+
+  await supabase.from('monthly_appointments_summary')
+    .upsert(weekdayUpserts, { onConflict: 'user_id,year,month,weekday' })
 
   return NextResponse.json({ endpoint: 'appointments', fetched_at: new Date().toISOString(), acuity_data: appointments })
 }
