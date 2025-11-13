@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subHours } from 'date-fns'
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, subHours } from 'date-fns'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 
@@ -19,13 +19,16 @@ interface SystemLog {
 
 const STATUS_OPTIONS = ['success', 'pending', 'failed']
 const SOURCE_OPTIONS = ['SYSTEM', 'USER']
-const ITEMS_OPTIONS = [10, 25, 50, 100]
+const ITEMS_OPTIONS = [15, 25, 50, 100]
 const DATE_PRESETS = ['Day', 'Week', 'Month', 'Custom'] as const
+
+const SEARCH_DEBOUNCE_MS = 500; // <--- Adjust search delay here (milliseconds)
 
 export default function SystemLogsPage() {
   const [logs, setLogs] = useState<SystemLog[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
   const [datePreset, setDatePreset] = useState<typeof DATE_PRESETS[number]>('Day')
@@ -33,28 +36,58 @@ export default function SystemLogsPage() {
   const [sortField, setSortField] = useState<'timestamp' | 'source' | 'status'>('timestamp')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [showCustomPicker, setShowCustomPicker] = useState(false)
+
+  const pickerRef = useRef<HTMLDivElement>(null)
+
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
+  // Close the custom picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowCustomPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => clearTimeout(handler)
+  }, [searchQuery])
 
   const getDateRange = () => {
     const now = subHours(new Date(), 5)
+
     switch (datePreset) {
       case 'Day':
-        return { from: now, to: now }
+        return { from: startOfDay(now), to: endOfDay(now) }
       case 'Week':
         return { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) }
       case 'Month':
         return { from: startOfMonth(now), to: endOfMonth(now) }
       case 'Custom':
-        // If user selects only one day, use it as both from and to
-        if (customRange.from && !customRange.to) return { from: customRange.from, to: customRange.from }
-        return customRange
+        const from = customRange?.from
+        const to = customRange?.to
+
+        if (from && to) return { from: startOfDay(from), to: endOfDay(to) }
+        if (from) return { from: startOfDay(from), to: endOfDay(from) }
+
+        return { from: startOfDay(now), to: endOfDay(now) } // fallback if nothing is selected
     }
   }
 
   const fetchLogs = async () => {
     setLoading(true)
     try {
-      let query = supabase.from<SystemLog>('system_logs').select('*')
+      let query = supabase.from<SystemLog, SystemLog>('system_logs').select('*')
 
       if (statusFilter) query = query.eq('status', statusFilter)
       if (sourceFilter) {
@@ -66,15 +99,22 @@ export default function SystemLogsPage() {
       if (range.from) query = query.gte('timestamp', range.from.toISOString())
       if (range.to) query = query.lte('timestamp', range.to.toISOString())
 
-      if (searchQuery) {
-        const term = `%${searchQuery}%`
-        query = query.or(`source.ilike.${term},action.ilike.${term},status.ilike.${term},details.ilike.${term}`)
+      if (debouncedSearchQuery) {
+        const term = `%${debouncedSearchQuery}%`
+        query = query.or(
+          `id.ilike.${term},source.ilike.${term},action.ilike.${term},status.ilike.${term},details.ilike.${term}`
+        )
       }
 
       query = query.order(sortField, { ascending: sortOrder === 'asc' })
 
       const { data, error } = await query
-      if (error) throw error
+      if (error) {
+        console.error('Supabase query error:', error, data)
+        toast.error(`Failed to fetch system logs: ${error.message}`)
+        return
+      }
+
       setLogs(data || [])
       setCurrentPage(1)
     } catch (err: any) {
@@ -87,7 +127,7 @@ export default function SystemLogsPage() {
 
   useEffect(() => {
     fetchLogs()
-  }, [searchQuery, statusFilter, sourceFilter, datePreset, customRange, sortField, sortOrder])
+  }, [debouncedSearchQuery, statusFilter, sourceFilter, datePreset, customRange, sortField, sortOrder])
 
   const totalPages = Math.ceil(logs.length / itemsPerPage)
   const paginatedLogs = logs.slice(
@@ -149,7 +189,7 @@ export default function SystemLogsPage() {
       <div className="p-4 sm:p-6 min-h-screen bg-[#1f2420] text-[#F1F5E9]">
         <h1 className="text-3xl font-bold text-[var(--highlight)] mb-6">System Logs</h1>
 
-        {/* Filters: sticky at top */}
+        {/* Filters */}
         <div className="sticky top-0 z-20 bg-[#1f2420] p-3 border-b border-[#55694b] flex flex-wrap gap-4 items-center">
           <input
             type="text"
@@ -158,6 +198,9 @@ export default function SystemLogsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 min-w-[200px] px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
           />
+
+          <Pagination />
+
           <select
             value={statusFilter || ''}
             onChange={(e) => setStatusFilter(e.target.value || null)}
@@ -166,6 +209,7 @@ export default function SystemLogsPage() {
             <option value="">All Statuses</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
           </select>
+
           <select
             value={sourceFilter || ''}
             onChange={(e) => setSourceFilter(e.target.value || null)}
@@ -176,7 +220,7 @@ export default function SystemLogsPage() {
           </select>
 
           {/* Date Preset Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={pickerRef}>
             <select
               value={datePreset}
               onChange={(e) => setDatePreset(e.target.value as typeof DATE_PRESETS[number])}
@@ -188,6 +232,14 @@ export default function SystemLogsPage() {
             {/* Custom Date Range Picker */}
             {datePreset === 'Custom' && (
               <div className="absolute top-full mt-2 z-50 bg-[#2f3a2d] border border-[#55694b] rounded-lg shadow-lg p-2">
+                <div className="flex justify-end mb-1">
+                  <button
+                    onClick={() => setDatePreset('Day')}
+                    className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-red-700"
+                  >
+                    ✕
+                  </button>
+                </div>
                 <DayPicker
                   mode="range"
                   selected={customRange}
@@ -222,15 +274,12 @@ export default function SystemLogsPage() {
           </button>
         </div>
 
-        {/* Top Pagination */}
-        <Pagination />
-
-        {/* Table */}
-        <div className="overflow-x-auto mt-4 bg-[#2a2f27] rounded-xl shadow-md border border-[#55694b]">
+        {/* Table Container */}
+        <div className="mt-4 bg-[#2a2f27] rounded-xl shadow-md border border-[#55694b] max-h-[80vh] overflow-auto">
           <table className="min-w-full divide-y divide-[#55694b]">
-            <thead className="bg-[#2f3a2d] sticky z-10">
+            <thead className="bg-[#2f3a2d] sticky top-0 z-10">
               <tr>
-                {['Timestamp', 'Source', 'Status', 'Action', 'Details'].map((col, idx) => (
+                {['Log ID', 'Timestamp', 'Source', 'Status', 'Action', 'Details'].map((col, idx) => (
                   <th
                     key={idx}
                     onClick={() => idx <= 2 && handleSort((['timestamp', 'source', 'status'] as const)[idx])}
@@ -246,16 +295,17 @@ export default function SystemLogsPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-6">Loading...</td>
+                  <td colSpan={6} className="text-center py-6">Loading...</td>
                 </tr>
               ) : paginatedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-6">No logs found.</td>
+                  <td colSpan={6} className="text-center py-6">No logs found.</td>
                 </tr>
               ) : (
                 paginatedLogs.map(log => (
                   <tr key={log.id} className="hover:bg-[#3a4431] transition-colors">
-                    <td className="px-6 py-3">{formatTimestamp(log.timestamp)}</td>
+                    <td className="px-6 py-3">{log.id}</td>
+                    <td className="px-6 py-3">{weekdays[new Date(log.timestamp).getUTCDay()]}, {formatTimestamp(log.timestamp)}</td>
                     <td className="px-6 py-3">{log.source}</td>
                     <td className="px-6 py-3">{getStatusBadge(log.status)}</td>
                     <td className="px-6 py-3">{log.action}</td>
@@ -267,8 +317,6 @@ export default function SystemLogsPage() {
           </table>
         </div>
 
-        {/* Bottom Pagination */}
-        <Pagination />
       </div>
     </>
   )

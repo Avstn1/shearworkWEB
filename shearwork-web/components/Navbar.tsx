@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Menu, X, Grid, UserCog, CreditCard, FileText } from 'lucide-react'
+import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
@@ -107,8 +107,11 @@ export default function Navbar() {
     if (userRole === 'Admin') {
       return (
         <>
-          {/* --- ADMIN MOBILE MENU --- */}
-          {/* Example: <Link href="/admin-dashboard" onClick={() => setOpen(false)}>Admin Dashboard</Link> */}
+          <Link href="/admin/syslogs" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <FileText className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
         </>
       )
     }
@@ -147,6 +150,18 @@ export default function Navbar() {
             <FileText className="w-6 h-6 text-[var(--foreground)]" />
           </div>
         </Link>
+
+        <Link href="/admin/analytics" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <ChartBar className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+        <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <Grid className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+
         <UserProfile />
       </>
     )
