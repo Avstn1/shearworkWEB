@@ -75,15 +75,42 @@ Your app should now be running at
 ## 🧩 Project Structure
 
 ```
-shearwork/
-├── app/                   # Next.js app directory (pages, layouts, routes)
-├── components/            # Reusable React components
-├── lib/ or utils/         # Helper functions and Supabase client setup
-├── styles/                # Tailwind CSS and global styles
-├── public/                # Static assets
-├── supabase/              # Database schema, migrations (if any)
-└── .env.local             # Environment variables (not committed)
+shearwork-web/
+├── .next/                  # Next.js build output (auto-generated)
+├── app/                    # Next.js app directory (routes, layouts, pages)
+├── components/             # Reusable React components (UI elements, charts, etc.)
+├── context/                # React contexts for global state (e.g. user, theme)
+├── hooks/                  # Custom React hooks
+├── lib/                    # Supabase client, helpers, and utility functions
+├── node_modules/           # Project dependencies (auto-installed)
+├── public/                 # Static assets (images, icons, etc.)
+├── utils/                  # Shared utility scripts
+│
+├── supabase/               # SQL, migrations, or Supabase schema definitions
+│
+├── .env.local              # Environment variables (not committed)
+├── .gitignore              # Git ignore rules
+├── eslint.config.mjs       # ESLint configuration
+├── next-env.d.ts           # TypeScript declarations for Next.js
+├── next.config.ts          # Next.js project configuration
+├── package-lock.json       # Auto-generated lock file for npm
+├── package.json            # Project dependencies and scripts
+├── postcss.config.mjs      # PostCSS configuration for Tailwind
+├── proxy.ts                # Proxy utility or server handler
+├── tailwind.config.ts      # Tailwind CSS configuration
+├── tsconfig.json           # TypeScript compiler configuration
+├── vercel.json             # Vercel deployment configuration
+└── README.md               # Project documentation
 ```
+
+---
+
+🗒️ **Notes:**
+- `.env.local` should **never** be committed — it holds Supabase keys and secrets.  
+- The `supabase/` folder may include SQL migrations or config for local database syncing.  
+- The `lib/` folder is typically where your Supabase client instance (`supabaseClient.ts`) lives.  
+- `proxy.ts` might handle routing or server-side fetch logic, depending on your setup.  
+- When collaborating, developers should only need to install dependencies and get access to `.env.local`.
 
 ---
 
