@@ -28,6 +28,7 @@ import AverageTicketCard from '@/components/AverageTicketCard'
 import ServiceBreakdownChart from '@/components/Dashboard/ServiceBreakdownChart'
 import MarketingFunnelsChart from '@/components/Dashboard/MarketingFunnelsChart'
 import ProfitLossDashboard from '@/components/Dashboard/ProfitLossDashboard'
+import YearlyDashboard from '@/components/Dashboard/YearlyDashboard'
 
 import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -64,7 +65,7 @@ export default function DashboardPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [showProfitLoss, setShowProfitLoss] = useState(false)
+  const [dashboardView, setDashboardView] = useState<'monthly' | 'yearly' | 'profit'>('monthly')
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate())
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
@@ -189,14 +190,25 @@ export default function DashboardPage() {
         {/* Controls — stacked nicely on mobile */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
           <button
-            onClick={() => setShowProfitLoss(prev => !prev)}
+            onClick={() => {
+              setDashboardView(prev =>
+                prev === 'monthly' ? 'yearly' :
+                prev === 'yearly' ? 'profit' : 'monthly'
+              )
+            }}
             className={`w-full sm:w-auto px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
-              showProfitLoss
-                ? 'bg-lime-300 text-black shadow-[0_0_8px_#c4ff85]'
-                : 'bg-white/10 text-white hover:bg-white/20'
+              dashboardView === 'profit'
+                ? 'bg-rose-300 text-black shadow-[0_0_8px_#ff7f7f]'
+                : dashboardView === 'yearly'
+                ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
+                : 'bg-lime-300 text-black shadow-[0_0_8px_#c4ff85]'
             }`}
           >
-            {showProfitLoss ? 'Main Dashboard' : 'Profit/Loss View'}
+            {dashboardView === 'monthly'
+              ? 'Switch → Yearly Dashboard'
+              : dashboardView === 'yearly'
+              ? 'Switch → Profit/Loss Dashboard'
+              : 'Switch → Monthly Dashboard'}
           </button>
           <TipsDropdown barberId={user?.id} onRefresh={() => setRefreshKey(prev => prev + 1)} />
         </div>
@@ -289,22 +301,37 @@ export default function DashboardPage() {
     </motion.div>
   )
 
+
   // -------------------- PAGE CONTENT --------------------
   const content = (
     <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
       <DashboardHeader />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={showProfitLoss ? 'profit-loss-view' : 'main-dashboard-view'}
+          key={dashboardView}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.4, ease: 'easeInOut' }}
         >
-          {showProfitLoss
-            ? <ProfitLossDashboard userId={user.id} selectedMonth={selectedMonth} selectedYear={selectedYear} selectedDay={selectedDay} globalRefreshKey={refreshKey} />
-            : <MainDashboard />
+
+          {dashboardView === 'monthly' && <MainDashboard />}
+          {dashboardView === 'yearly' && 
+            <YearlyDashboard
+              userId={user.id}
+              selectedYear={selectedYear}
+              globalRefreshKey={refreshKey}
+            />
           }
+          {dashboardView === 'profit' && (
+            <ProfitLossDashboard
+              userId={user.id}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              selectedDay={selectedDay}
+              globalRefreshKey={refreshKey}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
     </div>
