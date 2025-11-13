@@ -2,7 +2,7 @@ name: Discord PR Notifications
 
 on:
   pull_request:
-    types: [opened, closed]
+    types: [opened, closed]  # triggers on PR creation and PR close
 
 jobs:
   discord-pr:
@@ -13,6 +13,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const axios = require('axios');
             const webhookUrl = '${{ secrets.DISCORD_WEBHOOK_PR }}';
 
             // Only run on pull_request events
@@ -24,14 +25,10 @@ jobs:
             // Helper function to send Discord embed
             async function sendEmbed(embed) {
               try {
-                await fetch(webhookUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ embeds: [embed] })
-                });
-                console.log('Discord message sent successfully');
+                await axios.post(webhookUrl, { embeds: [embed] });
+                console.log("Discord message sent successfully");
               } catch (err) {
-                console.error('Discord webhook failed:', err);
+                console.error("Discord webhook failed:", err.message);
               }
             }
 
