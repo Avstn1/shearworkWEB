@@ -2,7 +2,7 @@ name: Discord PR Notifications
 
 on:
   pull_request:
-    types: [opened, closed]  # triggers on PR creation and PR close
+    types: [opened, closed]
 
 jobs:
   discord-pr:
@@ -15,18 +15,30 @@ jobs:
           script: |
             const webhookUrl = '${{ secrets.DISCORD_WEBHOOK_PR }}';
 
-            // Only run if this is a pull_request event
+            // Only run on pull_request events
             if (github.event_name !== 'pull_request') return;
 
             const pr = github.event.pull_request;
             const action = github.event.action;
 
-            // ---------------------------
-            // PR CREATED
-            // ---------------------------
+            // Helper function to send Discord embed
+            async function sendEmbed(embed) {
+              try {
+                await fetch(webhookUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ embeds: [embed] })
+                });
+                console.log('Discord message sent successfully');
+              } catch (err) {
+                console.error('Discord webhook failed:', err);
+              }
+            }
+
+            // PR Created
             if (action === 'opened') {
               const embed = {
-                title: `📬 New PR: ${pr.title}`,
+                title: `📬 PR Created: ${pr.title}`,
                 url: pr.html_url,
                 color: 0x00ff00,
                 author: { name: pr.user.login, icon_url: pr.user.avatar_url },
@@ -36,17 +48,10 @@ jobs:
                 ],
                 timestamp: new Date().toISOString()
               };
-
-              await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed] })
-              });
+              await sendEmbed(embed);
             }
 
-            // ---------------------------
-            // PR MERGED (any branch)
-            // ---------------------------
+            // PR Merged
             if (action === 'closed' && pr.merged) {
               const embed = {
                 title: `✅ PR Merged: ${pr.title}`,
@@ -59,17 +64,10 @@ jobs:
                 ],
                 timestamp: new Date().toISOString()
               };
-
-              await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed] })
-              });
+              await sendEmbed(embed);
             }
 
-            // ---------------------------
-            // PR CLOSED WITHOUT MERGE (optional)
-            // ---------------------------
+            // PR Closed without merge
             if (action === 'closed' && !pr.merged) {
               const embed = {
                 title: `❌ PR Closed: ${pr.title}`,
@@ -82,10 +80,5 @@ jobs:
                 ],
                 timestamp: new Date().toISOString()
               };
-
-              await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ embeds: [embed] })
-              });
+              await sendEmbed(embed);
             }
