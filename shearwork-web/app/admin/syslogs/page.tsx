@@ -87,8 +87,8 @@ export default function SystemLogsPage() {
   const fetchLogs = async () => {
     setLoading(true)
     try {
-      let query = supabase.from<SystemLog, SystemLog>('system_logs').select('*')
-
+      let query = supabase.from<SystemLog>('system_logs').select('id, timestamp, source, action, status, details')
+      
       if (statusFilter) query = query.eq('status', statusFilter)
       if (sourceFilter) {
         if (sourceFilter === 'SYSTEM') query = query.eq('source', 'SYSTEM')
