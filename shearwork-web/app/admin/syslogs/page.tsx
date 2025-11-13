@@ -8,6 +8,15 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, e
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 
+interface SystemLog {
+  id: string
+  timestamp: string
+  source: string
+  action: string
+  status: 'success' | 'pending' | 'failed'
+  details?: string
+}
+
 const STATUS_OPTIONS = ['success', 'pending', 'failed']
 const SOURCE_OPTIONS = ['SYSTEM', 'USER']
 const ITEMS_OPTIONS = [15, 25, 50, 100]
