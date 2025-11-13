@@ -144,7 +144,7 @@ export default function SettingsPage() {
           email: user.email ?? '',
         })
         setFullName(data.full_name ?? '')
-        setCommissionRate(data.commission_rate * 100)
+        setCommissionRate(data.commission_rate ? data.commission_rate * 100 : null)
       }
       setLoading(false)
     }
