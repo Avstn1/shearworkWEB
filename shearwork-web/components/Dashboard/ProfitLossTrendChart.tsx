@@ -56,23 +56,27 @@ export default function ProfitLossTrendChart({
         return
       }
 
-      const formatted = daily.map((d) => {
-        const revenue = Number(d.final_revenue || 0)
-        const expenses = Number(d.expenses || 0)
-        const profit = revenue - expenses
+      const today = new Date()
 
-        // Format date label to show day only (e.g., "Nov 5" or "5")
-        // const dateLabel = new Date(d.date).getDate().toString()
+      const formatted = daily
+        .filter((d) => {
+          const dateObj = new Date(d.date + 'T00:00:00Z')
+          // Only include dates up to today
+          return dateObj <= today
+        })
+        .map((d) => {
+          const revenue = Number(d.final_revenue || 0)
+          const expenses = Number(d.expenses || 0)
+          const profit = revenue - expenses
+          const dateLabel = new Date(d.date + 'T00:00:00Z').getUTCDate().toString()
 
-        const dateLabel = new Date(d.date + 'T00:00:00Z').getUTCDate().toString()
-
-        return {
-          date: dateLabel,
-          revenue,
-          expenses,
-          profit,
-        }
-      })
+          return {
+            date: dateLabel,
+            revenue,
+            expenses,
+            profit,
+          }
+        })
 
       setData(formatted)
     }
@@ -140,28 +144,27 @@ export default function ProfitLossTrendChart({
                 default:
                   label = name
               }
-              // Recharts expects: [value, label]
               return [`$${value.toFixed(2)}`, label]
             }}
           />
 
           <Legend />
-          {/* <Line
+          <Line
             type="monotone"
             dataKey="revenue"
             stroke="#aeea00"
             strokeWidth={2}
             name="Revenue"
             dot={false}
-          /> */}
-          {/* <Line
+          />
+          <Line
             type="monotone"
             dataKey="expenses"
             stroke="#ff6d00"
             strokeWidth={2}
             name="Expenses"
             dot={false}
-          /> */}
+          />
           <Line
             type="monotone"
             dataKey="profit"

@@ -67,7 +67,7 @@ export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
                 color: '#F5E6C5',
               }}
             />
-            <Bar dataKey="total_appointments" fill="#c4ff85" radius={[6,6,0,0]} />
+            <Bar dataKey="total_appointments" name="Total Appointments" fill="#c4ff85" radius={[6,6,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
