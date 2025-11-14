@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       .from('system_logs')
       .select('*')
       .gte('timestamp', startOfDay(now).toISOString())
-      .lte(new Date(startOfDay(now).getTime() + 23 * 60 * 60 + 59 * 60 + 59).toISOString()); // full day
+      .lte('timestamp', new Date(startOfDay(now).getTime() + 23 * 60 * 60 + 59 * 60 + 59).toISOString()); // full day
 
     const hourlyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
 
