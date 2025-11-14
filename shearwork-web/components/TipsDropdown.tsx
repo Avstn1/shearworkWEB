@@ -96,6 +96,19 @@ export default function DailyTipsDropdown({
           action === 'add' ? 'updated' : 'saved'
         }!`
       )
+
+
+      const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+            source: barberId,
+            action: 'add_tips',
+            status: 'success',
+            details: `Tips added`,
+        })
+
+      if (insertError) throw insertError
+      
       setIsOpen(false)
       setTipAmount('')
       onRefresh?.()

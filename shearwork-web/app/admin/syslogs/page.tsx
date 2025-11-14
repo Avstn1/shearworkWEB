@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
@@ -6,6 +7,7 @@ import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, subHours } from 'date-fns'
 import { DayPicker, DateRange } from 'react-day-picker'
+import { RefreshCcw } from "lucide-react"
 import 'react-day-picker/dist/style.css'
 
 interface SystemLog {
@@ -21,7 +23,6 @@ const STATUS_OPTIONS = ['success', 'pending', 'failed']
 const SOURCE_OPTIONS = ['SYSTEM', 'USER']
 const ITEMS_OPTIONS = [15, 25, 50, 100]
 const DATE_PRESETS = ['Day', 'Week', 'Month', 'Custom'] as const
-
 const SEARCH_DEBOUNCE_MS = 500
 
 export default function SystemLogsPage() {
@@ -31,27 +32,27 @@ export default function SystemLogsPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
-  const [datePreset, setDatePreset] = useState<typeof DATE_PRESETS[number]>('Day')
+  const [datePreset, setDatePreset] = useState<typeof DATE_PRESETS[number]>('Month')
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined)
+  const [showCustomPicker, setShowCustomPicker] = useState(false)
   const [sortField, setSortField] = useState<'timestamp' | 'source' | 'status'>('timestamp')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [itemsPerPage, setItemsPerPage] = useState(100)
 
   const pickerRef = useRef<HTMLDivElement>(null)
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-  // Close picker on outside click
+  // Close custom picker on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        // Hide picker only if Custom preset is active
-        if (datePreset === 'Custom') setDatePreset('Day')
+        setShowCustomPicker(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [datePreset])
+  }, [])
 
   // Debounce search
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function SystemLogsPage() {
   }, [searchQuery])
 
   const getDateRange = () => {
-    const now = subHours(new Date(), 5)
+    const now = new Date()
     switch (datePreset) {
       case 'Day': return { from: startOfDay(now), to: endOfDay(now) }
       case 'Week': return { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) }
@@ -125,7 +126,12 @@ export default function SystemLogsPage() {
     return <span className={`${base} bg-yellow-100 text-yellow-800`}>Pending</span>
   }
 
-  const formatTimestamp = (ts: string) => format(new Date(ts), 'MMM d yyyy HH:mm')
+  const formatTimestamp = (ts: string) => {
+    const date = new Date(ts)
+    date.setHours(date.getHours() + 5)
+    return format(date, 'MMM d yyyy HH:mm')
+  }
+
 
   const resetFilters = () => {
     setSearchQuery('')
@@ -134,6 +140,7 @@ export default function SystemLogsPage() {
     setDatePreset('Day')
     setCustomRange(undefined)
     setItemsPerPage(15)
+    setShowCustomPicker(false)
   }
 
   const Pagination = () =>
@@ -169,25 +176,53 @@ export default function SystemLogsPage() {
           />
           <Pagination />
 
-          <select value={statusFilter || ''} onChange={e => setStatusFilter(e.target.value || null)} className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]">
+          <button
+            onClick={fetchLogs}
+            className="px-4 py-2 rounded-lg bg-[#3a4431] text-[#F1F5E9] hover:bg-[#4b5a42] transition-colors"
+          >
+            <RefreshCcw size={25} />
+          </button>
+
+          <select
+            value={statusFilter || ''}
+            onChange={e => setStatusFilter(e.target.value || null)}
+            className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+          >
             <option value="">All Statuses</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
           </select>
 
-          <select value={sourceFilter || ''} onChange={e => setSourceFilter(e.target.value || null)} className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]">
+          <select
+            value={sourceFilter || ''}
+            onChange={e => setSourceFilter(e.target.value || null)}
+            className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+          >
             <option value="">All Sources</option>
             {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
           <div className="relative" ref={pickerRef}>
-            <select value={datePreset} onChange={e => setDatePreset(e.target.value as typeof DATE_PRESETS[number])} className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]">
+            <select
+              value={datePreset}
+              onChange={e => {
+                const value = e.target.value as typeof DATE_PRESETS[number]
+                setDatePreset(value)
+                if (value === 'Custom') setShowCustomPicker(true)
+              }}
+              className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+            >
               {DATE_PRESETS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
-            {datePreset === 'Custom' && (
+            {datePreset === 'Custom' && showCustomPicker && (
               <div className="absolute top-full mt-2 z-50 bg-[#2f3a2d] border border-[#55694b] rounded-lg shadow-lg p-2">
                 <div className="flex justify-end mb-1">
-                  <button onClick={() => setDatePreset('Day')} className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-red-700">✕</button>
+                  <button
+                    onClick={() => setShowCustomPicker(false)}
+                    className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-red-700"
+                  >
+                    ✕
+                  </button>
                 </div>
                 <DayPicker
                   mode="range"
@@ -206,7 +241,11 @@ export default function SystemLogsPage() {
             )}
           </div>
 
-          <select value={itemsPerPage} onChange={e => setItemsPerPage(Number(e.target.value))} className="px-3 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]">
+          <select
+            value={itemsPerPage}
+            onChange={e => setItemsPerPage(Number(e.target.value))}
+            className="px-3 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+          >
             {ITEMS_OPTIONS.map(i => <option key={i} value={i}>{i} per page</option>)}
           </select>
 
@@ -217,7 +256,7 @@ export default function SystemLogsPage() {
           <table className="min-w-full divide-y divide-[#55694b]">
             <thead className="bg-[#2f3a2d] sticky top-0 z-10">
               <tr>
-                {['Log ID', 'Timestamp', 'Source', 'Status', 'Action', 'Details'].map((col, idx) => (
+                {['Log ID', 'Timestamp', 'Action', 'Details', 'Status', 'Source'].map((col, idx) => (
                   <th
                     key={idx}
                     onClick={() => idx <= 2 && handleSort((['timestamp', 'source', 'status'] as const)[idx])}
@@ -238,10 +277,10 @@ export default function SystemLogsPage() {
                   <tr key={log.id} className="hover:bg-[#3a4431] transition-colors">
                     <td className="px-6 py-3">{log.id}</td>
                     <td className="px-6 py-3">{weekdays[new Date(log.timestamp).getUTCDay()]}, {formatTimestamp(log.timestamp)}</td>
-                    <td className="px-6 py-3">{log.source}</td>
-                    <td className="px-6 py-3">{getStatusBadge(log.status)}</td>
                     <td className="px-6 py-3">{log.action}</td>
                     <td className="px-6 py-3 max-w-xs truncate">{log.details || '-'}</td>
+                    <td className="px-6 py-3">{getStatusBadge(log.status)}</td>
+                    <td className="px-6 py-3">{log.source}</td>
                   </tr>
                 ))
               )}

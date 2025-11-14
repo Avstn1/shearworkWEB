@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -21,6 +23,39 @@ interface WeeklyComparisonReportsProps {
   filterMonth?: string;
   filterYear?: number | null;
   isAdmin?: boolean;
+}
+
+function getMondaysInMonth(month: number, year: number): Date[] {
+  const mondays: number[] = []
+  const date = new Date(year, month, 1) 
+
+  // Move to first Monday
+  while (date.getDay() !== 1) {
+    date.setDate(date.getDate() + 1)
+  }
+
+  // Collect all Mondays
+  while (date.getMonth() === month) {
+    mondays.push(date.getDate())
+    date.setDate(date.getDate() + 7)
+  }
+
+  return mondays
+}
+
+async function logWeeklyComparisonReportOpen(user_id: string, r: any) {
+  const monthIndex = new Date(`${r.month} 1, ${r.year}`).getMonth();
+  const week_number = r.week_number ?? getMondaysInMonth(monthIndex, r.year).length
+  const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+      source: user_id,
+      action: 'opened_wkComparison_report',
+      status: 'success',
+      details: `Opened Report: Week #${week_number}, ${r.month} ${r.year}`,
+    });
+
+  if (insertError) throw insertError;
 }
 
 export default function WeeklyComparisonReports({
@@ -133,6 +168,7 @@ export default function WeeklyComparisonReports({
                 <div
                   onClick={() => {
                     setSelectedReport(r);
+                    logWeeklyComparisonReportOpen(userId, r);
                     setIsEditing(false);
                   }}
                   className="flex-1 flex flex-col gap-1"

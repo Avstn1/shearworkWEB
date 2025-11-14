@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -22,6 +23,19 @@ interface WeeklyReportsProps {
   filterMonth?: string
   filterYear?: number | null
   isAdmin?: boolean
+}
+
+async function logWeeklyReportOpen(user_id: string, r: any) {
+  const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+      source: user_id,
+      action: 'opened_weekly_report',
+      status: 'success',
+      details: `Opened Report: Week #${r.week_number}, ${r.month} ${r.year}`,
+    });
+
+  if (insertError) throw insertError;
 }
 
 export default function WeeklyReports({
@@ -59,6 +73,7 @@ export default function WeeklyReports({
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchReports()
   }, [userId, refresh])
 
@@ -114,6 +129,7 @@ export default function WeeklyReports({
               }}
               onClick={() => {
                 setSelectedReport(r)
+                logWeeklyReportOpen(userId, r);
                 setIsEditing(false)
               }}
             >

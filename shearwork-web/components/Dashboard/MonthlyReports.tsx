@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/set-state-in-effect */
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -21,6 +23,19 @@ interface MonthlyReportsProps {
   filterMonth?: string
   filterYear?: number | null
   isAdmin?: boolean
+}
+
+async function logMonthlyReportOpen(user_id: string, r: any) {
+  const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+      source: user_id,
+      action: 'opened_monthly_report',
+      status: 'success',
+      details: `Opened Report: ${r.month} ${r.year}`,
+    });
+
+  if (insertError) throw insertError;
 }
 
 export default function MonthlyReports({
@@ -134,6 +149,7 @@ export default function MonthlyReports({
               }}
               onClick={() => {
                 setSelectedReport(r)
+                logMonthlyReportOpen(userId, r);
                 setIsEditing(false)
               }}
             >

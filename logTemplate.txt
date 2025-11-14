@@ -1,11 +1,11 @@
 const { error: insertError } = await supabase
-.from('system_logs')
-.insert({
-    source: userProfile.user?.id,
-    action: 'user_login',
-    status: 'success',
-    details: `User ${userProfile.user?.email} logged in.`,
-})
+    .from('system_logs')
+    .insert({
+        source: user_id,
+        action: 'opened_weekly_report',
+        status: 'success',
+        details: `User opened the weekly report for Week #${r.week_number}, ${r.month} ${r.year}`,
+    })
 
 if (insertError) throw insertError
 
