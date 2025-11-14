@@ -7,6 +7,8 @@ import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar } from 'lucide-r
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
+import Tooltip from '@/components/Wrappers/Tooltip'
+import NotificationsDropdown from '@/components/NotificationsDropdown'
 
 async function logNavLinkClick(user_id: string, linkName: string) {
   const { error: insertError } = await supabase
@@ -87,6 +89,7 @@ export default function Navbar() {
 
   const desktopIcons = (
     <>
+<<<<<<< HEAD
       <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
         <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'dashboard')}}>
           <Grid className="w-6 h-6 text-[var(--foreground)]" />
@@ -102,6 +105,29 @@ export default function Navbar() {
           <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
         </div>
       </Link>
+=======
+      <Tooltip label="Dashboard">
+        <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <Grid className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+      </Tooltip>
+      <Tooltip label="User Editor">
+        <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <UserCog className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+      </Tooltip>
+      <Tooltip label="Expenses">
+        <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+      </Tooltip>
+>>>>>>> fb083895a050f3a3d1b30fa1fe05760da7bb021b
     </>
   )
 
@@ -198,6 +224,7 @@ export default function Navbar() {
       <>
         {/* --- NON-ADMIN CONTENT --- */}
         {desktopIcons}
+        <NotificationsDropdown userId={user.id} />
         {/* <TipsDropdown barberId={user.id} /> */}
         <UserProfile />
       </>

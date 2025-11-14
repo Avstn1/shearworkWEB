@@ -13,15 +13,15 @@ function normalizePhone(phone?: string) {
   return phone ? phone.replace(/\D/g, '') : ''
 }
 
-function buildClientKey(client: any) {
+function buildClientKey(client: any, userId: string) {
   const email = (client.email || '').toLowerCase().trim()
   const phone = normalizePhone(client.phone)
   const name = `${client.firstName || ''} ${client.lastName || ''}`.trim().toLowerCase()
   const raw = email || phone || name
-  if (raw) return raw
+  if (raw) return `${userId}_${raw}`  // prefix userId for global uniqueness
 
   // fallback for missing identifiers → deterministic internal ID
-  const seed = `${client.id || ''}|${client.datetime || ''}|${client.firstName || ''}|${client.lastName || ''}`
+  const seed = `${userId}|${client.id || ''}|${client.datetime || ''}|${client.firstName || ''}|${client.lastName || ''}`
   return crypto.createHash('sha256').update(seed).digest('hex')
 }
 
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const requestedYear = searchParams.get('year') ? parseInt(searchParams.get('year') as string, 10) : null
   if (!requestedYear) return NextResponse.json({ error: 'Year parameter required' }, { status: 400 })
 
-  // Fetch token
+  // Fetch Acuity token
   const { data: tokenRow } = await supabase.from('acuity_tokens').select('*').eq('user_id', user.id).single()
   if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
 
@@ -71,36 +71,69 @@ export async function GET(request: Request) {
     }
   }
 
-  // ---------------- Helper to fetch a single day's appointments ----------------
-  async function fetchDay(date: string) {
-    const url = new URL('https://acuityscheduling.com/api/v1/appointments')
-    url.searchParams.set('minDate', date)
-    url.searchParams.set('maxDate', date)
-    url.searchParams.set('max', '2000') // fetch max per day
-    const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
-    if (!res.ok) throw new Error(`Failed fetching appointments for ${date}: ${res.statusText}`)
-    return res.json()
+  // ------------------- Get barber profile -------------------------
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("calendar")
+    .eq("user_id", user.id)
+    .single()
+  if (profileError || !profile) {
+    console.log(profileError)
+    return NextResponse.json({ error: "No profile found" }, { status: 400 })
   }
 
-  // ---------------- Fetch every day of the year ----------------
-  let allAppointments: any[] = []
-  const start = new Date(requestedYear, 0, 1)
-  const end = new Date(requestedYear, 11, 31)
+  const barberCalendarName = (profile.calendar || "").trim().toLowerCase()
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dayStr = d.toISOString().split('T')[0]
+  // ------------------- Fetch calendars ----------------------------
+  let allCalendars: any[] = []
+  try {
+    const calRes = await fetch('https://acuityscheduling.com/api/v1/calendars', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    })
+    if (!calRes.ok) throw new Error(`Calendars fetch failed: ${calRes.status}`)
+    allCalendars = await calRes.json()
+  } catch (err) {
+    console.error('Failed to fetch calendars:', err)
+    return NextResponse.json({ error: 'Failed to fetch calendars', details: String(err) }, { status: 500 })
+  }
+
+  const calendarMatch = allCalendars.find(c => c.name.trim().toLowerCase() === barberCalendarName)
+  if (!calendarMatch || !calendarMatch.id) {
+    return NextResponse.json({ error: `No matching calendar found for barber: ${barberCalendarName}` }, { status: 400 })
+  }
+  const calendarID = calendarMatch.id
+
+  // ------------------- Fetch appointments by month -----------------
+  const allAppointments: any[] = []
+  for (let month = 0; month < 12; month++) {
+    const start = new Date(requestedYear, month, 1).toISOString().split('T')[0]
+    const end = new Date(requestedYear, month + 1, 0).toISOString().split('T')[0] // last day of month
+
+    const url = new URL('https://acuityscheduling.com/api/v1/appointments')
+    url.searchParams.set('minDate', start)
+    url.searchParams.set('maxDate', end)
+    url.searchParams.set('calendarID', calendarID.toString())
+    url.searchParams.set('max', '2000')
+
     try {
-      const dayAppointments = await fetchDay(dayStr)
-      if (Array.isArray(dayAppointments)) allAppointments.push(...dayAppointments)
+      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
+      if (!res.ok) throw new Error(`Failed fetching appointments for ${month + 1}: ${res.statusText}`)
+      const monthAppointments = await res.json()
+      if (Array.isArray(monthAppointments)) allAppointments.push(...monthAppointments)
+      console.log(`Month ${month + 1} processed: ${monthAppointments.length} appointments fetched`)
     } catch (err) {
-      console.error(`Failed to fetch appointments for ${dayStr}:`, err)
+      console.error(`Failed to fetch appointments for month ${month + 1}:`, err)
     }
   }
 
-  // ---------------- Aggregate clients ----------------
+  // ------------------- Filter past appointments -------------------
+  const now = new Date()
+  const appointments = allAppointments.filter(a => new Date(a.datetime) <= now)
+
+  // ------------------- Aggregate clients ---------------------------
   const clientMap: Record<string, any> = {}
-  for (const appt of allAppointments) {
-    const key = buildClientKey(appt)
+  for (const appt of appointments) {
+    const key = buildClientKey(appt, user.id)
     if (!key) continue
 
     if (!clientMap[key]) {
@@ -112,7 +145,7 @@ export async function GET(request: Request) {
         phone: normalizePhone(appt.phone),
         notes: appt.notes || '',
         total_appointments: 0,
-        user_id: user.id // ✅ associate with current barber
+        user_id: user.id
       }
     }
 
@@ -121,16 +154,16 @@ export async function GET(request: Request) {
 
   const upserts = Object.values(clientMap)
 
-  // ---------------- Upsert into Supabase ----------------
+  // ------------------- Upsert into Supabase ------------------------
   const { error: upsertErr } = await supabase.from('acuity_clients').upsert(upserts, {
-    onConflict: 'user_id,client_id' // ✅ uniqueness per user
+    onConflict: 'user_id,client_id'
   })
   if (upsertErr) return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 })
 
-  return NextResponse.json({ 
-    success: true, 
-    year: requestedYear, 
-    totalAppointments: allAppointments.length, 
-    totalClients: upserts.length 
+  return NextResponse.json({
+    success: true,
+    year: requestedYear,
+    totalAppointments: allAppointments.length,
+    totalClients: upserts.length
   })
 }

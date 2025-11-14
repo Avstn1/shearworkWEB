@@ -232,9 +232,43 @@ export async function GET(request: Request) {
     }
   }
 
+  // Fetch the barber profile (to get their calendar)
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("calendar")
+    .eq("user_id", user.id)
+    .single()
+
+  if (profileError || !profile) {
+    console.log(profileError)
+    return NextResponse.json({ error: "No profile found" }, { status: 400 })
+  }
+
+  // -------------------- Calendar Logic --------------------------------
+  // Fetch all calendars for this user
+  let allCalendars: any[] = []
+  try {
+    const calRes = await fetch('https://acuityscheduling.com/api/v1/calendars', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    })
+    if (!calRes.ok) throw new Error(`Calendars fetch failed: ${calRes.status}`)
+    allCalendars = await calRes.json()
+  } catch (err) {
+    console.error('Failed to fetch calendars:', err)
+  }
+
+  // Find the calendarID for this barber
+  const barberCalendarName = (profile.calendar || "").trim().toLowerCase()
+  const calendarMatch = allCalendars.find(c => c.name.trim().toLowerCase() === barberCalendarName)
+  if (!calendarMatch) {
+    console.warn(`No matching calendar found for barber: ${barberCalendarName}`)
+  }
+  const calendarID = calendarMatch?.id
+
+
   // Fetch appointments
   let allData: any[] = []
-  if (requestedMonth && requestedYear) {
+  if (requestedMonth && requestedYear && calendarID) {
     const start = new Date(`${requestedMonth} 1, ${requestedYear}`)
     const end = new Date(start)
     end.setMonth(end.getMonth() + 1)
@@ -248,6 +282,8 @@ export async function GET(request: Request) {
       dayUrl.searchParams.set('minDate', dayStr)
       dayUrl.searchParams.set('maxDate', dayStr)
       dayUrl.searchParams.set('max', '100')
+      dayUrl.searchParams.set('calendarID', calendarID.toString()) // ✅ Filter by calendarID
+
       const dayRes = await fetch(dayUrl.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
       const dayData = await dayRes.json()
       if (Array.isArray(dayData)) allData.push(...dayData)
@@ -256,6 +292,7 @@ export async function GET(request: Request) {
 
   const now = new Date()
   const appointments = allData.filter(a => new Date(a.datetime) <= now)
+
 
   // ---------------- Single loop aggregation ----------------
   const monthlyAgg: Record<string, { revenue: number; count: number; returning: number, new: number }> = {}
@@ -330,28 +367,28 @@ export async function GET(request: Request) {
     if (!monthlyClientMap[monthKey][clientKey]) monthlyClientMap[monthKey][clientKey] = 0
     monthlyClientMap[monthKey][clientKey]++
 
-    // 4️⃣ Service bookings
-    // Make everything lowercase, remove leading/trailing/multiple spaces, capitalize first letters
+    // 4️⃣ Service bookings — exact services only
+
+    // Clean formatting (keep service intact, just normalize)
     let cleanApptType = `${appt.type}`
       .toLowerCase()
-      .trim() // No leading/trailing spaces
-      .replace(/\s+/g, ' ') // Single spaces only
-      .replace(/\b\w/g, c => c.toUpperCase()) // Capitalize first letters
+      .trim()
+      .replace(/\s+/g, ' ')              // collapse multiple spaces
+      .replace(/\b\w/g, c => c.toUpperCase()) // capitalize words
 
     const svcKey = `${cleanApptType || 'Unknown'}||${monthName}||${year}`
 
-    // Always count the original service
-    if (!serviceCounts[svcKey])
-      serviceCounts[svcKey] = { month: monthName, year, count: 0, price: appt.price }
+    // Count only THIS exact service type
+    if (!serviceCounts[svcKey]) {
+      serviceCounts[svcKey] = {
+        month: monthName,
+        year,
+        count: 0,
+        price: appt.price
+      }
+    }
     serviceCounts[svcKey].count++
 
-    // If it includes "haircut", also count it toward "Haircut"
-    if (cleanApptType.toLowerCase().includes('haircut')) {
-      const haircutKey = `Haircut||${monthName}||${year}`
-      if (!serviceCounts[haircutKey])
-        serviceCounts[haircutKey] = { month: monthName, year, count: 0, price: appt.price }
-      serviceCounts[haircutKey].count++
-    }
 
     // 5️⃣ Top clients
     if (!topClientsMap[monthKey]) topClientsMap[monthKey] = {}
