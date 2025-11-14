@@ -89,45 +89,27 @@ export default function Navbar() {
 
   const desktopIcons = (
     <>
-<<<<<<< HEAD
-      <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-        <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'dashboard')}}>
-          <Grid className="w-6 h-6 text-[var(--foreground)]" />
-        </div>
-      </Link>
-      <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
-        <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'barberEditor')}}>
-          <UserCog className="w-6 h-6 text-[var(--foreground)]" />
-        </div>
-      </Link>
-      <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
-        <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
-          <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
-        </div>
-      </Link>
-=======
       <Tooltip label="Dashboard">
         <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
             <Grid className="w-6 h-6 text-[var(--foreground)]" />
           </div>
         </Link>
       </Tooltip>
       <Tooltip label="User Editor">
         <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
             <UserCog className="w-6 h-6 text-[var(--foreground)]" />
           </div>
         </Link>
       </Tooltip>
       <Tooltip label="Expenses">
         <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
             <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
           </div>
         </Link>
       </Tooltip>
->>>>>>> fb083895a050f3a3d1b30fa1fe05760da7bb021b
     </>
   )
 
