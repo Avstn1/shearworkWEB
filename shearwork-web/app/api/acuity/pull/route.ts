@@ -232,6 +232,19 @@ export async function GET(request: Request) {
     }
   }
 
+  // Fetch the barber profile (to get their calendar)
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("calendar")
+    .eq("user_id", user.id)
+    .single()
+
+  if (profileError || !profile) {
+    console.log(profileError)
+    return NextResponse.json({ error: "No profile found" }, { status: 400 })
+  
+  }
+
   // Fetch appointments
   let allData: any[] = []
   if (requestedMonth && requestedYear) {
@@ -253,9 +266,17 @@ export async function GET(request: Request) {
       if (Array.isArray(dayData)) allData.push(...dayData)
     }
   }
-
+  const barberCalendar = (profile.calendar || "").trim()
   const now = new Date()
-  const appointments = allData.filter(a => new Date(a.datetime) <= now)
+  const appointments = allData.filter(a => {
+    const isPast = new Date(a.datetime) <= now
+    const matchesCalendar =
+      typeof a.calendar === "string" &&
+      a.calendar.trim().toLowerCase() === barberCalendar.toLowerCase()
+
+    return isPast && matchesCalendar
+  })
+
 
   // ---------------- Single loop aggregation ----------------
   const monthlyAgg: Record<string, { revenue: number; count: number; returning: number, new: number }> = {}

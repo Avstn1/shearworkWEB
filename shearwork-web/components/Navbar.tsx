@@ -6,6 +6,7 @@ import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar } from 'lucide-r
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
+import Tooltip from '@/components/Wrappers/Tooltip'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -73,21 +74,27 @@ export default function Navbar() {
 
   const desktopIcons = (
     <>
-      <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-        <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-          <Grid className="w-6 h-6 text-[var(--foreground)]" />
-        </div>
-      </Link>
-      <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
-        <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-          <UserCog className="w-6 h-6 text-[var(--foreground)]" />
-        </div>
-      </Link>
-      <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
-        <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-          <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
-        </div>
-      </Link>
+      <Tooltip label="Dashboard">
+        <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <Grid className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+      </Tooltip>
+      <Tooltip label="User Editor">
+        <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <UserCog className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+      </Tooltip>
+      <Tooltip label="Expenses">
+        <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+            <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
+          </div>
+        </Link>
+      </Tooltip>
     </>
   )
 

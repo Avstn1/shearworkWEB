@@ -30,10 +30,16 @@ export default function DailySelector({
   const [availableDays, setAvailableDays] = useState<number[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const today = new Date()
+  const isCurrentMonth =
+    today.getFullYear() === selectedYear &&
+    MONTHS[today.getMonth()] === selectedMonth
+  const maxSelectableDay = isCurrentMonth ? today.getDate() : Infinity
 
   // Fetch only days that actually have data for the month/year
   useEffect(() => {
     if (!userId) return
+
     const fetchDaysWithData = async () => {
       try {
         const monthIndex = MONTHS.indexOf(selectedMonth)
@@ -49,8 +55,23 @@ export default function DailySelector({
 
         if (error) throw error
 
-        // Extract day directly from YYYY-MM-DD string
-        const days = data?.map(d => parseInt(d.date.split('-')[2], 10)) ?? []
+        // Extract day numbers from YYYY-MM-DD
+        let days =
+          data?.map((d) => parseInt(d.date.split('-')[2], 10)) ?? []
+
+        // Determine if this is the current month
+        const today = new Date()
+        const isCurrentMonth =
+          today.getFullYear() === selectedYear &&
+          MONTHS[today.getMonth()] === selectedMonth
+
+        const maxSelectableDay = isCurrentMonth ? today.getDate() : Infinity
+
+        // ❗ Filter out days beyond today if this month is current
+        if (isCurrentMonth) {
+          days = days.filter((day) => day <= maxSelectableDay)
+        }
+
         setAvailableDays(days)
 
         // Set currentIndex based on selectedDay
@@ -60,8 +81,10 @@ export default function DailySelector({
         console.error('Error fetching daily data:', err)
       }
     }
+
     fetchDaysWithData()
   }, [userId, selectedYear, selectedMonth, selectedDay])
+
 
   // Sync selectedDay when currentIndex changes
   useEffect(() => {
@@ -93,12 +116,21 @@ export default function DailySelector({
   }
 
   const goNext = () => {
-    if (currentIndex < availableDays.length - 1) setCurrentIndex(currentIndex + 1)
+    if (currentIndex < availableDays.length - 1) {
+      const nextDay = availableDays[currentIndex + 1]
+      if (nextDay <= maxSelectableDay) {
+        setCurrentIndex(currentIndex + 1)
+      }
+    }
   }
+
 
   return (
     <div className="relative w-28 flex items-center gap-1" ref={containerRef}>
-      <button onClick={goPrev} disabled={currentIndex <= 0 || disabled} className="p-1 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed">
+      <button onClick={goPrev} 
+        disabled={currentIndex <= 0 || disabled} 
+        className="p-1 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
         <ChevronLeft className="w-4 h-4" />
       </button>
 
@@ -117,9 +149,18 @@ export default function DailySelector({
         <ChevronDown className="ml-2 h-4 w-4" />
       </button>
 
-      <button onClick={goNext} disabled={currentIndex >= availableDays.length - 1 || disabled} className="p-1 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed">
+      <button
+        onClick={goNext}
+        disabled={
+          disabled ||
+          currentIndex >= availableDays.length - 1 ||
+          (isCurrentMonth && availableDays[currentIndex + 1] > maxSelectableDay)
+        }
+        className="p-1 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
         <ChevronRight className="w-4 h-4" />
       </button>
+
 
       {open && (
         <ul className="absolute top-full mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-white/20 bg-[#1a1e18] shadow-lg z-50">
