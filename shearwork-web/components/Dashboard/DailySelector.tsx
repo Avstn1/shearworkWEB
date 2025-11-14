@@ -47,7 +47,7 @@ export default function DailySelector({
 
         const { data, error } = await supabase
           .from('daily_data')
-          .select('date')
+          .select('date, total_revenue')
           .eq('user_id', userId)
           .eq('month', selectedMonth)
           .eq('year', selectedYear)
@@ -57,7 +57,9 @@ export default function DailySelector({
 
         // Extract day numbers from YYYY-MM-DD
         let days =
-          data?.map((d) => parseInt(d.date.split('-')[2], 10)) ?? []
+          data
+            ?.filter((d) => d.total_revenue > 0) 
+            .map((d) => parseInt(d.date.split('-')[2], 10)) ?? []
 
         // Determine if this is the current month
         const today = new Date()

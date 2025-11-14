@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -134,6 +135,18 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
       toast.success('Expense deleted')
       fetchExpenses()
       onUpdate?.()
+
+      const { error: insertError } = await supabase
+      .from('system_logs')
+      .insert({
+          source: barberId,
+          action: 'expense_deleted',
+          status: 'success',
+          details: `Recurring expense deleted`,
+      })
+
+      if (insertError) throw insertError
+
     } catch (err) {
       console.error(err)
       toast.error('Failed to delete expense')
@@ -181,6 +194,18 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
       setEditingId(null)
       fetchExpenses()
       onUpdate?.()
+
+      const { error: insertError } = await supabase
+      .from('system_logs')
+      .insert({
+          source: barberId,
+          action: 'expense_edited',
+          status: 'success',
+          details: `Recurring expense edited`,
+      })
+
+      if (insertError) throw insertError
+
     } catch (err) {
       console.error(err)
       toast.error('Failed to update expense')

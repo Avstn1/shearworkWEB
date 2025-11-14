@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -8,6 +9,19 @@ import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
 import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
+
+async function logNavLinkClick(user_id: string, linkName: string) {
+  const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+      source: user_id,
+      action: `clicked_${linkName}`,
+      status: 'success',
+      details: `Opened navigation link: ${linkName}`,
+    });
+
+  if (insertError) throw insertError;
+}
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -77,21 +91,21 @@ export default function Navbar() {
     <>
       <Tooltip label="Dashboard">
         <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
             <Grid className="w-6 h-6 text-[var(--foreground)]" />
           </div>
         </Link>
       </Tooltip>
       <Tooltip label="User Editor">
         <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
             <UserCog className="w-6 h-6 text-[var(--foreground)]" />
           </div>
         </Link>
       </Tooltip>
       <Tooltip label="Expenses">
         <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
             <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
           </div>
         </Link>
@@ -116,10 +130,24 @@ export default function Navbar() {
       return (
         <>
           <Link href="/admin/syslogs" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-            <FileText className="w-6 h-6 text-[var(--foreground)]" />
-          </div>
-        </Link>
+            <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+              <FileText className="w-6 h-6 text-[var(--foreground)]" />
+            </div>
+          </Link>
+
+          <Link href="/admin/analytics" className="relative flex flex-col items-center group hidden md:flex">
+            <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+              <ChartBar className="w-6 h-6 text-[var(--foreground)]" />
+            </div>
+          </Link>
+
+          <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
+            <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
+              <Grid className="w-6 h-6 text-[var(--foreground)]" />
+            </div>
+          </Link>
+
+          <UserProfile />
         </>
       )
     }
