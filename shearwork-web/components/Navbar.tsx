@@ -7,6 +7,7 @@ import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
 import Tooltip from '@/components/Wrappers/Tooltip'
+import NotificationsDropdown from '@/components/NotificationsDropdown'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -177,6 +178,7 @@ export default function Navbar() {
       <>
         {/* --- NON-ADMIN CONTENT --- */}
         {desktopIcons}
+        <NotificationsDropdown userId={user.id} />
         {/* <TipsDropdown barberId={user.id} /> */}
         <UserProfile />
       </>

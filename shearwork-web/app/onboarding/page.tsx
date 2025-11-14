@@ -8,7 +8,6 @@ import EditableAvatar from '@/components/EditableAvatar';
 const ROLE_OPTIONS = [
   { label: 'Barber (Commission)', role: 'Barber', barber_type: 'commission' },
   { label: 'Barber (Chair Rental)', role: 'Barber', barber_type: 'rental' },
-  // { label: 'Owner', role: 'owner', barber_type: null },
 ];
 
 export default function OnboardingPage() {
@@ -56,10 +55,9 @@ export default function OnboardingPage() {
         onboarded: true,
       };
 
-      // Include commission_rate only if commission role is selected
       if (selectedRole.barber_type === 'commission') {
         if (commissionRate === '' || commissionRate < 1 || commissionRate > 100) {
-          throw new Error('Please enter a valid commission rate between 0 and 1');
+          throw new Error('Please enter a valid commission rate between 1 and 100');
         }
         profileUpdate.commission_rate = commissionRate / 100;
       }
@@ -79,11 +77,30 @@ export default function OnboardingPage() {
     }
   };
 
+  // --- FUTURISTIC CLASSES ---
+  const inputClass = `
+    w-full p-3 rounded-xl bg-black/90 border border-[var(--accent-2)] 
+    text-white focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] 
+    transition-all
+  `;
+
+  const selectClass = `
+    w-full p-3 rounded-xl bg-black/90 border border-[var(--accent-2)] 
+    text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] 
+    transition-all
+  `;
+
+  const primaryBtn = `
+    w-full py-3 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold 
+    rounded-xl hover:shadow-[0_0_20px_#3af1f7] transition-all
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--background)] text-[var(--foreground)] p-8">
-      <h1 className="text-3xl font-bold mb-8 text-[var(--highlight)]">Complete Your Profile</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--background)] text-white p-8">
+      <h1 className="text-4xl font-bold mb-8 text-[var(--highlight)]">Complete Your Profile</h1>
       <form
-        className="bg-[var(--accent-1)] p-8 rounded-2xl shadow-md w-full max-w-md space-y-6 flex flex-col items-center"
+        className="bg-black/80 p-8 rounded-3xl shadow-xl w-full max-w-md space-y-6 flex flex-col items-center"
         onSubmit={handleSubmit}
       >
         <EditableAvatar
@@ -102,26 +119,26 @@ export default function OnboardingPage() {
 
         {/* Full Name */}
         <div className="w-full">
-          <label className="block mb-1 font-semibold">Full Name</label>
+          <label className="block mb-2 font-semibold text-white">Full Name</label>
           <input
             type="text"
             value={fullName}
             onChange={e => setFullName(e.target.value)}
-            className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+            className={inputClass}
             required
           />
         </div>
 
         {/* Role Selection */}
         <div className="w-full">
-          <label className="block mb-1 font-semibold">Role</label>
+          <label className="block mb-2 font-semibold text-white">Role</label>
           <select
             value={selectedRole.label}
             onChange={e => {
               const roleObj = ROLE_OPTIONS.find(r => r.label === e.target.value);
               if (roleObj) setSelectedRole(roleObj);
             }}
-            className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+            className={selectClass}
           >
             {ROLE_OPTIONS.map(r => (
               <option key={r.label} value={r.label}>
@@ -131,10 +148,10 @@ export default function OnboardingPage() {
           </select>
         </div>
 
-        {/* Commission Rate Input (only if commission role) */}
+        {/* Commission Rate Input */}
         {selectedRole.barber_type === 'commission' && (
           <div className="w-full">
-            <label className="block mb-1 font-semibold">
+            <label className="block mb-2 font-semibold text-white">
               Commission Rate (%) <span className="text-sm text-gray-400">(1 to 100)</span>
             </label>
             <input
@@ -143,23 +160,18 @@ export default function OnboardingPage() {
               min="1"
               max="100"
               value={commissionRate}
-              onChange={e => setCommissionRate(e.target.value === '' ? '' : Number.parseFloat(e.target.value))}
-              className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+              onChange={e => setCommissionRate(e.target.value === '' ? '' : Number(e.target.value))}
+              className={inputClass}
               required
             />
           </div>
         )}
 
         {/* Submit Button */}
-        <button
-          type="submit"
-          className="w-full py-3 bg-[var(--accent-2)] hover:bg-[var(--accent-3)] text-[var(--text-bright)] font-semibold rounded-lg transition"
-          disabled={loading}
-        >
+        <button type="submit" className={primaryBtn} disabled={loading}>
           {loading ? 'Saving...' : 'Complete Onboarding'}
         </button>
       </form>
     </div>
   );
 }
-
