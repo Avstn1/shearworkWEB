@@ -342,6 +342,7 @@ export async function GET(request: Request) {
           const fieldValue = field.value?.toLowerCase() || ''
           if (!referralKeywords.some(k => fieldName.includes(k))) continue
           if (referralFilter.some(k => fieldValue.includes(k))) continue
+          if (fieldValue == '') continue
           wEntry.new++
           break
         }
@@ -374,11 +375,11 @@ export async function GET(request: Request) {
         for (const field of form.values) {
           const fieldName = field.name?.toLowerCase() || ''
           const fieldValue = field.value?.toLowerCase() || ''
-          if (!referralKeywords.some(k => fieldName.includes(k)) || referralFilter.some(k => fieldValue.includes(k))) continue
-          else {
-            monthlyAgg[monthKey].new++
-            break
-          }
+          if (!referralKeywords.some(k => fieldName.includes(k)) || referralFilter.some(k => fieldValue.includes(k)) || fieldValue == '') continue
+          monthlyAgg[monthKey].new++
+          console.log("test: ", field.name, "with: ", field.value)
+          break
+          
         }
       }
     }
