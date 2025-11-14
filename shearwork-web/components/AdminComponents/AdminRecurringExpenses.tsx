@@ -75,6 +75,18 @@ export default function AdminRecurringExpenses({ barberId, month, year, onUpdate
       setStartDate(new Date().toISOString().slice(0, 10))
       setEndDate('')
       onUpdate?.()
+
+      const { error: insertError } = await supabase
+      .from('system_logs')
+      .insert({
+          source: barberId,
+          action: 'expense_added',
+          status: 'success',
+          details: `Recurring expense added`,
+      })
+
+      if (insertError) throw insertError
+
     } catch (err) {
       console.error(err)
       toast.error('Failed to add recurring expense')
@@ -256,7 +268,7 @@ export default function AdminRecurringExpenses({ barberId, month, year, onUpdate
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-zinc-900 rounded-lg p-6 w-[90%] max-w-md text-white flex flex-col gap-4 border border-white/10 shadow-xl">
             <h2 className="text-lg font-semibold">Label your receipt</h2>
-            <p className="text-sm text-gray-400">Leave blank to default to today's date.</p>
+            <p className="text-sm text-gray-400">Leave blank to default to today`s date.</p>
             <input
               type="text"
               value={receiptLabel}
