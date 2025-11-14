@@ -13,7 +13,7 @@ async function logNavLinkClick(user_id: string, linkName: string) {
     .from('system_logs')
     .insert({
       source: user_id,
-      action: `clicked_navLink`,
+      action: `clicked_${linkName}`,
       status: 'success',
       details: `Opened navigation link: ${linkName}`,
     });

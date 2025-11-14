@@ -37,8 +37,11 @@ export default function LoginPage() {
       toast.success('Logged in successfully!');
       router.refresh();
       router.push('/dashboard');
+      
+      const { data: userData } = await supabase.from('profiles').select('role').eq('id', userProfile.user?.id).single();
 
-      const { error: insertError } = await supabase
+      if (userData?.role != 'admin') {
+        const { error: insertError } = await supabase
         .from('system_logs')
         .insert({
           source: userProfile.user?.id,
@@ -48,6 +51,7 @@ export default function LoginPage() {
         })
 
         if (insertError) throw insertError
+      }
     }
 
     setLoading(false);

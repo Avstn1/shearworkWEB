@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { cookies } from 'next/headers';
 import {
   startOfDay,
@@ -8,48 +8,37 @@ import {
   startOfMonth,
   getHours,
   getDate,
-  getDaysInMonth,
   getISOWeek,
-  parseISO
+  parseISO,
 } from 'date-fns';
 
 interface RequestBody {
-  targetDate: string; // expected format: 'YYYY-MM-DD'
+  targetDate: string; // 'YYYY-MM-DD'
 }
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body: RequestBody = await request.json();
-    const { targetDate } = body;
+    const supabase = await createSupabaseServerClient();
+    const authHeader = req.headers.get('authorization');
 
-    if (!targetDate) {
-      return NextResponse.json({ status: 'error', message: 'targetDate is required' });
+    if (!authHeader || authHeader !== `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createRouteHandlerClient({ cookies: async () => cookies() });
+    const body: RequestBody = await req.json();
+    const targetDate = body.targetDate;
+    if (!targetDate) return NextResponse.json({ success: false, error: 'Missing targetDate' }, { status: 400 });
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const now = new Date()
 
-    if (userError || !user) {
-      console.warn('No logged-in user found.');
-      return NextResponse.json({ data: [] });
-    }
-
-    // -------------------------------
-    // Target date adjusted -5 hours
-    // -------------------------------
-    const rawDate = parseISO(targetDate);
-    const now = new Date(rawDate.getTime() - 5 * 60 * 60 * 1000);
-
-    const currentHour = getHours(now);
-    const currentDay = getDate(now);
-    const currentMonthDays = getDaysInMonth(now);
+    const currentHour = getHours(now); // 0-based
+    const currentDay = getDate(now); // 1-based
+    const currentWeekDay = (now.getDay() + 6) % 7; // Monday=0
     const currentWeekNumber = getISOWeek(now);
 
-    const generateEmptyArray = (length: number) => Array.from({ length }, () => 0);
+    console.log(`Generating summaries for target date: ${now.toISOString()}`);
+
+    const generateProgressiveArray = (length: number) => Array.from({ length }, () => 0);
 
     // -------------------------------
     // Upsert helper
@@ -97,39 +86,40 @@ export async function POST(request: Request) {
     // 1. Hourly summary for target day
     // -------------------------------
     const hourlyDimension = `hourly|${targetDate}`;
-    const hourlyLength = 24;
+    const hourlyLength = currentHour; // only hours that have passed
 
     const { data: hourlyLogs } = await supabase
       .from('system_logs')
       .select('*')
       .gte('timestamp', startOfDay(now).toISOString())
-      .lte('timestamp', new Date(startOfDay(now).getTime() + 23 * 60 * 60 + 59 * 60 + 59).toISOString()); // full day
+      .lte('timestamp', new Date(startOfDay(now).getTime() + currentHour * 60 * 60 * 1000 + 59 * 60 + 59).toISOString());
 
     const hourlyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
 
     for (const log of (hourlyLogs as any[]) || []) {
       if (!hourlyAggregates[log.action]) {
         hourlyAggregates[log.action] = {
-          log: generateEmptyArray(hourlyLength),
-          success: generateEmptyArray(hourlyLength),
-          pending: generateEmptyArray(hourlyLength),
-          failed: generateEmptyArray(hourlyLength),
+          log: generateProgressiveArray(hourlyLength),
+          success: generateProgressiveArray(hourlyLength),
+          pending: generateProgressiveArray(hourlyLength),
+          failed: generateProgressiveArray(hourlyLength),
         };
       }
       const hour = new Date(log.timestamp).getHours();
-      hourlyAggregates[log.action].log[hour]++;
-      if (log.status === 'success') hourlyAggregates[log.action].success[hour]++;
-      else if (log.status === 'pending') hourlyAggregates[log.action].pending[hour]++;
-      else if (log.status === 'failed') hourlyAggregates[log.action].failed[hour]++;
+      if (hour < hourlyLength) {
+        hourlyAggregates[log.action].log[hour]++;
+        if (log.status === 'success') hourlyAggregates[log.action].success[hour]++;
+        else if (log.status === 'pending') hourlyAggregates[log.action].pending[hour]++;
+        else if (log.status === 'failed') hourlyAggregates[log.action].failed[hour]++;
+      }
     }
 
-    // If no logs for an action, still create 0-filled arrays
     if (Object.keys(hourlyAggregates).length === 0) {
       hourlyAggregates['no_logs'] = {
-        log: generateEmptyArray(hourlyLength),
-        success: generateEmptyArray(hourlyLength),
-        pending: generateEmptyArray(hourlyLength),
-        failed: generateEmptyArray(hourlyLength),
+        log: generateProgressiveArray(hourlyLength),
+        success: generateProgressiveArray(hourlyLength),
+        pending: generateProgressiveArray(hourlyLength),
+        failed: generateProgressiveArray(hourlyLength),
       };
     }
 
@@ -141,38 +131,40 @@ export async function POST(request: Request) {
     // 2. Daily summary for the month of targetDate
     // -------------------------------
     const dailyDimension = `daily|${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const dailyLength = currentMonthDays;
+    const dailyLength = currentDay; // only days that have passed
 
     const { data: dailyLogs } = await supabase
       .from('system_logs')
       .select('*')
       .gte('timestamp', startOfMonth(now).toISOString())
-      .lte('timestamp', new Date(startOfMonth(now).getTime() + (currentMonthDays - 1) * 24 * 60 * 60 * 1000 + 23*60*60 + 59*60 +59).toISOString());
+      .lte('timestamp', new Date(startOfMonth(now).getTime() + (currentDay - 1) * 24 * 60 * 60 * 1000 + 23 * 60 * 60 + 59 * 60 + 59).toISOString());
 
     const dailyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
 
     for (const log of (dailyLogs as any[]) || []) {
       if (!dailyAggregates[log.action]) {
         dailyAggregates[log.action] = {
-          log: generateEmptyArray(dailyLength),
-          success: generateEmptyArray(dailyLength),
-          pending: generateEmptyArray(dailyLength),
-          failed: generateEmptyArray(dailyLength),
+          log: generateProgressiveArray(dailyLength),
+          success: generateProgressiveArray(dailyLength),
+          pending: generateProgressiveArray(dailyLength),
+          failed: generateProgressiveArray(dailyLength),
         };
       }
       const dayIndex = new Date(log.timestamp).getDate() - 1;
-      dailyAggregates[log.action].log[dayIndex]++;
-      if (log.status === 'success') dailyAggregates[log.action].success[dayIndex]++;
-      else if (log.status === 'pending') dailyAggregates[log.action].pending[dayIndex]++;
-      else if (log.status === 'failed') dailyAggregates[log.action].failed[dayIndex]++;
+      if (dayIndex < dailyLength) {
+        dailyAggregates[log.action].log[dayIndex]++;
+        if (log.status === 'success') dailyAggregates[log.action].success[dayIndex]++;
+        else if (log.status === 'pending') dailyAggregates[log.action].pending[dayIndex]++;
+        else if (log.status === 'failed') dailyAggregates[log.action].failed[dayIndex]++;
+      }
     }
 
     if (Object.keys(dailyAggregates).length === 0) {
       dailyAggregates['no_logs'] = {
-        log: generateEmptyArray(dailyLength),
-        success: generateEmptyArray(dailyLength),
-        pending: generateEmptyArray(dailyLength),
-        failed: generateEmptyArray(dailyLength),
+        log: generateProgressiveArray(dailyLength),
+        success: generateProgressiveArray(dailyLength),
+        pending: generateProgressiveArray(dailyLength),
+        failed: generateProgressiveArray(dailyLength),
       };
     }
 
@@ -185,38 +177,40 @@ export async function POST(request: Request) {
     // -------------------------------
     const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
     const weeklyDimension = `weekly|${now.getFullYear()}-W${currentWeekNumber}`;
-    const weeklyLength = 7;
+    const weeklyLength = currentWeekDay + 1; // only days that have passed
 
     const { data: weeklyLogs } = await supabase
       .from('system_logs')
       .select('*')
       .gte('timestamp', weekStart.toISOString())
-      .lte('timestamp', new Date(weekStart.getTime() + 6 * 24*60*60*1000 + 23*60*60 + 59*60 +59).toISOString());
+      .lte('timestamp', new Date(weekStart.getTime() + currentWeekDay * 24 * 60 * 60 * 1000 + 23 * 60 * 60 + 59 * 60 + 59).toISOString());
 
     const weeklyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
 
     for (const log of (weeklyLogs as any[]) || []) {
       if (!weeklyAggregates[log.action]) {
         weeklyAggregates[log.action] = {
-          log: generateEmptyArray(weeklyLength),
-          success: generateEmptyArray(weeklyLength),
-          pending: generateEmptyArray(weeklyLength),
-          failed: generateEmptyArray(weeklyLength),
+          log: generateProgressiveArray(weeklyLength),
+          success: generateProgressiveArray(weeklyLength),
+          pending: generateProgressiveArray(weeklyLength),
+          failed: generateProgressiveArray(weeklyLength),
         };
       }
       const dayIndex = (new Date(log.timestamp).getDay() + 6) % 7; // Monday=0
-      weeklyAggregates[log.action].log[dayIndex]++;
-      if (log.status === 'success') weeklyAggregates[log.action].success[dayIndex]++;
-      else if (log.status === 'pending') weeklyAggregates[log.action].pending[dayIndex]++;
-      else if (log.status === 'failed') weeklyAggregates[log.action].failed[dayIndex]++;
+      if (dayIndex < weeklyLength) {
+        weeklyAggregates[log.action].log[dayIndex]++;
+        if (log.status === 'success') weeklyAggregates[log.action].success[dayIndex]++;
+        else if (log.status === 'pending') weeklyAggregates[log.action].pending[dayIndex]++;
+        else if (log.status === 'failed') weeklyAggregates[log.action].failed[dayIndex]++;
+      }
     }
 
     if (Object.keys(weeklyAggregates).length === 0) {
       weeklyAggregates['no_logs'] = {
-        log: generateEmptyArray(weeklyLength),
-        success: generateEmptyArray(weeklyLength),
-        pending: generateEmptyArray(weeklyLength),
-        failed: generateEmptyArray(weeklyLength),
+        log: generateProgressiveArray(weeklyLength),
+        success: generateProgressiveArray(weeklyLength),
+        pending: generateProgressiveArray(weeklyLength),
+        failed: generateProgressiveArray(weeklyLength),
       };
     }
 
