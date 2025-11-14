@@ -17,13 +17,37 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: userProfile, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+
+      const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: 'Unauthenticated user',
+          action: 'user_login',
+          status: 'failed',
+          details: `${email} login failed.`,
+        })
+
+        if (insertError) throw insertError
+    }
     else {
       toast.success('Logged in successfully!');
       router.refresh();
       router.push('/dashboard');
+
+      const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: userProfile.user?.id,
+          action: 'user_login',
+          status: 'success',
+          details: `${userProfile.user?.email} logged in.`,
+        })
+
+        if (insertError) throw insertError
     }
 
     setLoading(false);

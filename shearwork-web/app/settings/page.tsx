@@ -144,7 +144,7 @@ export default function SettingsPage() {
           email: user.email ?? '',
         })
         setFullName(data.full_name ?? '')
-        setCommissionRate(data.commission_rate ?? null)
+        setCommissionRate(data.commission_rate ? data.commission_rate * 100 : null)
       }
       setLoading(false)
     }
@@ -182,11 +182,11 @@ export default function SettingsPage() {
   }
 
   const handleCommissionUpdate = async () => {
-    if (!profile) return
+    if (!profile || commissionRate === null) return;
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase.from('profiles').update({ commission_rate: commissionRate }).eq('user_id', user.id)
+    await supabase.from('profiles').update({ commission_rate: commissionRate / 100 }).eq('user_id', user.id)
     toast.success('Commission rate updated!')
     setEditingCommission(false)
   }
@@ -308,7 +308,14 @@ export default function SettingsPage() {
               <input
                 type="number"
                 value={commissionRate ?? ''}
-                onChange={(e) => setCommissionRate(Number(e.target.value))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    setCommissionRate(null);
+                  } else if (/^\d{0,3}$/.test(value) && Number(value) <= 100) {
+                    setCommissionRate(Number(value));
+                  }
+                }}
                 readOnly={!editingCommission}
                 min={0}
                 max={100}

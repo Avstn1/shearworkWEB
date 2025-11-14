@@ -23,7 +23,18 @@ export default function SignUpPage() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data: userProfile, error } = await supabase.auth.signUp({ email, password });
+
+    const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+        source: userProfile.user?.id,
+        action: 'user_signup',
+        status: 'success',
+        details: `User ${userProfile.user?.email} logged in.`,
+    })
+
+    if (insertError) throw insertError
 
     if (error) toast.error(error.message);
     else {

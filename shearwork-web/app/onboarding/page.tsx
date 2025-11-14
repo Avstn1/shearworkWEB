@@ -58,10 +58,10 @@ export default function OnboardingPage() {
 
       // Include commission_rate only if commission role is selected
       if (selectedRole.barber_type === 'commission') {
-        if (commissionRate === '' || commissionRate < 0 || commissionRate > 1) {
+        if (commissionRate === '' || commissionRate < 1 || commissionRate > 100) {
           throw new Error('Please enter a valid commission rate between 0 and 1');
         }
-        profileUpdate.commission_rate = commissionRate;
+        profileUpdate.commission_rate = commissionRate / 100;
       }
 
       const { error: updateError } = await supabase
@@ -135,15 +135,15 @@ export default function OnboardingPage() {
         {selectedRole.barber_type === 'commission' && (
           <div className="w-full">
             <label className="block mb-1 font-semibold">
-              Commission Rate <span className="text-sm text-gray-400">(0 to 1)</span>
+              Commission Rate (%) <span className="text-sm text-gray-400">(1 to 100)</span>
             </label>
             <input
               type="number"
-              step="0.01"
-              min="0"
-              max="1"
+              step="1"
+              min="1"
+              max="100"
               value={commissionRate}
-              onChange={e => setCommissionRate(e.target.value === '' ? '' : parseFloat(e.target.value))}
+              onChange={e => setCommissionRate(e.target.value === '' ? '' : Number.parseFloat(e.target.value))}
               className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
               required
             />
@@ -162,3 +162,4 @@ export default function OnboardingPage() {
     </div>
   );
 }
+

@@ -279,6 +279,7 @@ export async function POST(req: Request) {
     const htmlReport = response.choices?.[0]?.message?.content?.trim() || ''
 
     // 🧾 Store report in DB
+    console.log(`Database writing ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
     const { data: newReport, error: insertError } = await supabase
       .from('reports')
       .insert({
@@ -294,6 +295,8 @@ export async function POST(req: Request) {
       .select()
       .single()
     if (insertError) throw insertError
+
+    console.log(`Generated ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
 
     return NextResponse.json({ success: true, report: newReport })
   } catch (err: any) {
