@@ -20,7 +20,6 @@ interface TopClient {
 export default function TopClientsCard({ userId, selectedMonth, selectedYear }: TopClientsCardProps) {
   const [clients, setClients] = useState<TopClient[]>([])
   const [loading, setLoading] = useState<boolean>(false)
-
   useEffect(() => {
     if (!userId || !selectedMonth || !selectedYear) return
 
@@ -40,7 +39,14 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
 
         if (error) throw error
 
-        setClients(topClients || [])
+        const filtered = (topClients as TopClient[]).filter(
+          (f) =>
+            f.client_name &&
+            f.client_name !== 'Unknown' &&
+            f.client_name !== 'Returning Client' &&
+            !/walk/i.test(f.client_name) // excludes any name containing "walk" (case-insensitive)
+        )
+        setClients(filtered || [])
       } catch (err) {
         console.error('Error fetching top clients:', err)
         setClients([])

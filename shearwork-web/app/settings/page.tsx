@@ -126,6 +126,7 @@ export default function SettingsPage() {
   const [clientSyncing, setClientSyncing] = useState(false)
   const [commissionRate, setCommissionRate] = useState<number | null>(null)
   const [editingCommission, setEditingCommission] = useState(false)
+  const [barberType, setBarberType] = useState<string | null>(null)
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
 
@@ -145,6 +146,7 @@ export default function SettingsPage() {
         })
         setFullName(data.full_name ?? '')
         setCommissionRate(data.commission_rate ? data.commission_rate * 100 : null)
+        setBarberType(data.barber_type ?? null)
       }
       setLoading(false)
     }
@@ -302,36 +304,44 @@ export default function SettingsPage() {
           </div>
 
           {/* Commission Rate Input */}
-          <div className="mt-4 flex flex-col gap-2">
-            <label className="text-sm text-[#bdbdbd] font-semibold">Commission Rate (%)</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="number"
-                value={commissionRate ?? ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === '') {
-                    setCommissionRate(null);
-                  } else if (/^\d{0,3}$/.test(value) && Number(value) <= 100) {
-                    setCommissionRate(Number(value));
-                  }
-                }}
-                readOnly={!editingCommission}
-                min={0}
-                max={100}
-                step={0.01}
-                className={`flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] ${editingCommission ? '' : 'opacity-70'}`}
-              />
-              <button className="text-[var(--accent-2)] hover:text-[var(--highlight)] transition" onClick={() => setEditingCommission(!editingCommission)} title={editingCommission ? 'Cancel' : 'Edit'}>
-                <FaCog />
-              </button>
-              {editingCommission && (
-                <button onClick={handleCommissionUpdate} className="px-3 py-1 bg-[var(--highlight)] text-black text-xs font-semibold rounded-full hover:opacity-90 transition">
-                  Save
+          {barberType === "commission" && (
+            <div className="mt-4 flex flex-col gap-2">
+              <label className="text-sm text-[#bdbdbd] font-semibold">Commission Rate (%)</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  value={commissionRate ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setCommissionRate(null);
+                    } else if (/^\d{0,3}$/.test(value) && Number(value) <= 100) {
+                      setCommissionRate(Number(value));
+                    }
+                  }}
+                  readOnly={!editingCommission}
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  className={`flex-1 px-3 py-2 rounded-lg bg-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--highlight)] ${editingCommission ? '' : 'opacity-70'}`}
+                />
+                <button
+                  className="text-[var(--accent-2)] hover:text-[var(--highlight)] transition"
+                  onClick={() => setEditingCommission(!editingCommission)}
+                >
+                  <FaCog />
                 </button>
-              )}
+                {editingCommission && (
+                  <button
+                    onClick={handleCommissionUpdate}
+                    className="px-3 py-1 bg-[var(--highlight)] text-black text-xs font-semibold rounded-full hover:opacity-90 transition"
+                  >
+                    Save
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="text-sm text-[#bdbdbd] mt-3 space-y-1">
             <p>Role: {profile?.role}</p>
