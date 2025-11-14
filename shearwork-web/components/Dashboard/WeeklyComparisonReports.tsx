@@ -25,7 +25,7 @@ interface WeeklyComparisonReportsProps {
   isAdmin?: boolean;
 }
 
-function getMondaysInMonth(month: number, year: number): Date[] {
+function getMondaysInMonth(month: number, year: number): number[] {
   const mondays: number[] = []
   const date = new Date(year, month, 1) 
 
