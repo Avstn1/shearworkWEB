@@ -147,7 +147,7 @@ export async function POST(request: Request) {
       .from('system_logs')
       .select('*')
       .gte('timestamp', startOfMonth(now).toISOString())
-      .lte(new Date(startOfMonth(now).getTime() + (currentMonthDays - 1) * 24 * 60 * 60 * 1000 + 23*60*60 + 59*60 +59).toISOString());
+      .lte('timestamp', new Date(startOfMonth(now).getTime() + (currentMonthDays - 1) * 24 * 60 * 60 * 1000 + 23*60*60 + 59*60 +59).toISOString());
 
     const dailyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
 
