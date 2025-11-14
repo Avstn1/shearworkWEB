@@ -304,7 +304,8 @@ export async function GET(request: Request) {
   const monthlyClientMap: Record<string, Record<string, number>> = {}
   const monthlyWeekdayAgg: Record<string, number> = {}
 
-  const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok']
+  const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok', 'walking', 'walk']
+  const referralFilter = ['unknown', 'returning', 'return', 'returning client']
 
   for (const appt of appointments) {
     const parsed = parseDateStringSafe(appt.datetime)
@@ -322,7 +323,7 @@ export async function GET(request: Request) {
     if (!name && !email && !phone) continue
     const clientKey = getClientKey(appt)
     const returning = await isReturningClient(supabase, user.id, email, phone, appt.firstName, appt.lastName)
-    // 3️⃣ Weekly
+    // 3️⃣ Weekly - Done first due to week to week logic
     const weekMeta = getWeekMetaForDate(apptDate)
     const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(2,'0')}||${weekMeta.weekStartISO}`
     if (!weeklyAgg[weekKey]) weeklyAgg[weekKey] = {
@@ -331,10 +332,22 @@ export async function GET(request: Request) {
     const wEntry = weeklyAgg[weekKey]
     wEntry.revenue += price
     wEntry.numAppointments++
+
+    // Need to make this reusable code somehow
+    if(!returning){
+      for (const form of appt.forms) {
+        if (!form.values || !Array.isArray(form.values)) continue
+        for (const field of form.values) {
+          const fieldName = field.name?.toLowerCase() || ''
+          const fieldValue = field.value?.toLowerCase() || ''
+          if (!referralKeywords.some(k => fieldName.includes(k))) continue
+          if (referralFilter.some(k => fieldValue.includes(k))) continue
+          wEntry.new++
+          break
+        }
+      }
+    }
     
-    if (returning) wEntry.returning++
-    else wEntry.new++
-   
     if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
     wEntry.clientVisitMap[clientKey]++
 
@@ -354,8 +367,22 @@ export async function GET(request: Request) {
     
     monthlyAgg[monthKey].revenue += price
     monthlyAgg[monthKey].count++
-    if (returning) monthlyAgg[monthKey].returning++
-    else monthlyAgg[monthKey].new++
+    // Need to make this reusable code somehow
+    if(!returning){
+      for (const form of appt.forms) {
+        if (!form.values || !Array.isArray(form.values)) continue
+        for (const field of form.values) {
+          const fieldName = field.name?.toLowerCase() || ''
+          const fieldValue = field.value?.toLowerCase() || ''
+          if (!referralKeywords.some(k => fieldName.includes(k)) || referralFilter.some(k => fieldValue.includes(k))) continue
+          else {
+            monthlyAgg[monthKey].new++
+            break
+          }
+        }
+      }
+    }
+
 
     // 2️⃣ Daily
     if (!dailyAgg[dayKey]) dailyAgg[dayKey] = { revenue: 0, count: 0 }
@@ -462,6 +489,7 @@ export async function GET(request: Request) {
     }
   }
 
+  // -----------------------------------------------
   // ---------------- Batch upserts ----------------
   // Monthly
   const monthlyUpserts = Object.entries(monthlyAgg).map(([key, val]) => {
@@ -474,7 +502,7 @@ export async function GET(request: Request) {
       total_revenue: val.revenue,
       num_appointments: val.count,
       new_clients: val.new,
-      returning_clients: val.returning,
+      returning_clients: val.count - val.new,
       updated_at: new Date().toISOString()
     }
   })
@@ -527,7 +555,7 @@ export async function GET(request: Request) {
           expenses: w.expenses, 
           num_appointments: w.numAppointments, 
           new_clients: w.new, 
-          returning_clients: w.returning, 
+          returning_clients: w.numAppointments - w.new, 
           year: weekYear, 
           month: weekMonth, 
           created_at: c, 
