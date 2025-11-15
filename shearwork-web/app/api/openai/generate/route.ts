@@ -175,13 +175,16 @@ export async function POST(req: Request) {
         weekly_rows = weeklyData as WeeklyRow[]
         summaryData = null
 
-        const { error } = await supabase
+        const { data: deletedRow, error } = await supabase
         .from('reports')
         .delete()
         .eq('type', 'weekly_comparison')
         .eq('month', month)
         .eq('year', year)
-        .eq('user_id', user_id); 
+        .eq('user_id', user_id)
+        .select();
+
+        console.log("Deleted Row: " + deletedRow)
 
       } else {
         // ✅ Pick the specific week number if provided
