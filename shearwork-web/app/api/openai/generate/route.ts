@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
 import { NextResponse } from 'next/server'
@@ -167,11 +168,21 @@ export async function POST(req: Request) {
         .order('week_number', { ascending: true })
       if (weeklyError) throw weeklyError
       if (!weeklyData || weeklyData.length === 0) throw new Error('No weekly data found')
+        
 
       // ✅ Comparison mode uses full weekly dataset
       if (type.includes('comparison')) {
         weekly_rows = weeklyData as WeeklyRow[]
         summaryData = null
+
+        const { error } = await supabase
+        .from('reports')
+        .delete()
+        .eq('type', 'weekly_comparison')
+        .eq('month', month)
+        .eq('year', year)
+        .eq('id', user_id); 
+
       } else {
         // ✅ Pick the specific week number if provided
         const selectedWeek =
@@ -277,6 +288,8 @@ export async function POST(req: Request) {
     })
 
     const htmlReport = response.choices?.[0]?.message?.content?.trim() || ''
+
+
 
     // 🧾 Store report in DB
     console.log(`Database writing ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
