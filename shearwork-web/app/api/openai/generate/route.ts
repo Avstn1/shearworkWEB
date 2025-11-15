@@ -181,7 +181,7 @@ export async function POST(req: Request) {
         .eq('type', 'weekly_comparison')
         .eq('month', month)
         .eq('year', year)
-        .eq('id', user_id); 
+        .eq('user_id', user_id); 
 
       } else {
         // ✅ Pick the specific week number if provided
