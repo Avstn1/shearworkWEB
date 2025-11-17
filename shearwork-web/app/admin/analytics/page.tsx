@@ -55,9 +55,9 @@ export default function AnalyticsPage() {
         setTargetDate('')
         setShowCustomPicker(false)
         break
-      case 'Custom':
-        setShowCustomPicker(true)
-        break
+      // case 'Custom':
+      //   setShowCustomPicker(true)
+      //   break
     }
   }, [datePreset])
 
