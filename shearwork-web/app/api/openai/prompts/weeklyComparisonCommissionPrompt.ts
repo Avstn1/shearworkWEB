@@ -124,7 +124,6 @@ ${JSON.stringify(minimalDataset, null, 2)}
 
 <h2>Key Insights & Trends 🔍</h2>
 <ul>
-  <li>Month Overview: revenue, clients, and average ticket derived from weekly_rows and daily_rows.</li>
   <li>Peak Performance:
     <ul>
       <li>Best revenue week: Week ${bestWeekRevenue.week_number}</li>
@@ -132,8 +131,8 @@ ${JSON.stringify(minimalDataset, null, 2)}
       <li>Best personal earnings week: Week ${dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue*(dataset.commission_rate||0)>a.total_revenue*(dataset.commission_rate||0)?b:a), dataset.weekly_rows[0]).week_number}</li>
     </ul>
   </li>
-  <li>Client Retention: overall rate ${retentionRate}%</li>
-  <li>Average Ticket Growth: month avg $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+w.final_revenue,0)/dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0)).toFixed(2)}</li>
+  <li>Client Retention: Overall rate ${retentionRate}%</li>
+  <li>Average Ticket Growth: Month avg: $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+w.final_revenue,0)/dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0)).toFixed(2)}</li>
   <li>Tip income total: $${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.tips||0),0).toFixed(2)}</li>
   <li>Service Mix Evolution: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>
    <li>Marketing Funnels: ${dataset.marketing_funnels?.filter((f:any)=>f.source!=='Unknown' && f.source!=='Returning Client').map((f:any)=>f.source + ': ' + f.new_clients + ' new clients (' + (f.percentage||0) + '%)').join(', ')||'No data'}</li>
