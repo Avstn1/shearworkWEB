@@ -27,7 +27,7 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
       num_appointments: w.num_appointments,
       new_clients: w.new_clients,
       returning_clients: w.returning_clients,
-      expenses: w.expenses, // always 0 
+      expenses: w.expenses, // All expenses are 0 in the database
       tips: w.tips
     })),
     services_percentage: dataset.services_percentage,
