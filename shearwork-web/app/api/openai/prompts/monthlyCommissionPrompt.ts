@@ -8,6 +8,9 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const weeklyRows = dataset.weekly_rows || []
   const totalRevenue = summary.total_revenue || 0
   const personalEarnings = (totalRevenue * summary.commission_rate) + summary.tips || 0
+  
+  console.log(totalRevenue, summary.commission_rate, summary.tips)
+
   const expenses = summary.expenses || 0
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0

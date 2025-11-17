@@ -30,7 +30,7 @@ Include sections:
    - Tips ≈ [$summary.tips]
    - Average Ticket: [$summary.avg_ticket] (or calculate as final_revenue / num_appointments)
    - Expenses: [$summary.expenses] (if available)
-   - Net Profit: [$summary.final_revenue] (if available)
+   - Net Profit: [$summary.final_revenue - $summary.expenses] (if available)
 
 3. <h2>Notes & Highlights 📝</h2>
    <ul>
