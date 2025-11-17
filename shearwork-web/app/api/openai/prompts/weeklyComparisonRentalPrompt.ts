@@ -136,9 +136,9 @@ ${JSON.stringify(minimalDataset, null, 2)}
 
 <h2>Key Insights & Trends 🔍</h2>
 <ul>
-  <li>Revenue Performance: total revenue $${totalRevenue.toFixed(2)}, best week: Week ${bestWeekRevenue.week_number}, worst week: Week ${worstWeekRevenue.week_number}</li>
-  <li>Client Retention: overall ${retentionRate}%, highlight best retention week.</li>
-  <li>Average Ticket: monthly avg $${(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}, range from lowest to highest week.</li>
+  <li>Revenue Performance: Total revenue $${totalRevenue.toFixed(2)}, Best week: Week ${bestWeekRevenue.week_number}, Worst week: Week ${worstWeekRevenue.week_number}</li>
+  <li>Client Retention: Overall ${retentionRate}%, highlight best retention week.</li>
+  <li>Average Ticket: Monthly avg $${(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}, range from lowest to highest week.</li>
   <li>Service Breakdown: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>
   <li>Marketing Funnels: ${dataset.marketing_funnels?.filter((f:any)=>f.source!=='Unknown' && f.source!=='Returning Client').map((f:any)=>f.source + ': ' + f.new_clients + ' new clients (' + (f.percentage||0) + '%)').join(', ')||'No data'}</li>
   <li>Day of Week Performance: highlight best performing days for revenue 💈</li>
