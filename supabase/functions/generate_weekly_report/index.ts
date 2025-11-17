@@ -18,7 +18,6 @@ const { data: barberData, error: barberError } = await supabase
   .from('profiles')
   .select('user_id, full_name, barber_type') 
   .eq('role', 'Barber')  
-  // .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // Gavin Cruz's user_id for testing        
 
 if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
@@ -29,8 +28,8 @@ Deno.serve(async (req) => {
   try {
     // Report generation
     const now = new Date();
-    let todaysDate = 14 // now.getDate();
-    let selectedMonth = 6 // now.getMonth();  TEST FOR JULY 16TH
+    let todaysDate = now.getDate();
+    let selectedMonth = now.getMonth();  
     let selectedYear = now.getFullYear();
 
     // console.log('Today is:', todaysDate, monthNames[selectedMonth], selectedYear);

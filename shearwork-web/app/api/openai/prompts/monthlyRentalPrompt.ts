@@ -7,9 +7,9 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
   const funnels = dataset.marketing_funnels || []
   const topClients = dataset.top_clients || []
   const weeklyRows = dataset.weekly_rows || []
-  const totalRevenue = summary.total_revenue || 0
+  const totalRevenue = summary.total_revenue + summary.tips || 0 // changed
   const expenses = summary.expenses || 0
-  const profit = totalRevenue - expenses
+  const profit = totalRevenue - expenses + summary.tips // changed
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
       ? (summary.final_revenue || 0) / summary.num_appointments
@@ -66,6 +66,7 @@ Include:
        <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
        <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
        <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
+       <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
        <tr><td>Estimated Profit</td><td>$${profit.toFixed(2)}</td></tr>
        <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
      </tbody>
