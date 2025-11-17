@@ -9,12 +9,12 @@ export const weeklyComparisonCommissionPrompt = (dataset: any, userName: string,
 
   const totalNewClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients||0),0);
   const totalReturningClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.returning_clients||0),0);
-  const totalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0);
+  const finalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0);
   const totalAppointments = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0);
   const retentionRate = totalAppointments > 0 ? ((totalReturningClients / totalAppointments) * 100).toFixed(1) : '0.0';
   const bestWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue>a.total_revenue?b:a),dataset.weekly_rows[0]);
   const worstWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue<a.total_revenue?b:a),dataset.weekly_rows[0]);
-  const averageRevenue = totalRevenue / (dataset.weekly_rows?.length || 1);
+  const averageRevenue = finalRevenue / (dataset.weekly_rows?.length || 1);
 
   const minimalDataset = {
     weekly_rows: dataset.weekly_rows.map((w: any) => ({
@@ -26,7 +26,7 @@ export const weeklyComparisonCommissionPrompt = (dataset: any, userName: string,
       num_appointments: w.num_appointments,
       new_clients: w.new_clients,
       returning_clients: w.returning_clients,
-      expenses: w.expenses,
+      expenses: w.expenses, // All expenses are 0 in the database
       tips: w.tips
     })),
     services_percentage: dataset.services_percentage,
@@ -140,12 +140,12 @@ ${JSON.stringify(minimalDataset, null, 2)}
 
 <h2>${snapshotTitle}</h2>
 <ul>
-  <li>Total Revenue: $${totalRevenue.toFixed(2)}</li>
+  <li>Final revenue: $${finalRevenue.toFixed(2)}</li>
   <li>Total Clients: ${totalNewClients + totalReturningClients}</li>
   <li>New Clients: ${totalNewClients}</li>
   <li>Returning Clients: ${totalReturningClients}</li>
   <li>Average Ticket: $${(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}</li>
-  <li>Personal Earnings: $${(totalRevenue*(dataset.commission_rate||0)).toFixed(2)}</li>
+  <li>Personal Earnings: $${(finalRevenue*(dataset.commission_rate||0)).toFixed(2)}</li>
 </ul>
 
 <h2>Critical Opportunities for Growth 🚀</h2> AI INSTRUCTIONS: DO NOT JUST OUTPUT THE FOLLOWING AS RAW TEXT, ACTUALLY GENERATE SOMETHING CREATIVE!
