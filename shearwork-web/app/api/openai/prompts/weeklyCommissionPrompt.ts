@@ -34,7 +34,7 @@ Include sections:
 
 3. <h2>Highlights & Notes 📝</h2>
    <ul>
-     <li>Retention analysis using new_clients vs returning_clients.</li>
+     <li>Retention analysis using [$new_clients vs returning_clients].</li>
      <li>Revenue movement compared to prior weeks.</li>
      <li>Service Mix summary — use services_percentage for detail.</li>
      <li>Best Day — mention best_day.date and revenue.</li>
