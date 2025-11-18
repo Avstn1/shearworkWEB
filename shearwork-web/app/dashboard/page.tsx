@@ -107,6 +107,7 @@ export default function DashboardPage() {
         setLoading(false)
       }
     }
+  
     fetchUserAndProfile()
   }, [])
 
@@ -122,13 +123,14 @@ export default function DashboardPage() {
       }
     }
     handleInitialSync()
+    syncAcuityData() // sync on refresh  --  Comment out to remove autosync
   }, [user])
 
-  // -------------------- RE-SYNC ON MONTH/YEAR CHANGE --------------------
-  // useEffect(() => {
-  //   if (!user || !hasSyncedInitially.current) return
-  //   syncAcuityData()
-  // }, [selectedMonth, selectedYear])
+  // -------------------- RE-SYNC ON MONTH/YEAR CHANGE -------------------- Comment out to remove autosync
+  useEffect(() => {
+    if (!user || !hasSyncedInitially.current) return
+    syncAcuityData()
+  }, [selectedMonth, selectedYear])
 
   // -------------------- SYNC FUNCTIONS --------------------
   const syncAcuityData = async () => {

@@ -7,18 +7,12 @@ import {
 
 interface HourRow {
   hour: number
-  add_tips: number
-  expense_edited: number
-  expense_added: number
-  total?: number
+  total: number
 }
 
 interface DayRow {
   day: string
-  add_tips: number
-  expense_edited: number
-  expense_added: number
-  total?: number
+  total: number
 }
 
 interface Props {
@@ -26,10 +20,9 @@ interface Props {
   endDate?: string
   targetDate?: string
   viewMode: 'hourly' | 'weekly'
-  displayMode: 'separate' | 'aggregate'
 }
 
-export default function FinanceChart({ startDate, endDate, targetDate, viewMode, displayMode }: Props) {
+export default function AggregateChart({ startDate, endDate, targetDate, viewMode }: Props) {
   const [data, setData] = useState<HourRow[] | DayRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -67,7 +60,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
 
       try {
         if (viewMode === 'hourly') {
-          const res = await fetch('/api/analytics/finance_summary', {
+          const res = await fetch('/api/analytics/aggregate_summary', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -76,27 +69,23 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
             body: JSON.stringify({ summaryType: 'hourly', startDate, endDate, targetDate }),
           })
           const result = await res.json()
+          
+          console.log('📊 Hourly Aggregate Response:', result)
+          
           const summary = result.data?.summary || []
           
-          // Add total field for aggregate mode
-          const dataWithTotal = summary.map((row: HourRow) => ({
-            ...row,
-            total: row.add_tips + row.expense_edited + row.expense_added
-          }))
-          
-          if (Array.isArray(dataWithTotal) && dataWithTotal.length > 0) {
-            setData(dataWithTotal as HourRow[])
+          if (Array.isArray(summary) && summary.length > 0) {
+            setData(summary as HourRow[])
+            console.log('✅ Set hourly aggregate data:', summary.length, 'hours')
           } else {
+            console.warn('⚠️ No hourly aggregate data received')
             setData(Array.from({ length: 24 }, (_, h) => ({
               hour: h,
-              add_tips: 0,
-              expense_edited: 0,
-              expense_added: 0,
               total: 0
             })))
           }
         } else {
-          // Weekly mode
+          // Weekly mode - need to aggregate across multiple weeks
           const weekList: string[] = []
           let curr = new Date(startDate + 'T00:00:00')
           const end = new Date(endDate + 'T00:00:00')
@@ -106,16 +95,17 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
             curr.setDate(curr.getDate() + 7)
           }
 
+          console.log('📅 Fetching aggregate weeks:', weekList)
+
+          // Initialize merged data
           const merged: DayRow[] = Array.from({ length: 7 }, (_, i) => ({
             day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
-            add_tips: 0,
-            expense_edited: 0,
-            expense_added: 0,
             total: 0
           }))
 
+          // Fetch and merge each week
           for (const isoWeek of weekList) {
-            const res = await fetch('/api/analytics/finance_summary', {
+            const res = await fetch('/api/analytics/aggregate_summary', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -126,38 +116,29 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
             const result = await res.json()
             const weekData: DayRow[] = result.data?.summary || []
 
+            console.log(`📊 Aggregate Week ${isoWeek} data:`, weekData)
+
+            // Merge this week's data into the accumulated totals
             weekData.forEach((dayData, dayIndex) => {
               if (dayIndex >= 0 && dayIndex < 7) {
-                merged[dayIndex].add_tips += dayData.add_tips || 0
-                merged[dayIndex].expense_edited += dayData.expense_edited || 0
-                merged[dayIndex].expense_added += dayData.expense_added || 0
+                merged[dayIndex].total += dayData.total || 0
               }
             })
           }
 
-          // Calculate totals
-          merged.forEach(day => {
-            day.total = day.add_tips + day.expense_edited + day.expense_added
-          })
-
+          console.log('✅ Set weekly aggregate merged data:', merged)
           setData(merged)
         }
       } catch (err) {
-        console.error('❌ Finance fetch error:', err)
+        console.error('❌ Aggregate fetch error:', err)
         if (viewMode === 'hourly') {
           setData(Array.from({ length: 24 }, (_, h) => ({
             hour: h,
-            add_tips: 0,
-            expense_edited: 0,
-            expense_added: 0,
             total: 0
           })))
         } else {
           setData(Array.from({ length: 7 }, (_, i) => ({
             day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
-            add_tips: 0,
-            expense_edited: 0,
-            expense_added: 0,
             total: 0
           })))
         }
@@ -170,19 +151,17 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
   }, [startDate, endDate, targetDate, viewMode])
 
   // -------------------- Title --------------------
-  const totalLogs = data.reduce((sum, row) =>
-    sum + (row as any).add_tips + (row as any).expense_edited + (row as any).expense_added
-  , 0)
+  const totalLogs = data.reduce((sum, row) => sum + (row as any).total, 0)
 
   const titleText = viewMode === 'hourly'
     ? targetDate
-      ? `Finance Logs for ${targetDate}`
+      ? `Hourly Total System Activity for ${targetDate}`
       : startDate && endDate
-      ? `Finance Logs from ${startDate} to ${endDate}`
-      : 'Finance Logs'
-    : `Weekly Finance Logs from ${monday} to ${sunday}`
+      ? `Hourly Total System Activity from ${startDate} to ${endDate}`
+      : 'Hourly Total System Activity'
+    : `Weekly Total System Activity from ${monday} to ${sunday}`
 
-  const title = `${titleText} | Logs: ${totalLogs} | Mode: ${displayMode}`
+  const title = `${titleText} | Total Logs: ${totalLogs}`
 
   // -------------------- Tooltip --------------------
   const tooltipContent = ({ payload, label }: any) => {
@@ -215,12 +194,13 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
     <div className="w-full">
       <div className="mb-2">
         <h2 className="text-[#c4d2b8] font-semibold text-sm sm:text-base">{title}</h2>
+        <p className="text-xs text-[#bdbdbd] mt-0.5">All system actions combined</p>
       </div>
 
       <div className="w-full h-64 relative">
         {loading ? (
           <div className="p-4 text-center text-[#E8EDC7] opacity-70 text-sm">
-            Loading {viewMode} data...
+            Loading {viewMode} aggregate data...
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -234,44 +214,15 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
               <YAxis stroke="#ccc" />
               <Tooltip content={tooltipContent} />
               <Legend />
-              
-              {displayMode === 'separate' ? (
-                <>
-                  <Line 
-                    type="monotone" 
-                    dataKey="add_tips" 
-                    name="Add Tips"
-                    stroke="#00e676" 
-                    strokeWidth={2} 
-                    dot={false} 
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="expense_edited" 
-                    name="Edit Expense"
-                    stroke="#ff6d00" 
-                    strokeWidth={2} 
-                    dot={false} 
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="expense_added" 
-                    name="Add Expense"
-                    stroke="#1e88e5" 
-                    strokeWidth={2} 
-                    dot={false} 
-                  />
-                </>
-              ) : (
-                <Line 
-                  type="monotone" 
-                  dataKey="total" 
-                  name="Total Finance Actions"
-                  stroke="#abf19aff"                   
-                  strokeWidth={3} 
-                  dot={false} 
-                />
-              )}
+              <Line 
+                type="monotone" 
+                dataKey="total" 
+                name="Total Activity"
+                stroke="#9c27b0" 
+                strokeWidth={3} 
+                dot={false}
+                strokeLinecap="round"
+              />
             </LineChart>
           </ResponsiveContainer>
         )}

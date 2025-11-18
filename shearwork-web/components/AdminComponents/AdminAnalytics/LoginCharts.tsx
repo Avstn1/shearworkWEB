@@ -10,6 +10,7 @@ interface HourRow {
   log: number
   success: number
   failed: number
+  total?: number
 }
 
 interface DayRow {
@@ -17,16 +18,18 @@ interface DayRow {
   log: number
   success: number
   failed: number
+  total?: number
 }
 
 interface Props {
   startDate?: string
   endDate?: string
   targetDate?: string
+  viewMode: 'hourly' | 'weekly'
+  displayMode: 'separate' | 'aggregate'
 }
 
-export default function LoginChartToggle({ startDate, endDate, targetDate }: Props) {
-  const [mode, setMode] = useState<'hourly' | 'weekly'>('hourly')
+export default function LoginChart({ startDate, endDate, targetDate, viewMode, displayMode }: Props) {
   const [data, setData] = useState<HourRow[] | DayRow[]>([])
   const [loading, setLoading] = useState(true)
   const [weeks, setWeeks] = useState<string[]>([])
@@ -64,7 +67,7 @@ export default function LoginChartToggle({ startDate, endDate, targetDate }: Pro
       setLoading(true)
 
       try {
-        if (mode === 'hourly') {
+        if (viewMode === 'hourly') {
           const res = await fetch('/api/analytics/login_summary', {
             method: 'POST',
             headers: {
@@ -74,7 +77,15 @@ export default function LoginChartToggle({ startDate, endDate, targetDate }: Pro
             body: JSON.stringify({ summaryType: 'hourly', startDate, endDate, targetDate }),
           })
           const result = await res.json()
-          setData(result.data?.summary || [])
+          const summary = result.data?.summary || []
+          
+          // Add total field for aggregate mode
+          const dataWithTotal = summary.map((row: HourRow) => ({
+            ...row,
+            total: row.success + row.failed
+          }))
+          
+          setData(dataWithTotal)
         } else {
           // Weekly
           const weekList: string[] = []
@@ -90,7 +101,8 @@ export default function LoginChartToggle({ startDate, endDate, targetDate }: Pro
             day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
             log: 0,
             success: 0,
-            failed: 0
+            failed: 0,
+            total: 0
           }))
 
           for (const isoWeek of weekList) {
@@ -110,39 +122,52 @@ export default function LoginChartToggle({ startDate, endDate, targetDate }: Pro
               merged[i].failed += d?.failed ?? 0
             })
           }
+
+          // Calculate totals
+          merged.forEach(day => {
+            day.total = day.success + day.failed
+          })
+
           setData(merged)
         }
       } catch (err) {
-        console.error('❌ Fetch error:', err)
-        if (mode === 'hourly') setData([])
-        else setData(Array.from({ length: 7 }, (_, i) => ({ day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i], log: 0, success: 0, failed: 0 })))
+        console.error('❌ Login fetch error:', err)
+        if (viewMode === 'hourly') {
+          setData([])
+        } else {
+          setData(Array.from({ length: 7 }, (_, i) => ({ 
+            day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i], 
+            log: 0, 
+            success: 0, 
+            failed: 0,
+            total: 0
+          })))
+        }
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [startDate, endDate, targetDate, mode])
+  }, [startDate, endDate, targetDate, viewMode])
 
   // -------------------- Title --------------------
   const totalLogs = data.reduce((sum, row) => sum + row.log, 0)
   const isoWeekDisplay = weeks.length === 1 ? weeks[0] : `${weeks[0]} - ${weeks[weeks.length-1]}`
-  const titleText = mode === 'hourly'
+  const titleText = viewMode === 'hourly'
     ? targetDate
-      ? `Hourly User Login Activity for ${targetDate}`
+      ? `User Login Activity for ${targetDate}`
       : startDate && endDate
-      ? `Hourly User Login Activity from ${startDate} to ${endDate}`
-      : 'Hourly User Login Activity'
+      ? `User Login Activity from ${startDate} to ${endDate}`
+      : 'User Login Activity'
     : `Weekly User Login Activity from ${monday} to ${sunday}`
 
-  const title = `${titleText} | Logs fetched: ${totalLogs}`
+  const title = `${titleText} | Logs: ${totalLogs} | Mode: ${displayMode}`
 
   // -------------------- Tooltip --------------------
   const tooltipContent = ({ payload, label }: any) => {
     if (!payload || payload.length === 0) return null
-    const success = payload.find((p: any) => p.dataKey === 'success')?.value ?? 0
-    const failed = payload.find((p: any) => p.dataKey === 'failed')?.value ?? 0
-    const formattedLabel = mode === 'hourly'
+    const formattedLabel = viewMode === 'hourly'
       ? `${Number(label) % 12 === 0 ? 12 : Number(label) % 12}${Number(label) < 12 ? 'am' : 'pm'}`
       : label
 
@@ -158,52 +183,68 @@ export default function LoginChartToggle({ startDate, endDate, targetDate }: Pro
         }}
       >
         <div style={{ fontWeight: 600, marginBottom: 4 }}>{formattedLabel}</div>
-        <div>{`Success: ${success}`}</div>
-        <div>{`Failed: ${failed}`}</div>
+        {payload.map((p: any) => (
+          <div key={p.dataKey} style={{ color: p.color }}>
+            {`${p.name}: ${p.value}`}
+          </div>
+        ))}
       </div>
     )
   }
 
   return (
     <div className="w-full">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2">
         <h2 className="text-[#c4d2b8] font-semibold text-sm sm:text-base">{title}</h2>
-        <button
-          onClick={() => !loading && setMode(mode === 'hourly' ? 'weekly' : 'hourly')}
-          disabled={loading}
-          className={`
-            px-3 py-1 rounded-md border text-sm font-medium
-            transition-colors duration-1500 ease-in-out
-            ${loading
-              ? 'bg-gray-600 border-gray-600 text-gray-300 cursor-not-allowed'
-              : mode === 'hourly'
-              ? 'bg-green-900 border-green-400 text-green-100 hover:bg-green-400'
-              : 'bg-green-1100 border-green-500 text-green-100 hover:bg-green-500'}
-          `}
-        >
-          {loading ? 'Loading...' : mode === 'hourly' ? 'Switch to Weekly' : 'Switch to Hourly'}
-        </button>
       </div>
 
       <div className="w-full h-64 relative">
         {loading ? (
           <div className="p-4 text-center text-[#E8EDC7] opacity-70 text-sm">
-            Loading {mode} login data...
+            Loading {viewMode} login data...
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis
-                dataKey={mode === 'hourly' ? 'hour' : 'day'}
+                dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
                 stroke="#ccc"
-                tickFormatter={mode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
+                tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
               <YAxis stroke="#ccc" />
               <Tooltip content={tooltipContent} />
               <Legend />
-              <Line type="monotone" dataKey="success" stroke="#00e676" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="failed" stroke="#ff6d00" strokeWidth={2} dot={false} />
+              
+              {displayMode === 'separate' ? (
+                <>
+                  <Line 
+                    type="monotone" 
+                    dataKey="success" 
+                    name="Success"
+                    stroke="#00e676" 
+                    strokeWidth={2} 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="failed" 
+                    name="Failed"
+                    stroke="#ff6d00" 
+                    strokeWidth={2} 
+                    dot={false} 
+                  />
+                </>
+              ) : (
+                <Line 
+                  type="monotone" 
+                  dataKey="total" 
+                  name="Total Logins"
+                  stroke="#abf19aff"                   
+                  strokeWidth={3} 
+                  dot={false} 
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         )}
