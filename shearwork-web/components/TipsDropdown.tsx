@@ -188,9 +188,7 @@ export default function DailyTipsDropdown({
             [&_.rdp-nav-icon]:stroke-white
             [&_.rdp-day:hover]:bg-white/10
           "
-          styles={{
-            root: { '--rdp-accent-color': 'transparent' },
-          }}
+          style={{ ["--rdp-accent-color" as any]: "#4d7c0f" }}
         />
 
             {/* Current Tips */}
