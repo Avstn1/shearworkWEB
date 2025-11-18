@@ -3,8 +3,13 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import YearlyRevenueCard from '@/components/Dashboard/YearlyRevenueCard'
-import AppointmentsByWeekdayChart from './AppointmentsByWeekdayChart'
+import RevenueByWeekdayChart from './RevenueByWeekdayChart'
 import YearlyExpensesCard from './YearlyExpensesCard'
+import QuarterlyRevenueChart from './QuarterlyRevenueChart'
+import YearlyTopClientsCard from './YearlyTopClientsCard'
+
+
+
 
 import { useIsMobile } from '@/hooks/useIsMobile'
 
@@ -34,13 +39,8 @@ export default function YearlyDashboard({
     'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
 
   return (
-    <motion.div
-      className={`grid gap-4 flex-1 ${
-        isMobile
-          ? 'grid-cols-1'
-          : 'grid-cols-[minmax(250px,3fr)_minmax(200px,2fr)_minmax(150px,1fr)]'
-      }`}
-    >
+    <motion.div className="flex flex-col gap-4 flex-1">
+
       {/* LEFT COLUMN */}
       <div className="flex flex-col gap-4 pr-1">
         <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -51,13 +51,37 @@ export default function YearlyDashboard({
             <YearlyExpensesCard key={`yexpenses-${globalRefreshKey}`} userId={userId} year={selectedYear} />
           </motion.div>
         </motion.div>
+
+        <motion.div
+          variants={fadeInUp}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+        >
+          <motion.div variants={fadeInUp} className={cardClass}>
+            <RevenueByWeekdayChart
+              key={`yappointments-${globalRefreshKey}`}
+              userId={userId}
+              year={selectedYear}
+            />
+          </motion.div>
+
+          <motion.div variants={fadeInUp} className={cardClass}>
+            <QuarterlyRevenueChart
+              key={`yquarterly-${globalRefreshKey}`}
+              userId={userId}
+              year={selectedYear}
+            />
+          </motion.div>
+        </motion.div>
+
         <motion.div variants={fadeInUp} className={cardClass}>
-          <AppointmentsByWeekdayChart
-            key={`yappointments-${globalRefreshKey}`}
+          <YearlyTopClientsCard
+            key={`ytopclients-${globalRefreshKey}`}
             userId={userId}
             year={selectedYear}
           />
         </motion.div>
+
+
       </div>
     </motion.div>
   )

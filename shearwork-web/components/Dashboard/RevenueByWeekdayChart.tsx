@@ -11,10 +11,10 @@ interface Props {
 
 interface DayData {
   weekday: string
-  total_appointments: number
+  total_revenue: number
 }
 
-export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
+export default function RevenueByWeekdayChart({ userId, year }: Props) {
   const [data, setData] = useState<DayData[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -24,24 +24,24 @@ export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
       setLoading(true)
       try {
         const { data: rows, error } = await supabase
-          .from('yearly_appointments_summary')
-          .select('weekday, total_appointments')
+          .from('yearly_revenue_summary')
+          .select('weekday, total_revenue')
           .eq('user_id', userId)
           .eq('year', year)
         if (error) throw error
 
         const orderedDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-        const mapped: DayData[] = orderedDays.map(day => {
-          const row = rows.find(r => r.weekday === day)
+        const mapped: DayData[] = orderedDays.map((day) => {
+          const row = (rows ?? []).find((r: any) => r.weekday === day)
           return {
             weekday: day,
-            total_appointments: row ? row.total_appointments : 0
+            total_revenue: row ? Number(row.total_revenue) : 0,
           }
         })
 
         setData(mapped)
       } catch (err) {
-        console.error('Error fetching weekday appointments:', err)
+        console.error('Error fetching weekday revenues: ', err)
       } finally {
         setLoading(false)
       }
@@ -51,7 +51,7 @@ export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
 
   return (
     <div className="h-[300px] flex flex-col">
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-3">📅 Appointments by Weekday</h2>
+      <h2 className="text-[#E8EDC7] text-base font-semibold mb-3"> 💵 Revenue by Weekday</h2>
       {loading ? (
         <div className="text-[#F5E6C5] text-sm">Loading chart...</div>
       ) : (
@@ -59,7 +59,10 @@ export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
             <XAxis dataKey="weekday" tick={{ fill: '#d1e2c5', fontSize: 12 }} />
-            <YAxis tick={{ fill: '#d1e2c5', fontSize: 12 }} />
+            <YAxis
+            tick={{ fill: '#d1e2c5', fontSize: 12 }}
+            tickFormatter={(val) => `$${val}`}        
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: '#1a1f1b',
@@ -67,7 +70,7 @@ export default function AppointmentsByWeekdayChart({ userId, year }: Props) {
                 color: '#F5E6C5',
               }}
             />
-            <Bar dataKey="total_appointments" name="Total Appointments" fill="#c4ff85" radius={[6,6,0,0]} />
+            <Bar dataKey="total_revenue" name="Revenue" fill="#c4ff85" radius={[6,6,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
