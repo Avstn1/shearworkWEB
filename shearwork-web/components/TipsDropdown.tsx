@@ -159,28 +159,37 @@ export default function DailyTipsDropdown({
         </h3>
 
         {/* Calendar Picker */}
-        <div className="bg-white/5 rounded-lg border border-white/10 p-1 w-full">
-          <DayPicker
-            mode="single"
-            selected={selectedDate}
-            onSelect={date => setSelectedDate(date ?? new Date())}
-            disabled={{ after: new Date() }}
-            weekStartsOn={1}
-            showOutsideDays
-            className="
-              bg-transparent text-xs
-              [&_.rdp-day]:text-white [&_.rdp-day]:px-0.5 [&_.rdp-day]:py-0.25 [&_.rdp-day]:min-w-[1.5rem] [&_.rdp-day]:min-h-[1.5rem]
-              [&_.rdp-day--outside]:text-gray-500 [&_.rdp-day--outside]:opacity-50
-              [&_.rdp-day--today]:bg-amber-400/30
-              [&_.rdp-day--selected]:bg-lime-400/40 [&_.rdp-day--selected]:text-black
-              [&_.rdp-day--disabled]:text-gray-800 [&_.rdp-day--disabled]:bg-[#101210] [&_.rdp-day--disabled]:cursor-not-allowed
-              [&_.rdp-day--weekend]:text-white
-              [&_.rdp-caption]:text-white [&_.rdp-caption]:font-semibold
-              [&_.rdp-nav-button]:text-white [&_.rdp-nav-button]:hover:text-lime-400
-              [&_.rdp-day:hover]:bg-white/10
-            "
-          />
-      </div>
+        <DayPicker
+          mode="single"
+          selected={selectedDate}
+          onSelect={date => setSelectedDate(date ?? new Date())}
+          disabled={{ after: new Date(new Date().setHours(23, 59, 59, 999)) }}
+          weekStartsOn={1}
+          showOutsideDays
+          modifiersClassNames={{
+            today: 'rdp-day_today-custom'
+          }}
+          modifiersStyles={{
+            selected: {
+              color: '#bef264',
+              fontWeight: 'bold',
+              background: 'transparent'
+            }
+          }}
+          className="
+            bg-transparent text-xs
+            [&_.rdp-day]:text-white [&_.rdp-day]:px-0.5 [&_.rdp-day]:py-0.25 [&_.rdp-day]:min-w-[1.5rem] [&_.rdp-day]:min-h-[1.5rem]
+            [&_.rdp-day--outside]:text-gray-500 [&_.rdp-day--outside]:opacity-50
+            [&_.rdp-day_today-custom]:!bg-lime-400/20 [&_.rdp-day_today-custom]:!text-lime-400 [&_.rdp-day_today-custom]:!font-bold [&_.rdp-day_today-custom]:!ring-2 [&_.rdp-day_today-custom]:!ring-lime-400 [&_.rdp-day_today-custom]:!rounded-full
+            [&_.rdp-day--disabled]:!text-gray-800 [&_.rdp-day--disabled]:!bg-[#101210] [&_.rdp-day--disabled]:!cursor-not-allowed [&_.rdp-day--disabled]:!opacity-100
+            [&_.rdp-day--weekend]:text-white
+            [&_.rdp-caption]:text-white [&_.rdp-caption]:font-semibold
+            [&_.rdp-nav-button]:bg-transparent [&_.rdp-nav-button]:hover:bg-white/10 [&_.rdp-nav-button]:text-white [&_.rdp-nav-button]:p-1 [&_.rdp-nav-button]:rounded-full
+            [&_.rdp-nav-icon]:stroke-white
+            [&_.rdp-day:hover]:bg-white/10
+          "
+          style={{ ["--rdp-accent-color" as any]: "#4d7c0f" }}
+        />
 
             {/* Current Tips */}
             <div className="text-center py-2 rounded-lg bg-gradient-to-r from-lime-500/20 to-amber-400/20 border border-lime-300/20">

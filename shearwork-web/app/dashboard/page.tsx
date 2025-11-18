@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -118,18 +119,16 @@ export default function DashboardPage() {
       if (firstSyncAfterConnect.current) {
         toast('Performing first-time Acuity sync...')
         await handleFullAcuitySync()
-      } else {
-        await syncAcuityData()
       }
     }
     handleInitialSync()
   }, [user])
 
   // -------------------- RE-SYNC ON MONTH/YEAR CHANGE --------------------
-  useEffect(() => {
-    if (!user || !hasSyncedInitially.current) return
-    syncAcuityData()
-  }, [selectedMonth, selectedYear])
+  // useEffect(() => {
+  //   if (!user || !hasSyncedInitially.current) return
+  //   syncAcuityData()
+  // }, [selectedMonth, selectedYear])
 
   // -------------------- SYNC FUNCTIONS --------------------
   const syncAcuityData = async () => {
@@ -216,6 +215,18 @@ export default function DashboardPage() {
 
       {/* Month + Year Selector */}
       <div className="flex flex-col flex-row sm:flex-row sm:items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+        <button
+          onClick={() => {
+            syncAcuityData()
+          }}
+          disabled={isRefreshing}
+          className="whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Sync data"
+        >
+          <Loader2 className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">Re-sync</span>
+        </button>
+
         {isRefreshing && (
           <div className="flex items-center gap-1 text-xs text-[#fffb85] animate-pulse ml-2">
             <Loader2 className="h-3 w-3 animate-spin" />

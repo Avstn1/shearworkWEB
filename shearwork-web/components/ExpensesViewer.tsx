@@ -64,8 +64,12 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
       if (countError) throw countError
       setTotalCount(count || 0)
 
+      // Calculate valid page range
+      const maxPage = Math.max(1, Math.ceil((count || 0) / PAGE_SIZE)) // max page depending on how many expenses there are 
+      const validPage = Math.min(page, maxPage) // 
+
       // Page data
-      const from = (page - 1) * PAGE_SIZE
+      const from = (validPage - 1) * PAGE_SIZE // get data from the page that is valid
       const to = from + PAGE_SIZE - 1
 
       const { data, error } = await supabase
@@ -76,6 +80,11 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
         .range(from, to)
       if (error) throw error
       setExpenses(data || [])
+      
+      // Update page if it was adjusted
+      if (validPage !== page) {
+        setPage(validPage)
+      }
     } catch (err) {
       console.error(err)
       toast.error('Failed to load recurring expenses')
@@ -126,6 +135,15 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
       supabase.removeChannel(channel)
     }
   }, [barberId, page])
+
+  // Add this useEffect to handle automatic page navigation
+  useEffect(() => {
+    // If we're on a page beyond the last valid page, go back
+    const maxPage = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+    if (page > maxPage) {
+      setPage(maxPage)
+    }
+  }, [totalCount, page])
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this recurring expense?')) return

@@ -20,7 +20,6 @@ const { data: barberData, error: barberError } = await supabase
   .from('profiles')
   .select('user_id, full_name, barber_type') 
   .eq('role', 'Barber')  
-  // .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // Gavin Cruz's user_id for testing        
 
 if (barberError) throw barberError
 console.log('Barber IDs:', barberData)
@@ -32,7 +31,7 @@ Deno.serve(async (req) => {
     let prevMonthIndex = now.getMonth() - 1
     let selectedYear = prevMonthIndex < 0 ? now.getFullYear() - 1 : now.getFullYear()
     prevMonthIndex = prevMonthIndex < 0 ? 11 : prevMonthIndex
-    let selectedMonth = "July" //monthNames[prevMonthIndex]
+    let selectedMonth = monthNames[prevMonthIndex]
 
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
 

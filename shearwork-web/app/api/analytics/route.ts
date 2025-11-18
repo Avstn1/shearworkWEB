@@ -1,16 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
-import { cookies } from 'next/headers';
-import {
-  startOfDay,
-  startOfWeek,
-  startOfMonth,
-  getHours,
-  getDate,
-  getISOWeek,
-  parseISO,
-} from 'date-fns';
 
 interface RequestBody {
   targetDate: string; // 'YYYY-MM-DD'
@@ -19,8 +9,8 @@ interface RequestBody {
 export async function POST(req: Request) {
   try {
     const supabase = await createSupabaseServerClient();
-    const authHeader = req.headers.get('authorization');
 
+    const authHeader = req.headers.get('authorization');
     if (!authHeader || authHeader !== `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -29,198 +19,125 @@ export async function POST(req: Request) {
     const targetDate = body.targetDate;
     if (!targetDate) return NextResponse.json({ success: false, error: 'Missing targetDate' }, { status: 400 });
 
-    const now = new Date()
+    // -----------------------
+    // 1. Fetch all aggregations via RPC
+    // -----------------------
+    const [hourlyData, dailyData, weeklyData] = await Promise.all([
+      supabase.rpc('hourly_summary', { target_date: targetDate }),
+      supabase.rpc('daily_summary', { target_date: targetDate }),
+      supabase.rpc('weekly_summary', { target_date: targetDate }),
+    ]);
 
-    const currentHour = getHours(now); // 0-based
-    const currentDay = getDate(now); // 1-based
-    const currentWeekDay = (now.getDay() + 6) % 7; // Monday=0
-    const currentWeekNumber = getISOWeek(now);
+    if (hourlyData.error || dailyData.error || weeklyData.error) {
+      throw new Error(
+        `RPC Error: ${hourlyData.error?.message || dailyData.error?.message || weeklyData.error?.message}`
+      );
+    }
 
-    console.log(`Generating summaries for target date: ${now.toISOString()}`);
+    // -----------------------
+    // 2. Transform into arrays
+    // -----------------------
+    function transformHourly(data: any[]) {
+      const result: Record<string, any> = {};
+      for (const row of data) {
+        const action = row.action;
+        if (!result[action]) result[action] = { log: Array(24).fill(0), success: Array(24).fill(0), pending: Array(24).fill(0), failed: Array(24).fill(0) };
+        const h = Number(row.hour);
+        const count = Number(row.count);
+        result[action].log[h] += count;
+        if (row.status === 'success') result[action].success[h] += count;
+        else if (row.status === 'pending') result[action].pending[h] += count;
+        else if (row.status === 'failed') result[action].failed[h] += count;
+      }
+      return result;
+    }
 
-    const generateProgressiveArray = (length: number) => Array.from({ length }, () => 0);
+    function transformDaily(data: any[], daysInMonth: number) {
+      const result: Record<string, any> = {};
+      for (const row of data) {
+        const action = row.action;
+        if (!result[action]) result[action] = { log: Array(daysInMonth).fill(0), success: Array(daysInMonth).fill(0), pending: Array(daysInMonth).fill(0), failed: Array(daysInMonth).fill(0) };
+        const d = Number(row.day) - 1;
+        const count = Number(row.count);
+        result[action].log[d] += count;
+        if (row.status === 'success') result[action].success[d] += count;
+        else if (row.status === 'pending') result[action].pending[d] += count;
+        else if (row.status === 'failed') result[action].failed[d] += count;
+      }
+      return result;
+    }
 
-    // -------------------------------
-    // Upsert helper
-    // -------------------------------
-    async function upsertSummary(
-      dimension: string,
-      action: string,
-      length: number,
-      logCount: number[],
-      successCount: number[],
-      pendingCount: number[],
-      failedCount: number[]
-    ) {
-      const { data: existing } = await supabase
-        .from('system_logs_summary')
-        .select('*')
-        .eq('dimension', dimension)
-        .eq('action', action)
-        .limit(1)
-        .maybeSingle();
+    function transformWeekly(data: any[]) {
+      const result: Record<string, any> = {};
+      for (const row of data) {
+        const action = row.action;
+        if (!result[action]) result[action] = { log: Array(7).fill(0), success: Array(7).fill(0), pending: Array(7).fill(0), failed: Array(7).fill(0) };
+        const dayIndex = (Number(row.dow) + 6) % 7; // Sunday=0 → Monday=0
+        const count = Number(row.count);
+        result[action].log[dayIndex] += count;
+        if (row.status === 'success') result[action].success[dayIndex] += count;
+        else if (row.status === 'pending') result[action].pending[dayIndex] += count;
+        else if (row.status === 'failed') result[action].failed[dayIndex] += count;
+      }
+      return result;
+    }
 
-      if (!existing) {
-        await supabase.from('system_logs_summary').insert({
-          dimension,
-          action,
-          log_count: logCount,
-          success_count: successCount,
-          pending_count: pendingCount,
-          failed_count: failedCount,
-        });
-      } else if (existing.log_count.length < length) {
-        await supabase
+    const hourlyAggregates = transformHourly(hourlyData.data as any[]);
+    const daysInMonth = new Date(targetDate).getMonth() + 1 === 2
+      ? 28
+      : [4, 6, 9, 11].includes(new Date(targetDate).getMonth() + 1)
+        ? 30
+        : 31;
+    const dailyAggregates = transformDaily(dailyData.data as any[], daysInMonth);
+    const weeklyAggregates = transformWeekly(weeklyData.data as any[]);
+
+    // -----------------------
+    // 3. Upsert summaries in bulk
+    // -----------------------
+    async function upsertAggregates(dimension: string, aggregates: Record<string, any>) {
+      const rows = Object.entries(aggregates).map(([action, counts]) => ({
+        dimension,
+        action,
+        log_count: counts.log,
+        success_count: counts.success,
+        pending_count: counts.pending,
+        failed_count: counts.failed,
+      }));
+
+      for (const row of rows) {
+        const { data: existing } = await supabase
           .from('system_logs_summary')
-          .update({
-            log_count: logCount,
-            success_count: successCount,
-            pending_count: pendingCount,
-            failed_count: failedCount,
-          })
-          .eq('id', existing.id);
+          .select('id')
+          .eq('dimension', row.dimension)
+          .eq('action', row.action)
+          .limit(1)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from('system_logs_summary')
+            .update({
+              log_count: row.log_count,
+              success_count: row.success_count,
+              pending_count: row.pending_count,
+              failed_count: row.failed_count,
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase.from('system_logs_summary').insert(row);
+        }
       }
     }
 
-    // -------------------------------
-    // 1. Hourly summary for target day
-    // -------------------------------
-    const hourlyDimension = `hourly|${targetDate}`;
-    const hourlyLength = currentHour; // only hours that have passed
-
-    const { data: hourlyLogs } = await supabase
-      .from('system_logs')
-      .select('*')
-      .gte('timestamp', startOfDay(now).toISOString())
-      .lte('timestamp', new Date(startOfDay(now).getTime() + currentHour * 60 * 60 * 1000 + 59 * 60 + 59).toISOString());
-
-    const hourlyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
-
-    for (const log of (hourlyLogs as any[]) || []) {
-      if (!hourlyAggregates[log.action]) {
-        hourlyAggregates[log.action] = {
-          log: generateProgressiveArray(hourlyLength),
-          success: generateProgressiveArray(hourlyLength),
-          pending: generateProgressiveArray(hourlyLength),
-          failed: generateProgressiveArray(hourlyLength),
-        };
-      }
-      const hour = new Date(log.timestamp).getHours();
-      if (hour < hourlyLength) {
-        hourlyAggregates[log.action].log[hour]++;
-        if (log.status === 'success') hourlyAggregates[log.action].success[hour]++;
-        else if (log.status === 'pending') hourlyAggregates[log.action].pending[hour]++;
-        else if (log.status === 'failed') hourlyAggregates[log.action].failed[hour]++;
-      }
-    }
-
-    if (Object.keys(hourlyAggregates).length === 0) {
-      hourlyAggregates['no_logs'] = {
-        log: generateProgressiveArray(hourlyLength),
-        success: generateProgressiveArray(hourlyLength),
-        pending: generateProgressiveArray(hourlyLength),
-        failed: generateProgressiveArray(hourlyLength),
-      };
-    }
-
-    for (const [action, counts] of Object.entries(hourlyAggregates)) {
-      await upsertSummary(hourlyDimension, action, hourlyLength, counts.log, counts.success, counts.pending, counts.failed);
-    }
-
-    // -------------------------------
-    // 2. Daily summary for the month of targetDate
-    // -------------------------------
-    const dailyDimension = `daily|${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-    const dailyLength = currentDay; // only days that have passed
-
-    const { data: dailyLogs } = await supabase
-      .from('system_logs')
-      .select('*')
-      .gte('timestamp', startOfMonth(now).toISOString())
-      .lte('timestamp', new Date(startOfMonth(now).getTime() + (currentDay - 1) * 24 * 60 * 60 * 1000 + 23 * 60 * 60 + 59 * 60 + 59).toISOString());
-
-    const dailyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
-
-    for (const log of (dailyLogs as any[]) || []) {
-      if (!dailyAggregates[log.action]) {
-        dailyAggregates[log.action] = {
-          log: generateProgressiveArray(dailyLength),
-          success: generateProgressiveArray(dailyLength),
-          pending: generateProgressiveArray(dailyLength),
-          failed: generateProgressiveArray(dailyLength),
-        };
-      }
-      const dayIndex = new Date(log.timestamp).getDate() - 1;
-      if (dayIndex < dailyLength) {
-        dailyAggregates[log.action].log[dayIndex]++;
-        if (log.status === 'success') dailyAggregates[log.action].success[dayIndex]++;
-        else if (log.status === 'pending') dailyAggregates[log.action].pending[dayIndex]++;
-        else if (log.status === 'failed') dailyAggregates[log.action].failed[dayIndex]++;
-      }
-    }
-
-    if (Object.keys(dailyAggregates).length === 0) {
-      dailyAggregates['no_logs'] = {
-        log: generateProgressiveArray(dailyLength),
-        success: generateProgressiveArray(dailyLength),
-        pending: generateProgressiveArray(dailyLength),
-        failed: generateProgressiveArray(dailyLength),
-      };
-    }
-
-    for (const [action, counts] of Object.entries(dailyAggregates)) {
-      await upsertSummary(dailyDimension, action, dailyLength, counts.log, counts.success, counts.pending, counts.failed);
-    }
-
-    // -------------------------------
-    // 3. Weekly summary for the week of targetDate
-    // -------------------------------
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-    const weeklyDimension = `weekly|${now.getFullYear()}-W${currentWeekNumber}`;
-    const weeklyLength = currentWeekDay + 1; // only days that have passed
-
-    const { data: weeklyLogs } = await supabase
-      .from('system_logs')
-      .select('*')
-      .gte('timestamp', weekStart.toISOString())
-      .lte('timestamp', new Date(weekStart.getTime() + currentWeekDay * 24 * 60 * 60 * 1000 + 23 * 60 * 60 + 59 * 60 + 59).toISOString());
-
-    const weeklyAggregates: Record<string, { log: number[]; success: number[]; pending: number[]; failed: number[] }> = {};
-
-    for (const log of (weeklyLogs as any[]) || []) {
-      if (!weeklyAggregates[log.action]) {
-        weeklyAggregates[log.action] = {
-          log: generateProgressiveArray(weeklyLength),
-          success: generateProgressiveArray(weeklyLength),
-          pending: generateProgressiveArray(weeklyLength),
-          failed: generateProgressiveArray(weeklyLength),
-        };
-      }
-      const dayIndex = (new Date(log.timestamp).getDay() + 6) % 7; // Monday=0
-      if (dayIndex < weeklyLength) {
-        weeklyAggregates[log.action].log[dayIndex]++;
-        if (log.status === 'success') weeklyAggregates[log.action].success[dayIndex]++;
-        else if (log.status === 'pending') weeklyAggregates[log.action].pending[dayIndex]++;
-        else if (log.status === 'failed') weeklyAggregates[log.action].failed[dayIndex]++;
-      }
-    }
-
-    if (Object.keys(weeklyAggregates).length === 0) {
-      weeklyAggregates['no_logs'] = {
-        log: generateProgressiveArray(weeklyLength),
-        success: generateProgressiveArray(weeklyLength),
-        pending: generateProgressiveArray(weeklyLength),
-        failed: generateProgressiveArray(weeklyLength),
-      };
-    }
-
-    for (const [action, counts] of Object.entries(weeklyAggregates)) {
-      await upsertSummary(weeklyDimension, action, weeklyLength, counts.log, counts.success, counts.pending, counts.failed);
-    }
+    await Promise.all([
+      upsertAggregates(`hourly|${targetDate}`, hourlyAggregates),
+      upsertAggregates(`daily|${targetDate}`, dailyAggregates),
+      upsertAggregates(`weekly|${targetDate}`, weeklyAggregates),
+    ]);
 
     return NextResponse.json({ status: 'success' });
   } catch (err: any) {
-    console.error('Unexpected error in appointments route:', err);
+    console.error('Aggregation error:', err);
     return NextResponse.json({ status: 'error', message: err.message });
   }
 }

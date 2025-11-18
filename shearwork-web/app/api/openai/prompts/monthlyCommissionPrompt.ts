@@ -7,7 +7,10 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const topClients = dataset.top_clients || []
   const weeklyRows = dataset.weekly_rows || []
   const totalRevenue = summary.total_revenue || 0
-  const personalEarnings = totalRevenue * summary.commission_rate || 0
+  const personalEarnings = (totalRevenue * summary.commission_rate) + summary.tips || 0
+  
+  console.log(totalRevenue, summary.commission_rate, summary.tips)
+
   const expenses = summary.expenses || 0
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
@@ -32,6 +35,8 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
     if (!bestWeek || revenue > bestWeek.total_revenue) bestWeek = w
     if (!worstWeek || revenue < worstWeek.total_revenue) worstWeek = w
   })
+
+  console.log(summary)
 
   const avgWeeklyRevenue = weeklyRows.length ? totalWeeklyRevenue / weeklyRows.length : 0
 
@@ -62,6 +67,7 @@ Include:
     <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
+    <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
     <tr><td>Personal Earnings</td><td>$${(totalRevenue * dataset.commission_rate).toFixed(2)}</td></tr>
     <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
     <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>

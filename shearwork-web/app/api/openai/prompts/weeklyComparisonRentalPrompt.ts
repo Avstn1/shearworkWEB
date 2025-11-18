@@ -10,12 +10,12 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
 
   const totalNewClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients||0),0);
   const totalReturningClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.returning_clients||0),0);
-  const totalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0);
+  const finalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0);
   const totalAppointments = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0);
   const retentionRate = totalAppointments > 0 ? ((totalReturningClients / totalAppointments) * 100).toFixed(1) : '0.0';
   const bestWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.final_revenue>a.final_revenue?b:a),dataset.weekly_rows[0]);
   const worstWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.final_revenue<a.final_revenue?b:a),dataset.weekly_rows[0]);
-  const averageRevenue = totalRevenue / (dataset.weekly_rows?.length || 1);
+  const averageRevenue = finalRevenue / (dataset.weekly_rows?.length || 1);
 
   const minimalDataset = {
     weekly_rows: dataset.weekly_rows.map((w: any) => ({
@@ -27,7 +27,7 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
       num_appointments: w.num_appointments,
       new_clients: w.new_clients,
       returning_clients: w.returning_clients,
-      expenses: w.expenses,
+      expenses: w.expenses, // All expenses are 0 in the database
       tips: w.tips
     })),
     services_percentage: dataset.services_percentage,
@@ -136,7 +136,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
 
 <h2>Key Insights & Trends 🔍</h2>
 <ul>
-  <li>Revenue Performance: Total revenue $${totalRevenue.toFixed(2)}, Best week: Week ${bestWeekRevenue.week_number}, Worst week: Week ${worstWeekRevenue.week_number}</li>
+  <li>Revenue Performance: Final revenue $${finalRevenue.toFixed(2)}, Best week: Week ${bestWeekRevenue.week_number}, Worst week: Week ${worstWeekRevenue.week_number}</li>
   <li>Client Retention: Overall ${retentionRate}%, highlight best retention week.</li>
   <li>Average Ticket: Monthly avg $${(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}, range from lowest to highest week.</li>
   <li>Service Breakdown: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>
@@ -145,7 +145,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
 
 <h2>${snapshotTitle}</h2>
 <ul>
-  <li>Total Revenue: $${totalRevenue.toFixed(2)}</li>
+  <li>Final revenue: $${finalRevenue.toFixed(2)}</li>
   <li>Total Clients: ${totalNewClients + totalReturningClients}</li>
   <li>New Clients: ${totalNewClients}</li>
   <li>Returning Clients: ${totalReturningClients}</li>

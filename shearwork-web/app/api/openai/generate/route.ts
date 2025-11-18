@@ -23,7 +23,7 @@ interface WeeklyRow {
   end_date: string
   total_revenue: number
   tips: number
-  final_revenue: number
+  // final_revenue: number // NOT USED
   expenses: number
   num_appointments: number
   new_clients: number
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
             end_date: weekEnd.toISOString().split('T')[0],
             total_revenue,
             tips: 0,
-            final_revenue: total_revenue,
+            // final_revenue: total_revenue, // NOT USED
             expenses: 0,
             num_appointments,
             new_clients,
