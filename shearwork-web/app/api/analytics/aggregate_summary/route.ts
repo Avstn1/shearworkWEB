@@ -89,8 +89,6 @@ export async function POST(req: Request) {
       }
     }
 
-    console.log('✅ Edge function response:', JSON.stringify(data, null, 2));
-
     return NextResponse.json({
       success: true,
       data,

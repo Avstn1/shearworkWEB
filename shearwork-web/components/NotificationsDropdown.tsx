@@ -12,8 +12,8 @@ dayjs.extend(relativeTime)
 
 interface Notification {
   id: string
+  header: string
   message: string
-  action_url?: string | null
   is_read: boolean
   created_at: string
 }
@@ -30,44 +30,70 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
 
   const fetchNotifications = async () => {
     if (!userId) return
+
     try {
-      const { data: notisData, error: notisError } = await supabase
-        .from('user_notifications')
+      const { data, error } = await supabase
+        .from('notifications')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10)
+        .order('timestamp', { ascending: false })
+        .limit(15)
 
-      if (notisError) console.error('Failed to fetch notifications:', notisError)
+      if (error) console.error('Failed to fetch notifications:', error)
 
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('calendar')
-        .eq('user_id', userId)
-        .single()
+      // Map database 'read' column to 'is_read' for our interface
+      const mapped = (data || []).map(item => ({
+        id: item.id,
+        header: item.header,
+        message: item.message,
+        is_read: item.read === true,
+        created_at: item.timestamp
+      }))
 
-      if (profileError) console.error('Failed to fetch profile:', profileError)
-
-      const dynamicNotis: Notification[] = []
-      if (!profileData?.calendar) {
-        dynamicNotis.push({
-          id: 'setup-calendar',
-          message:
-            '📅 You have not connected your calendar yet. Go to settings and select your calendar for Acuity to continue syncing.',
-          action_url: '/settings',
-          is_read: false,
-          created_at: new Date().toISOString()
-        })
-      }
-
-      setNotifications([...(dynamicNotis || []), ...(notisData || [])])
-    } catch (err: any) {
+      setNotifications(mapped)
+    } catch (err) {
       console.error(err)
     }
   }
 
+  // Fetch on mount + on userId change
   useEffect(() => {
     if (userId) fetchNotifications()
+  }, [userId])
+
+  // 🔥 Realtime listener
+  useEffect(() => {
+    if (!userId) return
+
+    const channel = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const newN = payload.new as any
+
+          const formatted: Notification = {
+            id: newN.id,
+            header: newN.header,
+            message: newN.message,
+            is_read: newN.read === true,
+            created_at: newN.timestamp,
+          }
+
+          setNotifications((prev) => [formatted, ...prev])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [userId])
 
   useEffect(() => {
@@ -81,20 +107,22 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
   }, [open])
 
   const handleClickNotification = async (n: Notification) => {
-    if (n.id !== 'setup-calendar') {
-      await supabase.from('user_notifications').update({ is_read: true }).eq('id', n.id)
+    // Only update if it's currently unread
+    if (!n.is_read) {
+      await supabase.from('notifications').update({ read: true }).eq('id', n.id)
+      // Optimistically update the UI
+      setNotifications((prev) => 
+        prev.map((notif) => notif.id === n.id ? { ...notif, is_read: true } : notif)
+      )
     }
-    if (n.action_url) router.push(n.action_url)
-    setOpen(false)
-    fetchNotifications()
   }
 
   const handleMarkAllRead = async () => {
-    await supabase.from('user_notifications').update({ is_read: true }).eq('user_id', userId)
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+    await supabase.from('notifications').update({ read: true }).eq('user_id', userId)
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
   }
 
-  const unreadCount = notifications.filter(n => !n.is_read).length
+  const unreadCount = notifications.filter((n) => !n.is_read).length
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -134,19 +162,19 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
             {notifications.length === 0 ? (
               <div className="p-6 text-center text-gray-400 text-sm">No notifications</div>
             ) : (
-              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-[rgba(100,100,100,0.4)] scrollbar-track-[rgba(0,0,0,0.1)]">
-                {notifications.map(n => (
+              <div className="max-h-80 overflow-y-auto scrollbar-none">
+                {notifications.map((n) => (
                   <motion.div
                     key={n.id}
                     onClick={() => handleClickNotification(n)}
                     className={`px-4 py-3 cursor-pointer transition flex flex-col gap-1 rounded-lg mb-1
                       ${!n.is_read ? 'bg-[rgba(255,255,255,0.08)] font-semibold' : 'hover:bg-[rgba(255,255,255,0.05)]'}
                     `}
-                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <span className="text-sm text-white">{n.message}</span>
-                    <span className="text-xs text-gray-400">{dayjs(n.created_at).fromNow()}</span>
+                    <span className="text-sm text-white">{n.header}</span>
+                    <span className="text-xs text-gray-400">{n.message}</span>
+                    <span className="text-[0.65rem] text-gray-500">{dayjs(n.created_at).fromNow()}</span>
                   </motion.div>
                 ))}
               </div>
