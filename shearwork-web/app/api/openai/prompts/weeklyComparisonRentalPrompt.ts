@@ -102,6 +102,23 @@ ${JSON.stringify(minimalDataset, null, 2)}
       }
     </tr>
     <tr>
+      <td>Tips</td>
+      ${minimalDataset.weekly_rows
+        .map((w:any) => `<td>$${(w.tips || 0).toFixed(2)}</td>`)
+        .join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (() => {
+              const cur = minimalDataset.weekly_rows.at(-1);
+              const prev = minimalDataset.weekly_rows.at(-2);
+              const delta = (cur.tips || 0) - (prev.tips || 0);
+              const pct = ((delta / (prev.tips || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
+    </tr>
+    <tr>
       <td>Expenses</td>
       ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${(w.expenses||0).toFixed(2)}</td>`).join('')}
       ${
