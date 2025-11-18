@@ -432,3 +432,47 @@ entrypoint = "./functions/updateLogSummaries/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/updateLogSummaries/*.html" ]
+
+[functions.nav_summary]
+enabled = true
+verify_jwt = true
+import_map = "./functions/nav_summary/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/nav_summary/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/nav_summary/*.html" ]
+
+[functions.monthlyReport_summary]
+enabled = true
+verify_jwt = true
+import_map = "./functions/monthlyReport_summary/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/monthlyReport_summary/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/monthlyReport_summary/*.html" ]
+
+[functions.finance_summary]
+enabled = true
+verify_jwt = true
+import_map = "./functions/finance_summary/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/finance_summary/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/finance_summary/*.html" ]
+
+[functions.aggregate_summary]
+enabled = true
+verify_jwt = true
+import_map = "./functions/aggregate_summary/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/aggregate_summary/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/aggregate_summary/*.html" ]
