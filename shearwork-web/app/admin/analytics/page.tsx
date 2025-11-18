@@ -7,6 +7,11 @@ import 'react-day-picker/dist/style.css'
 import { DayPicker, DateRange } from 'react-day-picker'
 
 import LoginCharts from '@/components/AdminComponents/AdminAnalytics/LoginCharts'
+import NavCharts from '@/components/AdminComponents/AdminAnalytics/NavCharts'
+import MonthlyReportCharts from '@/components/AdminComponents/AdminAnalytics/MonthlyReportCharts'
+import FinanceCharts from '@/components/AdminComponents/AdminAnalytics/FinanceCharts'
+
+
 
 function formatMonthLabel(ym: string) {
   const [y, m] = ym.split('-').map(Number)
@@ -251,14 +256,28 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Charts */}
-        <div className="flex flex-row gap-6">
-          <div className="w-1/2 bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 relative min-h-[300px]">
+        <div className="grid grid-cols-2 gap-6">
+          {/* Top-left */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 relative min-h-[300px]">
             <LoginCharts startDate={hourlyStartDate} endDate={hourlyEndDate} targetDate={targetDate} />
           </div>
-          <div className="w-1/2 bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 relative min-h-[300px]">
-            <LoginCharts startDate={hourlyStartDate} endDate={hourlyEndDate} targetDate={targetDate} />
+
+          {/* Top-right */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 relative min-h-[300px]">
+            <NavCharts startDate={hourlyStartDate} endDate={hourlyEndDate} targetDate={targetDate} />
+          </div>
+
+          {/* Bottom-left */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 relative min-h-[300px]">
+            <MonthlyReportCharts startDate={hourlyStartDate} endDate={hourlyEndDate} targetDate={targetDate} />
+          </div>
+
+          {/* Bottom-right */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 relative min-h-[300px]">
+            <FinanceCharts startDate={hourlyStartDate} endDate={hourlyEndDate} targetDate={targetDate} />
           </div>
         </div>
+
       </div>
     </>
   )

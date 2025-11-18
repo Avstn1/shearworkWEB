@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json()
-    console.log('📥 NAV_SUMMARY received:', JSON.stringify(body, null, 2))
+    console.log('📥 Finance summary received:', JSON.stringify(body, null, 2))
     
     const { startDate, endDate, targetDate, summaryType, isoWeek } = body
 
@@ -58,13 +58,13 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const actions = ['clicked_expenses', 'clicked_dashboard', 'clicked_barberEditor']
+    const actions = ['add_tips', 'expense_edited', 'expense_added']
     
     if (summaryType === 'hourly') {
       const start = targetDate ?? startDate
       const end = targetDate ?? endDate
       
-      console.log(`🔍 Querying HOURLY nav data from ${start} to ${end}`)
+      console.log(`🔍 Querying HOURLY finance data from ${start} to ${end}`)
 
       // Query by date range - dimension format is "hourly|YYYY-MM-DD"
       const { data, error } = await supabase
@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
         throw error
       }
 
-      console.log(`✅ Fetched ${data?.length || 0} hourly nav rows`)
+      console.log(`✅ Fetched ${data?.length || 0} hourly finance rows`)
       if (data && data.length > 0) {
         console.log('📋 Sample row:', data[0])
       }
@@ -87,9 +87,9 @@ Deno.serve(async (req: Request) => {
       // Initialize 24 hours with zeros
       const aggregated = Array.from({ length: 24 }, (_, h) => ({
         hour: h,
-        clicked_expenses: 0,
-        clicked_dashboard: 0,
-        clicked_barberEditor: 0,
+        add_tips: 0,
+        expense_edited: 0,
+        expense_added: 0,
       }))
 
       // Aggregate across all matching rows
@@ -111,9 +111,9 @@ Deno.serve(async (req: Request) => {
       }
 
       const totalLogs = aggregated.reduce((sum, h) => 
-        sum + h.clicked_expenses + h.clicked_dashboard + h.clicked_barberEditor, 0
+        sum + h.add_tips + h.expense_edited + h.expense_added, 0
       )
-      console.log(`📊 Total nav logs aggregated: ${totalLogs}`)
+      console.log(`📊 Total finance logs aggregated: ${totalLogs}`)
 
       return new Response(JSON.stringify({ summary: aggregated }), {
         status: 200,
@@ -123,7 +123,7 @@ Deno.serve(async (req: Request) => {
     } else if (summaryType === 'weekly') {
       const week = isoWeek ?? getISOWeek(targetDate ?? startDate!)
       
-      console.log(`🔍 Querying WEEKLY nav data for ${week}`)
+      console.log(`🔍 Querying WEEKLY finance data for ${week}`)
 
       // Query for specific week - dimension format is "weekly|YYYY-WWW"
       const { data, error } = await supabase
@@ -137,7 +137,7 @@ Deno.serve(async (req: Request) => {
         throw error
       }
 
-      console.log(`✅ Fetched ${data?.length || 0} weekly nav rows`)
+      console.log(`✅ Fetched ${data?.length || 0} weekly finance rows`)
       if (data && data.length > 0) {
         console.log('📋 Sample row:', data[0])
       }
@@ -145,9 +145,9 @@ Deno.serve(async (req: Request) => {
       // Initialize 7 days with zeros
       const aggregated = Array.from({ length: 7 }, (_, i) => ({
         day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
-        clicked_expenses: 0,
-        clicked_dashboard: 0,
-        clicked_barberEditor: 0,
+        add_tips: 0,
+        expense_edited: 0,
+        expense_added: 0,
       }))
 
       // Aggregate the week's data
@@ -169,9 +169,9 @@ Deno.serve(async (req: Request) => {
       }
 
       const totalLogs = aggregated.reduce((sum, d) => 
-        sum + d.clicked_expenses + d.clicked_dashboard + d.clicked_barberEditor, 0
+        sum + d.add_tips + d.expense_edited + d.expense_added, 0
       )
-      console.log(`📊 Total nav logs aggregated: ${totalLogs}`)
+      console.log(`📊 Total finance logs aggregated: ${totalLogs}`)
       console.log('📊 Weekly breakdown:', aggregated)
 
       return new Response(JSON.stringify({ summary: aggregated }), {
@@ -182,7 +182,7 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Unsupported summaryType: ${summaryType}`)
     }
   } catch (err: any) {
-    console.error('💥 NAV_SUMMARY Error:', err)
+    console.error('💥 Finance Summary Error:', err)
     return new Response(
       JSON.stringify({ 
         error: err.message || 'Unknown error',

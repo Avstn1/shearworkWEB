@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const actions = ['clicked_expenses', 'clicked_dashboard', 'clicked_barberEditor']
+    const actions = ['opened_monthly_report', 'opened_weekly_report', 'opened_wkComparison_report']
     
     if (summaryType === 'hourly') {
       const start = targetDate ?? startDate
@@ -87,9 +87,9 @@ Deno.serve(async (req: Request) => {
       // Initialize 24 hours with zeros
       const aggregated = Array.from({ length: 24 }, (_, h) => ({
         hour: h,
-        clicked_expenses: 0,
-        clicked_dashboard: 0,
-        clicked_barberEditor: 0,
+        opened_monthly_report: 0,
+        opened_weekly_report: 0,
+        opened_wkComparison_report: 0,
       }))
 
       // Aggregate across all matching rows
@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const totalLogs = aggregated.reduce((sum, h) => 
-        sum + h.clicked_expenses + h.clicked_dashboard + h.clicked_barberEditor, 0
+        sum + h.opened_monthly_report + h.opened_weekly_report + h.opened_wkComparison_report, 0
       )
       console.log(`📊 Total nav logs aggregated: ${totalLogs}`)
 
@@ -145,9 +145,9 @@ Deno.serve(async (req: Request) => {
       // Initialize 7 days with zeros
       const aggregated = Array.from({ length: 7 }, (_, i) => ({
         day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
-        clicked_expenses: 0,
-        clicked_dashboard: 0,
-        clicked_barberEditor: 0,
+        opened_monthly_report: 0,
+        opened_weekly_report: 0,
+        opened_wkComparison_report: 0,
       }))
 
       // Aggregate the week's data
@@ -169,7 +169,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const totalLogs = aggregated.reduce((sum, d) => 
-        sum + d.clicked_expenses + d.clicked_dashboard + d.clicked_barberEditor, 0
+        sum + d.opened_monthly_report + d.opened_weekly_report + d.opened_wkComparison_report, 0
       )
       console.log(`📊 Total nav logs aggregated: ${totalLogs}`)
       console.log('📊 Weekly breakdown:', aggregated)
