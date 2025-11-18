@@ -316,20 +316,27 @@ export async function POST(req: Request) {
 
     let message = "";
 
+    const formatType = (str: string) =>
+      str
+        .split('_')                 
+        .map(s => s.charAt(0).toUpperCase() + s.slice(1)) 
+        .join(' ');               
+    const formattedType = formatType(type);
+
     if (type === "monthly") {
-      message = `Your ${type} report has been generated for ${month} ${year}.`;
+      message = `Your ${formattedType} report has been generated for ${month} ${year}.`;
     } else if (type === "weekly" || type === "weekly_comparison") {
       const week = dataset.week_number;
-      
+
       if (week != null) {
         const suffix =
           week === 1 ? "st" :
           week === 2 ? "nd" :
           week === 3 ? "rd" : "th";
-        
-        message = `Your ${type} report has been generated for the ${week}${suffix} week of ${month} ${year}.`;
+
+        message = `Your ${formattedType} report has been generated for the ${week}${suffix} week of ${month} ${year}.`;
       } else {
-        message = `Your ${type} report has been generated for the weeks of ${month} ${year}.`;
+        message = `Your ${formattedType} report has been generated for the weeks of ${month} ${year}.`;
       }
     }
 

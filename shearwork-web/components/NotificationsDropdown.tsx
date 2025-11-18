@@ -115,7 +115,6 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
         prev.map((notif) => notif.id === n.id ? { ...notif, is_read: true } : notif)
       )
     }
-    setOpen(false)
   }
 
   const handleMarkAllRead = async () => {
@@ -163,7 +162,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
             {notifications.length === 0 ? (
               <div className="p-6 text-center text-gray-400 text-sm">No notifications</div>
             ) : (
-              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-[rgba(100,100,100,0.4)] scrollbar-track-[rgba(0,0,0,0.1)]">
+              <div className="max-h-80 overflow-y-auto scrollbar-none">
                 {notifications.map((n) => (
                   <motion.div
                     key={n.id}
