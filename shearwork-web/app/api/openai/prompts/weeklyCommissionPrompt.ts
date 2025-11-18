@@ -1,57 +1,148 @@
-export const weeklyCommissionPrompt = (dataset: any, userName: string, month: string, year: number) => `
+export const weeklyCommissionPrompt = (dataset: any, userName: string, month: string, year: number) => {
+  const summary = dataset.summary || {};
+  const bestDay = summary.best_day || null;
+  const commissionRate = dataset.commission_rate || 0;
+  
+  const personalEarnings = ((summary.total_revenue || 0) * commissionRate) + (summary.tips || 0);
+  const avgTicket = summary.num_appointments > 0 
+    ? (personalEarnings / summary.num_appointments).toFixed(2) 
+    : '0.00';
+  const retentionRate = summary.num_appointments > 0 
+    ? (((summary.returning_clients || 0) / summary.num_appointments) * 100).toFixed(1) 
+    : '0.0';
+
+  return `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional on commission named ${userName}.
 Be a little fun and use some emojis, especially in section headers. Keep tone encouraging but analytical. 
-Important: Also do not wrap with ''' html or 3 backticks at top and bottom. Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE.
+Important: Do not wrap with ''' html or 3 backticks at top and bottom. Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE.
 
 You are given a JSON dataset that includes:
-- summary: weekly metrics (includes totals, start_date, end_date, averages, final_revenue)
+- summary: weekly metrics (week_number, start_date, end_date, total_revenue, tips, expenses, num_appointments, new_clients, returning_clients)
 - daily_rows: day-by-day data across the month
 - services and services_percentage: service mix and booking percentages
 - top_clients: highest-paying or most loyal clients for the week
 - marketing_funnels: data on client acquisition/referrals
 - best_day: the top daily performer in the week
-- commission_rate: the barber’s commission split percentage
+- commission_rate: the barber's commission split percentage
 
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
 
 Generate a detailed weekly report in **HTML** suitable for TinyMCE.
-Fill in [] with the correct data from the dataset (do not invent values). 
-- Personal earnings = (summary.total_revenue * commission_rate) + tips
-- Average Ticket: if missing, calculate as personal earnings / num_appointments
+Use the provided data and computed values. Do not invent numbers.
 
-Include sections:
+<h1>Weekly Report - Week ${summary.week_number || 'N/A'} (${summary.start_date || 'N/A'} → ${summary.end_date || 'N/A'}, ${year})</h1>
 
-1. <h1>Weekly Report - [summary.start_date] → [summary.end_date] (${year})</h1>
+<h2>Weekly Summary 💰</h2>
+<ul>
+  <li><strong>Total Clients:</strong> ${summary.num_appointments || 0}</li>
+  <li><strong>New Clients:</strong> ${summary.new_clients || 0} | <strong>Returning:</strong> ${summary.returning_clients || 0}</li>
+  <li><strong>Gross Revenue:</strong> $${(summary.total_revenue || 0).toFixed(2)}</li>
+  <li><strong>Tips:</strong> $${(summary.tips || 0).toFixed(2)}</li>
+  <li><strong>Commission Rate:</strong> ${(commissionRate * 100).toFixed(0)}%</li>
+  <li><strong>Personal Earnings:</strong> $${personalEarnings.toFixed(2)} <em>(commission + tips)</em></li>
+  <li><strong>Average Ticket:</strong> $${avgTicket} per client</li>
+</ul>
 
-2. <h2>Weekly Summary 💰</h2>
-   - Total Clients: [summary.num_appointments]
-   - New Clients: [summary.new_clients] | Returning: [summary.returning_clients]
-   - Gross Revenue ≈ [$summary.final_revenue]
-   - Tips ≈ [$summary.tips]
-   - Average Ticket: [$summary.avg_ticket] (or calculate as final_revenue / num_appointments)
-   - Personal Earnings ≈ [$summary.total_revenue * commission_rate]
+<h2>Highlights & Notes 📝</h2>
+<ul>
+  <li><strong>Retention Rate:</strong> ${retentionRate}% of clients were returning customers (${summary.returning_clients || 0} out of ${summary.num_appointments || 0}).</li>
+  <li><strong>Revenue Performance:</strong> Gross revenue of $${(summary.total_revenue || 0).toFixed(2)} resulted in $${((summary.total_revenue || 0) * commissionRate).toFixed(2)} in commission earnings.</li>
+  <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients joined this week (${summary.num_appointments > 0 ? (((summary.new_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of total).</li>
+  <li><strong>Service Mix:</strong> ${dataset.services_percentage?.slice(0, 3).map((s: any) => `${s.name}: ${s.bookings} bookings (${s.percentage.toFixed(1)}%)`).join(', ') || 'No service data available.'}</li>
+  ${bestDay ? `<li><strong>Best Day:</strong> ${bestDay.date} with $${(bestDay.total_revenue || 0).toFixed(2)} in gross revenue.</li>` : ''}
+  <li><strong>Tips:</strong> Earned $${(summary.tips || 0).toFixed(2)} in tips this week${summary.num_appointments > 0 ? ` (avg $${((summary.tips || 0) / summary.num_appointments).toFixed(2)} per client)` : ''}.</li>
+  <li><strong>Average Ticket Trend:</strong> $${avgTicket} personal earnings per client. ${parseFloat(avgTicket) > 30 ? 'Strong performance! 💪' : 'Consider upselling opportunities to boost average ticket.'}</li>
+</ul>
 
-3. <h2>Highlights & Notes 📝</h2>
-   <ul>
-     <li>Retention analysis using [$new_clients vs returning_clients].</li>
-     <li>Revenue movement compared to prior weeks.</li>
-     <li>Service Mix summary — use services_percentage for detail.</li>
-     <li>Best Day — mention best_day.date and revenue.</li>
-     <li>Tips (if available) and ticket trend commentary.</li>
-   </ul>
+<h2>Top Clients 💎</h2>
+${dataset.top_clients && dataset.top_clients.length > 0 ? `
+<table>
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Client Name</th>
+      <th>Visits</th>
+      <th>Total Paid</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${dataset.top_clients.slice(0, 10).map((client: any, index: number) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${client.client_name || 'Unknown'}</td>
+      <td>${client.num_visits || 0}</td>
+      <td>$${(client.total_paid || 0).toFixed(2)}</td>
+    </tr>
+    `).join('')}
+  </tbody>
+</table>
+` : '<p>No data available for this section.</p>'}
 
-4. <h2>Top Clients 💎</h2>
-   Pull from top_clients, showing client_name, num_visits, and total_paid.
-   If top_clients is empty, say “No data available for this section.”
+<h2>Service Performance 📋</h2>
+${dataset.services_percentage && dataset.services_percentage.length > 0 ? `
+<table>
+  <thead>
+    <tr>
+      <th>Service</th>
+      <th>Bookings</th>
+      <th>Percentage</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${dataset.services_percentage.map((service: any) => `
+    <tr>
+      <td>${service.name || 'Unknown Service'}</td>
+      <td>${service.bookings || 0}</td>
+      <td>${service.percentage.toFixed(1)}%</td>
+    </tr>
+    `).join('')}
+  </tbody>
+</table>
+<p><strong>Top Service:</strong> ${dataset.services_percentage[0]?.name || 'N/A'} with ${dataset.services_percentage[0]?.bookings || 0} bookings (${dataset.services_percentage[0]?.percentage?.toFixed(1) || '0.0'}%).</p>
+` : '<p>No service data available for this section.</p>'}
 
-5. <h2>Insights 🔍</h2>
-   Provide a short, narrative breakdown of what this week’s performance suggests — strengths, patterns, and opportunities.
+<h2>Marketing Funnels 📣</h2>
+${dataset.marketing_funnels && dataset.marketing_funnels.length > 0 ? `
+<table>
+  <thead>
+    <tr>
+      <th>Source</th>
+      <th>New Clients</th>
+      <th>Percentage</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${dataset.marketing_funnels.map((funnel: any) => `
+    <tr>
+      <td>${funnel.source || 'Unknown'}</td>
+      <td>${funnel.new_clients || 0}</td>
+      <td>${(funnel.percentage || 0).toFixed(1)}%</td>
+    </tr>
+    `).join('')}
+  </tbody>
+</table>
+` : '<p>No marketing funnel data available for this section.</p>'}
 
-6. <h2>Action Steps 🚀</h2>
-   Recommend key focus areas for next week (e.g., boosting rebook rates, promoting high-margin services, managing downtime).
+<h2>Insights 🔍</h2>
+<p>Based on this week's performance, here are key observations:</p>
+<ul>
+  <li><strong>Client Retention:</strong> ${retentionRate}% retention rate ${parseFloat(retentionRate) >= 60 ? 'shows strong loyalty! Keep nurturing these relationships.' : 'has room for improvement. Focus on rebooking strategies and follow-ups.'}</li>
+  <li><strong>Revenue Patterns:</strong> Your personal earnings of $${personalEarnings.toFixed(2)} were driven by ${summary.num_appointments || 0} appointments at an average of $${avgTicket} per client.</li>
+  <li><strong>Service Strategy:</strong> ${dataset.services_percentage?.[0]?.name || 'Your top service'} is your highest performer. ${dataset.services_percentage && dataset.services_percentage.length > 2 ? 'Consider promoting underperforming services to balance your mix.' : ''}</li>
+  ${bestDay ? `<li><strong>Peak Performance:</strong> ${bestDay.date} was your strongest day with $${(bestDay.total_revenue || 0).toFixed(2)} in revenue. Analyze what made this day successful.</li>` : ''}
+  <li><strong>Marketing Effectiveness:</strong> ${dataset.marketing_funnels?.[0]?.source || 'Your primary source'} brought in ${dataset.marketing_funnels?.[0]?.new_clients || 0} new clients. ${(dataset.marketing_funnels?.[0]?.new_clients || 0) > 3 ? 'This channel is performing well!' : 'Consider diversifying your marketing efforts.'}</li>
+</ul>
 
-Use <h2>/<h3> for headings, <p> for text, <ul><li> for lists, and <table> where appropriate. 
-If any section has no data, write: “No data available for this section.” 
-Output only the HTML body.
-`
+<h2>Action Steps 🚀</h2>
+<p>Focus on these key areas for next week:</p>
+<ul>
+  <li><strong>Boost Retention:</strong> ${parseFloat(retentionRate) < 60 ? `Current retention is ${retentionRate}%. Implement post-appointment follow-ups and pre-booking reminders.` : `Maintain your ${retentionRate}% retention by continuing excellent service and communication.`}</li>
+  <li><strong>Maximize High-Margin Services:</strong> Promote ${dataset.services_percentage?.[0]?.name || 'your top service'} and consider upselling complementary services to increase average ticket from $${avgTicket}.</li>
+  <li><strong>Optimize Schedule:</strong> ${bestDay ? `Replicate the success of ${bestDay.date} by analyzing booking patterns and client preferences from that day.` : 'Identify your busiest days and optimize your schedule to maximize earnings.'}</li>
+  <li><strong>Client Acquisition:</strong> ${(summary.new_clients || 0) < 5 ? `Focus on attracting new clients through ${dataset.marketing_funnels?.[0]?.source || 'referrals and promotions'}.` : `You brought in ${summary.new_clients || 0} new clients—keep this momentum going!`}</li>
+</ul>
+
+<p><em>Keep up the great work, ${userName}! 💈✨</em></p>
+`;
+};
