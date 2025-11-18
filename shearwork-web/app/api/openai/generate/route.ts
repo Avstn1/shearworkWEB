@@ -314,6 +314,38 @@ export async function POST(req: Request) {
 
     console.log(`Generated ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
 
+    let message = "";
+
+    if (type === "monthly") {
+      message = `Your ${type} report has been generated for ${month} ${year}.`;
+    } else if (type === "weekly" || type === "weekly_comparison") {
+      const week = dataset.week_number;
+      
+      if (week != null) {
+        const suffix =
+          week === 1 ? "st" :
+          week === 2 ? "nd" :
+          week === 3 ? "rd" : "th";
+        
+        message = `Your ${type} report has been generated for the ${week}${suffix} week of ${month} ${year}.`;
+      } else {
+        message = `Your ${type} report has been generated for the weeks of ${month} ${year}.`;
+      }
+    }
+
+    // Insert into notifications table
+    const { error: notifError } = await supabase
+      .from("notifications")
+      .insert({
+        user_id,
+        header: `${type.charAt(0).toUpperCase() + type.slice(1)} report generated`,
+        message,
+      });
+
+    if (notifError) throw notifError;
+
+    console.log(`Notification created for ${user_id}`);
+
     return NextResponse.json({ success: true, report: newReport })
   } catch (err: any) {
     console.error('❌ Report generation error:', err)
