@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar'
 import 'react-day-picker/dist/style.css'
 import { DayPicker, DateRange } from 'react-day-picker'
 
-import LoginCharts from '@/components/AdminComponents/AdminAnalytics/LoginCharts/LoginCharts'
+import LoginCharts from '@/components/AdminComponents/AdminAnalytics/LoginCharts'
 
 function formatMonthLabel(ym: string) {
   const [y, m] = ym.split('-').map(Number)
