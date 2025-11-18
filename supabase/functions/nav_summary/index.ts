@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
       .select("*")
       .gte("dimension", gte)
       .lte("dimension", lte)
-      .eq("action", "user_login")
+      .in("action", ["clicked_expenses", "clicked_dashboard", "clicked_barberEditor"])
 
     if (error) throw error
 
