@@ -8,6 +8,7 @@ import { MoreVertical, Edit, Trash2, FileText } from 'lucide-react';
 import ReportModal from './ReportModal';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
+import { useApp } from '@/contexts/AppContext';
 
 type WeeklyComparisonReport = {
   id: string;
@@ -70,6 +71,7 @@ export default function WeeklyComparisonReports({
   const [isEditing, setIsEditing] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const { reportToOpen, setReportToOpen, refreshTrigger } = useApp();  // ADD refreshTrigger
 
   const fetchReports = async () => {
     if (!userId) return;
@@ -92,7 +94,20 @@ export default function WeeklyComparisonReports({
 
   useEffect(() => {
     fetchReports();
-  }, [userId, refresh]);
+  }, [userId, refresh, refreshTrigger]);  // ADD refreshTrigger here
+
+  // Handle opening report from notification
+  useEffect(() => {
+    if (reportToOpen?.type === 'weekly_comparison' && reports.length > 0) {
+      const report = reports.find(r => r.id === reportToOpen.id)
+      if (report) {
+        setSelectedReport(report)
+        setIsEditing(false)
+        logWeeklyComparisonReportOpen(userId, report)
+        setReportToOpen(null)
+      }
+    }
+  }, [reportToOpen, reports, userId, setReportToOpen])
 
   const filteredReports = reports.filter((r) => {
     return (!filterMonth || r.month === filterMonth) &&

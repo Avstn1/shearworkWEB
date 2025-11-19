@@ -10,7 +10,7 @@ export default function AppointmentsList() {
       try {
         const res = await fetch('/api/acuity/pull?endpoint=appointments')
         const data = await res.json()
-        console.log('Appointments data:', data)
+        // console.log('Appointments data:', data)
         setAppointments(data.data || [])
       } catch (err) {
         console.error('Error fetching appointments:', err)

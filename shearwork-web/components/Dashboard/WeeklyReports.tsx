@@ -7,6 +7,7 @@ import { MoreVertical, FileText } from 'lucide-react'
 import ReportModal from './ReportModal'
 import toast from 'react-hot-toast'
 import { createPortal } from 'react-dom'
+import { useApp } from '@/contexts/AppContext'
 
 type WeeklyReport = {
   id: string
@@ -54,6 +55,7 @@ export default function WeeklyReports({
   })
   const [isEditing, setIsEditing] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const { reportToOpen, setReportToOpen, refreshTrigger } = useApp()  // ADD refreshTrigger
 
   const fetchReports = async () => {
     const { data, error } = await supabase
@@ -73,9 +75,21 @@ export default function WeeklyReports({
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchReports()
-  }, [userId, refresh])
+  }, [userId, refresh, refreshTrigger])  // ADD refreshTrigger here
+
+  // Handle opening report from notification
+  useEffect(() => {
+    if (reportToOpen?.type === 'weekly' && reports.length > 0) {
+      const report = reports.find(r => r.id === reportToOpen.id)
+      if (report) {
+        setSelectedReport(report)
+        setIsEditing(false)
+        logWeeklyReportOpen(userId, report)
+        setReportToOpen(null)
+      }
+    }
+  }, [reportToOpen, reports, userId, setReportToOpen])
 
   const filteredReports = reports.filter(
     (r) =>
@@ -161,7 +175,6 @@ export default function WeeklyReports({
         )}
       </div>
 
-      {/* ✅ Portal Dropdown Menu (always on top of all cards) */}
       {openMenu &&
         createPortal(
           <div
@@ -193,7 +206,6 @@ export default function WeeklyReports({
           document.body
         )}
 
-      {/* 🧾 Modal */}
       {selectedReport &&
         createPortal(
           <ReportModal

@@ -36,6 +36,7 @@ export default function MarketingFunnelsChart({
   barberId,
   month,
   year,
+  topN = 5,
 }: MarketingFunnelsChartProps) {
   const [data, setData] = useState<MarketingFunnel[]>([])
 
