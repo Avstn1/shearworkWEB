@@ -68,7 +68,7 @@ Include:
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
     <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
-    <tr><td>Personal Earnings</td><td>$${(totalRevenue * dataset.commission_rate).toFixed(2)}</td></tr>
+    <tr><td>Personal Earnings</td><td>$${((totalRevenue * dataset.commission_rate) + summary.tips).toFixed(2)}</td></tr>
     <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
     <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
   </tbody>

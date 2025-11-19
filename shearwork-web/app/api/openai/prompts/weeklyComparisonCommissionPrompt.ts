@@ -11,11 +11,13 @@ export const weeklyComparisonCommissionPrompt = (dataset: any, userName: string,
   const totalReturningClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.returning_clients||0),0);
   // const totalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0); // NOT USED
   const finalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0);
+  const totalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0);
   const totalAppointments = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0);
   const retentionRate = totalAppointments > 0 ? ((totalReturningClients / totalAppointments) * 100).toFixed(1) : '0.0';
   const bestWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue>a.total_revenue?b:a),dataset.weekly_rows[0]);
   // const worstWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue<a.total_revenue?b:a),dataset.weekly_rows[0]); // NOT USED
   const averageRevenue = finalRevenue / (dataset.weekly_rows?.length || 1);
+  const tips = dataset.weekly_rows.reduce((sum:number,w:any)=> sum+(w.tips||0),0)
 
   const minimalDataset = {
     weekly_rows: dataset.weekly_rows.map((w: any) => ({
@@ -101,19 +103,66 @@ ${JSON.stringify(minimalDataset, null, 2)}
             })()
           : '<td>--</td><td>--</td>'
       }
+    </tr
+    <tr>
+      <td>Tips</td>
+      ${minimalDataset.weekly_rows
+        .map((w:any) => `<td>$${(w.tips || 0).toFixed(2)}</td>`)
+        .join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (() => {
+              const cur = minimalDataset.weekly_rows.at(-1);
+              const prev = minimalDataset.weekly_rows.at(-2);
+              const delta = (cur.tips || 0) - (prev.tips || 0);
+              const pct = ((delta / (prev.tips || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
     </tr>
-
     <tr>
       <td>Personal Earnings (≈${(dataset.commission_rate * 100).toFixed(0)}%)</td>
-      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${((w.final_revenue||0)*(dataset.commission_rate||0)).toFixed(2)}</td>`).join('')}
+      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${((w.total_revenue||0)*(dataset.commission_rate||0) + w.tips).toFixed(2)}</td>`).join('')}
       ${
         minimalDataset.weekly_rows.length > 1
           ? (()=>{ 
               const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
-              const curE = (cur.final_revenue||0)*(dataset.commission_rate||0);
-              const prevE = (prev.final_revenue||0)*(dataset.commission_rate||0);
+              const curE = (cur.total_revenue||0)*(dataset.commission_rate||0) + cur.tips;
+              const prevE = (prev.total_revenue||0)*(dataset.commission_rate||0) + prev.tips;
               const delta = curE - prevE;
               const pct = ((delta / (prevE || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
+    </tr>
+    <tr>
+      <td>Expenses</td>
+      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${(w.expenses||0).toFixed(2)}</td>`).join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (()=>{ 
+              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
+              const delta = (cur.expenses||0) - (prev.expenses||0);
+              const pct = ((delta / (prev.expenses || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
+    </tr>
+
+    <tr>
+      <td>Net Profit</td>
+      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${(((w.total_revenue||0)*(dataset.commission_rate||0) + w.tips) - w.expenses).toFixed(2)}</td>`).join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (()=>{ 
+              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
+              const curNet = (cur.total_revenue||0)*(dataset.commission_rate||0) + cur.tips -(cur.expenses||0);
+              const prevNet = (prev.total_revenue||0)*(dataset.commission_rate||0) + prev.tips -(prev.expenses||0);
+              const delta = curNet - prevNet;
+              const pct = ((delta / (prevNet || 1)) * 100).toFixed(1);
               return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
             })()
           : '<td>--</td><td>--</td>'
@@ -133,7 +182,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
     </ul>
   </li>
   <li>Client Retention: Overall rate ${retentionRate}%</li>
-  <li>Average Ticket Growth: Month avg: $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+w.final_revenue,0)/dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0)).toFixed(2)}</li>
+  <li>Average Ticket Growth: Month avg: $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+w.final_revenue,0)/dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0)).toFixed(2)}</li>
   <li>Tip income total: $${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.tips||0),0).toFixed(2)}</li>
   <li>Service Mix Evolution: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>
    <li>Marketing Funnels: ${dataset.marketing_funnels?.filter((f:any)=>f.source!=='Unknown' && f.source!=='Returning Client').map((f:any)=>f.source + ': ' + f.new_clients + ' new clients (' + (f.percentage||0) + '%)').join(', ')||'No data'}</li>
@@ -141,12 +190,12 @@ ${JSON.stringify(minimalDataset, null, 2)}
 
 <h2>${snapshotTitle}</h2>
 <ul>
-  <li>Final revenue: $${finalRevenue.toFixed(2)}</li>
+  <li>Gross revenue: $${finalRevenue.toFixed(2)}</li>
   <li>Total Clients: ${totalNewClients + totalReturningClients}</li>
   <li>New Clients: ${totalNewClients}</li>
   <li>Returning Clients: ${totalReturningClients}</li>
   <li>Average Ticket: $${(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}</li>
-  <li>Personal Earnings: $${(finalRevenue*(dataset.commission_rate||0)).toFixed(2)}</li>
+  <li>Personal Earnings: $${(totalRevenue*(dataset.commission_rate||0) + tips).toFixed(2)}</li>
 </ul>
 
 <h2>Critical Opportunities for Growth 🚀</h2> AI INSTRUCTIONS: DO NOT JUST OUTPUT THE FOLLOWING AS RAW TEXT, ACTUALLY GENERATE SOMETHING CREATIVE!
