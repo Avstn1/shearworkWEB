@@ -29,12 +29,6 @@ export default function Navbar() {
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const menuRef = useRef<HTMLDivElement>(null)
-  
-  const [reportToOpen, setReportToOpen] = useState<{id: string, type: string} | null>(null)
-  
-  const handleOpenReport = (reportId: string, reportType: string) => {
-    setReportToOpen({ id: reportId, type: reportType })
-  }
 
   useEffect(() => {
     const getUser = async () => {
@@ -212,11 +206,7 @@ export default function Navbar() {
       <>
         {/* --- NON-ADMIN CONTENT --- */}
         {desktopIcons}
-        {/* <NotificationsDropdown userId={user.id} /> */}
-        <NotificationsDropdown 
-          userId={user.id}
-          onOpenReport={handleOpenReport}
-        />
+        <NotificationsDropdown userId={user.id} />
         {/* <TipsDropdown barberId={user.id} /> */}
         <UserProfile />
       </>
