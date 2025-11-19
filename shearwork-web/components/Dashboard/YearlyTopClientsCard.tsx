@@ -3,19 +3,49 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 
+type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
 interface YearlyTopClientsCardProps {
   userId: string
   year: number
+  timeframe: Timeframe
 }
 
 interface TopClient {
-  client_id: string
+  client_id: string | null
   client_name: string | null
   total_paid: number | null
   num_visits: number | null
 }
 
-export default function YearlyTopClientsCard({ userId, year }: YearlyTopClientsCardProps) {
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
+const QUARTER_MONTHS: Record<Timeframe, string[]> = {
+  year: MONTHS,
+  Q1: ['January', 'February', 'March'],
+  Q2: ['April', 'May', 'June'],
+  Q3: ['July', 'August', 'September'],
+  Q4: ['October', 'November', 'December'],
+}
+
+export default function YearlyTopClientsCard({
+  userId,
+  year,
+  timeframe,
+}: YearlyTopClientsCardProps) {
   const [clients, setClients] = useState<TopClient[]>([])
   const [loading, setLoading] = useState<boolean>(false)
 
@@ -26,16 +56,62 @@ export default function YearlyTopClientsCard({ userId, year }: YearlyTopClientsC
       try {
         setLoading(true)
 
-        const { data: topClients, error } = await supabase
-          .from('yearly_top_clients')
-          .select('client_id, client_name, total_paid, num_visits')
+        // YEAR: use the existing yearly_top_clients view
+        if (timeframe === 'year') {
+          const { data: topClients, error } = await supabase
+            .from('yearly_top_clients')
+            .select('client_id, client_name, total_paid, num_visits')
+            .eq('user_id', userId)
+            .eq('year', year)
+            .order('total_paid', { ascending: false })
+
+          if (error) throw error
+
+          const filtered = (topClients as TopClient[]).filter(
+            (f) =>
+              f.client_name &&
+              f.client_name !== 'Unknown' &&
+              f.client_name !== 'Returning Client' &&
+              !/walk/i.test(f.client_name)
+          )
+
+          setClients(filtered || [])
+          return
+        }
+
+        // QUARTERS: aggregate from weekly_top_clients
+        const months = QUARTER_MONTHS[timeframe]
+
+        const { data: weeklyRows, error } = await supabase
+          .from('weekly_top_clients')
+          .select('client_id, client_name, total_paid, num_visits, month, year')
           .eq('user_id', userId)
           .eq('year', year)
-          .order('total_paid', { ascending: false })
+          .in('month', months)
 
         if (error) throw error
 
-        const filtered = (topClients as TopClient[]).filter(
+        // aggregate totals per client
+        const map = new Map<string, TopClient>()
+
+        ;(weeklyRows ?? []).forEach((row: any) => {
+          const key = row.client_id || row.client_name || 'unknown'
+          const existing = map.get(key) || {
+            client_id: row.client_id ?? null,
+            client_name: row.client_name ?? null,
+            total_paid: 0,
+            num_visits: 0,
+          }
+
+          existing.total_paid = (existing.total_paid ?? 0) + (Number(row.total_paid) || 0)
+          existing.num_visits = (existing.num_visits ?? 0) + (Number(row.num_visits) || 0)
+
+          map.set(key, existing)
+        })
+
+        const aggregated = Array.from(map.values())
+
+        const filtered = aggregated.filter(
           (f) =>
             f.client_name &&
             f.client_name !== 'Unknown' &&
@@ -43,9 +119,14 @@ export default function YearlyTopClientsCard({ userId, year }: YearlyTopClientsC
             !/walk/i.test(f.client_name)
         )
 
-        setClients(filtered || [])
+        // sort by total_paid desc
+        filtered.sort(
+          (a, b) => (b.total_paid ?? 0) - (a.total_paid ?? 0)
+        )
+
+        setClients(filtered)
       } catch (err) {
-        console.error('Error fetching yearly top clients:', err)
+        console.error('Error fetching yearly/quarterly top clients:', err)
         setClients([])
       } finally {
         setLoading(false)
@@ -53,7 +134,10 @@ export default function YearlyTopClientsCard({ userId, year }: YearlyTopClientsC
     }
 
     fetchTopClients()
-  }, [userId, year])
+  }, [userId, year, timeframe])
+
+  const titleSuffix =
+    timeframe === 'year' ? `${year}` : `${timeframe} ${year}`
 
   return (
     <div
@@ -65,7 +149,7 @@ export default function YearlyTopClientsCard({ userId, year }: YearlyTopClientsC
       }}
     >
       <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
-        👑 Top Clients (Year)
+        👑 Top Clients ({titleSuffix})
       </h2>
 
       {loading ? (
@@ -74,7 +158,7 @@ export default function YearlyTopClientsCard({ userId, year }: YearlyTopClientsC
         </div>
       ) : clients.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-sm text-gray-400 text-center">
-          No data available for {year}
+          No data available for {titleSuffix}
         </div>
       ) : (
         <div className="overflow-y-auto flex-1">
@@ -90,7 +174,7 @@ export default function YearlyTopClientsCard({ userId, year }: YearlyTopClientsC
             <tbody>
               {clients.slice(0, 5).map((client, idx) => (
                 <tr
-                  key={client.client_id ?? idx}
+                  key={client.client_id ?? client.client_name ?? idx}
                   className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
                     idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
                   }`}

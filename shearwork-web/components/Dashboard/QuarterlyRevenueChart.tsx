@@ -12,25 +12,52 @@ import {
 } from 'recharts'
 import { supabase } from '@/utils/supabaseClient'
 
+type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
 interface Props {
   userId: string
   year: number
+  timeframe: Timeframe
 }
 
-interface QuarterData {
-  quarter: number
+interface MonthData {
+  month: string
   total_revenue: number
 }
 
-const QUARTER_LABELS: Record<number, string> = {
-  1: 'Q1',
-  2: 'Q2',
-  3: 'Q3',
-  4: 'Q4',
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
+function getMonthsForTimeframe(timeframe: Timeframe): string[] {
+  switch (timeframe) {
+    case 'Q1':
+      return MONTHS.slice(0, 3) // Jan–Mar
+    case 'Q2':
+      return MONTHS.slice(3, 6) // Apr–Jun
+    case 'Q3':
+      return MONTHS.slice(6, 9) // Jul–Sep
+    case 'Q4':
+      return MONTHS.slice(9, 12) // Oct–Dec
+    case 'year':
+    default:
+      return MONTHS
+  }
 }
 
-export default function QuarterlyRevenueChart({ userId, year }: Props) {
-  const [data, setData] = useState<QuarterData[]>([])
+export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props) {
+  const [data, setData] = useState<MonthData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -40,35 +67,50 @@ export default function QuarterlyRevenueChart({ userId, year }: Props) {
       setLoading(true)
       try {
         const { data: rows, error } = await supabase
-          .from('quarterly_revenue_summary')
-          .select('quarter, total_revenue')
+          .from('monthly_data')
+          .select('month, final_revenue')
           .eq('user_id', userId)
           .eq('year', year)
 
         if (error) throw error
 
-        const mapped: QuarterData[] = (rows ?? [])
-          .map((r: any) => ({
-            quarter: r.quarter,
-            total_revenue: Number(r.total_revenue) || 0,
-          }))
-          .sort((a, b) => a.quarter - b.quarter)
+        // map all months to a fixed order with default 0
+        const totals: Record<string, number> = {}
+        MONTHS.forEach((m) => (totals[m] = 0))
+
+        ;(rows ?? []).forEach((r: any) => {
+          const name = r.month as string
+          const monthName = MONTHS.find((m) => m === name) ?? name
+          totals[monthName] += Number(r.final_revenue) || 0
+        })
+
+        const visibleMonths = getMonthsForTimeframe(timeframe)
+
+        const mapped: MonthData[] = visibleMonths.map((m) => ({
+          month: m,
+          total_revenue: totals[m] || 0,
+        }))
 
         setData(mapped)
       } catch (err) {
-        console.error('Error fetching quarterly revenue:', err)
+        console.error('Error fetching monthly revenue:', err)
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [userId, year])
+  }, [userId, year, timeframe])
+
+  const title =
+    timeframe === 'year'
+      ? '📊 Revenue by Month (Year)'
+      : `📊 Revenue by Month (${timeframe})`
 
   return (
     <div className="h-[300px] flex flex-col">
       <h2 className="text-[#E8EDC7] text-base font-semibold mb-3">
-        📊 Revenue by Quarter
+        {title}
       </h2>
       {loading ? (
         <div className="text-[#F5E6C5] text-sm">Loading chart...</div>
@@ -76,15 +118,12 @@ export default function QuarterlyRevenueChart({ userId, year }: Props) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data.map((d) => ({
-              label: QUARTER_LABELS[d.quarter] ?? `Q${d.quarter}`,
+              label: d.month.slice(0, 3), // Jan, Feb, ...
               total_revenue: d.total_revenue,
             }))}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: '#d1e2c5', fontSize: 12 }}
-            />
+            <XAxis dataKey="label" tick={{ fill: '#d1e2c5', fontSize: 12 }} />
             <YAxis
               tick={{ fill: '#d1e2c5', fontSize: 12 }}
               tickFormatter={(val) => `$${val}`}
