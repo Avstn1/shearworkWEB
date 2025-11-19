@@ -38,13 +38,13 @@ export default function LoginPage() {
       router.refresh();
       router.push('/dashboard');
       
-      const { data: userData } = await supabase.from('profiles').select('role').eq('id', userProfile.user?.id).single();
-
-      if (userData?.role != 'admin') {
+      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', userProfile.user?.id).single();
+      console.log(userData)
+      if (userData?.role != 'Admin') {
         const { error: insertError } = await supabase
         .from('system_logs')
         .insert({
-          source: userProfile.user?.id,
+          source: `${userData?.full_name}: ${userProfile.user?.id}`,
           action: 'user_login',
           status: 'success',
           details: `${userProfile.user?.email} logged in.`,

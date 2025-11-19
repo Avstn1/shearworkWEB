@@ -290,6 +290,21 @@ export async function GET(request: Request) {
     }
   }
 
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
+
+  const appointmentAddOnsRes = await fetch("https://acuityscheduling.com/api/v1/appointment-addons", { headers: { Authorization: `Bearer ${accessToken}` } })
+  const addOnsData = await appointmentAddOnsRes.json()
+  const addOnsString = JSON.stringify(addOnsData);
+  console.log(addOnsData)
+
   const now = new Date()
   const appointments = allData.filter(a => new Date(a.datetime) <= now)
 
@@ -377,7 +392,7 @@ export async function GET(request: Request) {
           const fieldValue = field.value?.toLowerCase() || ''
           if (!referralKeywords.some(k => fieldName.includes(k)) || referralFilter.some(k => fieldValue.includes(k)) || fieldValue == '') continue
           monthlyAgg[monthKey].new++
-          console.log("test: ", field.name, "with: ", field.value)
+          // console.log("test: ", field.name, "with: ", field.value)
           break
           
         }

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useApp } from '@/contexts/AppContext'
 
 dayjs.extend(relativeTime)
 
@@ -16,6 +17,8 @@ interface Notification {
   message: string
   is_read: boolean
   created_at: string
+  reference?: string
+  reference_type?: string
 }
 
 interface NotificationsDropdownProps {
@@ -25,8 +28,9 @@ interface NotificationsDropdownProps {
 export default function NotificationsDropdown({ userId }: NotificationsDropdownProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
-  const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { openReport, triggerRefresh } = useApp()  // ADD triggerRefresh
+  const router = useRouter()
 
   const fetchNotifications = async () => {
     if (!userId) return
@@ -41,13 +45,14 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
 
       if (error) console.error('Failed to fetch notifications:', error)
 
-      // Map database 'read' column to 'is_read' for our interface
       const mapped = (data || []).map(item => ({
         id: item.id,
         header: item.header,
         message: item.message,
         is_read: item.read === true,
-        created_at: item.timestamp
+        created_at: item.timestamp,
+        reference: item.reference,
+        reference_type: item.reference_type
       }))
 
       setNotifications(mapped)
@@ -56,12 +61,10 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
     }
   }
 
-  // Fetch on mount + on userId change
   useEffect(() => {
     if (userId) fetchNotifications()
   }, [userId])
 
-  // 🔥 Realtime listener
   useEffect(() => {
     if (!userId) return
 
@@ -84,9 +87,14 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
             message: newN.message,
             is_read: newN.read === true,
             created_at: newN.timestamp,
+            reference: newN.reference,
+            reference_type: newN.reference_type
           }
 
           setNotifications((prev) => [formatted, ...prev])
+          
+          // TRIGGER REFRESH when new notification arrives
+          triggerRefresh()
         }
       )
       .subscribe()
@@ -94,7 +102,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, triggerRefresh])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -107,13 +115,32 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
   }, [open])
 
   const handleClickNotification = async (n: Notification) => {
-    // Only update if it's currently unread
+    // Mark as read if unread
     if (!n.is_read) {
       await supabase.from('notifications').update({ read: true }).eq('id', n.id)
-      // Optimistically update the UI
       setNotifications((prev) => 
         prev.map((notif) => notif.id === n.id ? { ...notif, is_read: true } : notif)
       )
+    }
+
+    // If notification has a reference, open the report
+    if (n.reference && n.reference_type) {
+      // Trigger refresh before opening
+      triggerRefresh()
+      
+      setOpen(false)
+      
+      // Redirect to dashboard first if not already there
+      if (!window.location.pathname.includes('/dashboard')) {
+        router.push('/dashboard')
+        setTimeout(() => {
+          openReport(n.reference!, n.reference_type!)
+        }, 1250)
+      } else {
+        setTimeout(() => {
+          openReport(n.reference!, n.reference_type!)
+        }, 300)
+      }
     }
   }
 
@@ -126,7 +153,6 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Bell Icon */}
       <button
         className="relative p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
         onClick={() => setOpen(!open)}
@@ -139,7 +165,6 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
         )}
       </button>
 
-      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -147,7 +172,9 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-96 max-w-[90vw] bg-[var(--accent-1)] border border-[var(--accent-2)] rounded-2xl shadow-lg z-50 overflow-hidden backdrop-blur-sm"
+            className="absolute mt-2 bg-[var(--accent-1)] border border-[var(--accent-2)] rounded-2xl shadow-lg z-50 overflow-hidden backdrop-blur-sm
+            right-0 w-96 max-w-[calc(100vw-1rem)]
+            max-[640px]:fixed max-[640px]:left-[0.5rem] max-[640px]:right-[0.5rem] max-[640px]:w-auto"
           >
             <div className="flex justify-between items-center p-4 border-b border-[var(--accent-2)]">
               <h3 className="font-semibold text-[var(--highlight)] text-sm tracking-wide">Notifications</h3>
@@ -184,4 +211,4 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
       </AnimatePresence>
     </div>
   )
-}
+} 

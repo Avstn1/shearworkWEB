@@ -26,7 +26,7 @@ export async function GET() {
     const clients = await res.json()
 
     // Just log them to server console
-    console.log('All Acuity Clients:', clients)
+    // console.log('All Acuity Clients:', clients)
 
     // Return them in the JSON response
     return NextResponse.json({ success: true, totalClients: clients.length, clients })

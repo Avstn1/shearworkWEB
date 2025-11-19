@@ -8,6 +8,7 @@ import { MoreVertical, Edit, Trash2, FileText } from 'lucide-react'
 import ReportModal from './ReportModal'
 import toast from 'react-hot-toast'
 import { createPortal } from 'react-dom'
+import { useApp } from '@/contexts/AppContext'
 
 type MonthlyReport = {
   id: string
@@ -50,6 +51,7 @@ export default function MonthlyReports({
   const [isEditing, setIsEditing] = useState(false)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const { reportToOpen, setReportToOpen, refreshTrigger } = useApp()  // ADD refreshTrigger
 
   const fetchMonthlyReports = async () => {
     if (!userId) return
@@ -75,7 +77,20 @@ export default function MonthlyReports({
 
   useEffect(() => {
     fetchMonthlyReports()
-  }, [userId, refresh])
+  }, [userId, refresh, refreshTrigger])  // ADD refreshTrigger here
+
+  // Handle opening report from notification
+  useEffect(() => {
+    if (reportToOpen?.type === 'monthly' && reports.length > 0) {
+      const report = reports.find(r => r.id === reportToOpen.id)
+      if (report) {
+        setSelectedReport(report)
+        setIsEditing(false)
+        logMonthlyReportOpen(userId, report)
+        setReportToOpen(null)
+      }
+    }
+  }, [reportToOpen, reports, userId, setReportToOpen])
 
   const filteredReports = reports.filter((r) => {
     return (!filterMonth || r.month === filterMonth) &&
@@ -194,7 +209,7 @@ export default function MonthlyReports({
                         background: 'var(--card-monthly-border)',
                         color: 'var(--text-bright)',
                       }}
-                      onClick={(e) => e.stopPropagation()} // prevent parent click from closing menu
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <button
                         onClick={() => handleEdit(r)}

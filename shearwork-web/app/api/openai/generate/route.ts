@@ -345,8 +345,10 @@ export async function POST(req: Request) {
       .from("notifications")
       .insert({
         user_id,
-        header: `${type.charAt(0).toUpperCase() + type.slice(1)} report generated`,
+        header: `${formattedType} report generated`,
         message,
+        reference: newReport.id, 
+        reference_type: type
       });
 
     if (notifError) throw notifError;

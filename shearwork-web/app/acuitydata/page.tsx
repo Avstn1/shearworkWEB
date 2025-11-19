@@ -42,7 +42,7 @@ export default function AcuityDataViewer() {
 
       setData(results)
       setLoading(false)
-      console.log('Full Acuity API data:', results)
+      // console.log('Full Acuity API data:', results)
     }
 
     fetchAllEndpoints()
