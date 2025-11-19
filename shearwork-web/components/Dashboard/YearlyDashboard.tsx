@@ -7,6 +7,8 @@ import YearlyExpensesCard from './YearlyExpensesCard'
 import YearlyTopClientsCard from './YearlyTopClientsCard'
 import TimeframeAverageTicketCard from './TimeframeAverageTicketCard'
 import RevenueDayMonthToggleChart from './RevenueDayMonthToggleChart'
+import YearlyServiceBreakdownChart from './YearlyServiceBreakdownChart'      // ✅ NEW
+import TimeframeMarketingFunnelsChart from './TimeframeMarketingFunnelsChart' // ✅ NEW
 import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface YearlyDashboardProps {
@@ -111,6 +113,30 @@ export default function YearlyDashboard({
             <YearlyTopClientsCard
               key={`ytopclients-${globalRefreshKey}-${timeframe}`}
               userId={userId}
+              year={selectedYear}
+              timeframe={timeframe}
+            />
+          </motion.div>
+        </motion.div>
+
+        {/* BOTTOM ROW: Service Breakdown + Marketing Funnels */}
+        <motion.div
+          variants={fadeInUp}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+        >
+          <motion.div className={cardClass}>
+            <YearlyServiceBreakdownChart
+              key={`yservices-${globalRefreshKey}-${timeframe}`}
+              barberId={userId}
+              year={selectedYear}
+              timeframe={timeframe}
+            />
+          </motion.div>
+
+          <motion.div className={cardClass}>
+            <TimeframeMarketingFunnelsChart
+              key={`yfunnels-${globalRefreshKey}-${timeframe}`}
+              barberId={userId}
               year={selectedYear}
               timeframe={timeframe}
             />
