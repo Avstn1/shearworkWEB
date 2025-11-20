@@ -4,12 +4,12 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useBarberLabel } from '@/hooks/useBarberLabel'
 
-type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
+type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'YTD'
 
 interface YearlyRevenueCardProps {
   userId: string
   year?: number
-  timeframe: Timeframe
+  timeframe?: Timeframe
 }
 
 const MONTHS = [
@@ -32,6 +32,7 @@ const QUARTER_MONTHS: Record<Exclude<Timeframe, 'year'>, string[]> = {
   Q2: ['April', 'May', 'June'],
   Q3: ['July', 'August', 'September'],
   Q4: ['October', 'November', 'December'],
+  YTD: ['']
 }
 
 export default function YearlyRevenueCard({
@@ -72,7 +73,7 @@ export default function YearlyRevenueCard({
         let finalTotal = 0
 
         // 2) YEAR view – keep using yearly_revenue
-        if (timeframe === 'year') {
+        if (timeframe === 'year' || timeframe === 'YTD') {
           const { data: yearlyData, error: yearlyError } = await supabase
             .from('yearly_revenue')
             .select('total_revenue, tips, final_revenue')
@@ -95,7 +96,7 @@ export default function YearlyRevenueCard({
           }
         } else {
           // 3) QUARTER view – sum from monthly_data for that quarter
-          const months = QUARTER_MONTHS[timeframe]
+          const months = QUARTER_MONTHS[timeframe!]
 
           const { data: monthlyRows, error: monthlyError } = await supabase
             .from('monthly_data')

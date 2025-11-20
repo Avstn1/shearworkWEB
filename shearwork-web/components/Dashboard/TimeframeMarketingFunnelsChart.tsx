@@ -287,14 +287,27 @@ export default function TimeframeMarketingFunnelsChart({
               fill={COLORS[2]}
               radius={[8, 8, 0, 0]}
             >
-              <LabelList
-                dataKey="retention"
-                position="top"
-                dx={5}
-                style={{ fill: '#E8EDC7', fontSize: 8, fontWeight: 'bold' }}
-                // Note: if your Recharts version supports formatter on LabelList,
-                // you can add it back here.
-              />
+            <LabelList
+              dataKey="retention"
+              position="top"
+              content={(props) => {
+                const { x, y, value } = props;
+
+                if (x == null || y == null || value == null) return null;
+
+                return (
+                  <text
+                    x={Number(x)}
+                    y={Number(y) - 5}
+                    fill="#E8EDC7"
+                    fontSize={10}
+                    fontWeight="bold"
+                  >
+                    {`${Number(value).toFixed(2)}%`}
+                  </text>
+                );
+              }}
+            />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
