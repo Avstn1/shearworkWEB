@@ -81,6 +81,7 @@ export default function TimeframeMarketingFunnelsChart({
           .eq('report_year', year)
           .in('report_month', monthsToUse)
 
+
         if (error) {
           console.error('Error fetching marketing funnels:', error)
           setData([])
@@ -162,6 +163,8 @@ export default function TimeframeMarketingFunnelsChart({
 
     fetchData()
   }, [barberId, year, timeframe])
+
+  console.log(data)
 
   if (loading) {
     return (
