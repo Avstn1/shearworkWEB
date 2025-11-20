@@ -302,7 +302,7 @@ export default function DashboardPage() {
       {/* MIDDLE COLUMN */}
       <div className="flex flex-col gap-4 px-1">
         <motion.div variants={fadeInUp} className={cardClass}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></motion.div>
-        <motion.div variants={fadeInUp} className={cardClass}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} timeframe="year" year={selectedYear} /></motion.div>
+        <motion.div variants={fadeInUp} className={cardClass}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
       </div>
 
       {/* RIGHT COLUMN */}
