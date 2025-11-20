@@ -291,19 +291,10 @@ export async function GET(request: Request) {
   }
 
   // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-
-  const appointmentAddOnsRes = await fetch("https://acuityscheduling.com/api/v1/appointment-addons", { headers: { Authorization: `Bearer ${accessToken}` } })
-  const addOnsData = await appointmentAddOnsRes.json()
-  const addOnsString = JSON.stringify(addOnsData);
-  console.log(addOnsData)
+  // const appointmentAddOnsRes = await fetch("https://acuityscheduling.com/api/v1/appointment-addons", { headers: { Authorization: `Bearer ${accessToken}` } })
+  // const addOnsData = await appointmentAddOnsRes.json()
+  // const addOnsString = JSON.stringify(addOnsData);
+  // console.log(addOnsData)
 
   const now = new Date()
   const appointments = allData.filter(a => new Date(a.datetime) <= now)
@@ -316,11 +307,14 @@ export async function GET(request: Request) {
   const serviceCounts: Record<string, { month: string; year: number; count: number; price: number }> = {}
   const topClientsMap: Record<string, Record<string, any>> = {}
   const funnelMap: Record<string, Record<string, any>> = {}
+  const funnelMapDaily: Record<string, Record<string, any>> = {}
   const monthlyClientMap: Record<string, Record<string, number>> = {}
   const monthlyWeekdayAgg: Record<string, number> = {}
 
   const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok', 'walking', 'walk']
   const referralFilter = ['unknown', 'returning', 'return', 'returning client']
+
+  // console.log(JSON.stringify(appointments[0], null, 2));
 
   for (const appt of appointments) {
     const parsed = parseDateStringSafe(appt.datetime)
@@ -347,6 +341,8 @@ export async function GET(request: Request) {
     const wEntry = weeklyAgg[weekKey]
     wEntry.revenue += price
     wEntry.numAppointments++
+
+    const dailyPrice = 0
 
     // Need to make this reusable code somehow
     if(!returning){
@@ -439,9 +435,10 @@ export async function GET(request: Request) {
     topClientsMap[monthKey][clientKey].total_paid += price
     topClientsMap[monthKey][clientKey].num_visits++
 
-    // 6️⃣ Marketing funnels (only for the requested month)
+    // 6️⃣ Marketing funnels (only for the requested month. MONTHLY AND DAILY)
     if (!appt.forms || !Array.isArray(appt.forms)) continue
     if (returning) continue
+
     for (const form of appt.forms) {
       if (!form.values || !Array.isArray(form.values)) continue
 
@@ -451,7 +448,8 @@ export async function GET(request: Request) {
 
         const rawValue = (field.value || '').trim()
         if (!rawValue || rawValue.includes(',')) continue
-
+        
+        // START OF MONTHLY FUNNELING
         if (!funnelMap[monthKey]) funnelMap[monthKey] = {}
         if (!funnelMap[monthKey][rawValue]) {
           funnelMap[monthKey][rawValue] = {
@@ -500,6 +498,20 @@ export async function GET(request: Request) {
 
         funnel.totalRevenue += price
         funnel.totalVisits++
+
+
+        // DAILY FUNNELS HERE
+        if (!funnelMapDaily[dayKey]) funnelMapDaily[dayKey] = {}
+        if (!funnelMapDaily[dayKey][rawValue]) {
+          funnelMapDaily[dayKey][rawValue] = {
+            totalRevenue: 0,
+            totalVisits: 0
+          }
+        }
+
+        const dailyFunnel = funnelMapDaily[dayKey][rawValue]
+        dailyFunnel.totalRevenue += price
+        dailyFunnel.totalVisits++
         break
       }
     }
@@ -679,7 +691,37 @@ export async function GET(request: Request) {
       created_at: new Date().toISOString(),
     }))
   })
+  // console.log(JSON.stringify(funnelUpserts, null, 2));
   await supabase.from('marketing_funnels').upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+
+  // Daily marketing funnels
+  const dailyFunnelUpserts = Object.entries(funnelMapDaily).flatMap(([dayKey, sources]) => {
+    // console.log(dayKey, sources)
+
+    return Object.entries(sources).map(([source, stats]) => ({
+      user_id: user.id,
+      source,
+      avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
+      total_revenue: Math.round(stats.totalRevenue * 100) / 100,
+      count: stats.totalVisits,
+      report_date: dayKey, 
+      created_at: new Date().toISOString(),
+    }));
+  });
+
+  console.log(JSON.stringify(dailyFunnelUpserts, null, 2));
+
+  console.log("updating daily_marketing_funnels");
+  const { data, error } = await supabase
+    .from('daily_marketing_funnels')
+    .upsert(dailyFunnelUpserts, { onConflict: 'user_id,source,report_date' })
+    .select('*');
+
+  if (error) {
+    console.error("Supabase upsert error:", error);
+  } else {
+    console.log("Upsert successful. Rows affected:", data?.length);
+  }
 
   const weekdayUpserts = Object.entries(monthlyWeekdayAgg).map(([key, total]) => {
     const [userId, yearStr, month, weekday] = key.split('||')
