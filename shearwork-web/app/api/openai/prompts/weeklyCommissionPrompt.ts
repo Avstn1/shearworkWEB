@@ -46,10 +46,10 @@ Use the provided data and computed values. Do not invent numbers.
 
 <h2>Highlights & Notes 📝</h2>
 <ul>
+THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
   <li><strong>Retention Rate:</strong> ${retentionRate}% of clients were returning customers (${summary.returning_clients || 0} out of ${summary.num_appointments || 0}).</li>
   <li><strong>Revenue Performance:</strong> Gross revenue of $${(summary.total_revenue || 0).toFixed(2)} resulted in $${((summary.total_revenue || 0) * commissionRate).toFixed(2)} in commission earnings.</li>
   <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients joined this week (${summary.num_appointments > 0 ? (((summary.new_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of total).</li>
-  <li><strong>Service Mix:</strong> ${dataset.services_percentage?.slice(0, 3).map((s: any) => `${s.name}: ${s.bookings} bookings (${s.percentage.toFixed(1)}%)`).join(', ') || 'No service data available.'}</li>
   ${bestDay ? `<li><strong>Best Day:</strong> ${bestDay.date} with $${(bestDay.total_revenue || 0).toFixed(2)} in gross revenue.</li>` : ''}
   <li><strong>Tips:</strong> Earned $${(summary.tips || 0).toFixed(2)} in tips this week${summary.num_appointments > 0 ? ` (avg $${((summary.tips || 0) / summary.num_appointments).toFixed(2)} per client)` : ''}.</li>
   <li><strong>Average Ticket Trend:</strong> $${avgTicket} personal earnings per client. ${parseFloat(avgTicket) > 30 ? 'Strong performance! 💪' : 'Consider upselling opportunities to boost average ticket.'}</li>
@@ -79,53 +79,8 @@ ${dataset.top_clients && dataset.top_clients.length > 0 ? `
 </table>
 ` : '<p>No data available for this section.</p>'}
 
-<h2>Service Performance 📋</h2>
-${dataset.services_percentage && dataset.services_percentage.length > 0 ? `
-<table>
-  <thead>
-    <tr>
-      <th>Service</th>
-      <th>Bookings</th>
-      <th>Percentage</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${dataset.services_percentage.map((service: any) => `
-    <tr>
-      <td>${service.name || 'Unknown Service'}</td>
-      <td>${service.bookings || 0}</td>
-      <td>${service.percentage.toFixed(1)}%</td>
-    </tr>
-    `).join('')}
-  </tbody>
-</table>
-<p><strong>Top Service:</strong> ${dataset.services_percentage[0]?.name || 'N/A'} with ${dataset.services_percentage[0]?.bookings || 0} bookings (${dataset.services_percentage[0]?.percentage?.toFixed(1) || '0.0'}%).</p>
-` : '<p>No service data available for this section.</p>'}
-
-<h2>Marketing Funnels 📣</h2>
-${dataset.marketing_funnels && dataset.marketing_funnels.length > 0 ? `
-<table>
-  <thead>
-    <tr>
-      <th>Source</th>
-      <th>New Clients</th>
-      <th>Percentage</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${dataset.marketing_funnels.map((funnel: any) => `
-    <tr>
-      <td>${funnel.source || 'Unknown'}</td>
-      <td>${funnel.new_clients || 0}</td>
-      <td>${(funnel.percentage || 0).toFixed(1)}%</td>
-    </tr>
-    `).join('')}
-  </tbody>
-</table>
-` : '<p>No marketing funnel data available for this section.</p>'}
-
 <h2>Insights 🔍</h2>
-<p>Based on this week's performance, here are key observations:</p>
+AI INSTRUCTIONS: Based on the data provided, generate 2-3 insightful observations about:
 <ul>
   <li><strong>Client Retention:</strong> ${retentionRate}% retention rate ${parseFloat(retentionRate) >= 60 ? 'shows strong loyalty! Keep nurturing these relationships.' : 'has room for improvement. Focus on rebooking strategies and follow-ups.'}</li>
   <li><strong>Revenue Patterns:</strong> Your personal earnings of $${personalEarnings.toFixed(2)} were driven by ${summary.num_appointments || 0} appointments at an average of $${avgTicket} per client.</li>
@@ -135,7 +90,7 @@ ${dataset.marketing_funnels && dataset.marketing_funnels.length > 0 ? `
 </ul>
 
 <h2>Action Steps 🚀</h2>
-<p>Focus on these key areas for next week:</p>
+Suggest 2-3 actionable improvements for next week:
 <ul>
   <li><strong>Boost Retention:</strong> ${parseFloat(retentionRate) < 60 ? `Current retention is ${retentionRate}%. Implement post-appointment follow-ups and pre-booking reminders.` : `Maintain your ${retentionRate}% retention by continuing excellent service and communication.`}</li>
   <li><strong>Maximize High-Margin Services:</strong> Promote ${dataset.services_percentage?.[0]?.name || 'your top service'} and consider upselling complementary services to increase average ticket from $${avgTicket}.</li>

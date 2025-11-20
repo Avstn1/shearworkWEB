@@ -165,6 +165,7 @@ export async function POST(req: Request) {
         .eq('user_id', user_id)
         .eq('month', month)
         .eq('year', year)
+        .eq('week_number', week_number)
         .order('week_number', { ascending: true })
       if (weeklyError) throw weeklyError
       if (!weeklyData || weeklyData.length === 0) throw new Error('No weekly data found')
@@ -246,6 +247,7 @@ export async function POST(req: Request) {
       .eq('user_id', user_id)
       .eq('month', month)
       .eq('year', year)
+      .eq('week_number', week_number)
       .order('total_paid', { ascending: false })
 
     const {data: expenses } = await supabase
