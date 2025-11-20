@@ -299,6 +299,7 @@ export async function GET(request: Request) {
   const dailyAgg: Record<string, { revenue: number; count: number }> = {}
   const weeklyAgg: Record<string, { meta: any; revenue: number; tips: number; expenses: number; returning: number; new: number; numAppointments: number; clientVisitMap: Record<string, number> }> = {}
   const serviceCounts: Record<string, { month: string; year: number; count: number; price: number }> = {}
+  const dailyServiceCounts: Record<string, { date: string; count: number; price: number }> = {}
   const topClientsMap: Record<string, Record<string, any>> = {}
   const funnelMap: Record<string, Record<string, any>> = {}
   const funnelMapDaily: Record<string, Record<string, any>> = {}
@@ -422,6 +423,18 @@ export async function GET(request: Request) {
     }
     serviceCounts[svcKey].count++
 
+    // DAILY SERVICE COUNTS
+    const dailySvcKey = `${cleanApptType || 'Unknown'}||${dayKey}`
+
+    if (!dailyServiceCounts[dailySvcKey]) {
+      dailyServiceCounts[dailySvcKey] = {
+        date: dayKey,
+        count: 0,
+        price: appt.price
+      }
+    }
+    dailyServiceCounts[dailySvcKey].count++
+
 
     // 5️⃣ Top clients
     if (!topClientsMap[monthKey]) topClientsMap[monthKey] = {}
@@ -496,14 +509,17 @@ export async function GET(request: Request) {
 
         // DAILY FUNNELS HERE
         if (!funnelMapDaily[dayKey]) funnelMapDaily[dayKey] = {}
+
         if (!funnelMapDaily[dayKey][rawValue]) {
           funnelMapDaily[dayKey][rawValue] = {
             totalRevenue: 0,
-            totalVisits: 0
+            totalVisits: 0,
+            clientIds: new Set<string>() // 👈 Just collect client IDs
           }
         }
 
         const dailyFunnel = funnelMapDaily[dayKey][rawValue]
+        dailyFunnel.clientIds.add(clientId)
         dailyFunnel.totalRevenue += price
         dailyFunnel.totalVisits++
         break
@@ -664,6 +680,13 @@ export async function GET(request: Request) {
   })
   await supabase.from('service_bookings').upsert(serviceUpserts, { onConflict: 'user_id,service_name,report_month,report_year' })
 
+  // Daily service bookings
+  const dailyServiceUpserts = Object.entries(dailyServiceCounts).map(([key, val]) => {
+    const [service, date] = key.split('||')
+    return { user_id: user.id, service_name: service, bookings: val.count, price: val.price, report_date: date, created_at: new Date().toISOString() }
+  })
+  await supabase.from('daily_service_bookings').upsert(dailyServiceUpserts, { onConflict: 'user_id,service_name,report_date' })
+
   // Top clients
   for (const clients of Object.values(topClientsMap)) {
     const upserts = Object.values(clients).map(c => ({ ...c, user_id: user.id, updated_at: new Date().toISOString() }))
@@ -687,25 +710,21 @@ export async function GET(request: Request) {
   })
   // console.log(JSON.stringify(funnelUpserts, null, 2));
   await supabase.from('marketing_funnels').upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
-
+  
   // Daily marketing funnels
   const dailyFunnelUpserts = Object.entries(funnelMapDaily).flatMap(([dayKey, sources]) => {
-    // console.log(dayKey, sources)
-
     return Object.entries(sources).map(([source, stats]) => ({
       user_id: user.id,
       source,
       avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
       total_revenue: Math.round(stats.totalRevenue * 100) / 100,
       count: stats.totalVisits,
+      client_ids: Array.from(stats.clientIds), // 👈 Convert Set to array
       report_date: dayKey, 
       created_at: new Date().toISOString(),
     }));
   });
 
-  // console.log(JSON.stringify(dailyFunnelUpserts, null, 2));
-
-  // console.log("updating daily_marketing_funnels");
   const { data, error } = await supabase
     .from('daily_marketing_funnels')
     .upsert(dailyFunnelUpserts, { onConflict: 'user_id,source,report_date' })
