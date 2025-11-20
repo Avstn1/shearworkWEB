@@ -39,11 +39,11 @@ Use the provided data and computed values. Pull values directly from the dataset
 </ul>
 
 <h2>Notes & Highlights 📝</h2>
+THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
 <ul>
   <li><strong>Retention Rate:</strong> ${summary.num_appointments > 0 ? (((summary.returning_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of clients were returning customers.</li>
   <li><strong>Revenue Performance:</strong> Analyze whether $${(summary.total_revenue || 0).toFixed(2)} is strong or weak for the week. Compare to previous weeks if possible.</li>
   <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients (${summary.num_appointments > 0 ? (((summary.new_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of total).</li>
-  <li><strong>Service Mix:</strong> ${dataset.services_percentage?.slice(0, 3).map((s: any) => `${s.name}: ${s.bookings} bookings (${s.percentage.toFixed(1)}%)`).join(', ') || 'No service data available.'}</li>
   ${bestDay ? `<li><strong>Best Day:</strong> ${bestDay.date} with $${(bestDay.total_revenue || 0).toFixed(2)} in revenue.</li>` : ''}
   <li><strong>Average Ticket:</strong> $${avgTicket} per client. ${parseFloat(avgTicket) > 50 ? 'Strong average ticket!' : 'Consider upselling opportunities.'}</li>
 </ul>
@@ -70,39 +70,8 @@ ${dataset.top_clients && dataset.top_clients.length > 0 ? `
 </table>
 ` : '<p>No data available for this section.</p>'}
 
-<h2>Service Performance 📋</h2>
-${dataset.services_percentage && dataset.services_percentage.length > 0 ? `
-<table>
-  <thead>
-    <tr>
-      <th>Service</th>
-      <th>Bookings</th>
-      <th>Percentage</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${dataset.services_percentage.map((service: any) => `
-    <tr>
-      <td>${service.name || 'Unknown Service'}</td>
-      <td>${service.bookings || 0}</td>
-      <td>${service.percentage.toFixed(1)}%</td>
-    </tr>
-    `).join('')}
-  </tbody>
-</table>
-` : '<p>No service data available for this section.</p>'}
-
-<h2>Marketing Funnels 📣</h2>
-${dataset.marketing_funnels && dataset.marketing_funnels.length > 0 ? `
-<ul>
-  ${dataset.marketing_funnels.map((funnel: any) => `
-  <li><strong>${funnel.source || 'Unknown'}:</strong> ${funnel.new_clients || 0} new clients (${(funnel.percentage || 0).toFixed(1)}%)</li>
-  `).join('')}
-</ul>
-` : '<p>No marketing funnel data available for this section.</p>'}
-
 <h2>Insights 🔍</h2>
-<p>Based on the data provided, generate 2-3 insightful observations about:</p>
+AI INSTRUCTIONS: Based on the data provided, generate 2-3 insightful observations about:
 <ul>
   <li>Client flow patterns (busiest days, new vs. returning trends)</li>
   <li>Revenue trends and average ticket performance</li>
@@ -111,7 +80,7 @@ ${dataset.marketing_funnels && dataset.marketing_funnels.length > 0 ? `
 </ul>
 
 <h2>Action Steps 🚀</h2>
-<p>Suggest 2-3 actionable improvements for next week:</p>
+Suggest 2-3 actionable improvements for next week:
 <ul>
   <li>Focus on improving rebooking rates if retention is low (currently ${summary.num_appointments > 0 ? (((summary.returning_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}%)</li>
   <li>Promote high-performing services: ${dataset.services_percentage?.[0]?.name || 'N/A'}</li>
