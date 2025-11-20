@@ -89,12 +89,27 @@ export default function YearlyServiceBreakdownChart({
           totals[name] = (totals[name] ?? 0) + count
         })
 
-        const aggregated: ServiceBooking[] = Object.entries(totals)
+        const sorted: ServiceBooking[] = Object.entries(totals)
           .map(([service_name, bookings]) => ({
             service_name,
             bookings,
           }))
           .sort((a, b) => (b.bookings || 0) - (a.bookings || 0))
+
+        // Take top 6, group the rest into "Others"
+        let aggregated: ServiceBooking[]
+        if (sorted.length <= 6) {
+          aggregated = sorted
+        } else {
+          const top6 = sorted.slice(0, 6)
+          const others = sorted.slice(6)
+          const othersTotal = others.reduce((sum, item) => sum + (item.bookings || 0), 0)
+          
+          aggregated = [
+            ...top6,
+            { service_name: 'Others', bookings: othersTotal }
+          ]
+        }
 
         setData(aggregated)
       } catch (err) {
