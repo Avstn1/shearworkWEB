@@ -703,9 +703,9 @@ export async function GET(request: Request) {
     }));
   });
 
-  console.log(JSON.stringify(dailyFunnelUpserts, null, 2));
+  // console.log(JSON.stringify(dailyFunnelUpserts, null, 2));
 
-  console.log("updating daily_marketing_funnels");
+  // console.log("updating daily_marketing_funnels");
   const { data, error } = await supabase
     .from('daily_marketing_funnels')
     .upsert(dailyFunnelUpserts, { onConflict: 'user_id,source,report_date' })
@@ -713,8 +713,8 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Supabase upsert error:", error);
-  } else {
-    console.log("Upsert successful. Rows affected:", data?.length);
+  // } else {
+  //   console.log("Upsert successful. Rows affected:", data?.length);
   }
 
   const weekdayUpserts = Object.entries(monthlyWeekdayAgg).map(([key, total]) => {
