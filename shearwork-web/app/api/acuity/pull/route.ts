@@ -290,15 +290,6 @@ export async function GET(request: Request) {
     }
   }
 
-<<<<<<< HEAD
-  // HANDLE POPULATING PROFILES.ACUITY_ADDONS HERE
-  // const appointmentAddOnsRes = await fetch("https://acuityscheduling.com/api/v1/appointment-addons", { headers: { Authorization: `Bearer ${accessToken}` } })
-  // const addOnsData = await appointmentAddOnsRes.json()
-  // const addOnsString = JSON.stringify(addOnsData);
-  // console.log(addOnsData)
-
-=======
->>>>>>> 94a6638c5e8b9b453c8c41d5b10b8e8abab97426
   const now = new Date()
   const appointments = allData.filter(a => new Date(a.datetime) <= now)
 
