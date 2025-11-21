@@ -1,5 +1,7 @@
 export const weeklyCommissionPrompt = (dataset: any, userName: string, month: string, year: number) => {
   const summary = dataset.summary || {};
+  const services = dataset.services || []
+  const funnels = dataset.marketing_funnels || []
   const bestDay = summary.best_day || null;
   const commissionRate = dataset.commission_rate || 0;
   
@@ -54,6 +56,54 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
   <li><strong>Tips:</strong> Earned $${(summary.tips || 0).toFixed(2)} in tips this week${summary.num_appointments > 0 ? ` (avg $${((summary.tips || 0) / summary.num_appointments).toFixed(2)} per client)` : ''}.</li>
   <li><strong>Average Ticket Trend:</strong> $${avgTicket} personal earnings per client. ${parseFloat(avgTicket) > 30 ? 'Strong performance! 💪' : 'Consider upselling opportunities to boost average ticket.'}</li>
 </ul>
+
+<h2>💼 Service Breakdown</h2>
+   ${
+     services.length
+       ? `<table>
+            <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
+            <tbody>
+              ${services
+                .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
+                .map(
+                  (s: any) =>
+                    `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.price || 0).toFixed(2)}</td><td>$${s.bookings > 0 ? (s.price / s.bookings).toFixed(2) : '0.00'}</td></tr>`
+                )
+                .join('')}
+              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.price||0),0).toFixed(2)}</td><td>--</td></tr>
+            </tbody>
+          </table>
+          <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing consistent client demand and service value.</p>`
+       : `<p>No data available for this section.</p>`
+   }
+
+
+<h2>📣 Marketing Funnels</h2>
+(extra instructions: do not include a row if source is literally called "Returning Client")
+${
+  funnels.length
+    ? `<table>
+        <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
+        <tbody>
+          ${funnels
+            .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
+            .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
+            .map(
+                (f: any) =>
+                `<tr>
+                    <td>${f.source}</td>
+                    <td>${f.new_clients || 0}</td>
+                    <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
+                </tr>`
+            )
+            .join('')}
+        </tbody>
+      </table>
+      <p>PROMPT: State which channels did the well and Encourage exposing more of their work publicly. DO NOT mention any other channels</p>
+      Instructions: creative analysis/generation`
+    : `<p>No data available for this section.</p>`
+}
+
 
 <h2>Top Clients 💎</h2>
 ${dataset.top_clients && dataset.top_clients.length > 0 ? `

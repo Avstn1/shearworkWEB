@@ -23,7 +23,15 @@ export default function ReportModal({
   isAdmin = false,
   onSave,
 }: ReportModalProps) {
-  const isWeekly = report.week_number !== undefined
+  const reportType = report.type
+
+  const headerTitle =
+  reportType === "weekly"
+    ? "Weekly Report"
+    : reportType === "weekly_comparison"
+    ? "Weekly Comparison Report"
+    : `Monthly Report: ${report.month} ${report.year}`;
+
   const [editedContent, setEditedContent] = useState(report.content || '')
 
   const readonly = !(isEditing && isAdmin)
@@ -41,12 +49,10 @@ export default function ReportModal({
         {/* Header */}
         <div className="shrink-0 p-4 sm:p-6 border-b border-gray-200">
           <h2 className="text-2xl sm:text-3xl font-bold mb-1 text-gray-900 truncate">
-            {isWeekly
-              ? `Weekly Comparison Report`
-              : `Monthly Report: ${report.month} ${report.year || ''}`}
+            {headerTitle}
           </h2>
           <p className="text-sm text-gray-500 truncate">
-            {isWeekly
+            {reportType
               ? `${report.month} ${report.year || ''}`
               : `Summary for ${report.month} ${report.year || ''}`}
           </p>

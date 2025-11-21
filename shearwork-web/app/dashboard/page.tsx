@@ -189,30 +189,39 @@ export default function DashboardPage() {
         </div>
 
         {/* Controls — stacked nicely on mobile */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
+        <div className="flex gap-1 w-full sm:w-auto bg-[#1a1a1a] rounded-full p-1">
           <button
-            onClick={() => {
-              setDashboardView(prev =>
-                prev === 'monthly' ? 'yearly' :
-                prev === 'yearly' ? 'profit' : 'monthly'
-              )
-            }}
-            className={`w-full sm:w-auto px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
-              dashboardView === 'profit'
-                ? 'bg-rose-300 text-black shadow-[0_0_8px_#ff7f7f]'
-                : dashboardView === 'yearly'
-                ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
-                : 'bg-lime-300 text-black shadow-[0_0_8px_#c4ff85]'
+            onClick={() => setDashboardView('monthly')}
+            className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+              dashboardView === 'monthly'
+                ? 'bg-lime-300 text-black shadow-[0_0_8px_#c4ff85]'
+                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
             }`}
           >
-            {dashboardView === 'monthly'
-              ? 'Switch → Yearly Dashboard'
-              : dashboardView === 'yearly'
-              ? 'Switch → Profit/Loss Dashboard'
-              : 'Switch → Monthly Dashboard'}
+            Monthly
           </button>
-          <TipsDropdown barberId={user?.id} onRefresh={() => setRefreshKey(prev => prev + 1)} />
+          <button
+            onClick={() => setDashboardView('yearly')}
+            className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+              dashboardView === 'yearly'
+                ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
+                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+            }`}
+          >
+            Yearly
+          </button>
+          <button
+            onClick={() => setDashboardView('profit')}
+            className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+              dashboardView === 'profit'
+                ? 'bg-rose-300 text-black shadow-[0_0_8px_#ff7f7f]'
+                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+            }`}
+          >
+            Profit/Loss
+          </button>
         </div>
+        
       </div>
 
       {/* Month + Year Selector */}

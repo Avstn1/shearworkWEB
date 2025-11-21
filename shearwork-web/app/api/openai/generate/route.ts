@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
@@ -156,43 +157,48 @@ export async function POST(req: Request) {
     }
 
 
-
     // 🧮 Weekly summary (supports week_number)
     else if (type.startsWith('weekly')) {
-      const { data: weeklyData, error: weeklyError } = await supabase
+      let weeklyQuery = supabase
         .from('weekly_data')
         .select('*')
         .eq('user_id', user_id)
         .eq('month', month)
         .eq('year', year)
-        .eq('week_number', week_number)
-        .order('week_number', { ascending: true })
+      
+      if (type.includes('comparison') && week_number != null) {
+        weeklyQuery = weeklyQuery.lte('week_number', week_number)  // ≤ week_number
+      } else if (week_number != null) {
+        weeklyQuery = weeklyQuery.eq('week_number', week_number)  // = week_number
+      }
+      
+      const { data: weeklyData, error: weeklyError } = await weeklyQuery.order('week_number', { ascending: true })
+      
       if (weeklyError) throw weeklyError
       if (!weeklyData || weeklyData.length === 0) throw new Error('No weekly data found')
         
-
-      // ✅ Comparison mode uses full weekly dataset
+      // ✅ Comparison mode uses cumulative weekly dataset (weeks 1-N)
       if (type.includes('comparison')) {
-        weekly_rows = weeklyData as WeeklyRow[]
+        weekly_rows = weeklyData as WeeklyRow[]  // All weeks up to week_number
         summaryData = null
 
         const { data: deletedRow, error } = await supabase
-        .from('reports')
-        .delete()
-        .eq('type', 'weekly_comparison')
-        .eq('month', month)
-        .eq('year', year)
-        .eq('user_id', user_id)
-        .select();
+          .from('reports')
+          .delete()
+          .eq('type', 'weekly_comparison')
+          .eq('month', month)
+          .eq('year', year)
+          .eq('user_id', user_id)
+          .select();
 
         console.log("Deleted Row: " + deletedRow)
 
       } else {
-        // ✅ Pick the specific week number if provided
+        // ✅ Single week report
         const selectedWeek =
           week_number != null
             ? weeklyData.find((w) => w.week_number === week_number)
-            : weeklyData[weeklyData.length - 1] // default to last week if not specified
+            : weeklyData[weeklyData.length - 1]
 
         if (!selectedWeek)
           throw new Error(`Week ${week_number} not found for ${month} ${year}`)
@@ -217,13 +223,35 @@ export async function POST(req: Request) {
       if (!Array.isArray(weekly_rows)) summaryData.best_day = bestDay
     }
 
-    // 🧩 Fetch services
-    const { data: services } = await supabase
-      .from('service_bookings')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('report_month', month)
-      .eq('report_year', year)
+    let services
+
+    if (type == 'monthly') {
+      const { data } = await supabase
+        .from('service_bookings')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('report_month', month)
+        .eq('report_year', year)
+      services = data
+    } else if (type === 'weekly') {
+      const { data } = await supabase
+        .from('weekly_service_bookings')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+        .eq('week_number', week_number)
+
+      services = data
+    } else if (type == 'weekly_comparison') {
+      const { data } = await supabase
+        .from('weekly_service_bookings')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+      services = data
+    }
 
     const totalBookings = services?.reduce((sum, s) => sum + (s.bookings || 0), 0) || 0
     const services_percentage = (services || []).map((s) => ({
@@ -233,12 +261,33 @@ export async function POST(req: Request) {
     }))
 
     // 🧩 Fetch marketing funnels
-    const { data: funnels } = await supabase
-      .from('marketing_funnels')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('report_month', month)
-      .eq('report_year', year)
+    let funnels
+    if (type == 'monthly') {
+      const { data } = await supabase
+        .from('marketing_funnels')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('report_month', month)
+        .eq('report_year', year)
+      funnels = data
+    } else if (type === 'weekly') {
+      const { data } = await supabase
+        .from('weekly_marketing_funnels')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('report_month', month)
+        .eq('report_year', year)
+        .eq('week_number', week_number)
+      funnels = data
+    } else if (type == 'weekly_comparison') {
+      const { data } = await supabase
+        .from('weekly_marketing_funnels')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('report_month', month)
+        .eq('report_year', year)
+      funnels = data
+    }
 
     // 🧩 Fetch top clients (weekly or monthly)
     const { data: topClients } = await supabase
@@ -314,7 +363,7 @@ export async function POST(req: Request) {
       .single()
     if (insertError) throw insertError
 
-    console.log(`Generated ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
+    console.log(`Generated ${type} report for ${user_id} for ${month} ${year} (${summaryData.start_date} -> ${summaryData.end_date}). Current time: ${new Date().toISOString()}`)
 
     let message = "";
 
@@ -357,7 +406,15 @@ export async function POST(req: Request) {
 
     console.log(`Notification created for ${user_id}`);
 
+    supabase.rpc('refresh_weekly_funnels')
+    .then(
+      () => console.log('Refreshed weekly funnels'),
+      (e: any) => console.warn('Refresh failed:', e)
+    )
+
     return NextResponse.json({ success: true, report: newReport })
+
+
   } catch (err: any) {
     console.error('❌ Report generation error:', err)
     return NextResponse.json(

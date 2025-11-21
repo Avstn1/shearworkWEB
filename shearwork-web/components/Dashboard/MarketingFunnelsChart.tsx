@@ -137,7 +137,7 @@ export default function MarketingFunnelsChart({
           <BarChart
             layout="vertical"
             data={data}
-            margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+            margin={{ top: 20, right: 20, left: -33, bottom: 20 }}
             barCategoryGap={data.length > 10 ? '30%' : '15%'}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
