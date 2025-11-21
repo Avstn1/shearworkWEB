@@ -261,7 +261,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
           return funnelData?.new_clients || 0;
         });
         
-        const total = weeklyNewClients.reduce((sum, c) => sum + c, 0);
+        const total = weeklyNewClients.reduce((sum: number, c) => sum + c, 0);
         
         return {
           name: source,
@@ -289,7 +289,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
       // Generate "Others" row if there are more than 5 sources
       const othersRow = others.length > 0 ? (() => {
         const othersWeeklyClients = minimalDataset.weekly_rows.map((w: any, index: number) => {
-          return others.reduce((sum, source) => sum + (source.weeklyNewClients[index] || 0), 0);
+          return others.reduce((sum: number, source) => sum + (source.weeklyNewClients[index] || 0), 0);
         });
         
         return `
