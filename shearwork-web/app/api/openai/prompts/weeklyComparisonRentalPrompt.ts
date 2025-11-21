@@ -175,7 +175,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
             return serviceData?.total_bookings || 0;
           });
           
-          const total = weeklyBookings.reduce((sum: number, b) => sum + b, 0);
+          const total = weeklyBookings.reduce((sum: number, b: number) => sum + b, 0);
           
           return {
             name: serviceName,
