@@ -261,7 +261,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
           return funnelData?.new_clients || 0;
         });
         
-        const total = weeklyNewClients.reduce((sum: number, c) => sum + c, 0);
+        const total = weeklyNewClients.reduce((sum: number, c: number) => sum + c, 0);
         
         return {
           name: source,
