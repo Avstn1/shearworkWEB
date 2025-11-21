@@ -175,7 +175,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
             return serviceData?.total_bookings || 0;
           });
           
-          const total = weeklyBookings.reduce((sum, b) => sum + b, 0);
+          const total = weeklyBookings.reduce((sum: number, b) => sum + b, 0);
           
           return {
             name: serviceName,
@@ -213,7 +213,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
         // Generate "Others" row if there are more than 5 services
         const othersRow = others.length > 0 ? (() => {
           const othersWeeklyBookings = minimalDataset.weekly_rows.map((w: any, index: number) => {
-            return others.reduce((sum, service) => sum + (service.weeklyBookings[index] || 0), 0);
+            return others.reduce((sum: number, service) => sum + (service.weeklyBookings[index] || 0), 0);
           });
           
           const delta = othersWeeklyBookings.length > 1 
