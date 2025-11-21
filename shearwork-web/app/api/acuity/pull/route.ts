@@ -48,11 +48,21 @@ function normalizeDateUTC(d: Date) {
 
 // WEEK HELPERS
 function getMondayStart(d: Date) {
-  const day = d.getDay() // Sunday=0, Monday=1, ...
-  const diff = (day === 0 ? -6 : 1 - day) // shift back to Monday
-  const monday = new Date(d)
-  monday.setDate(d.getDate() + diff)
+  // Create a clean copy to avoid mutations
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  
+  // Get ISO day of week (1=Monday, 7=Sunday)
+  const dayOfWeek = date.getDay()
+  const isoDay = dayOfWeek === 0 ? 7 : dayOfWeek
+  
+  // Calculate days to subtract to get to Monday
+  const daysToSubtract = isoDay - 1
+  
+  // Go back to Monday
+  const monday = new Date(date)
+  monday.setDate(date.getDate() - daysToSubtract)
   monday.setHours(0, 0, 0, 0)
+  
   return monday
 }
 
@@ -602,7 +612,7 @@ export async function GET(request: Request) {
         }
       })
 
-  await supabase.from('weekly_data').upsert(weeklyUpserts, { onConflict: 'user_id,start_date,week_number,month,year' })
+  await supabase.from('weekly_data').upsert(weeklyUpserts, { onConflict: 'user_id,week_number,month,year' })
 
 
 // ---------------- Weekly Top Clients (corrected total_paid) ----------------

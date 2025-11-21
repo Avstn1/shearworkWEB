@@ -20,7 +20,7 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
   const averageRevenue = finalRevenue / (dataset.weekly_rows?.length || 1);
 
   const minimalDataset = {
-      weekly_rows: dataset.weekly_rows.map((w: any) => ({
+    weekly_rows: dataset.weekly_rows.map((w: any) => ({
       week_number: w.week_number,
       start_date: w.start_date,
       end_date: w.end_date,
@@ -172,7 +172,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
             const serviceData = services.find((s: any) => 
               s.service_name === serviceName && s.week_number === w.week_number
             );
-            return serviceData?.total_bookings || 0;
+            return serviceData?.bookings  || 0;
           });
           
           const total = weeklyBookings.reduce((sum: number, b: number) => sum + b, 0);

@@ -193,7 +193,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
             const serviceData = services.find((s: any) => 
               s.service_name === serviceName && s.week_number === w.week_number
             );
-            return serviceData?.total_bookings || 0;
+            return serviceData?.bookings  || 0;
           });
           
           const total = weeklyBookings.reduce((sum: number, b: number) => sum + b, 0);

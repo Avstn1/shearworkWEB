@@ -60,10 +60,10 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
                 .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
                 .map(
                   (s: any) =>
-                    `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${((s.price || 0) * s.bookings).toFixed(2)}</td><td>$${(s.price || 0).toFixed(2)}</td></tr>`
+                    `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.price || 0).toFixed(2)}</td><td>$${s.bookings > 0 ? (s.price / s.bookings).toFixed(2) : '0.00'}</td></tr>`
                 )
                 .join('')}
-              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+((s.price||0)*(s.bookings || 0)),0).toFixed(2)}</td><td>--</td></tr>
+              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.price||0),0).toFixed(2)}</td><td>--</td></tr>
             </tbody>
           </table>
           <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing consistent client demand and service value.</p>`

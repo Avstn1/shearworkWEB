@@ -166,8 +166,6 @@ export async function POST(req: Request) {
         .eq('month', month)
         .eq('year', year)
       
-      // ✅ For comparison: get weeks 1 through week_number (cumulative)
-      // ✅ For single week: get only that specific week
       if (type.includes('comparison') && week_number != null) {
         weeklyQuery = weeklyQuery.lte('week_number', week_number)  // ≤ week_number
       } else if (week_number != null) {
@@ -243,6 +241,7 @@ export async function POST(req: Request) {
         .eq('month', month)
         .eq('year', year)
         .eq('week_number', week_number)
+
       services = data
     } else if (type == 'weekly_comparison') {
       const { data } = await supabase
@@ -364,7 +363,7 @@ export async function POST(req: Request) {
       .single()
     if (insertError) throw insertError
 
-    console.log(`Generated ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
+    console.log(`Generated ${type} report for ${user_id} for ${month} ${year} (${summaryData.start_date} -> ${summaryData.end_date}). Current time: ${new Date().toISOString()}`)
 
     let message = "";
 
@@ -407,13 +406,13 @@ export async function POST(req: Request) {
 
     console.log(`Notification created for ${user_id}`);
 
-    const { error: refreshError } = await supabase.rpc('refresh_weekly_funnels')
-
-    if (refreshError) {
-      console.error('Failed to refresh weekly_marketing_funnels:', refreshError)
-    }
+    supabase.rpc('refresh_weekly_funnels').catch(e => 
+      console.warn('Background refresh skipped:', e)
+    )
 
     return NextResponse.json({ success: true, report: newReport })
+
+
   } catch (err: any) {
     console.error('❌ Report generation error:', err)
     return NextResponse.json(
