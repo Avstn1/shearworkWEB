@@ -433,6 +433,7 @@ export async function GET(request: Request) {
         price: appt.price
       }
     }
+    
     dailyServiceCounts[dailySvcKey].count++
 
 

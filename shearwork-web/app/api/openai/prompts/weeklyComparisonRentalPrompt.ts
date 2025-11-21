@@ -3,6 +3,8 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
   const lastWeekEnd = dataset.weekly_rows?.[dataset.weekly_rows.length - 1]?.end_date;
   const monthEndDate = new Date(year, new Date(`${month} 1, ${year}`).getMonth() + 1, 0);
   const lastWeekEndDate = lastWeekEnd ? new Date(lastWeekEnd) : null;
+  const services = dataset.services || []
+  const funnels = dataset.marketing_funnels || []
   const snapshotTitle =
     lastWeekEndDate && lastWeekEndDate.getDate() === monthEndDate.getDate()
       ? 'Month End Snapshot 🧾'
@@ -18,7 +20,7 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
   const averageRevenue = finalRevenue / (dataset.weekly_rows?.length || 1);
 
   const minimalDataset = {
-    weekly_rows: dataset.weekly_rows.map((w: any) => ({
+      weekly_rows: dataset.weekly_rows.map((w: any) => ({
       week_number: w.week_number,
       start_date: w.start_date,
       end_date: w.end_date,
@@ -31,7 +33,6 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
       tips: w.tips
     })),
     services_percentage: dataset.services_percentage,
-    marketing_funnels: dataset.marketing_funnels
   };
 
   return `
@@ -148,6 +149,159 @@ ${JSON.stringify(minimalDataset, null, 2)}
           : '<td>--</td><td>--</td>'
       }
     </tr>
+  </tbody>
+</table>
+
+<h2>💼 Service Breakdown</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Service Count</th>
+      ${minimalDataset.weekly_rows.map((w: any) => `<th>W${w.week_number}</th>`).join('')}
+      <th>Δ (Last Week → This Week)</th>
+      <th>% Change</th>
+    </tr>
+  </thead>
+    <tbody>
+      ${(() => {
+        // Get all unique service names with their total bookings
+        const serviceNames = [...new Set(services.map((s: any) => s.service_name))];
+        
+        const servicesWithTotals = serviceNames.map(serviceName => {
+          const weeklyBookings = minimalDataset.weekly_rows.map((w: any) => {
+            const serviceData = services.find((s: any) => 
+              s.service_name === serviceName && s.week_number === w.week_number
+            );
+            return serviceData?.total_bookings || 0;
+          });
+          
+          const total = weeklyBookings.reduce((sum, b) => sum + b, 0);
+          
+          return {
+            name: serviceName,
+            weeklyBookings,
+            total
+          };
+        })
+        .filter(s => s.total > 0)  // Remove services with 0 bookings
+        .sort((a, b) => b.total - a.total);  // Sort by total (highest first)
+        
+        // Split into top 5 and others
+        const top5 = servicesWithTotals.slice(0, 5);
+        const others = servicesWithTotals.slice(5);
+        
+        // Generate rows for top 5
+        const top5Rows = top5.map(service => {
+          const delta = service.weeklyBookings.length > 1 
+            ? service.weeklyBookings[service.weeklyBookings.length - 1] - service.weeklyBookings[service.weeklyBookings.length - 2]
+            : 0;
+          
+          const percentChange = service.weeklyBookings.length > 1 && service.weeklyBookings[service.weeklyBookings.length - 2] > 0
+            ? ((delta / service.weeklyBookings[service.weeklyBookings.length - 2]) * 100).toFixed(1)
+            : '--';
+          
+          return `
+            <tr>
+              <td style="padding: 8px 4px;">${service.name}</td>
+              ${service.weeklyBookings.map(bookings => `<td style="padding: 8px 4px;">${bookings}</td>`).join('')}
+              <td style="padding: 8px 4px;">${service.weeklyBookings.length > 1 ? delta : '--'}</td>
+              <td style="padding: 8px 4px;">${service.weeklyBookings.length > 1 && percentChange !== '--' ? percentChange + '%' : '--'}</td>
+            </tr>
+          `;
+        }).join('');
+        
+        // Generate "Others" row if there are more than 5 services
+        const othersRow = others.length > 0 ? (() => {
+          const othersWeeklyBookings = minimalDataset.weekly_rows.map((w: any, index: number) => {
+            return others.reduce((sum, service) => sum + (service.weeklyBookings[index] || 0), 0);
+          });
+          
+          const delta = othersWeeklyBookings.length > 1 
+            ? othersWeeklyBookings[othersWeeklyBookings.length - 1] - othersWeeklyBookings[othersWeeklyBookings.length - 2]
+            : 0;
+          
+          const percentChange = othersWeeklyBookings.length > 1 && othersWeeklyBookings[othersWeeklyBookings.length - 2] > 0
+            ? ((delta / othersWeeklyBookings[othersWeeklyBookings.length - 2]) * 100).toFixed(1)
+            : '--';
+          
+          return `
+            <tr style="font-style: italic; opacity: 0.8;">
+              <td style="padding: 8px 4px;"><em>Others (${others.length} services)</em></td>
+              ${othersWeeklyBookings.map(bookings => `<td style="padding: 8px 4px;">${bookings}</td>`).join('')}
+              <td style="padding: 8px 4px;">${othersWeeklyBookings.length > 1 ? delta : '--'}</td>
+              <td style="padding: 8px 4px;">${othersWeeklyBookings.length > 1 && percentChange !== '--' ? percentChange + '%' : '--'}</td>
+            </tr>
+          `;
+        })() : '';
+        
+        return top5Rows + othersRow;
+      })()}
+    </tbody>
+</table>
+
+<h2>📣 Marketing Funnels</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="padding: 8px 4px;">Source</th>
+      ${minimalDataset.weekly_rows.map((w: any) => `<th style="padding: 8px 4px;">W${w.week_number}</th>`).join('')}
+    </tr>
+  </thead>
+  <tbody>
+    ${(() => {
+      // Get all unique sources with their total new clients
+      const sourceNames = [...new Set(funnels.map((f: any) => f.source))]
+        .filter(source => source !== 'Returning Client' && source !== 'Walk In');
+      
+      const sourcesWithTotals = sourceNames.map(source => {
+        const weeklyNewClients = minimalDataset.weekly_rows.map((w: any) => {
+          const funnelData = funnels.find((f: any) => 
+            f.source === source && f.week_number === w.week_number
+          );
+          return funnelData?.new_clients || 0;
+        });
+        
+        const total = weeklyNewClients.reduce((sum, c) => sum + c, 0);
+        
+        return {
+          name: source,
+          weeklyNewClients,
+          total
+        };
+      })
+      .filter(s => s.total > 0)  // Remove sources with 0 new clients
+      .sort((a, b) => b.total - a.total);  // Sort by total (highest first)
+      
+      // Split into top 5 and others
+      const top5 = sourcesWithTotals.slice(0, 5);
+      const others = sourcesWithTotals.slice(5);
+      
+      // Generate rows for top 5
+      const top5Rows = top5.map(source => {
+        return `
+          <tr>
+            <td style="padding: 8px 4px;">${source.name}</td>
+            ${source.weeklyNewClients.map(clients => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
+          </tr>
+        `;
+      }).join('');
+      
+      // Generate "Others" row if there are more than 5 sources
+      const othersRow = others.length > 0 ? (() => {
+        const othersWeeklyClients = minimalDataset.weekly_rows.map((w: any, index: number) => {
+          return others.reduce((sum, source) => sum + (source.weeklyNewClients[index] || 0), 0);
+        });
+        
+        return `
+          <tr style="font-style: italic; opacity: 0.8;">
+            <td style="padding: 8px 4px;"><em>Others (${others.length} sources)</em></td>
+            ${othersWeeklyClients.map(clients => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
+          </tr>
+        `;
+      })() : '';
+      
+      return top5Rows + othersRow;
+    })()}
   </tbody>
 </table>
 
