@@ -224,7 +224,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
           return `
             <tr>
               <td style="padding: 8px 4px;">${service.name}</td>
-              ${service.weeklyBookings.map(bookings => `<td style="padding: 8px 4px;">${bookings}</td>`).join('')}
+              ${service.weeklyBookings.map((bookings: number) => `<td style="padding: 8px 4px;">${bookings}</td>`).join('')}
               <td style="padding: 8px 4px;">${service.weeklyBookings.length > 1 ? delta : '--'}</td>
               <td style="padding: 8px 4px;">${service.weeklyBookings.length > 1 && percentChange !== '--' ? percentChange + '%' : '--'}</td>
             </tr>
@@ -248,7 +248,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
           return `
             <tr style="font-style: italic; opacity: 0.8;">
               <td style="padding: 8px 4px;"><em>Others (${others.length} services)</em></td>
-              ${othersWeeklyBookings.map(bookings => `<td style="padding: 8px 4px;">${bookings}</td>`).join('')}
+              ${othersWeeklyBookings.map((bookings: number) => `<td style="padding: 8px 4px;">${bookings}</td>`).join('')}
               <td style="padding: 8px 4px;">${othersWeeklyBookings.length > 1 ? delta : '--'}</td>
               <td style="padding: 8px 4px;">${othersWeeklyBookings.length > 1 && percentChange !== '--' ? percentChange + '%' : '--'}</td>
             </tr>
@@ -302,7 +302,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
         return `
           <tr>
             <td style="padding: 8px 4px;">${source.name}</td>
-            ${source.weeklyNewClients.map(clients => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
+            ${source.weeklyNewClients.map((clients: number) => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
           </tr>
         `;
       }).join('');
@@ -316,7 +316,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
         return `
           <tr style="font-style: italic; opacity: 0.8;">
             <td style="padding: 8px 4px;"><em>Others (${others.length} sources)</em></td>
-            ${othersWeeklyClients.map(clients => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
+            ${othersWeeklyClients.map((clients: number) => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
           </tr>
         `;
       })() : '';
