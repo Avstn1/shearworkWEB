@@ -406,8 +406,10 @@ export async function POST(req: Request) {
 
     console.log(`Notification created for ${user_id}`);
 
-    supabase.rpc('refresh_weekly_funnels').catch(e => 
-      console.warn('Background refresh skipped:', e)
+    supabase.rpc('refresh_weekly_funnels')
+    .then(
+      () => console.log('Refreshed weekly funnels'),
+      (e: any) => console.warn('Refresh failed:', e)
     )
 
     return NextResponse.json({ success: true, report: newReport })
