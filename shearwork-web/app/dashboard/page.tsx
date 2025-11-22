@@ -221,9 +221,7 @@ export default function DashboardPage() {
             Profit/Loss
           </button>
         </div>
-
-        <TipsDropdown barberId={user.id} />
-        
+        <TipsDropdown barberId={user.id} onRefresh={() => setRefreshKey(prev => prev + 1)}  />
       </div>
 
       {/* Month + Year Selector */}
