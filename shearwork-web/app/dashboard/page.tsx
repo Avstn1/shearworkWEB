@@ -221,6 +221,8 @@ export default function DashboardPage() {
             Profit/Loss
           </button>
         </div>
+
+        <TipsDropdown barberId={user.id} />
         
       </div>
 
