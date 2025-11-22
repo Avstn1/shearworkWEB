@@ -103,7 +103,7 @@ export async function GET(request: Request) {
   }
   const calendarID = calendarMatch.id
 
-  // ------------------- Fetch appointments by month -----------------
+    // ------------------- Fetch appointments by month -----------------
   const allAppointments: any[] = []
   for (let month = 0; month < 12; month++) {
     const start = new Date(requestedYear, month, 1).toISOString().split('T')[0]
@@ -130,79 +130,116 @@ export async function GET(request: Request) {
   const now = new Date()
   const appointments = allAppointments.filter(a => new Date(a.datetime) <= now)
 
-  // ------------------- Aggregate clients ---------------------------
-  const clientMap: Record<string, any> = {}
+  const referralKeywords = ['referral', 'referred', 'hear', 'heard', 'source', 'social', 'instagram', 'facebook', 'tiktok', 'walking', 'walk']
+  const referralFilter = ['unknown', 'returning', 'return', 'returning client']
+
+  // move func outside of GET
+  function getClientKey(appt: any) {
+    const email = (appt.email || '').toLowerCase().trim()
+    const phone = (appt.phone || '').replace(/\D/g, '')
+    const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
+    const rawKey = `${email}|${phone}|${name}`
+    return crypto.createHash('sha256').update(rawKey).digest('hex')
+  }
+  // move func outside of GET
+  async function isReturning(
+  supabase: any,
+  userId: string,
+  email?: string,
+  phone?: string,
+  firstName?: string,
+  lastName?: string
+) {
+  if (!email && !phone && !(firstName && lastName)) return false;
+
+  // Normalize
+  const normEmail = email?.toLowerCase().trim();
+  const normPhone = phone?.replace(/\D/g, '');
+  const normFirst = firstName?.trim().toLowerCase();
+  const normLast = lastName?.trim().toLowerCase();
+
+  let data: any[] = [];
+
+  try {
+    // 1️⃣ Try email first
+    if (normEmail) {
+      const { data: emailData, error } = await supabase
+        .from('acuity_clients')
+        .select('first_appt')
+        .eq('user_id', userId)
+        .eq('email', normEmail)
+        .limit(1);
+
+      if (error) throw error;
+      if (emailData && emailData.length > 0) {
+        data = emailData;
+      }
+    }
+
+    // 2️⃣ If no email match, try phone
+    if (data.length === 0 && normPhone) {
+      const { data: phoneData, error } = await supabase
+        .from('acuity_clients')
+        .select('first_appt')
+        .eq('user_id', userId)
+        .eq('phone', normPhone)
+        .limit(1);
+
+      if (error) throw error;
+      if (phoneData && phoneData.length > 0) {
+        data = phoneData;
+      }
+    }
+
+    // 3️⃣ If no email or phone match, try first + last name
+    if (data.length === 0 && normFirst && normLast) {
+      const { data: nameData, error } = await supabase
+        .from('acuity_clients')
+        .select('first_appt')
+        .eq('user_id', userId)
+        .eq('first_name', normFirst)
+        .eq('last_name', normLast)
+        .limit(1);
+
+      if (error) throw error;
+      if (nameData && nameData.length > 0) {
+        data = nameData;
+      }
+    }
+
+    // No match → new client
+    if (!data || data.length === 0) return false;
+
+    // do first appt with timeframe logic here
+  } catch (err: any) {
+    console.error('Error checking client visits:', err);
+    return false;
+  }
+}
   for (const appt of appointments) {
-    const key = buildClientKey(appt, user.id)
-    if (!key) continue
+    const name = appt.firstName && appt.lastName ? `${appt.firstName} ${appt.lastName}`.trim() : ''
+    const email = (appt.email || '').toLowerCase().trim()
+    const phone = (appt.phone || '').replace(/\D/g, '')
+    // Skip entirely if no identifying info
+    if (!name && !email && !phone) continue
+    const clientKey = getClientKey(appt)
+    const returning = await isReturning(supabase, user.id, email, phone, appt.firstName, appt.lastName)
+    if (!appt.forms || !Array.isArray(appt.forms)) continue
+    if (returning) continue // this will check if they are an ALL TIME returning client
+    
+    for (const form of appt.forms) {
+        if (!form.values || !Array.isArray(form.values)) continue
 
-    const apptDateISO = appt.datetime.split('T')[0] // 'yyyy-mm-dd'
+        for (const field of form.values) {
+            const fieldName = field.name?.toLowerCase() || ''
+            if (!referralKeywords.some(k => fieldName.includes(k))) continue
 
-    if (!clientMap[key]) {
-      clientMap[key] = {
-        client_id: key,
-        first_name: appt.firstName || '',
-        last_name: appt.lastName || '',
-        email: (appt.email || '').toLowerCase().trim(),
-        phone: normalizePhone(appt.phone),
-        notes: appt.notes || '',
-        total_appointments: 0,
-        user_id: user.id,
-        first_appt: apptDateISO,
-      }
-    } else {
-      // keep earliest date seen in this pull
-      if (apptDateISO < clientMap[key].first_appt) {
-        clientMap[key].first_appt = apptDateISO
-      }
-    }
-
-    clientMap[key].total_appointments++
-  }
-
-  // --------- Load existing client records to preserve earliest first_appt ------
-  const { data: existingRows, error: existingErr } = await supabase
-    .from('acuity_clients')
-    .select('client_id, first_appt')
-    .eq('user_id', user.id)
-
-  if (existingErr) {
-    console.error('Error loading existing acuity_clients:', existingErr)
-  }
-
-  const existingMap: Record<string, string | null> = {}
-  existingRows?.forEach(row => {
-    existingMap[row.client_id] = row.first_appt
-  })
-
-  // Merge: keep the earliest date between DB and this pull
-  for (const entry of Object.values(clientMap)) {
-    const existing = existingMap[entry.client_id]
-    if (existing) {
-      // if DB has an earlier date, keep that
-      if (!entry.first_appt || existing < entry.first_appt) {
-        entry.first_appt = existing
-      }
+            const rawValue = (field.value || '').trim()
+            if (!rawValue || rawValue.includes(',')) continue
+            //somewhere around here reference /pull, start to populate yearly marketing funnels data
+            //if you find another appt, add to the timeframe returning clients count
+        }
     }
   }
-
-  // ------------------- Upsert into Supabase ------------------------
-
-  const upserts = Object.values(clientMap)
-  console.log('Sample upsert row', upserts[0])
-
-  const { error: upsertErr } = await supabase.from('acuity_clients').upsert(upserts, {
-    onConflict: 'user_id,client_id'
-  })
-
-  if (upsertErr) {
-    return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 })
-  }
-
-  return NextResponse.json({
-    success: true,
-    year: requestedYear,
-    totalAppointments: allAppointments.length,
-    totalClients: upserts.length,
-  })
+  //after this loop, begin to upsert into supabase
 }
