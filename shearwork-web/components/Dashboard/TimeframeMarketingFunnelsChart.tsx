@@ -21,7 +21,7 @@ export interface MarketingFunnel {
   new_clients: number
   returning_clients: number
   retention: number
-  avg_ticket: number
+  timeframe: string
   [key: string]: string | number | undefined
 }
 
@@ -69,17 +69,13 @@ export default function TimeframeMarketingFunnelsChart({
     const fetchData = async () => {
       setLoading(true)
       try {
-        const monthsToUse =
-          timeframe === 'year'
-            ? ALL_MONTHS
-            : MONTHS_BY_QUARTER[timeframe]
 
         const { data: funnels, error } = await supabase
-          .from('marketing_funnels')
-          .select('source, new_clients, returning_clients, retention, avg_ticket, report_month')
+          .from('yearly_marketing_funnels')
+          .select('source, new_clients, returning_clients, retention, timeframe, report_year')
           .eq('user_id', barberId)
           .eq('report_year', year)
-          .in('report_month', monthsToUse)
+          .eq('timeframe', timeframe)
 
 
         if (error) {
@@ -87,72 +83,9 @@ export default function TimeframeMarketingFunnelsChart({
           setData([])
           return
         }
+        console.log(funnels)
+        setData(funnels)
 
-        // Aggregate by source across all selected months
-        type Agg = {
-          source: string
-          new_clients: number
-          returning_clients: number
-          retentionSum: number
-          retentionCount: number
-          avgTicketSum: number
-          avgTicketCount: number
-        }
-
-        const map = new Map<string, Agg>()
-
-        ;(funnels ?? []).forEach((row: any) => {
-          const source: string = row.source ?? 'Unknown'
-          if (!source || source === 'Unknown' || source === 'Returning Client') return
-
-          if (!map.has(source)) {
-            map.set(source, {
-              source,
-              new_clients: 0,
-              returning_clients: 0,
-              retentionSum: 0,
-              retentionCount: 0,
-              avgTicketSum: 0,
-              avgTicketCount: 0,
-            })
-          }
-
-          const agg = map.get(source)!
-          const nc = Number(row.new_clients) || 0
-          const rc = Number(row.returning_clients) || 0
-          const ret = row.retention !== null && row.retention !== undefined ? Number(row.retention) : null
-          const at = row.avg_ticket !== null && row.avg_ticket !== undefined ? Number(row.avg_ticket) : null
-
-          agg.new_clients += nc
-          agg.returning_clients += rc
-
-          if (ret !== null) {
-            agg.retentionSum += ret
-            agg.retentionCount += 1
-          }
-          if (at !== null) {
-            agg.avgTicketSum += at
-            agg.avgTicketCount += 1
-          }
-        })
-
-        const aggregated: MarketingFunnel[] = Array.from(map.values())
-          .map((agg) => ({
-            source: agg.source,
-            new_clients: agg.new_clients,
-            returning_clients: agg.returning_clients,
-            retention:
-              agg.retentionCount > 0
-                ? agg.retentionSum / agg.retentionCount
-                : 0,
-            avg_ticket:
-              agg.avgTicketCount > 0
-                ? agg.avgTicketSum / agg.avgTicketCount
-                : 0,
-          }))
-          .sort((a, b) => (b.new_clients + b.returning_clients) - (a.new_clients + a.returning_clients))
-
-        setData(aggregated)
       } catch (err) {
         console.error('Error preparing timeframe marketing funnels:', err)
         setData([])
