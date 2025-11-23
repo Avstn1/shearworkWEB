@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import YearlyRevenueCard from '@/components/Dashboard/YearlyRevenueCard'
 import YearlyExpensesCard from './YearlyExpensesCard'
@@ -10,6 +10,7 @@ import RevenueDayMonthToggleChart from './RevenueDayMonthToggleChart'
 import YearlyServiceBreakdownChart from './YearlyServiceBreakdownChart'      // ✅ NEW
 import TimeframeMarketingFunnelsChart from './TimeframeMarketingFunnelsChart' // ✅ NEW
 import { useIsMobile } from '@/hooks/useIsMobile'
+import toast from 'react-hot-toast'
 
 interface YearlyDashboardProps {
   userId: string
@@ -38,8 +39,30 @@ export default function YearlyDashboard({
 
   const cardClass =
     'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
+  const syncMarketingFunnels = async () => {
+    if (!userId) return
+    //setIsRefreshing(true)
+    const toastId = toast.loading(`Syncing data for ${timeframe} of ${selectedYear}...`)
+    try {
+      const res = await fetch(`/api/acuity/pull-marketing-funnels?endpoint=appointments&month=${encodeURIComponent(timeframe)}&year=${selectedYear}`)
+      // if (!res.ok) throw new Error('Acuity data fetch failed')
+      await res.json()
+      //setRefreshKey(prev => prev + 1)
+      toast.success(`Data updated for ${timeframe} of ${selectedYear}`, { id: toastId })
+    } catch (err) {
+      console.error(err)
+      toast.error('Error fetching Acuity data.', { id: toastId })
+    } finally {
+      //setIsRefreshing(false)
+    }
+  }
 
-  return (
+  useEffect(() => {
+    if (!userId) return
+    syncMarketingFunnels()
+  }, [timeframe, selectedYear])
+
+    return (
     <motion.div className="flex flex-col gap-4 flex-1">
       <div className="flex flex-col gap-4 pr-1">
         {/* Timeframe selector */}
