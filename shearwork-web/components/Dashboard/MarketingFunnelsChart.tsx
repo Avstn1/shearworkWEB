@@ -154,7 +154,7 @@ export default function MarketingFunnelsChart({
             <Tooltip
               formatter={(value: any, name: string) =>
                 name === 'Retention'
-                  ? [`${Number(value).toFixed(2)}%`, name]
+                  ? [`${Number(value).toFixed(2) * 10}%`, name]
                   : [value, name]
               }
               contentStyle={{
@@ -221,7 +221,7 @@ export default function MarketingFunnelsChart({
             </Bar>
 
             <Bar
-              dataKey="retention"
+              dataKey={(entry) => entry.retention / 10}
               name="Retention"
               fill={COLORS[2]}
               radius={[8, 8, 0, 0]}
