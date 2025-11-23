@@ -136,6 +136,8 @@ export async function GET(request: Request) {
     const key = buildClientKey(appt, user.id)
     if (!key) continue
 
+    const apptDateISO = appt.datetime.split('T')[0] // 'yyyy-mm-dd'
+
     if (!clientMap[key]) {
       clientMap[key] = {
         client_id: key,
@@ -145,25 +147,62 @@ export async function GET(request: Request) {
         phone: normalizePhone(appt.phone),
         notes: appt.notes || '',
         total_appointments: 0,
-        user_id: user.id
+        user_id: user.id,
+        first_appt: apptDateISO,
+      }
+    } else {
+      // keep earliest date seen in this pull
+      if (apptDateISO < clientMap[key].first_appt) {
+        clientMap[key].first_appt = apptDateISO
       }
     }
 
     clientMap[key].total_appointments++
   }
 
-  const upserts = Object.values(clientMap)
+  // --------- Load existing client records to preserve earliest first_appt ------
+  const { data: existingRows, error: existingErr } = await supabase
+    .from('acuity_clients')
+    .select('client_id, first_appt')
+    .eq('user_id', user.id)
+
+  if (existingErr) {
+    console.error('Error loading existing acuity_clients:', existingErr)
+  }
+
+  const existingMap: Record<string, string | null> = {}
+  existingRows?.forEach(row => {
+    existingMap[row.client_id] = row.first_appt
+  })
+
+  // Merge: keep the earliest date between DB and this pull
+  for (const entry of Object.values(clientMap)) {
+    const existing = existingMap[entry.client_id]
+    if (existing) {
+      // if DB has an earlier date, keep that
+      if (!entry.first_appt || existing < entry.first_appt) {
+        entry.first_appt = existing
+      }
+    }
+  }
 
   // ------------------- Upsert into Supabase ------------------------
+
+  const upserts = Object.values(clientMap)
+  console.log('Sample upsert row', upserts[0])
+
   const { error: upsertErr } = await supabase.from('acuity_clients').upsert(upserts, {
     onConflict: 'user_id,client_id'
   })
-  if (upsertErr) return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 })
+
+  if (upsertErr) {
+    return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 })
+  }
 
   return NextResponse.json({
     success: true,
     year: requestedYear,
     totalAppointments: allAppointments.length,
-    totalClients: upserts.length
+    totalClients: upserts.length,
   })
 }
