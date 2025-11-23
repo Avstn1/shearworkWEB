@@ -41,6 +41,26 @@ const REFERRAL_KEYWORDS = [
 
 const REFERRAL_FILTER = ['unknown', 'returning', 'return', 'returning client']
 
+function canonicalizeSource(raw?: string | null): string | null {
+  if (!raw) return null
+
+  const value = raw.trim()
+  if (!value) return null
+
+  const lower = value.toLowerCase()
+
+  // Normalize common variants
+  if (['tiktok', 'tik tok', 'tik-tok'].includes(lower)) return 'TikTok'
+  if (['instagram', 'insta', 'ig'].includes(lower)) return 'Instagram'
+  if (['facebook', 'fb'].includes(lower)) return 'Facebook'
+  if (['google', 'google search', 'google maps'].includes(lower)) return 'Google'
+  if (['walk', 'walking', 'walk-in', 'walk in', 'walk by'].includes(lower)) return 'Walk-in'
+
+  // Default: just return trimmed value (you could also title-case it here)
+  return value
+}
+
+
 function extractSourceFromForms(forms: any[]): string | null {
   if (!forms || !Array.isArray(forms)) return null
 
@@ -57,12 +77,16 @@ function extractSourceFromForms(forms: any[]): string | null {
       const valueLower = fieldValue.toLowerCase()
       if (REFERRAL_FILTER.some(k => valueLower.includes(k))) continue
 
-      return fieldValue // keep raw text
+      const canonical = canonicalizeSource(fieldValue)
+      if (!canonical) continue
+
+      return canonical
     }
   }
 
   return null
 }
+
 
 type TimeframeDef = {
   id: string // 'year', 'Q1', ...

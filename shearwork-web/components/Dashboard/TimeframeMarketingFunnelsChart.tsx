@@ -76,6 +76,8 @@ export default function TimeframeMarketingFunnelsChart({
           .eq('user_id', barberId)
           .eq('report_year', year)
           .eq('timeframe', timeframe)
+          .gt('new_clients', 0)   // 👈 only show sources with at least 1 new client
+
 
 
         if (error) {
