@@ -68,6 +68,29 @@ export default function ServiceBreakdownChart({
       </div>
     )
 
+  // -----------------------------
+  // TOP 6 + OTHERS LOGIC
+  // -----------------------------
+  const TOP_COUNT = 6
+  const topServices = data.slice(0, TOP_COUNT)
+  const otherServices = data.slice(TOP_COUNT)
+
+  let finalData = topServices
+
+  if (otherServices.length > 0) {
+    const otherTotal = otherServices.reduce(
+      (sum, item) => sum + (item.bookings || 0),
+      0
+    )
+
+    finalData = [
+      ...topServices,
+      { service_name: "Others", bookings: otherTotal },
+    ]
+  }
+
+  // -----------------------------
+
   return (
     <div
       className="p-2 rounded-lg shadow-md border flex flex-col flex-1"
@@ -90,7 +113,7 @@ export default function ServiceBreakdownChart({
           <ResponsiveContainer width="100%" height={340}>
             <PieChart>
               <Pie
-                data={data}
+                data={finalData}
                 dataKey="bookings"
                 nameKey="service_name"
                 outerRadius="80%"
@@ -98,13 +121,14 @@ export default function ServiceBreakdownChart({
                 labelLine={false}
                 isAnimationActive={false}
               >
-                {data.map((_, index) => (
+                {finalData.map((_, index) => (
                   <Cell
                     key={index}
                     fill={COLORS[index % COLORS.length]}
                   />
                 ))}
               </Pie>
+
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#1E1E1C',
@@ -130,7 +154,7 @@ export default function ServiceBreakdownChart({
             flexShrink: 0,
           }}
         >
-          {data.map((item, index) => (
+          {finalData.map((item, index) => (
             <div
               key={index}
               className="flex items-center gap-2"
