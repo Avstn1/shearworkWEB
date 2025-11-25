@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
 const MONTHS = [
