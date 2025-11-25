@@ -121,6 +121,33 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const handleYearlySync = async () => {
+    try {
+      toast.loading('Syncing all Acuity data...')
+      
+      const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const response = await fetch('/api/analytics/acuity_sync_yearly', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      toast.dismiss()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to sync Acuity data.')
+      }
+
+      toast.success('✅ Yearly sync completed successfully!')
+    } catch (err: any) {
+      console.error(err)
+      toast.dismiss()
+      toast.error(err.message || 'Failed to sync Acuity data.')
+    }
+  }
   // everything else is identical — no other logic changed
   // ↓↓↓
 
@@ -284,7 +311,15 @@ export default function AdminDashboardPage() {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
+          <button
+            onClick={handleYearlySync}
+            className="h-10 px-4 rounded-md bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] text-sm whitespace-nowrap"
+          >
+            Manual Yearly Acuity Sync (ALL)
+          </button>
         </div>
+
+        
 
         {/* --- Barbers List with Pagination --- */}
         <section className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm overflow-x-auto">

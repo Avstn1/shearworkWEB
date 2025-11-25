@@ -327,6 +327,7 @@ export default function AnalyticsPage() {
             <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
           </button> */}
+          <p className="italic text-gray-400">Will automatically refresh every 5 minutes</p>
         </motion.div>
 
         {/* Charts Grid */}
