@@ -32,6 +32,33 @@ interface WeeklyRow {
   [key: string]: any
 }
 
+async function notifyUserAboutReport(
+  userId: string,
+  reportId: string,
+  reportType: string,
+  reportTitle: string,
+  supabase: any
+) {
+  const { data, error } = await supabase.functions.invoke(
+    'send-push-notification',
+    {
+      body: {
+        userId,
+        title: 'New Report Available',
+        body: reportTitle,
+        reportId,
+        reportType,
+      },
+    }
+  )
+
+  if (error) {
+    console.error('Error sending notification:', error)
+  } else {
+    console.log('Notification sent:', data)
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createSupabaseServerClient()
@@ -405,6 +432,8 @@ export async function POST(req: Request) {
     if (notifError) throw notifError;
 
     console.log(`Notification created for ${user_id}`);
+
+    notifyUserAboutReport(user_id, newReport.id, type, `${formattedType} report generated`, supabase)
 
     supabase.rpc('refresh_weekly_funnels')
     .then(
