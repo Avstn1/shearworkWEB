@@ -66,25 +66,25 @@ export default function AnalyticsPage() {
   }, [])
 
   // Refresh handler
-  const handleRefresh = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/analytics', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ targetDate: new Date().toISOString().slice(0, 10) }),
-      })
-      const data = await res.json()
-      console.log('Analytics refreshed:', data)
-    } catch (err) {
-      console.error('Failed to refresh analytics:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // const handleRefresh = async () => {
+  //   setLoading(true)
+  //   try {
+  //     const res = await fetch('/api/analytics', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+  //       },
+  //       body: JSON.stringify({ targetDate: new Date().toISOString().slice(0, 10) }),
+  //     })
+  //     const data = await res.json()
+  //     console.log('Analytics refreshed:', data)
+  //   } catch (err) {
+  //     console.error('Failed to refresh analytics:', err)
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
 
   const handleMonthSelect = (ym: string) => {
     setSelectedMonth(ym)
@@ -319,14 +319,14 @@ export default function AnalyticsPage() {
           <div className="flex-1 hidden lg:block" />
           
           {/* Refresh Button */}
-          <button
+          {/* <button
             onClick={handleRefresh}
             disabled={loading}
             className="whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-lime-300 hover:bg-lime-400 text-black text-sm font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(196,255,133,0.3)] hover:shadow-[0_0_16px_rgba(196,255,133,0.5)]"
           >
             <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
+          </button> */}
         </motion.div>
 
         {/* Charts Grid */}

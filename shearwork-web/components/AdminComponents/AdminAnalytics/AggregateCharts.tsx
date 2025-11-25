@@ -50,7 +50,25 @@ export default function AggregateChart({ startDate, endDate, targetDate, viewMod
     return { monday: format(monday), sunday: format(sunday) }
   }
 
-  const { monday, sunday } = startDate ? getWeekRange(startDate) : { monday: '', sunday: '' }
+  const getActualWeekRange = () => {
+    if (!startDate || !endDate) return { monday: '', sunday: '' }
+    
+    const start = new Date(startDate + 'T00:00:00')
+    const end = new Date(endDate + 'T00:00:00')
+    
+    const startDay = start.getDay()
+    const monday = new Date(start)
+    monday.setDate(start.getDate() - ((startDay + 6) % 7))
+    
+    const endDay = end.getDay()
+    const sunday = new Date(end)
+    sunday.setDate(end.getDate() + (7 - ((endDay + 6) % 7) - 1))
+    
+    const format = (d: Date) => d.toISOString().split('T')[0]
+    return { monday: format(monday), sunday: format(sunday) }
+  }
+
+  const { monday, sunday } = getActualWeekRange()
 
   // -------------------- Fetch --------------------
   useEffect(() => {
