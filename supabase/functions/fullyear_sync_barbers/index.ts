@@ -76,10 +76,8 @@ Deno.serve(async (req) => {
               }
             })
               .then(response => {
-                if (response.ok) {
-                  console.log(`✓ ${request.userId} - ${request.month} ${request.year}`)
-                } else {
-                  return response.text().then(errorText => {
+                if (!response.ok) {
+                    return response.text().then(errorText => {
                     console.error(`✗ ${request.userId} - ${request.month} ${request.year}: ${errorText}`)
                   })
                 }
