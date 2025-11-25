@@ -40,7 +40,7 @@ async function notifyUserAboutReport(
   supabase: any
 ) {
   const { data, error } = await supabase.functions.invoke(
-    'send-push-notification',
+    'send-push-notif',
     {
       body: {
         userId,
