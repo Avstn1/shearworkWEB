@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   }
 
   const { user, supabase } = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401, headers: corsHeaders });
   // const supabase = await createSupabaseServerClient()
   // const { data: { user } } = await supabase.auth.getUser()
   // if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     .eq('user_id', user.id)
     .single()
 
-  if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
+  if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400, headers: corsHeaders })
 
   let accessToken = tokenRow.access_token
   const nowSec = Math.floor(Date.now() / 1000)
@@ -62,10 +62,10 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString(),
         }).eq('user_id', user.id)
       } else {
-        return NextResponse.json({ error: 'Token refresh failed', details: newTokens }, { status: 500 })
+        return NextResponse.json({ error: 'Token refresh failed', details: newTokens }, { status: 500, headers: corsHeaders })
       }
     } catch (err) {
-      return NextResponse.json({ error: 'Failed to refresh token', details: String(err) }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to refresh token', details: String(err) }, { status: 500, headers: corsHeaders })
     }
   }
 
@@ -79,10 +79,10 @@ export async function GET(request: Request) {
     calendars = await res.json()
   } catch (err) {
     console.error('Failed to fetch calendars:', err)
-    return NextResponse.json({ error: 'Failed to fetch calendars', details: String(err) }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch calendars', details: String(err) }, { status: 500, headers: corsHeaders })
   }
 
   // Return simplified array
   const calendarList = calendars.map(c => ({ id: c.id, name: c.name }))
-  return NextResponse.json({ calendars: calendarList })
+  return NextResponse.json({ calendars: calendarList, headers: corsHeaders })
 }
