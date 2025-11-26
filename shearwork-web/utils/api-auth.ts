@@ -9,10 +9,16 @@ export async function getAuthenticatedUser(
   
   // Try Bearer token first (mobile)
   const authHeader = request.headers.get('authorization');
+  console.log(`THERE'S AN AUTH HEADER: ${authHeader}`)
   
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
+    console.log(`Token: ${token}`)
     const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error){
+      console.log(error)
+    }
     if (!error && user) {
       return { user, supabase };
     }
