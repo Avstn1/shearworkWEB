@@ -155,7 +155,7 @@ export default function DashboardPage() {
     setIsRefreshing(true)
     const toastId = toast.loading('Performing full Acuity sync...')
     try {
-      const res = await fetch('/api/acuity/sync-full', { method: 'POST' })
+      const res = await fetch('/api/acuity/pull-all', { method: 'POST' })
       if (!res.ok) throw new Error('Full Acuity sync failed')
       await res.json()
       toast.success('Full Acuity sync complete!', { id: toastId })
