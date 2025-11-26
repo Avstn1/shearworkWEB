@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   }
 
   const { user, supabase } = await getAuthenticatedUser(request);
-  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401, headers: corsHeaders });
   // const supabase = await createSupabaseServerClient()
   // const { data: { user } } = await supabase.auth.getUser()
   // if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
