@@ -434,6 +434,7 @@ export async function POST(req: Request) {
     console.log(`Notification created for ${user_id}`);
 
     notifyUserAboutReport(user_id, newReport.id, type, `${formattedType} report generated`, supabase)
+    console.log("Notification!")
 
     supabase.rpc('refresh_weekly_funnels')
     .then(
