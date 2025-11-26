@@ -1,34 +1,39 @@
-// utils/api-auth.ts
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
-
 export async function getAuthenticatedUser(request: Request) {
   const supabase = await createSupabaseServerClient();
-  
-  // Try Bearer token first (mobile)
-  const authHeader = request.headers.get('authorization');
-  console.log(`THERE'S AN AUTH HEADER: ${authHeader}`)
-  
+
+  // First, check normal Authorization header
+  let authHeader = request.headers.get('authorization');
+
+  // If missing, try x-vercel-sc-headers
+  if (!authHeader) {
+    const scHeaders = request.headers.get('x-vercel-sc-headers');
+    if (scHeaders) {
+      try {
+        const parsed = JSON.parse(scHeaders);
+        authHeader = parsed['Authorization'] || parsed['authorization'] || null;
+        console.log('Recovered auth from x-vercel-sc-headers:', authHeader);
+      } catch (err) {
+        console.error('Failed to parse x-vercel-sc-headers:', err);
+      }
+    }
+  }
+
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    console.log(`Token: ${token}`)
+    console.log('Token:', token);
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error){
-      console.log('Auth error:', error)
-    }
-    if (!error && user) {
-      console.log('Authenticated via Bearer token:', user.id)
+    if (error) console.log('Auth error:', error);
+    if (user) {
+      console.log('Authenticated via Bearer token:', user.id);
       return { user, supabase };
     }
   }
 
-  // Fallback to cookies (web)
-  console.log('Falling back to cookie auth')
+  // Fallback to cookies
+  console.log('Falling back to cookie auth');
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    console.log('Authenticated via cookies:', user.id)
-  } else {
-    console.log('No user found in cookies either')
-  }
+  if (user) console.log('Authenticated via cookies:', user.id);
+  else console.log('No user found in cookies either');
+
   return { user, supabase };
 }
