@@ -137,7 +137,7 @@ export default function MarketingFunnelsChart({
           <BarChart
             layout="vertical"
             data={data}
-            margin={{ top: 20, right: 20, left: -33, bottom: 20 }}
+            margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
             barCategoryGap={data.length > 10 ? '30%' : '15%'}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
@@ -154,7 +154,7 @@ export default function MarketingFunnelsChart({
             <Tooltip
               formatter={(value: any, name: string) =>
                 name === 'Retention'
-                  ? [`${Number(value).toFixed(2)}%`, name]
+                  ? [`${(Number(value) * 10).toFixed(2)}%`, name]
                   : [value, name]
               }
               contentStyle={{
@@ -221,7 +221,7 @@ export default function MarketingFunnelsChart({
             </Bar>
 
             <Bar
-              dataKey="retention"
+              dataKey={(entry) => entry.retention / 10}
               name="Retention"
               fill={COLORS[2]}
               radius={[8, 8, 0, 0]}

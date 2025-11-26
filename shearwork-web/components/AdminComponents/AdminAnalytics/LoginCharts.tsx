@@ -47,18 +47,28 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
     return `${target.getFullYear()}-W${String(weekNo).padStart(2, '0')}`
   }
 
-  function getWeekRange(dateStr: string) {
-    const date = new Date(dateStr + 'T00:00:00')
-    const day = date.getDay()
-    const monday = new Date(date)
-    monday.setDate(date.getDate() - ((day + 6) % 7))
-    const sunday = new Date(monday)
-    sunday.setDate(monday.getDate() + 6)
+  // Calculate the actual date range (monday of first week to sunday of last week)
+  const getActualWeekRange = () => {
+    if (!startDate || !endDate) return { monday: '', sunday: '' }
+    
+    const start = new Date(startDate + 'T00:00:00')
+    const end = new Date(endDate + 'T00:00:00')
+    
+    // Get Monday of the week containing startDate
+    const startDay = start.getDay()
+    const monday = new Date(start)
+    monday.setDate(start.getDate() - ((startDay + 6) % 7))
+    
+    // Get Sunday of the week containing endDate
+    const endDay = end.getDay()
+    const sunday = new Date(end)
+    sunday.setDate(end.getDate() + (7 - ((endDay + 6) % 7) - 1))
+    
     const format = (d: Date) => d.toISOString().split('T')[0]
     return { monday: format(monday), sunday: format(sunday) }
   }
 
-  const { monday, sunday } = startDate ? getWeekRange(startDate) : { monday: '', sunday: '' }
+  const { monday, sunday } = getActualWeekRange()
 
   // -------------------- Fetch --------------------
   useEffect(() => {

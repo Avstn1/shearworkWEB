@@ -1,12 +1,17 @@
 'use server'
 
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+// import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
-export async function GET() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+export async function GET(request: Request) {
+  console.log(request)
+  const { user, supabase } = await getAuthenticatedUser(request);
+  console.log(user)
+  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 });
+  // const supabase = await createSupabaseServerClient()
+  // const { data: { user } } = await supabase.auth.getUser()
+  // if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
   // Fetch Acuity token
   const { data: tokenRow } = await supabase
