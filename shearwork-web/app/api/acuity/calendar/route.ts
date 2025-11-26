@@ -5,9 +5,23 @@ import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 export async function GET(request: Request) {
-  console.log(request)
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*', // or your frontend URL
+        'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      },
+    })
+  }
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*', // or your frontend URL
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  }
+
   const { user, supabase } = await getAuthenticatedUser(request);
-  console.log(user)
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 });
   // const supabase = await createSupabaseServerClient()
   // const { data: { user } } = await supabase.auth.getUser()
