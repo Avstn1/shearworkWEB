@@ -1,37 +1,34 @@
 // utils/api-auth.ts
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
-import { createClient } from '@supabase/supabase-js'
 
 export async function getAuthenticatedUser(request: Request) {
-  const cookieClient = await createSupabaseServerClient()
-
-  // 1️⃣ Check for mobile Bearer token
-  const authHeader = request.headers.get('authorization')
+  const supabase = await createSupabaseServerClient();
+  
+  // Try Bearer token first (mobile)
+  const authHeader = request.headers.get('authorization');
+  console.log(`THERE'S AN AUTH HEADER: ${authHeader}`)
+  
   if (authHeader?.startsWith('Bearer ')) {
-    const accessToken = authHeader.replace('Bearer ', '')
-
-    // ❗ Create a client bound to this token
-    const tokenClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, // server key
-      {
-        global: {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        },
-        auth: {
-          persistSession: false
-        }
-      }
-    )
-
-    const { data, error } = await tokenClient.auth.getUser()
-
-    if (!error && data.user) {
-      return { user: data.user, supabase: tokenClient }
+    const token = authHeader.substring(7);
+    console.log(`Token: ${token}`)
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error){
+      console.log('Auth error:', error)
+    }
+    if (!error && user) {
+      console.log('Authenticated via Bearer token:', user.id)
+      return { user, supabase };
     }
   }
 
-  // 2️⃣ Fallback: web browser using cookies
-  const { data } = await cookieClient.auth.getUser()
-  return { user: data.user, supabase: cookieClient }
+  // Fallback to cookies (web)
+  console.log('Falling back to cookie auth')
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    console.log('Authenticated via cookies:', user.id)
+  } else {
+    console.log('No user found in cookies either')
+  }
+  return { user, supabase };
 }

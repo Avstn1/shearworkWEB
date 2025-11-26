@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 export async function GET(request: Request) {
+  console.log(request)
   const { user, supabase } = await getAuthenticatedUser(request);
+  console.log(user)
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 });
   // const supabase = await createSupabaseServerClient()
   // const { data: { user } } = await supabase.auth.getUser()
