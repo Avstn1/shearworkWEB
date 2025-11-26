@@ -1,27 +1,37 @@
 // utils/api-auth.ts
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
-import { SupabaseClient, User } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-export async function getAuthenticatedUser(
-  request: Request
-): Promise<{ user: User | null; supabase: SupabaseClient }> {
-  const supabase = await createSupabaseServerClient();
+export async function getAuthenticatedUser(request: Request) {
+  const cookieClient = await createSupabaseServerClient()
 
-  // First: Check Authorization header for mobile calls
-  const authHeader = request.headers.get("authorization");
+  // 1️⃣ Check for mobile Bearer token
+  const authHeader = request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const accessToken = authHeader.replace('Bearer ', '')
 
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.replace("Bearer ", "").trim();
+    // ❗ Create a client bound to this token
+    const tokenClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!, // server key
+      {
+        global: {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        },
+        auth: {
+          persistSession: false
+        }
+      }
+    )
 
-    // IMPORTANT: pass token into getUser({ token })
-    const { data, error } = await supabase.auth.getUser(token);
+    const { data, error } = await tokenClient.auth.getUser()
 
-    if (!error && data?.user) {
-      return { user: data.user, supabase };
+    if (!error && data.user) {
+      return { user: data.user, supabase: tokenClient }
     }
   }
 
-  // Fallback: Cookie-based session (for Next.js web)
-  const { data: cookieData } = await supabase.auth.getUser();
-  return { user: cookieData.user, supabase };
+  // 2️⃣ Fallback: web browser using cookies
+  const { data } = await cookieClient.auth.getUser()
+  return { user: data.user, supabase: cookieClient }
 }
