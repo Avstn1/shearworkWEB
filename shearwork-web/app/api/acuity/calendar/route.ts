@@ -6,11 +6,7 @@ import { getAuthenticatedUser } from '@/utils/api-auth'
 export async function GET(request: Request) {
   try {
     // Log headers for debugging
-    console.log('Incoming request headers:')
-    request.headers.forEach((value, key) => console.log(`${key}: ${value}`))
-
     const { user, supabase } = await getAuthenticatedUser(request)
-    console.log('Authenticated user:', user?.id)
     if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
     const { data: tokenRow, error: tokenError } = await supabase
@@ -24,7 +20,6 @@ export async function GET(request: Request) {
     const nowSec = Math.floor(Date.now() / 1000)
 
     if (tokenRow.expires_at && tokenRow.expires_at < nowSec) {
-      console.log('Token expired. Refreshing...')
       const refreshRes = await fetch('https://acuityscheduling.com/oauth2/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
