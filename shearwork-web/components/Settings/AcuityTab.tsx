@@ -6,11 +6,6 @@ import { supabase } from '@/utils/supabaseClient'
 import ConnectAcuityButton from '../ConnectAcuityButton'
 import Select from '@/components/UI/Select'
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
-]
-
 interface CalendarItem {
   id: number | string
   name: string
@@ -28,12 +23,16 @@ export default function AcuityTab() {
   const [syncingClients, setSyncingClients] = useState(false)
   const [syncingAppointments, setSyncingAppointments] = useState(false)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+  }, [])
 
   const loadData = async () => {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
 
       const { data: profileData } = await supabase
@@ -41,15 +40,17 @@ export default function AcuityTab() {
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle()
+
       setProfile(profileData)
       setSelectedCalendar(profileData?.calendar || '')
 
       const res = await fetch('/api/acuity/calendar')
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed to fetch calendars')
+      if (!res.ok)
+        throw new Error((await res.json()).error || 'Failed to fetch calendars')
       const data = await res.json()
       setCalendars(data.calendars || [])
     } catch (err: any) {
-    //   console.error(err)
+      // ignore
     } finally {
       setLoading(false)
     }
@@ -59,14 +60,21 @@ export default function AcuityTab() {
     if (!profile) return
     const newCal = value ?? selectedCalendar
     if (!newCal) return toast.error('Please choose a calendar')
+
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
       if (!user) throw new Error('Not logged in')
+
       const { error } = await supabase
         .from('profiles')
         .update({ calendar: newCal })
         .eq('user_id', user.id)
+
       if (error) throw error
+
       toast.success('Calendar updated!')
       setIsEditingCalendar(false)
       setConfirmingChange(false)
@@ -100,40 +108,54 @@ export default function AcuityTab() {
     setSyncingClients(true)
     const toastId = toast.loading(`Syncing clients for ${year}...`)
     try {
-      const res = await fetch(`/api/acuity/pull-clients?year=${encodeURIComponent(year)}`)
+      const res = await fetch(
+        `/api/acuity/pull-clients?year=${encodeURIComponent(year)}`
+      )
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Client sync failed')
-      toast.success(`✅ Synced ${data.totalClients} clients for ${year}!`, { id: toastId })
+
+      toast.success(`Synced ${data.totalClients} clients for ${year}!`, {
+        id: toastId,
+      })
     } catch (err: any) {
       console.error(err)
-      toast.error(`❌ Failed to sync clients for ${year}`, { id: toastId })
+      toast.error(`Failed to sync clients for ${year}`, { id: toastId })
     } finally {
       setSyncingClients(false)
     }
   }
 
-  // ----- Sync Full Year Appointments -----
+  // ----- FIXED: Full Year Appointment Sync -----
   const syncFullYear = async () => {
     if (!profile) return
-    const confirmAction = window.confirm(`This will sync all appointments for ${year}. Continue?`)
+
+    const confirmAction = window.confirm(
+      `This will sync all appointments for ${year}. Continue?`
+    )
     if (!confirmAction) return
 
     setSyncingAppointments(true)
     const toastId = toast.loading(`Syncing appointments for ${year}...`)
+
     try {
-      for (const month of MONTHS) {
-        try {
-          const res = await fetch(`/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`)
-          const data = await res.json()
-          if (!res.ok) throw new Error(data.error || `Failed to fetch ${month}`)
-        } catch (err: any) {
-          console.error(`Error syncing ${month}:`, err)
-        }
+      const res = await fetch(
+        `/api/acuity/pull-all?year=${encodeURIComponent(year)}`,
+        { method: 'POST' }
+      )
+
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Full Acuity sync failed')
       }
-      toast.success(`✅ Successfully synced all appointments for ${year}!`, { id: toastId })
+
+      toast.success(
+        `Successfully synced all appointments for ${year}!`,
+        { id: toastId }
+      )
     } catch (err: any) {
       console.error(err)
-      toast.error(`❌ Failed to sync appointments for ${year}`, { id: toastId })
+      toast.error(`Failed to sync appointments for ${year}`, { id: toastId })
     } finally {
       setSyncingAppointments(false)
     }
@@ -141,11 +163,15 @@ export default function AcuityTab() {
 
   if (loading) return <p className="text-white">Loading Acuity data...</p>
 
-  // --- FUTURISTIC BUTTON CLASSES ---
-  const primaryBtn = 'px-4 py-2 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold rounded-xl hover:shadow-[0_0_15px_#3af1f7] transition-all'
-  const secondaryBtn = 'px-4 py-2 bg-white/10 border border-[var(--accent-2)] rounded-xl hover:bg-white/20 transition-all'
-  const smallPrimaryBtn = 'px-3 py-2 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold rounded-xl hover:shadow-[0_0_12px_#3af1f7] transition-all'
-  const smallSecondaryBtn = 'px-3 py-2 bg-white/10 border border-[var(--accent-2)] rounded-xl hover:bg-white/20 transition-all'
+  // Button styles
+  const primaryBtn =
+    'px-4 py-2 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold rounded-xl hover:shadow-[0_0_15px_#3af1f7] transition-all'
+  const secondaryBtn =
+    'px-4 py-2 bg-white/10 border border-[var(--accent-2)] rounded-xl hover:bg-white/20 transition-all'
+  const smallPrimaryBtn =
+    'px-3 py-2 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold rounded-xl hover:shadow-[0_0_12px_#3af1f7] transition-all'
+  const smallSecondaryBtn =
+    'px-3 py-2 bg-white/10 border border-[var(--accent-2)] rounded-xl hover:bg-white/20 transition-all'
 
   return (
     <div className="space-y-8">
@@ -156,15 +182,22 @@ export default function AcuityTab() {
       {/* Calendar Selection */}
       <section className="space-y-4">
         <h3 className="text-lg font-semibold">Calendar</h3>
+
         <div className="flex gap-2 items-center">
           <Select
-            options={[{ value: '', label: 'Select calendar' }, ...calendars.map(c => ({ value: c.name, label: c.name }))]}
+            options={[
+              { value: '', label: 'Select calendar' },
+              ...calendars.map((c) => ({ value: c.name, label: c.name })),
+            ]}
             value={selectedCalendar}
             onChange={(val) => handleCalendarChangeRequest(val as string)}
             disabled={!isEditingCalendar}
           />
+
           {!isEditingCalendar ? (
-            <button onClick={() => setIsEditingCalendar(true)} className={secondaryBtn}>Change</button>
+            <button onClick={() => setIsEditingCalendar(true)} className={secondaryBtn}>
+              Change
+            </button>
           ) : (
             <>
               <button
@@ -174,18 +207,26 @@ export default function AcuityTab() {
                   setConfirmingChange(false)
                 }}
                 className={secondaryBtn}
-              >Cancel</button>
+              >
+                Cancel
+              </button>
               <button
                 onClick={() => saveCalendar(selectedCalendar)}
                 className={primaryBtn}
-              >Save</button>
+              >
+                Save
+              </button>
             </>
           )}
         </div>
 
         {confirmingChange && (
           <div className="mt-3 bg-white/5 border border-[var(--accent-2)] rounded-lg p-3">
-            <p className="text-sm">Changing your calendar will sync all data for this calendar. Confirm if you want to continue.</p>
+            <p className="text-sm">
+              Changing your calendar will sync all data for this calendar. Confirm if you want to
+              continue.
+            </p>
+
             <div className="mt-3 flex gap-3">
               <button
                 onClick={() => {
@@ -194,11 +235,16 @@ export default function AcuityTab() {
                   setSelectedCalendar(profile?.calendar || '')
                 }}
                 className={smallSecondaryBtn}
-              >Cancel</button>
+              >
+                Cancel
+              </button>
+
               <button
                 onClick={() => saveCalendar(selectedCalendar)}
                 className={smallPrimaryBtn}
-              >Confirm</button>
+              >
+                Confirm
+              </button>
             </div>
           </div>
         )}
@@ -207,6 +253,7 @@ export default function AcuityTab() {
       {/* Sync Section */}
       <section className="space-y-4">
         <h3 className="text-lg font-semibold">Sync & Import</h3>
+
         <div className="flex gap-4 flex-wrap items-center">
           <Select
             options={generateYearOptions()}
@@ -217,7 +264,7 @@ export default function AcuityTab() {
           <button
             onClick={syncYear}
             disabled={syncingClients}
-            className={`${syncingClients ? 'bg-white/20 text-white cursor-not-allowed' : primaryBtn}`}
+            className={syncingClients ? 'bg-white/20 text-white cursor-not-allowed' : primaryBtn}
           >
             {syncingClients ? `Syncing clients ${year}...` : `Sync Clients`}
           </button>
@@ -225,9 +272,13 @@ export default function AcuityTab() {
           <button
             onClick={syncFullYear}
             disabled={syncingAppointments}
-            className={`${syncingAppointments ? 'bg-white/20 text-white cursor-not-allowed' : secondaryBtn}`}
+            className={
+              syncingAppointments ? 'bg-white/20 text-white cursor-not-allowed' : secondaryBtn
+            }
           >
-            {syncingAppointments ? `Syncing appointments ${year}...` : `Sync All Appointments`}
+            {syncingAppointments
+              ? `Syncing appointments ${year}...`
+              : `Sync All Appointments`}
           </button>
         </div>
       </section>
