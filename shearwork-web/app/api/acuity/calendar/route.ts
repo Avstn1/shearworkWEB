@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     })
     if (!res.ok) throw new Error(`Calendars fetch failed: ${res.status}`)
     const calendars = await res.json()
-    const calendarList = calendars.map(c => ({ id: c.id, name: c.name }))
+    const calendarList = calendars.map((c: any) => ({ id: c.id, name: c.name }))
 
     return NextResponse.json({ calendars: calendarList })
   } catch (err) {
