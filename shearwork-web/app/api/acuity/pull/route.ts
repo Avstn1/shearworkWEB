@@ -3,7 +3,7 @@
 'use server'
 
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
@@ -200,48 +200,11 @@ async function isReturningClient(
   }
 }
 
-async function getUserFromRequest(request: Request) {
-  const supabase = await createSupabaseServerClient()
-  const authHeader = request.headers.get('Authorization')
-  const userIdHeader = request.headers.get('X-User-Id')
-  
-  if (authHeader?.includes(process.env.SUPABASE_SERVICE_ROLE_KEY!) && userIdHeader) {
-    // Service role request - create admin client
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
-    
-    // Verify user exists
-    const { data: userData, error } = await supabaseAdmin.auth.admin.getUserById(userIdHeader)
-    if (error || !userData) {
-      return { user: null, supabase: null, error: 'Invalid user ID' }
-    }
-    
-    return { user: userData.user, supabase: supabaseAdmin, error: null }
-  }
-  
-  // Regular user auth
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) {
-    return { user: null, supabase: null, error: 'Not authenticated' }
-  }
-  
-  return { user, supabase, error: null }
-}
-
-
 export async function GET(request: Request) {
-  const { user, supabase, error: authError } = await getUserFromRequest(request)
-  
-  if (authError || !user || !supabase) {
-    return NextResponse.json({ error: authError || 'Not logged in' }, { status: 401 })
+  const { user, supabase } = await getAuthenticatedUser(request)
+
+  if (!user || !supabase) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
   const { searchParams } = new URL(request.url)
