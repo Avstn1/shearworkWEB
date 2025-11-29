@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { cookies } from 'next/headers'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
-export async function GET(req: Request) {
-  const supabase = await createSupabaseServerClient()
+export async function GET(requestuest: requestuest) {
+  const { user, supabase } = await getAuthenticatedUser(requestuest)
   const cookieStore = await cookies()
-  const url = new URL(req.url)
+  const url = new URL(request.url)
   const code = url.searchParams.get('code')
   const state = url.searchParams.get('state')
 
@@ -36,11 +37,6 @@ export async function GET(req: Request) {
   if (!tokenResponse.ok) {
     return NextResponse.json({ error: 'Token exchange failed', details: tokenData }, { status: 400 })
   }
-
-  // Get logged-in Supabase user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'User not logged in during callback' }, { status: 401 })
