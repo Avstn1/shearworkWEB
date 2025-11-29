@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 export async function getAuthenticatedUser(request: Request) {
   const supabase = await createSupabaseServerClient();
 
-  // Extract token from either Authorization, x-client-access-token, or Vercel headers
+  // Extract token from either Authorization, x-client-access-token, URL query params, or Vercel headers
   const getTokenFromRequest = () => {
     // Standard Authorization header
     let token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
@@ -12,6 +12,16 @@ export async function getAuthenticatedUser(request: Request) {
     // Custom header from client
     if (!token) {
       token = request.headers.get('x-client-access-token') || undefined;
+    }
+
+    // CHANGE: Check URL query parameters for token
+    if (!token) {
+      try {
+        const url = new URL(request.url);
+        token = url.searchParams.get('token') || undefined;
+      } catch (err) {
+        console.error('Failed to parse URL for token:', err);
+      }
     }
 
     // Fallback to Vercel proxy headers
