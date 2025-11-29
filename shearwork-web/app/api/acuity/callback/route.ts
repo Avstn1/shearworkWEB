@@ -3,8 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { cookies } from 'next/headers'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
-export async function GET(requestuest: requestuest) {
-  const { user, supabase } = await getAuthenticatedUser(requestuest)
+export async function GET(request: Request) {
+  const { user, supabase } = await getAuthenticatedUser(request)
   const cookieStore = await cookies()
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
