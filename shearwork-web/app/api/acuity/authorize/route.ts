@@ -13,9 +13,9 @@ export async function GET(request: Request) {
   // Generate a state token for CSRF protection
   const state = crypto.randomUUID()
   
-  // Detect if this is a mobile request
-  const userAgent = request.headers.get('user-agent') || ''
-  const isMobile = userAgent.includes('Expo')
+  // CHANGE: Check if mobile is passed as a query parameter
+  const url = new URL(request.url)
+  const isMobile = url.searchParams.get('mobile') === 'true'
   
   // Store both state AND user_id in the cookie
   const stateData = JSON.stringify({ 
