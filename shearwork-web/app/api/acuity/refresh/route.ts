@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
-export async function POST() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
+export async function POST(request: Request) {
+  const { user, supabase } = await getAuthenticatedUser(request)
   if (!user) {
     return NextResponse.json({ error: 'User not logged in' }, { status: 401 })
   }

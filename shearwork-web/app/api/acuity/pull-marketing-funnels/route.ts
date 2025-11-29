@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import crypto from 'crypto'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -78,10 +79,7 @@ type FunnelStats = {
 }
 
 export async function GET(request: Request) {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { user, supabase } = await getAuthenticatedUser(request)
   if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
