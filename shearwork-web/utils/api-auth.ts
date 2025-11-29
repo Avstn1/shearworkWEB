@@ -14,7 +14,7 @@ export async function getAuthenticatedUser(request: Request) {
       token = request.headers.get('x-client-access-token') || undefined;
     }
 
-    // CHANGE: Check URL query parameters for token
+    // Check URL query parameters for token
     if (!token) {
       try {
         const url = new URL(request.url);
