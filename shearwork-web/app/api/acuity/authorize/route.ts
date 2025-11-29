@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { cookies } from 'next/headers'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // const supabase = await createSupabaseServerClient()
+  // const {
+  //   data: { user },
+  // } = await supabase.auth.getUser()
+
+  const { user, supabase } = await getAuthenticatedUser(request)
 
   if (!user) {
     // Not logged in — redirect to login page
