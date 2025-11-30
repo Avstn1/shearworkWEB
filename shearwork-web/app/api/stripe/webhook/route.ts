@@ -9,21 +9,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
 
+// ⚠️ Disable automatic body parsing for Stripe webhook
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing Stripe signature', { status: 400 })
 
-  const body = await req.text() // raw body
+  const body = await req.text() // raw body is required
 
   try {
-    // Verify Stripe signature
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
 
-    // Supabase client
     const supabase = (await createSupabaseServerClient()) as Awaited<
       ReturnType<typeof createSupabaseServerClient>
     >
@@ -42,13 +47,11 @@ export async function POST(req: NextRequest) {
             subscription_status: 'active',
           })
           .eq('user_id', supabaseUserId)
-
         break
       }
 
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription
-
         await supabase
           .from('profiles')
           .update({
@@ -56,13 +59,11 @@ export async function POST(req: NextRequest) {
             subscription_status: sub.status,
           })
           .eq('stripe_id', sub.customer as string)
-
         break
       }
 
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription
-
         await supabase
           .from('profiles')
           .update({
@@ -70,7 +71,6 @@ export async function POST(req: NextRequest) {
             subscription_status: 'canceled',
           })
           .eq('stripe_id', sub.customer as string)
-
         break
       }
     }
@@ -81,5 +81,3 @@ export async function POST(req: NextRequest) {
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 })
   }
 }
-
-// deploy
