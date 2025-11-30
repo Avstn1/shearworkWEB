@@ -1,21 +1,26 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function PricingReturnPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     const sessionId = searchParams.get('session_id')
     console.log('Stripe session_id:', sessionId)
 
-    // TODO: later call an API route here to verify the session
-    // and mark the user as subscribed in Supabase.
-    // For now, just send them to the dashboard.
+    // TODO: verify the session via API and mark user in Supabase
     router.replace('/dashboard')
-  }, [router, searchParams])
+  }, [mounted, router, searchParams])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">
