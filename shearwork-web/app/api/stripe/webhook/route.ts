@@ -54,11 +54,11 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription
         await supabase
           .from('profiles')
-          .upsert({
-            stripe_id: sub.customer as string,
+          .update({
             subscription_id: sub.id,
             stripe_subscription_status: sub.status,
           })
+          .eq('stripe_id', sub.customer as string)
         break
       }
 
@@ -66,11 +66,11 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription
         await supabase
           .from('profiles')
-          .upsert({
-            stripe_id: sub.customer as string,
+          .update({
             subscription_id: null,
             stripe_subscription_status: 'canceled',
           })
+          .eq('stripe_id', sub.customer as string)
         break
       }
     }
