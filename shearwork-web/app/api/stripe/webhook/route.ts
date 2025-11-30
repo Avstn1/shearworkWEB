@@ -16,6 +16,7 @@ export const config = {
 }
 
 export async function POST(req: NextRequest) {
+  var sess;
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing Stripe signature', { status: 400 })
 
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
         const supabaseUserId = session.metadata?.supabase_user_id
         if (!supabaseUserId) break
+        sess = session;
 
         await supabase
           .from('profiles')
@@ -73,8 +75,7 @@ export async function POST(req: NextRequest) {
         break
       }
     }
-
-    return NextResponse.json({ received: true })
+    return NextResponse.json({ received: true, sessionId: sess })
   } catch (err: any) {
     console.error('❌ Webhook error:', err.message)
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 })
