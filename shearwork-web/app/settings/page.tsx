@@ -9,6 +9,7 @@ import ProfileTab from '@/components/Settings/ProfileTab'
 import AcuityTab from '@/components/Settings/AcuityTab'
 import SecurityTab from '@/components/Settings/SecurityTab'
 import LogoutTab from '@/components/Settings/LogoutTab'
+import BillingSection from '@/components/Settings/BillingSection'
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -45,6 +46,8 @@ export default function SettingsPage() {
         return <ProfileTab />
       case 'acuity':
         return <AcuityTab />
+      case 'billing':
+        return <BillingSection/>
       case 'security':
         return <SecurityTab />
       case 'logout':
