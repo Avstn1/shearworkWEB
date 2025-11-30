@@ -4,27 +4,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
-// -------------------------------
 // Stripe client
-// -------------------------------
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
-
-// -------------------------------
-// Disable automatic body parsing
-// -------------------------------
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing Stripe signature', { status: 400 })
 
-  const body = await req.text()
+  const body = await req.text() // raw body
 
   try {
     // Verify Stripe signature
@@ -34,9 +23,7 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET!
     )
 
-    // -------------------------------
-    // Properly await Supabase client
-    // -------------------------------
+    // Supabase client
     const supabase = (await createSupabaseServerClient()) as Awaited<
       ReturnType<typeof createSupabaseServerClient>
     >
