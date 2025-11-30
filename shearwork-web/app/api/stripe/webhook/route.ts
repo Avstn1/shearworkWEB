@@ -16,7 +16,6 @@ export const config = {
 }
 
 export async function POST(req: NextRequest) {
-  var up = 0;
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing Stripe signature', { status: 400 })
 
@@ -43,12 +42,11 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('profiles')
           .upsert({
+            user_id: supabaseUserId,
             stripe_id: session.customer as string,
             subscription_id: session.subscription as string,
             stripe_subscription_status: 'active',
           })
-          .eq('user_id', supabaseUserId)
-        up = 1;
         break
       }
 
@@ -57,10 +55,10 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('profiles')
           .upsert({
+            stripe_id: sub.customer as string,
             subscription_id: sub.id,
             stripe_subscription_status: sub.status,
           })
-          .eq('stripe_id', sub.customer as string)
         break
       }
 
@@ -69,14 +67,14 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('profiles')
           .upsert({
+            stripe_id: sub.customer as string,
             subscription_id: null,
             stripe_subscription_status: 'canceled',
           })
-          .eq('stripe_id', sub.customer as string)
         break
       }
     }
-    return NextResponse.json({ received: true, upserted: up })
+    return NextResponse.json({ received: true })
   } catch (err: any) {
     console.error('❌ Webhook error:', err.message)
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 })
