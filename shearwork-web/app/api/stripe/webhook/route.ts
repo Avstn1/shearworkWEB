@@ -20,8 +20,6 @@ export const config = {
   },
 }
 
-export const dynamic = 'force-dynamic'
-
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing Stripe signature', { status: 400 })
