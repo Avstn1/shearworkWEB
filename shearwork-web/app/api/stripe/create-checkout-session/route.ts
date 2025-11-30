@@ -50,6 +50,9 @@ export async function POST(req: NextRequest) {
         },
       ],
       return_url: `${baseUrl}/pricing/return?session_id={CHECKOUT_SESSION_ID}`,
+      metadata: {
+        supabase_user_id: user.id,
+      },
     })
 
     if (!session.client_secret) {
