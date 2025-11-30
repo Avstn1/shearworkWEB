@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
             stripe_subscription_id: subscriptionId,
             subscription_status: 'active',
           })
-          .eq('id', supabaseUserId)
+          .eq('user_id', supabaseUserId)
 
         break
       }
