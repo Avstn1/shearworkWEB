@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
         await supabase
           .from('profiles')
-          .update({
+          .upsert({
             stripe_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
             subscription_status: 'active',
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription
         await supabase
           .from('profiles')
-          .update({
+          .upsert({
             stripe_subscription_id: sub.id,
             subscription_status: sub.status,
           })
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription
         await supabase
           .from('profiles')
-          .update({
+          .upsert({
             stripe_subscription_id: null,
             subscription_status: 'canceled',
           })
