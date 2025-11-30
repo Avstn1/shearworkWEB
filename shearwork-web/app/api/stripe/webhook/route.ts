@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createClient } from '@supabase/supabase-js'
 
 // Stripe client
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -16,7 +16,7 @@ export const config = {
 }
 
 export async function POST(req: NextRequest) {
-  var sess;
+  var up = 0;
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing Stripe signature', { status: 400 })
 
@@ -29,16 +29,16 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET!
     )
 
-    const supabase = (await createSupabaseServerClient()) as Awaited<
-      ReturnType<typeof createSupabaseServerClient>
-    >
+    const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         const supabaseUserId = session.metadata?.supabase_user_id
         if (!supabaseUserId) break
-        sess = session;
 
         await supabase
           .from('profiles')
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
             stripe_subscription_status: 'active',
           })
           .eq('user_id', supabaseUserId)
+        up = 1;
         break
       }
 
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
         break
       }
     }
-    return NextResponse.json({ received: true, sessionId: sess })
+    return NextResponse.json({ received: true, upserted: up })
   } catch (err: any) {
     console.error('❌ Webhook error:', err.message)
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 })
