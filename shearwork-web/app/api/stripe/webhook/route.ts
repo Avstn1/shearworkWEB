@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
           .from('profiles')
           .upsert({
             stripe_id: session.customer as string,
-            stripe_subscription_id: session.subscription as string,
-            subscription_status: 'active',
+            subscription_id: session.subscription as string,
+            stripe_subscription_status: 'active',
           })
           .eq('user_id', supabaseUserId)
         break
@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('profiles')
           .upsert({
-            stripe_subscription_id: sub.id,
-            subscription_status: sub.status,
+            subscription_id: sub.id,
+            stripe_subscription_status: sub.status,
           })
           .eq('stripe_id', sub.customer as string)
         break
@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
         await supabase
           .from('profiles')
           .upsert({
-            stripe_subscription_id: null,
-            subscription_status: 'canceled',
+            subscription_id: null,
+            stripe_subscription_status: 'canceled',
           })
           .eq('stripe_id', sub.customer as string)
         break
