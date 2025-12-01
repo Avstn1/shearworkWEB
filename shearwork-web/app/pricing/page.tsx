@@ -52,7 +52,7 @@ const startCheckout = async () => {
           Choose your plan
         </h1>
         <p className="text-sm md:text-base text-gray-300 mb-6">
-          Subscribe for <span className="font-semibold">$25 / month</span> to
+          Subscribe for <span className="font-semibold">$20 / month</span> to
           unlock full access to ShearWork&apos;s analytics dashboard.
         </p>
 
@@ -61,7 +61,7 @@ const startCheckout = async () => {
           <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col justify-between">
             <div>
               <h2 className="text-lg font-semibold mb-2">ShearWork Pro</h2>
-              <p className="text-3xl font-bold mb-1">$25</p>
+              <p className="text-3xl font-bold mb-1">$20</p>
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
                 per month • cancel anytime
               </p>
