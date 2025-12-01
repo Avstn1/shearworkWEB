@@ -8,7 +8,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 export default function BillingSection() {
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [showResumeConfirm, setShowResumeConfirm] = useState(false)
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState<boolean | null>(null)
 
   // fetch user's subscription status
@@ -26,11 +27,11 @@ export default function BillingSection() {
         setCancelAtPeriodEnd(data?.cancel_at_period_end ?? false)
       }
     }
-
     fetchProfile()
   }, [])
 
-  const handleCancelClick = () => setShowConfirm(true)
+  const handleCancelClick = () => setShowCancelConfirm(true)
+  const handleResumeClick = () => setShowResumeConfirm(true)
 
   const handleConfirmCancel = async () => {
     setLoading(true)
@@ -42,7 +43,7 @@ export default function BillingSection() {
       if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription')
 
       toast.success('Your subscription will end at the end of the current billing period.', { id: toastId })
-      setShowConfirm(false)
+      setShowCancelConfirm(false)
       setCancelAtPeriodEnd(true)
     } catch (err: any) {
       console.error(err)
@@ -52,7 +53,7 @@ export default function BillingSection() {
     }
   }
 
-  const handleResume = async () => {
+  const handleConfirmResume = async () => {
     setLoading(true)
     const toastId = toast.loading('Resuming subscription…')
 
@@ -62,6 +63,7 @@ export default function BillingSection() {
       if (!res.ok) throw new Error(data.error || 'Failed to resume subscription')
 
       toast.success('Your subscription will renew automatically.', { id: toastId })
+      setShowResumeConfirm(false)
       setCancelAtPeriodEnd(false)
     } catch (err: any) {
       console.error(err)
@@ -73,10 +75,11 @@ export default function BillingSection() {
 
   const handleCloseModal = () => {
     if (loading) return
-    setShowConfirm(false)
+    setShowCancelConfirm(false)
+    setShowResumeConfirm(false)
   }
 
-  if (cancelAtPeriodEnd === null) return <p>Loading…</p> // still fetching
+  if (cancelAtPeriodEnd === null) return <p>Loading…</p>
 
   return (
     <section className="space-y-3">
@@ -97,18 +100,23 @@ export default function BillingSection() {
           </button>
         </>
       ) : (
-        <button
-          onClick={handleResume}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6bff9f] to-[#6bff6b] text-black text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          <span>{loading ? 'Processing…' : 'Renew Automatically'}</span>
-        </button>
+        <>
+          <p className="text-sm text-gray-300 max-w-md">
+            Your subscription is scheduled to cancel at the end of the billing period.
+          </p>
+          <button
+            onClick={handleResumeClick}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6bff9f] to-[#6bff6b] text-black text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span>{loading ? 'Processing…' : 'Resume Auto-Billing'}</span>
+          </button>
+        </>
       )}
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
+      {/* Cancel Confirmation Modal */}
+      {showCancelConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseModal} />
           <div className="relative z-50 w-full max-w-md mx-4 rounded-2xl bg-[#141414] border border-white/10 shadow-2xl p-6">
@@ -123,31 +131,47 @@ export default function BillingSection() {
                   You can subscribe again later if you change your mind.
                 </p>
               </div>
-              <button
-                onClick={handleCloseModal}
-                disabled={loading}
-                className="text-gray-400 hover:text-gray-200 disabled:opacity-50"
-                aria-label="Close"
-              >
+              <button onClick={handleCloseModal} disabled={loading} className="text-gray-400 hover:text-gray-200 disabled:opacity-50">
                 <XCircle className="h-5 w-5" />
               </button>
             </div>
-
             <div className="mt-5 flex flex-col sm:flex-row justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                disabled={loading}
-                className="px-4 py-2 rounded-xl border border-white/15 bg-white/5 text-sm text-gray-200 hover:bg-white/10 disabled:opacity-50"
-              >
+              <button onClick={handleCloseModal} disabled={loading} className="px-4 py-2 rounded-xl border border-white/15 bg-white/5 text-sm text-gray-200 hover:bg-white/10 disabled:opacity-50">
                 Never mind
               </button>
-              <button
-                onClick={handleConfirmCancel}
-                disabled={loading}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff9f9f] to-[#ff6b6b] text-black text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-              >
+              <button onClick={handleConfirmCancel} disabled={loading} className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff9f9f] to-[#ff6b6b] text-black text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed">
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>Yes, cancel it</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resume Confirmation Modal */}
+      {showResumeConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseModal} />
+          <div className="relative z-50 w-full max-w-md mx-4 rounded-2xl bg-[#141414] border border-white/10 shadow-2xl p-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-6 w-6 text-green-400 mt-1" />
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold mb-1">Resume subscription?</h4>
+                <p className="text-sm text-gray-300 mb-2">
+                  You are scheduled to cancel your subscription at the end of the period. Do you want to resume auto-billing?
+                </p>
+              </div>
+              <button onClick={handleCloseModal} disabled={loading} className="text-gray-400 hover:text-gray-200 disabled:opacity-50">
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-5 flex flex-col sm:flex-row justify-end gap-3">
+              <button onClick={handleCloseModal} disabled={loading} className="px-4 py-2 rounded-xl border border-white/15 bg-white/5 text-sm text-gray-200 hover:bg-white/10 disabled:opacity-50">
+                Never mind
+              </button>
+              <button onClick={handleConfirmResume} disabled={loading} className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6bff9f] to-[#6bff6b] text-black text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed">
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span>Yes, resume</span>
               </button>
             </div>
           </div>
