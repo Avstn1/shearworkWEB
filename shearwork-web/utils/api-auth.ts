@@ -5,7 +5,7 @@ export async function getAuthenticatedUser(request: Request) {
   const supabase = await createSupabaseServerClient();
 
   // Check for service role key (for Edge Functions and internal calls)
-  const authHeader = request.headers.get('authorization');
+  const authHeader = request.headers.get('Authorization');
   if (authHeader === `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`) {
     // Get user_id from custom header for service role requests
     const userId = request.headers.get('x-user-id');
