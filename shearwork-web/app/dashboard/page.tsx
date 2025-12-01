@@ -138,6 +138,7 @@ export default function DashboardPage() {
     setIsRefreshing(true)
     const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
     try {
+      syncMarketingFunnels()
       const res = await fetch(`/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`)
       // if (!res.ok) throw new Error('Acuity data fetch failed')
       await res.json()
@@ -148,6 +149,24 @@ export default function DashboardPage() {
       toast.error('Error fetching Acuity data.', { id: toastId })
     } finally {
       setIsRefreshing(false)
+    }
+  }
+
+  const syncMarketingFunnels = async () => {
+    if (!user.id) return
+    //setIsRefreshing(true)
+
+    try {
+      const res = await fetch(`/api/acuity/pull-marketing-funnels?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`)
+      // if (!res.ok) throw new Error('Acuity data fetch failed')
+      await res.json()
+      //setRefreshKey(prev => prev + 1)
+
+    } catch (err) {
+      console.error(err)
+
+    } finally {
+      //setIsRefreshing(false)
     }
   }
 

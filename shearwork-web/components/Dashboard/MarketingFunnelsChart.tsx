@@ -147,9 +147,10 @@ export default function MarketingFunnelsChart({
               type="category"
               dataKey="source"
               stroke="#E8EDC7"
-              width={40}
+              width={60}   // MORE ROOM ON THE LEFT
               style={{ fontSize: labelFontSize }}
             />
+
 
             <Tooltip
               formatter={(value: any, name: string) =>

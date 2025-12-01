@@ -10,6 +10,21 @@ import {
   FunnelStats,
 } from '@/lib/marketingFunnels'
 
+const MONTH_INDEX: Record<string, number> = {
+  January: 0,
+  February: 1,
+  March: 2,
+  April: 3,
+  May: 4,
+  June: 5,
+  July: 6,
+  August: 7,
+  September: 8,
+  October: 9,
+  November: 10,
+  December: 11,
+};
+
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient()
   const {
@@ -22,6 +37,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const requestedYear = searchParams.get('year')
     ? parseInt(searchParams.get('year') as string, 10)
+    : null
+
+  const requestedMonth = searchParams.get('month')
+    ? searchParams.get('month') as string
     : null
 
   if (!requestedYear) {
@@ -142,7 +161,9 @@ export async function GET(request: Request) {
   // ------------ Fetch appointments for the whole year ------------
   const allAppointments: any[] = []
 
-  for (let month = 0; month < 12; month++) {
+
+  if (!(requestedMonth == 'year' || requestedMonth == 'Q1' || requestedMonth == 'Q2' || requestedMonth == 'Q3' || requestedMonth == 'Q4')){
+    const month = MONTH_INDEX[requestedMonth!]
     const start = new Date(requestedYear, month, 1)
       .toISOString()
       .split('T')[0]
@@ -174,6 +195,43 @@ export async function GET(request: Request) {
       )
     } catch (err) {
       console.error(`Failed to fetch appointments for month ${month + 1}:`, err)
+    }
+
+  }else {
+
+    for (let month = 0; month < 12; month++) {
+      const start = new Date(requestedYear, month, 1)
+        .toISOString()
+        .split('T')[0]
+      const end = new Date(requestedYear, month + 1, 0)
+        .toISOString()
+        .split('T')[0]
+
+      const url = new URL('https://acuityscheduling.com/api/v1/appointments')
+      url.searchParams.set('minDate', start)
+      url.searchParams.set('maxDate', end)
+      url.searchParams.set('calendarID', calendarID.toString())
+      url.searchParams.set('max', '2000')
+
+      try {
+        const res = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+        if (!res.ok) {
+          throw new Error(
+            `Failed fetching appointments for ${month + 1}: ${res.statusText}`,
+          )
+        }
+        const monthAppointments = await res.json()
+        if (Array.isArray(monthAppointments)) {
+          allAppointments.push(...monthAppointments)
+        }
+        console.log(
+          `Month ${month + 1} processed: ${monthAppointments.length} appointments fetched`,
+        )
+      } catch (err) {
+        console.error(`Failed to fetch appointments for month ${month + 1}:`, err)
+      }
     }
   }
 
@@ -239,6 +297,66 @@ export async function GET(request: Request) {
       startISO: `${requestedYear}-10-01`,
       endISO: `${requestedYear}-12-31`,
     },
+    {
+      id: 'January',
+      startISO: `${requestedYear}-01-01`,
+      endISO: `${requestedYear}-01-31`,
+    },
+    {
+      id: 'February',
+      startISO: `${requestedYear}-02-01`,
+      endISO: `${requestedYear}-02-28`,
+    },
+    {
+      id: 'March',
+      startISO: `${requestedYear}-03-01`,
+      endISO: `${requestedYear}-03-31`,
+    },
+    {
+      id: 'April',
+      startISO: `${requestedYear}-04-01`,
+      endISO: `${requestedYear}-04-30`,
+    },
+    {
+      id: 'May',
+      startISO: `${requestedYear}-05-01`,
+      endISO: `${requestedYear}-05-31`,
+    },
+    {
+      id: 'June',
+      startISO: `${requestedYear}-06-01`,
+      endISO: `${requestedYear}-06-30`,
+    },
+    {
+      id: 'July',
+      startISO: `${requestedYear}-07-01`,
+      endISO: `${requestedYear}-07-31`,
+    },
+    {
+      id: 'August',
+      startISO: `${requestedYear}-08-01`,
+      endISO: `${requestedYear}-08-31`,
+    },
+    {
+      id: 'September',
+      startISO: `${requestedYear}-09-01`,
+      endISO: `${requestedYear}-09-30`,
+    },
+    {
+      id: 'October',
+      startISO: `${requestedYear}-10-01`,
+      endISO: `${requestedYear}-10-31`,
+    },
+    {
+      id: 'November',
+      startISO: `${requestedYear}-11-01`,
+      endISO: `${requestedYear}-11-30`,
+    },
+    {
+      id: 'December',
+      startISO: `${requestedYear}-12-01`,
+      endISO: `${requestedYear}-12-31`,
+    }
   ]
 
   // ------------ Aggregation structures ------------
@@ -287,6 +405,7 @@ export async function GET(request: Request) {
     if (!source) continue
 
     for (const tf of tfDefs) {
+      if (requestedMonth && requestedMonth != tf.id) continue
       if (apptDateISO >= tf.startISO && apptDateISO <= tf.endISO) {
         if (!funnels[tf.id]) {
           funnels[tf.id] = {}
@@ -341,6 +460,7 @@ export async function GET(request: Request) {
     if (!firstAppt) continue
 
     for (const tf of tfDefs) {
+      if (requestedMonth && requestedMonth != tf.id) continue
       if (!funnels[tf.id]) {
         funnels[tf.id] = {}
       }
@@ -380,31 +500,60 @@ export async function GET(request: Request) {
   // ------------ Build upserts for yearly_marketing_funnels ------------
   const upserts: any[] = []
 
-  for (const tf of tfDefs) {
-    const tfStats = funnels[tf.id]
-    if (!tfStats) continue
+  if(requestedMonth){
+    const tfStats = funnels[requestedMonth]
+    if (tfStats){
 
-    for (const [source, stats] of Object.entries(tfStats)) {
-      const retention =
-        stats.new_clients > 0
-          ? (stats.returning_clients / stats.new_clients) * 100
-          : 0
-      const avg_ticket =
-        stats.total_visits > 0
-          ? stats.total_revenue / stats.total_visits
-          : 0
+      for (const [source, stats] of Object.entries(tfStats)) {
+        const retention =
+          stats.new_clients > 0
+            ? (stats.returning_clients / stats.new_clients) * 100
+            : 0
+        const avg_ticket =
+          stats.total_visits > 0
+            ? stats.total_revenue / stats.total_visits
+            : 0
 
-      upserts.push({
-        user_id: user.id,
-        source,
-        timeframe: tf.id,
-        new_clients: stats.new_clients,
-        returning_clients: stats.returning_clients,
-        retention,
-        avg_ticket,
-        report_year: requestedYear,
-        created_at: new Date().toISOString(),
-      })
+        upserts.push({
+          user_id: user.id,
+          source,
+          report_month: requestedMonth,
+          new_clients: stats.new_clients,
+          returning_clients: stats.returning_clients,
+          retention,
+          avg_ticket,
+          report_year: requestedYear,
+          created_at: new Date().toISOString(),
+        })
+      }
+    }
+  }else {
+    for (const tf of tfDefs) {
+      const tfStats = funnels[tf.id]
+      if (!tfStats) continue
+
+      for (const [source, stats] of Object.entries(tfStats)) {
+        const retention =
+          stats.new_clients > 0
+            ? (stats.returning_clients / stats.new_clients) * 100
+            : 0
+        const avg_ticket =
+          stats.total_visits > 0
+            ? stats.total_revenue / stats.total_visits
+            : 0
+
+        upserts.push({
+          user_id: user.id,
+          source,
+          timeframe: tf.id,
+          new_clients: stats.new_clients,
+          returning_clients: stats.returning_clients,
+          retention,
+          avg_ticket,
+          report_year: requestedYear,
+          created_at: new Date().toISOString(),
+        })
+      }
     }
   }
 
@@ -416,18 +565,35 @@ export async function GET(request: Request) {
     })
   }
 
-  const { error: upsertErr } = await supabase
-    .from('yearly_marketing_funnels')
-    .upsert(upserts, {
-      onConflict: 'user_id,source,report_year,timeframe',
-    })
 
-  if (upsertErr) {
-    console.error('Error upserting yearly_marketing_funnels:', upsertErr)
-    return NextResponse.json(
-      { success: false, error: upsertErr.message },
-      { status: 500 },
-    )
+  if (requestedMonth){
+        const { error: upsertErr } = await supabase
+      .from('marketing_funnels')
+      .upsert(upserts, {
+        onConflict: 'user_id,source,report_year,report_month',
+      })
+
+    if (upsertErr) {
+      console.error('Error upserting marketing_funnels:', upsertErr)
+      return NextResponse.json(
+        { success: false, error: upsertErr.message },
+        { status: 500 },
+      )
+    }
+  }else {
+    const { error: upsertErr } = await supabase
+      .from('yearly_marketing_funnels')
+      .upsert(upserts, {
+        onConflict: 'user_id,source,report_year,timeframe',
+      })
+
+    if (upsertErr) {
+      console.error('Error upserting yearly_marketing_funnels:', upsertErr)
+      return NextResponse.json(
+        { success: false, error: upsertErr.message },
+        { status: 500 },
+      )
+    }
   }
 
   return NextResponse.json({
