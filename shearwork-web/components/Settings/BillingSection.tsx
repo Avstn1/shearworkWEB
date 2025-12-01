@@ -3,21 +3,33 @@
 import { useState, useEffect } from 'react'
 import { Loader2, XCircle, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/utils/supabaseClient'
 
 export default function BillingSection() {
-  const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showResumeConfirm, setShowResumeConfirm] = useState(false)
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState<boolean | null>(null)
 
-  // fetch user's subscription status
   useEffect(() => {
     const fetchProfile = async () => {
+      // ⭐ 1. Get the authenticated user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        console.error('Failed to load user:', userError)
+        setCancelAtPeriodEnd(false)
+        return
+      }
+
+      // ⭐ 2. Fetch THEIR profile row
       const { data, error } = await supabase
         .from('profiles')
         .select('cancel_at_period_end')
+        .eq('user_id', user.id)   // <-- THIS was missing
         .maybeSingle()
 
       if (error) {
@@ -27,6 +39,7 @@ export default function BillingSection() {
         setCancelAtPeriodEnd(data?.cancel_at_period_end ?? false)
       }
     }
+
     fetchProfile()
   }, [])
 
@@ -91,7 +104,6 @@ export default function BillingSection() {
           : 'Your subscription is scheduled to cancel at the end of the billing period.'}
       </p>
 
-      {/* Dynamic Button */}
       <button
         onClick={cancelAtPeriodEnd ? handleResumeClick : handleCancelClick}
         disabled={loading}
@@ -105,7 +117,6 @@ export default function BillingSection() {
         <span>{loading ? 'Processing…' : cancelAtPeriodEnd ? 'Resume Auto-Billing' : 'Cancel Subscription'}</span>
       </button>
 
-      {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
         <ConfirmationModal
           title="Cancel subscription?"
@@ -118,7 +129,6 @@ export default function BillingSection() {
         />
       )}
 
-      {/* Resume Confirmation Modal */}
       {showResumeConfirm && (
         <ConfirmationModal
           title="Resume subscription?"
@@ -134,7 +144,7 @@ export default function BillingSection() {
   )
 }
 
-// Modal component to avoid duplicating JSX
+
 function ConfirmationModal({
   title,
   description,
