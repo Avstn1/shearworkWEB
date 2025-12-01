@@ -33,10 +33,6 @@ export default async function middleware(request: NextRequest) {
   // PREMIUM ACCESS CHECK
   // --------------------------------------
   const premiumRoutes = ['/dashboard', '/account', '/premium', 'user-editor', 'expenses']
-
-  const now = new Date()
-  const accessUntil = profile?.access_expires_at ? new Date(profile.access_expires_at) : null
-
   const hasPremiumAccess =
     subStatus === 'active' || subStatus === 'trialing'
 
