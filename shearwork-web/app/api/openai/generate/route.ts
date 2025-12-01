@@ -109,15 +109,15 @@ export async function POST(req: Request) {
     const lastDayOfMonth = new Date(year, monthIndex + 1, 0)
 
     // 🧮 Fetch daily data
-    // const { data: allDailyRows, error: allDailyError } = await supabase
-    //   .from('daily_data')
-    //   .select('*')
-    //   .eq('user_id', user_id)
-    //   .eq('month', month)
-    //   .eq('year', year)
-    // if (allDailyError) throw allDailyError
+    const { data: allDailyRows, error: allDailyError } = await supabase
+      .from('daily_data')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('month', month)
+      .eq('year', year)
+    if (allDailyError) throw allDailyError
 
-    // const dailyPoints: DailyRow[] = allDailyRows || []
+    const dailyPoints: DailyRow[] = allDailyRows || []
 
     let summaryData: any = null
     let weekly_rows: WeeklyRow[] | WeeklyRow | null = null
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
 
       summaryData = {
         ...data,
-        // daily_points: dailyPoints,
+        daily_points: dailyPoints,
         start_date: firstDayOfMonth.toISOString().split('T')[0],
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
