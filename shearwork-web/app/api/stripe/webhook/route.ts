@@ -52,15 +52,6 @@ export async function POST(req: NextRequest) {
         const supabaseUserId = session.metadata?.supabase_user_id
         if (!supabaseUserId) break
 
-        const raw = await stripe.subscriptions.retrieve(
-        session.subscription as string
-        )
-
-        const subscription = raw as unknown as StripeSubscriptionFixed
-
-        const currentPeriodEnd = subscription.current_period_end
-        console.log({ currentPeriodEnd })
-
         await supabase
           .from('profiles')
           .upsert({
@@ -68,7 +59,6 @@ export async function POST(req: NextRequest) {
             stripe_id: session.customer as string,
             subscription_id: session.subscription as string,
             stripe_subscription_status: 'active',
-            access_expires_at: currentPeriodEnd
           })
         break
       }
