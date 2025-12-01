@@ -327,6 +327,8 @@ export async function POST(req: Request) {
       funnels = data
     }
 
+    console.log(`Funnels: ${JSON.stringify(funnels, null, 2)}`)
+
     let topClients;
 
     if (type.startsWith('weekly')) {
