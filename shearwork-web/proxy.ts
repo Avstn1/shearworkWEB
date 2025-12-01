@@ -22,7 +22,7 @@ export default async function middleware(request: NextRequest) {
   // User is authenticated, fetch profile (NOW INCLUDE subscription_status)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, stripe_subscription_status, access_expires_at')
+    .select('role, stripe_subscription_status, cancel_at_period_end')
     .eq('user_id', user.id)
     .maybeSingle()
 
