@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { User, Calendar, Shield, LogOut } from 'lucide-react'
+import { User, Calendar, Shield, LogOut, CreditCard } from 'lucide-react'
 
 interface Props {
   activeTab: string
@@ -13,6 +13,7 @@ export default function SidebarTabs({ activeTab, setActiveTab }: Props) {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'acuity', label: 'Acuity', icon: Calendar },
     { id: 'security', label: 'Security', icon: Shield },
+    { id: 'billing', label: 'Billing', icon : CreditCard },
     { id: 'logout', label: 'Logout', icon: LogOut },
   ]
 

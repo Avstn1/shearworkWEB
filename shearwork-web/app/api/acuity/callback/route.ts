@@ -1,16 +1,31 @@
+// app/api/acuity/callback/route.ts
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { cookies } from 'next/headers'
 
-export async function GET(req: Request) {
+export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient()
   const cookieStore = await cookies()
-  const url = new URL(req.url)
+  const url = new URL(request.url)
   const code = url.searchParams.get('code')
   const state = url.searchParams.get('state')
 
-  const savedState = cookieStore.get('acuity_oauth_state')?.value
-  if (savedState !== state) {
+  const savedStateRaw = cookieStore.get('acuity_oauth_state')?.value
+  
+  if (!savedStateRaw) {
+    return NextResponse.json({ error: 'Missing state cookie' }, { status: 400 })
+  }
+
+  // Parse the state data to get both state and user_id
+  let savedStateData
+  try {
+    savedStateData = JSON.parse(savedStateRaw)
+  } catch (err) {
+    return NextResponse.json({ error: 'Invalid state cookie format' }, { status: 400 })
+  }
+
+  // Compare the state value
+  if (savedStateData.state !== state) {
     return NextResponse.json({ error: 'Invalid state parameter' }, { status: 400 })
   }
 
@@ -37,18 +52,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Token exchange failed', details: tokenData }, { status: 400 })
   }
 
-  // Get logged-in Supabase user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'User not logged in during callback' }, { status: 401 })
+  // Get user_id from the cookie
+  const userId = savedStateData.user_id
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID not found in state' }, { status: 401 })
   }
 
   // Save tokens to Supabase
   await supabase.from('acuity_tokens').upsert({
-    user_id: user.id,
+    user_id: userId,
     access_token: tokenData.access_token,
     refresh_token: tokenData.refresh_token,
     token_type: tokenData.token_type,
@@ -56,6 +69,36 @@ export async function GET(req: Request) {
     updated_at: new Date().toISOString(),
   })
 
-  // Redirect back to app (dashboard, settings, etc.)
-  return NextResponse.redirect(new URL('/dashboard', process.env.NEXT_PUBLIC_SITE_URL!))
+  cookieStore.delete('acuity_oauth_state')
+
+  const isMobile = savedStateData.is_mobile
+
+  if (isMobile) {
+    return new NextResponse(
+      `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="oauth-status" content="success">
+          <title>Success</title>
+        </head>
+        <body>
+          <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column;">
+            <h1 style="color: #8bcf68;">✓ Connected Successfully</h1>
+            <p>You can close this window and return to the app.</p>
+          </div>
+        </body>
+      </html>
+      `,
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html',
+        },
+      }
+    )
+  } else {
+    return NextResponse.redirect(new URL('/dashboard', process.env.NEXT_PUBLIC_SITE_URL!))
+  }
 }

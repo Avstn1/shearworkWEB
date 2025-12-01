@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
-export async function GET() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export async function GET(request: Request) {
+  // const supabase = await createSupabaseServerClient()
+  // const {
+  //   data: { user },
+  // } = await supabase.auth.getUser()
+
+  const { user, supabase } = await getAuthenticatedUser(request)
 
   if (!user) {
     return NextResponse.json({ connected: false })
