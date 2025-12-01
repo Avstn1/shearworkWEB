@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
           .update({
             subscription_id: sub.id,
             stripe_subscription_status: sub.status,
+            cancel_at_period_end: sub.cancel_at_period_end
           })
           .eq('stripe_id', sub.customer as string)
         break
