@@ -1,17 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, XCircle, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-interface BillingSectionProps {
-  cancelAtPeriodEnd: boolean
-  subscriptionEndDate?: string // ISO string from backend
-}
-
-export default function BillingSection({ cancelAtPeriodEnd, subscriptionEndDate }: BillingSectionProps) {
+export default function BillingSection() {
+  const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState<boolean | null>(null)
+
+  // fetch user's subscription status
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('cancel_at_period_end')
+        .maybeSingle()
+
+      if (error) {
+        console.error('Failed to fetch profile:', error)
+        setCancelAtPeriodEnd(false)
+      } else {
+        setCancelAtPeriodEnd(data?.cancel_at_period_end ?? false)
+      }
+    }
+
+    fetchProfile()
+  }, [])
 
   const handleCancelClick = () => setShowConfirm(true)
 
@@ -24,8 +41,9 @@ export default function BillingSection({ cancelAtPeriodEnd, subscriptionEndDate 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription')
 
-      toast.success('Your subscription will end at the end of your billing period.', { id: toastId })
+      toast.success('Your subscription will end at the end of the current billing period.', { id: toastId })
       setShowConfirm(false)
+      setCancelAtPeriodEnd(true)
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || 'Something went wrong.', { id: toastId })
@@ -44,6 +62,7 @@ export default function BillingSection({ cancelAtPeriodEnd, subscriptionEndDate 
       if (!res.ok) throw new Error(data.error || 'Failed to resume subscription')
 
       toast.success('Your subscription will renew automatically.', { id: toastId })
+      setCancelAtPeriodEnd(false)
     } catch (err: any) {
       console.error(err)
       toast.error(err.message || 'Something went wrong.', { id: toastId })
@@ -57,6 +76,8 @@ export default function BillingSection({ cancelAtPeriodEnd, subscriptionEndDate 
     setShowConfirm(false)
   }
 
+  if (cancelAtPeriodEnd === null) return <p>Loading…</p> // still fetching
+
   return (
     <section className="space-y-3">
       <h3 className="text-lg font-semibold">Billing</h3>
@@ -64,10 +85,8 @@ export default function BillingSection({ cancelAtPeriodEnd, subscriptionEndDate 
       {!cancelAtPeriodEnd ? (
         <>
           <p className="text-sm text-gray-300 max-w-md">
-            You may cancel your subscription at any time. After cancellation, you
-            will keep access until the end of your current billing period.
+            You may cancel your subscription at any time. After cancellation, access will remain until the end of the current billing period.
           </p>
-
           <button
             onClick={handleCancelClick}
             disabled={loading}
@@ -78,42 +97,30 @@ export default function BillingSection({ cancelAtPeriodEnd, subscriptionEndDate 
           </button>
         </>
       ) : (
-        <>
-          <p className="text-sm text-gray-300 max-w-md">
-            Your subscription is scheduled to end on{' '}
-            {subscriptionEndDate ? new Date(subscriptionEndDate).toLocaleDateString() : '…'}.
-          </p>
-
-          <button
-            onClick={handleResume}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6bff9f] to-[#6bff6b] text-black text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            <span>{loading ? 'Processing…' : 'Renew Automatically'}</span>
-          </button>
-        </>
+        <button
+          onClick={handleResume}
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#6bff9f] to-[#6bff6b] text-black text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <span>{loading ? 'Processing…' : 'Renew Automatically'}</span>
+        </button>
       )}
 
       {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleCloseModal} />
           <div className="relative z-50 w-full max-w-md mx-4 rounded-2xl bg-[#141414] border border-white/10 shadow-2xl p-6">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-6 w-6 text-amber-400 mt-1" />
               <div className="flex-1">
                 <h4 className="text-lg font-semibold mb-1">Cancel subscription?</h4>
                 <p className="text-sm text-gray-300 mb-2">
-                  If you cancel now, you'll keep access until the end of your
-                  current billing period. After that, you'll lose access to ShearWork's dashboard.
+                  If you cancel now, you'll keep access until the end of your current billing period.
                 </p>
                 <p className="text-xs text-gray-400">
-                  You can always subscribe again later if you change your mind.
+                  You can subscribe again later if you change your mind.
                 </p>
               </div>
               <button
