@@ -36,6 +36,7 @@ export default function BillingSection() {
         console.error('Failed to fetch profile:', error)
         setCancelAtPeriodEnd(false)
       } else {
+        console.log(data?.cancel_at_period_end)
         setCancelAtPeriodEnd(data?.cancel_at_period_end ?? false)
       }
     }
