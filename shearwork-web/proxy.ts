@@ -7,7 +7,7 @@ export default async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
-  // Public routes (for anyone)
+  // Public routes (anyone can access)
   const publicRoutes = ['/login', '/signup', '/_next', '/api', '/pricing']
 
   // Handle unauthenticated users
@@ -15,11 +15,10 @@ export default async function middleware(request: NextRequest) {
     if (pathname === '/' || publicRoutes.some(path => pathname.startsWith(path))) {
       return NextResponse.next()
     }
-
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // User is authenticated, fetch profile (NOW INCLUDE subscription_status)
+  // User is authenticated, fetch profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, stripe_subscription_status, cancel_at_period_end')
@@ -29,14 +28,21 @@ export default async function middleware(request: NextRequest) {
   const role = profile?.role?.toLowerCase()
   const subStatus = profile?.stripe_subscription_status
 
-  // --------------------------------------
-  // PREMIUM ACCESS CHECK
-  // --------------------------------------
-  const premiumRoutes = ['/dashboard', '/account', '/premium', 'user-editor', 'expenses']
-  const hasPremiumAccess =
-    subStatus === 'active' || subStatus === 'trialing'
+  // -----------------------------
+  // REDIRECT ACTIVE/TRIAL USERS FROM /PRICING
+  // -----------------------------
+  if (subStatus === 'active' || subStatus === 'trialing') {
+    if (pathname === '/pricing') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
 
-  // If user is not admin/owner AND not subscribed → block premium routes
+  // -----------------------------
+  // PREMIUM ACCESS CHECK
+  // -----------------------------
+  const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses']
+  const hasPremiumAccess = subStatus === 'active' || subStatus === 'trialing'
+
   if (
     role !== 'admin' &&
     role !== 'owner' &&
@@ -47,9 +53,9 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // --------------------------------------
-  // ORIGINAL ROLE-BASED REDIRECT LOGIC
-  // --------------------------------------
+  // -----------------------------
+  // ROLE-BASED REDIRECT LOGIC
+  // -----------------------------
   if ((role === 'admin' || role === 'owner') &&
       (pathname === '/' || pathname === '/dashboard')) {
     return NextResponse.redirect(new URL('/admin/dashboard', request.url))
