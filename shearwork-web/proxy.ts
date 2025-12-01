@@ -22,7 +22,7 @@ export default async function middleware(request: NextRequest) {
   // User is authenticated, fetch profile (NOW INCLUDE subscription_status)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, stripe_subscription_status')
+    .select('role, stripe_subscription_status, access_expires_at')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -34,13 +34,19 @@ export default async function middleware(request: NextRequest) {
   // --------------------------------------
   const premiumRoutes = ['/dashboard', '/account', '/premium', 'user-editor', 'expenses']
 
+  const now = new Date()
+  const accessUntil = profile?.access_expires_at ? new Date(profile.access_expires_at) : null
+
+  const hasPremiumAccess =
+    subStatus === 'active' || (accessUntil && now < accessUntil)
+
   // If user is not admin/owner AND not subscribed → block premium routes
   if (
     role !== 'admin' &&
     role !== 'owner' &&
     premiumRoutes.some(path => pathname.startsWith(path))
   ) {
-    if (subStatus !== 'active') {
+    if (!hasPremiumAccess) {
       return NextResponse.redirect(new URL('/pricing', request.url))
     }
   }
