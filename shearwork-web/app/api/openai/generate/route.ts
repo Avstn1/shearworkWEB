@@ -141,6 +141,8 @@ export async function POST(req: Request) {
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
 
+      // console.log(`Summary data: ${JSON.stringify(summaryData, null, 2)}`)
+
       // Also generate weekly_rows
       // const weeklyRows: WeeklyRow[] = []
       // let weekNumber = 1
@@ -327,10 +329,8 @@ export async function POST(req: Request) {
       funnels = data
     }
 
-    console.log(`Funnels: ${JSON.stringify(funnels, null, 2)}`)
-
+    // FETCH TOP CLIENTS
     let topClients;
-
     if (type.startsWith('weekly')) {
       const { data } = await supabase
         .from('weekly_top_clients')
@@ -355,12 +355,36 @@ export async function POST(req: Request) {
       topClients = data;
     }
 
-    const {data: expenses } = await supabase
-      .from("monthly_data")
-      .select("expenses")
-      .eq('user_id', user_id)
-      .eq('month', month)
-      .eq('year', year)
+    // FETCH EXPENSES
+    let expenses;
+    if (type == 'monthly') {
+      const { data } = await supabase
+        .from("monthly_data")
+        .select("expenses")
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+      
+        expenses = data;
+    } else if (type === 'weekly') {
+      const { data } = await supabase
+        .from("monthly_data")
+        .select("expenses")
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+      
+        expenses = data;
+    } else if (type == 'weekly_comparison') {
+      const { data } = await supabase
+        .from("recurring_expenses")
+        .select("*")
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+      
+        expenses = data;
+    }
 
     // 🧠 Build dataset for OpenAI
     const dataset = {
@@ -402,7 +426,7 @@ export async function POST(req: Request) {
 
 
     // 🧾 Store report in DB
-    console.log(`Database writing ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
+    // console.log(`Database writing ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
     const { data: newReport, error: insertError } = await supabase
       .from('reports')
       .insert({
