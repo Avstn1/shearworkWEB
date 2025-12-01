@@ -4,10 +4,28 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 export async function getAuthenticatedUser(request: Request) {
   const supabase = await createSupabaseServerClient();
 
+  // Check for service role key (for Edge Functions and internal calls)
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader === `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`) {
+    // Get user_id from custom header for service role requests
+    const userId = request.headers.get('x-user-id');
+    if (userId) {
+      console.log('Authenticated via service role for user:', userId);
+      // Create a mock user object or fetch the actual user
+      const { data: { user }, error } = await supabase.auth.admin.getUserById(userId);
+      if (user) {
+        return { user, supabase };
+      }
+    }
+    // If no user_id provided, this is a system-level call
+    console.log('Authenticated via service role (system)');
+    return { user: null, supabase }; // Or handle differently based on your needs
+  }
+
   // Extract token from either Authorization, x-client-access-token, URL query params, or Vercel headers
   const getTokenFromRequest = () => {
-    // Standard Authorization header
-    let token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    // Standard Authorization header (already checked above, so this will be user token)
+    let token = authHeader?.replace(/^Bearer\s+/i, '');
 
     // Custom header from client
     if (!token) {

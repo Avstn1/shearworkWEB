@@ -51,7 +51,6 @@ ANALYSIS AND DESCRIPTION!
 
 Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
-${JSON.stringify(dataset.daily_rows, null, 2)}
 
 Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all data. DO NOT WRAP WITH '''html and
 Do NOT use Markdown (** or *) at all. 
