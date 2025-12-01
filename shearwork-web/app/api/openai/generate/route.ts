@@ -316,15 +316,31 @@ export async function POST(req: Request) {
       funnels = data
     }
 
-    // 🧩 Fetch top clients (weekly or monthly)
-    const { data: topClients } = await supabase
-      .from(type.startsWith('weekly') ? 'weekly_top_clients' : 'report_top_clients')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('month', month)
-      .eq('year', year)
-      .eq('week_number', week_number)
-      .order('total_paid', { ascending: false })
+    let topClients;
+
+    if (type.startsWith('weekly')) {
+      const { data } = await supabase
+        .from('weekly_top_clients')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+        .eq('week_number', week_number)
+        .order('total_paid', { ascending: false });
+
+      topClients = data;
+    } else {
+      // Monthly
+      const { data } = await supabase
+        .from('report_top_clients')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+        .order('total_paid', { ascending: false });
+
+      topClients = data;
+    }
 
     const {data: expenses } = await supabase
       .from("monthly_data")
@@ -349,6 +365,8 @@ export async function POST(req: Request) {
       expenses: expenses,
       ...(barber_type === 'commission' && { commission_rate: commissionRate }),
     }
+
+    console.log(dataset)
 
     const promptKey = `${type}/${barber_type}`
     const promptTemplate =
