@@ -38,7 +38,7 @@ export default async function middleware(request: NextRequest) {
   const accessUntil = profile?.access_expires_at ? new Date(profile.access_expires_at) : null
 
   const hasPremiumAccess =
-    subStatus === 'active' || (accessUntil && now < accessUntil)
+    subStatus === 'active' || subStatus === 'trialing'
 
   // If user is not admin/owner AND not subscribed → block premium routes
   if (

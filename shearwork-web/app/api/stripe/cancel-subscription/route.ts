@@ -33,21 +33,13 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    console.log('Profile in cancel-subscription route:', profile)
-
     if (profileError) {
       console.error('Profile load error:', profileError)
-      return NextResponse.json(
-        { error: 'Failed to load profile' },
-        { status: 500 },
-      )
+      return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 })
     }
 
     if (!profile?.subscription_id) {
-      return NextResponse.json(
-        { error: 'No active subscription found' },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: 'No active subscription found' }, { status: 400 })
     }
 
     // Trim whitespace / newlines from the stored ID
@@ -55,16 +47,15 @@ export async function POST(req: NextRequest) {
       .trim()
       .replace(/[\r\n]/g, '')
 
-    console.log('Attempting to cancel subscription:', JSON.stringify(subscriptionId))
+    console.log('Setting subscription to cancel at period end:', subscriptionId)
 
-    const cancelled = await stripe.subscriptions.cancel(subscriptionId)
-    console.log(
-      'Stripe cancelled subscription:',
-      cancelled.id,
-      cancelled.status,
-    )
+    const updated = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: true, // <-- key change
+    })
 
-    return NextResponse.json({ success: true })
+    console.log('Stripe subscription updated:', updated.id, updated.status)
+
+    return NextResponse.json({ success: true, subscription: updated })
   } catch (err: any) {
     console.error('Cancel subscription error:', err)
 
