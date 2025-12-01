@@ -60,7 +60,7 @@ export default function YearlyDashboard({
   useEffect(() => {
     if (!userId) return
     syncMarketingFunnels()
-  }, [timeframe, selectedYear])
+  },[selectedYear])
 
     return (
     <motion.div className="flex flex-col gap-4 flex-1">
