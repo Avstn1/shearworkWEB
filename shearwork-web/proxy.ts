@@ -45,6 +45,9 @@ export default async function middleware(request: NextRequest) {
     if (!hasPremiumAccess) {
       return NextResponse.redirect(new URL('/pricing', request.url))
     }
+    else{
+      return NextResponse.redirect(new URL('/', request.url))
+    }
   }
 
   // --------------------------------------
