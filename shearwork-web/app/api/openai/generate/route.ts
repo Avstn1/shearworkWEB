@@ -109,15 +109,15 @@ export async function POST(req: Request) {
     const lastDayOfMonth = new Date(year, monthIndex + 1, 0)
 
     // 🧮 Fetch daily data
-    const { data: allDailyRows, error: allDailyError } = await supabase
-      .from('daily_data')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('month', month)
-      .eq('year', year)
-    if (allDailyError) throw allDailyError
+    // const { data: allDailyRows, error: allDailyError } = await supabase
+    //   .from('daily_data')
+    //   .select('*')
+    //   .eq('user_id', user_id)
+    //   .eq('month', month)
+    //   .eq('year', year)
+    // if (allDailyError) throw allDailyError
 
-    const dailyPoints: DailyRow[] = allDailyRows || []
+    // const dailyPoints: DailyRow[] = allDailyRows || []
 
     let summaryData: any = null
     let weekly_rows: WeeklyRow[] | WeeklyRow | null = null
@@ -136,53 +136,64 @@ export async function POST(req: Request) {
 
       summaryData = {
         ...data,
-        daily_points: dailyPoints,
+        // daily_points: dailyPoints,
         start_date: firstDayOfMonth.toISOString().split('T')[0],
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
 
       // Also generate weekly_rows
-      const weeklyRows: WeeklyRow[] = []
-      let weekNumber = 1
-      let weekStart = new Date(firstDayOfMonth)
-      const end = new Date(lastDayOfMonth)
+      // const weeklyRows: WeeklyRow[] = []
+      // let weekNumber = 1
+      // let weekStart = new Date(firstDayOfMonth)
+      // const end = new Date(lastDayOfMonth)
 
-      while (weekStart <= end) {
-        const weekEnd = new Date(weekStart)
-        weekEnd.setDate(weekEnd.getDate() + 6)
-        if (weekEnd > end) weekEnd.setDate(end.getDate())
+      // while (weekStart <= end) {
+      //   const weekEnd = new Date(weekStart)
+      //   weekEnd.setDate(weekEnd.getDate() + 6)
+      //   if (weekEnd > end) weekEnd.setDate(end.getDate())
 
-        const weekDaily = dailyPoints.filter(
-          (d) => new Date(d.date) >= weekStart && new Date(d.date) <= weekEnd
-        )
+      //   const weekDaily = dailyPoints.filter(
+      //     (d) => new Date(d.date) >= weekStart && new Date(d.date) <= weekEnd
+      //   )
 
-        if (weekDaily.length > 0) {
-          const total_revenue = weekDaily.reduce((sum, d) => sum + (d.total_revenue || 0), 0)
-          const num_appointments = weekDaily.reduce((sum, d) => sum + (d.num_appointments || 0), 0)
-          const new_clients = weekDaily.reduce((sum, d) => sum + (d.new_clients || 0), 0)
-          const returning_clients = weekDaily.reduce((sum, d) => sum + (d.returning_clients || 0), 0)
+      //   if (weekDaily.length > 0) {
+      //     const total_revenue = weekDaily.reduce((sum, d) => sum + (d.total_revenue || 0), 0)
+      //     const num_appointments = weekDaily.reduce((sum, d) => sum + (d.num_appointments || 0), 0)
+      //     const new_clients = weekDaily.reduce((sum, d) => sum + (d.new_clients || 0), 0)
+      //     const returning_clients = weekDaily.reduce((sum, d) => sum + (d.returning_clients || 0), 0)
 
-          weeklyRows.push({
-            week_number: weekNumber,
-            start_date: weekStart.toISOString().split('T')[0],
-            end_date: weekEnd.toISOString().split('T')[0],
-            total_revenue,
-            tips: 0,
-            // final_revenue: total_revenue, // NOT USED
-            expenses: 0,
-            num_appointments,
-            new_clients,
-            returning_clients,
-          })
-        }
+      //     weeklyRows.push({
+      //       week_number: weekNumber,
+      //       start_date: weekStart.toISOString().split('T')[0],
+      //       end_date: weekEnd.toISOString().split('T')[0],
+      //       total_revenue,
+      //       tips: 0,
+      //       // final_revenue: total_revenue, // NOT USED
+      //       expenses: 0,
+      //       num_appointments,
+      //       new_clients,
+      //       returning_clients,
+      //     })
+      //   }
 
-        weekStart.setDate(weekStart.getDate() + 7)
-        weekNumber += 1
-      }
+      //   weekStart.setDate(weekStart.getDate() + 7)
+      //   weekNumber += 1
+      // }
 
-      weekly_rows = weeklyRows
+      // weekly_rows = weeklyRows
+
+      const { data: weeklyData, error: weeklyError } = await supabase
+        .from('weekly_data')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', year)
+        .order('week_number', { ascending: true })
+      
+      if (weeklyError) throw weeklyError
+      
+      weekly_rows = weeklyData || []
     }
-
 
     // 🧮 Weekly summary (supports week_number)
     else if (type.startsWith('weekly')) {
@@ -356,7 +367,7 @@ export async function POST(req: Request) {
       week_number: type.startsWith('weekly') && !Array.isArray(weekly_rows) ? summaryData?.week_number : null,
       user_name: userName,
       summary: summaryData,
-      daily_rows: dailyPoints,
+      // daily_rows: dailyPoints,
       weekly_rows,
       services,
       services_percentage,
@@ -365,8 +376,6 @@ export async function POST(req: Request) {
       expenses: expenses,
       ...(barber_type === 'commission' && { commission_rate: commissionRate }),
     }
-
-    console.log(dataset)
 
     const promptKey = `${type}/${barber_type}`
     const promptTemplate =
@@ -407,8 +416,6 @@ export async function POST(req: Request) {
       .select()
       .single()
     if (insertError) throw insertError
-
-    console.log(`Generated ${type} report for ${user_id} for ${month} ${year} (${summaryData.start_date} -> ${summaryData.end_date}). Current time: ${new Date().toISOString()}`)
 
     let message = "";
 
