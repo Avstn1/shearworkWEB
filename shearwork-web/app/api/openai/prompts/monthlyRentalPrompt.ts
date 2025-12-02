@@ -15,6 +15,11 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
       ? (summary.final_revenue || 0) / summary.num_appointments
       : 0
 
+  const totalNewClients = funnels.reduce(
+    (sum: number, f: any) => sum + (f.new_clients || 0),
+    0
+  )
+
   // Weekly snapshot calculations
   let totalClients = 0
   let totalWeeklyRevenue = 0
@@ -60,38 +65,39 @@ Include:
    <table>
      <thead><tr><th>Metric</th><th>Value</th></tr></thead>
      <tbody>
-       <tr><td>Total Clients</td><td>${summary.new_clients + summary.returning_clients}</td></tr>
-       <tr><td>New Clients</td><td>${summary.new_clients || 0}</td></tr>
-       <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
-       <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
-       <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
-       <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
-       <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
-       <tr><td>Estimated Profit</td><td>$${profit.toFixed(2)}</td></tr>
-       <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
+      <tr><td>Total Appointments</td><td>${summary.num_appointments}</td></tr>
+      <tr><td>Unique Clients</td><td>${summary.unique_clients || 0}</td></tr>
+      <tr><td>New Clients</td><td>${totalNewClients || 0}</td></tr>
+      <tr><td>Returning Clients</td><td>${summary.unique_clients - totalNewClients || 0}</td></tr>
+      <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
+      <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
+      <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
+      <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
+      <tr><td>Estimated Profit</td><td>$${profit.toFixed(2)}</td></tr>
+      <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
      </tbody>
    </table>
    
 
 3. <h2>💼 Service Breakdown</h2>
-   ${
-     services.length
-       ? `<table>
-            <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
-            <tbody>
-              ${services
-                .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
-                .map(
-                  (s: any) =>
-                    `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${((s.price || 0) * s.bookings).toFixed(2)}</td><td>$${(s.price || 0).toFixed(2)}</td></tr>`
-                )
-                .join('')}
-              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+((s.price||0)*(s.bookings || 0)),0).toFixed(2)}</td><td>--</td></tr>
-            </tbody>
-          </table>
-          <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing consistent client demand and service value.</p>`
-       : `<p>No data available for this section.</p>`
-   }
+${
+  services.length
+    ? `<table>
+         <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
+         <tbody>
+           ${services
+             .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
+             .map(
+               (s: any) =>
+                 `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${((s.price || 0) * s.bookings).toFixed(2)}</td><td>$${(s.price || 0).toFixed(2)}</td></tr>`
+             )
+             .join('')}
+           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>$${(services.reduce((sum:any,s:any)=>sum+(s.price||0),0)/services.length).toFixed(2)}</td></tr>
+         </tbody>
+       </table>
+       Instructions: creative analysis/generation of above`
+    : `<p>No data available for this section.</p>`
+}
 
 4. <h2>💰 Expense Overview</h2>
    <table>

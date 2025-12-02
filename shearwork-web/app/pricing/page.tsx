@@ -8,6 +8,7 @@ import {
 } from '@stripe/react-stripe-js'
 import { Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import LogoutTab from '@/components/Settings/LogoutTab'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -108,8 +109,8 @@ export default function PricingPage() {
   const yearly = pricing?.yearly
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] px-4">
-      <div className="max-w-3xl w-full bg-black/30 border border-white/10 rounded-3xl shadow-2xl p-6 md:p-10 text-white relative">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] px-4 pt-10">
+      <div className="max-w-3xl w-full bg-black/30 border border-white/10 rounded-3xl shadow-2xl p-6 md:p-10 text-white">
         <h1 className="text-2xl md:text-3xl font-bold mb-2">
           Choose your plan
         </h1>

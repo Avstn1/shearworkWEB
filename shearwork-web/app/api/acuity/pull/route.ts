@@ -200,6 +200,43 @@ async function isReturningClient(
   }
 }
 
+function addUniqueClient(
+  list: any[],
+  appt: any
+) {
+  const email = appt.email?.toLowerCase().trim();
+  const phone = appt.phone?.replace(/\D/g, '');
+  const first = appt.first_name?.trim().toLowerCase();
+  const last = appt.last_name?.trim().toLowerCase();
+
+  // Bail if there's literally no identifying info
+  if (!email && !phone && !(first && last)) return;
+
+  // Search for a match
+  const exists = list.some((c) => {
+    const cEmail = c.email?.toLowerCase().trim();
+    const cPhone = c.phone?.replace(/\D/g, '');
+    const cFirst = c.first_name?.trim().toLowerCase();
+    const cLast = c.last_name?.trim().toLowerCase();
+
+    return (
+      (email && cEmail === email) ||
+      (phone && cPhone === phone) ||
+      (first && last && cFirst === first && cLast === last)
+    );
+  });
+
+  if (!exists) {
+    list.push({
+      email,
+      phone,
+      first_name: first,
+      last_name: last,
+    });
+  }
+}
+
+
 export async function GET(request: Request) {
   const { user, supabase } = await getAuthenticatedUser(request)
 
@@ -210,6 +247,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const requestedMonth = searchParams.get('month') || null
   const requestedYear = searchParams.get('year') ? parseInt(searchParams.get('year') as string, 10) : null
+  
 
   // Fetch token
   const { data: tokenRow } = await supabase.from('acuity_tokens').select('*').eq('user_id', user.id).single()
@@ -322,8 +360,12 @@ export async function GET(request: Request) {
   const referralFilter = ['unknown', 'returning', 'return', 'returning client']
 
   // console.log(JSON.stringify(appointments[0], null, 2));
-
+  let uniqueClients: any[] = [];
   for (const appt of appointments) {
+    
+    addUniqueClient(uniqueClients, appt)
+    
+    // console.log(appt)
     const parsed = parseDateStringSafe(appt.datetime)
     const apptDate = parsed ? new Date(`${parsed.dayKey}T00:00:00`) : new Date(appt.datetime)
     if (!apptDate || isNaN(apptDate.getTime())) continue
@@ -350,6 +392,8 @@ export async function GET(request: Request) {
     wEntry.numAppointments++
 
     const dailyPrice = 0
+
+
 
     // Need to make this reusable code somehow
     if(!returning){
@@ -472,6 +516,7 @@ export async function GET(request: Request) {
       num_appointments: val.count,
       new_clients: val.new,
       returning_clients: val.count - val.new,
+      unique_clients: uniqueClients.length,
       updated_at: new Date().toISOString()
     }
   })
