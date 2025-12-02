@@ -153,6 +153,10 @@ export default function MarketingFunnelsChart({
 
 
             <Tooltip
+              labelFormatter={(value, payload) => {
+                const row = payload?.[0]?.payload
+                return row?.source || ''
+              }}
               formatter={(value: any, name: string) =>
                 name === 'Retention'
                   ? [`${(Number(value) * 10).toFixed(2)}%`, name]
@@ -191,12 +195,6 @@ export default function MarketingFunnelsChart({
               radius={[8, 8, 0, 0]}
               barSize={barSize}
             >
-              {/* Show source name inside the bar */}
-              <LabelList
-                dataKey="source"
-                position="insideLeft"
-                style={{ fill: '#204219ff', fontSize: labelFontSize, fontWeight: 'bold' }}
-              />
 
               {/* Show new_clients value on the right */}
               <LabelList
@@ -204,6 +202,15 @@ export default function MarketingFunnelsChart({
                 position="right"
                 style={{ fill: '#E8EDC7', fontSize: labelFontSize, fontWeight: 'bold' }}
               />
+
+              {/* Show source name inside the bar */}
+              <LabelList
+                dataKey="source"
+                offset={18}
+                position="right"
+                style={{ fill: '#c4df92ff', fontSize: labelFontSize, fontWeight: 'bold' }}
+              />
+
             </Bar>
 
             <Bar
