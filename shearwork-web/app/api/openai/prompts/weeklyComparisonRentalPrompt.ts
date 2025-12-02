@@ -19,6 +19,23 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
   const worstWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.final_revenue<a.final_revenue?b:a),dataset.weekly_rows[0]);
   const averageRevenue = finalRevenue / (dataset.weekly_rows?.length || 1);
 
+    const allExpenses = Object.values(dataset.weeklyExpensesData)
+    .flatMap((week: any, index: number) =>
+      week.expenses.map((e: any) => ({
+        ...e,
+        week_number: index + 1
+      }))
+    )
+    .sort((a: any, b: any) => {
+      const weekDiff = a.week_number - b.week_number;
+      if (weekDiff !== 0) return weekDiff;
+
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+
+  const weeklyExpensesDataTotals = Object.values(dataset.weeklyExpensesData || {}).map(w => w.total || 0);
+
+
   const minimalDataset = {
     weekly_rows: dataset.weekly_rows.map((w: any) => ({
       week_number: w.week_number,
@@ -35,10 +52,13 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
     services_percentage: dataset.services_percentage,
   };
 
+  const formatDate = (d: string) =>
+    new Date(d).toISOString().split("T")[0];
+
   return `
 IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a weekly comparison performance report for a barbershop professional on booth rental named ${userName}.
 Use HTML tags for all formatting: <strong>, <em>, <ul>/<li>, <h1>-<h3>. Do NOT use Markdown (** or *).
-Compute totals and averages exactly. Report will display in TinyMCE. 
+Compute totals and averages exactly. Report will display in TinyMCE. DISPLAY EVERYTHING
 
 Dataset (JSON):
 ${JSON.stringify(minimalDataset, null, 2)}
@@ -67,6 +87,78 @@ ${JSON.stringify(minimalDataset, null, 2)}
       <td>$${minimalDataset.weekly_rows.length > 1 ? ((minimalDataset.weekly_rows.at(-1).final_revenue || 0) - (minimalDataset.weekly_rows.at(-2).final_revenue || 0)).toFixed(2) : '--'}</td>
       <td>${minimalDataset.weekly_rows.length > 1 ? ((((minimalDataset.weekly_rows.at(-1).final_revenue || 0) - (minimalDataset.weekly_rows.at(-2).final_revenue || 0)) / (minimalDataset.weekly_rows.at(-2).final_revenue || 1)) * 100).toFixed(1) + '%' : '--'}</td>
     </tr>
+    <tr>
+      <td>Tips</td>
+      ${minimalDataset.weekly_rows
+        .map((w:any) => `<td>$${(w.tips || 0).toFixed(2)}</td>`)
+        .join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (() => {
+              const cur = minimalDataset.weekly_rows.at(-1);
+              const prev = minimalDataset.weekly_rows.at(-2);
+              const delta = (cur.tips || 0) - (prev.tips || 0);
+              const pct = ((delta / (prev.tips || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
+    </tr>
+    <tr>
+      <td>Expenses</td>
+      ${weeklyExpensesDataTotals.map(total => `<td>$${total.toFixed(2)}</td>`).join('')}
+
+      <!-- Delta + Percent (exactly 2 cells) -->
+      ${(() => {
+        if (weeklyExpensesDataTotals.length < 2) {
+          return `<td>--</td><td>--</td>`;
+        }
+
+        const cur = weeklyExpensesDataTotals.at(-1) || 0;
+        const prev = weeklyExpensesDataTotals.at(-2) || 0;
+        const delta = cur - prev;
+        const pct = prev === 0 ? '∞' : ((delta / prev) * 100).toFixed(1);
+
+        return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+      })()}
+    </tr>
+    <tr>
+      <td>Net Profit</td>
+      ${minimalDataset.weekly_rows
+      .map((w: any, i: number) => {
+        const revenue = w.final_revenue || 0;
+        const expenses = weeklyExpensesDataTotals[i] || 0; // use correct weekly expenses
+        const netProfit = revenue - expenses + w.tips;
+        return `<td>$${netProfit.toFixed(2)}</td>`;
+      })
+      .join('')}
+      ${
+        minimalDataset.weekly_rows.length > 1
+          ? (()=>{ 
+              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
+              const curNet = (cur.final_revenue||0)-(cur.expenses||0);
+              const prevNet = (prev.final_revenue||0)-(prev.expenses||0);
+              const delta = curNet - prevNet;
+              const pct = ((delta / (prevNet || 1)) * 100).toFixed(1);
+              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
+            })()
+          : '<td>--</td><td>--</td>'
+      }
+    </tr>
+  </tbody>
+</table>
+
+<h2>Client Overview 👥</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Metric</th>
+      ${minimalDataset.weekly_rows.map((w: any) => `<th>W${w.week_number}</th>`).join('')}
+      <th>Δ (Last Week → This Week)</th>
+      <th>% Change</th>
+    </tr>
+  </thead>
+  <tbody>
     <tr>
       <td>Total Clients</td>
       ${minimalDataset.weekly_rows.map((w: any) => `<td>${(w.new_clients || 0) + (w.returning_clients || 0)}</td>`).join('')}
@@ -102,53 +194,33 @@ ${JSON.stringify(minimalDataset, null, 2)}
           : '<td>--</td><td>--</td>'
       }
     </tr>
+  </tbody>
+</table>
+
+<h2>💸 Expenses</h2>
+<table>
+  <thead>
     <tr>
-      <td>Tips</td>
-      ${minimalDataset.weekly_rows
-        .map((w:any) => `<td>$${(w.tips || 0).toFixed(2)}</td>`)
-        .join('')}
-      ${
-        minimalDataset.weekly_rows.length > 1
-          ? (() => {
-              const cur = minimalDataset.weekly_rows.at(-1);
-              const prev = minimalDataset.weekly_rows.at(-2);
-              const delta = (cur.tips || 0) - (prev.tips || 0);
-              const pct = ((delta / (prev.tips || 1)) * 100).toFixed(1);
-              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
-            })()
-          : '<td>--</td><td>--</td>'
-      }
+      <th>Week</th>
+      <th>Label</th>
+      <th>Frequency</th>
+      <th>Amount</th>
+      <th>Date Charged</th>
     </tr>
-    <tr>
-      <td>Expenses</td>
-      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${(w.expenses||0).toFixed(2)}</td>`).join('')}
-      ${
-        minimalDataset.weekly_rows.length > 1
-          ? (()=>{ 
-              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
-              const delta = (cur.expenses||0) - (prev.expenses||0);
-              const pct = ((delta / (prev.expenses || 1)) * 100).toFixed(1);
-              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
-            })()
-          : '<td>--</td><td>--</td>'
-      }
-    </tr>
-    <tr>
-      <td>Net Profit</td>
-      ${minimalDataset.weekly_rows.map((w:any)=>`<td>$${((w.final_revenue||0)-(w.expenses||0)).toFixed(2)}</td>`).join('')}
-      ${
-        minimalDataset.weekly_rows.length > 1
-          ? (()=>{ 
-              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
-              const curNet = (cur.final_revenue||0)-(cur.expenses||0);
-              const prevNet = (prev.final_revenue||0)-(prev.expenses||0);
-              const delta = curNet - prevNet;
-              const pct = ((delta / (prevNet || 1)) * 100).toFixed(1);
-              return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
-            })()
-          : '<td>--</td><td>--</td>'
-      }
-    </tr>
+  </thead>
+  <tbody>
+    ${allExpenses
+      .sort((a: any, b: any) => a.week_number - b.week_number)
+      .map((e: any) => `
+        <tr>
+          <td>W${e.week_number}</td>
+          <td>${e.label}</td>
+          <td>${e.frequency}</td>
+          <td>$${Number(e.amount).toFixed(2)}</td>
+          <td>${formatDate(e.date)}</td>
+        </tr>
+      `)
+      .join('')}
   </tbody>
 </table>
 
