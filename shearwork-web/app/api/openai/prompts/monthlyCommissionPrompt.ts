@@ -9,7 +9,10 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const totalRevenue = summary.total_revenue || 0
   const personalEarnings = (totalRevenue * summary.commission_rate) + summary.tips || 0
   
-  console.log(totalRevenue, summary.commission_rate, summary.tips)
+  const totalNewClients = funnels.reduce(
+    (sum: number, f: any) => sum + (f.new_clients || 0),
+    0
+  )
 
   const expenses = summary.expenses || 0
   const avgTicket =
@@ -61,9 +64,10 @@ Include:
 <table>
   <thead><tr><th>Metric</th><th>Value</th></tr></thead>
   <tbody>
-    <tr><td>Total Clients</td><td>${summary.new_clients + summary.returning_clients}</td></tr>
-    <tr><td>New Clients</td><td>${summary.new_clients || 0}</td></tr>
-    <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
+    <tr><td>Total Appointments</td><td>${summary.num_appointments}</td></tr>
+    <tr><td>Unique Clients</td><td>${summary.unique_clients || 0}</td></tr>
+    <tr><td>New Clients</td><td>${totalNewClients || 0}</td></tr>
+    <tr><td>Returning Clients</td><td>${summary.unique_clients - totalNewClients || 0}</td></tr>
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
     <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
@@ -87,7 +91,7 @@ ${
                  `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${((s.price || 0) * s.bookings).toFixed(2)}</td><td>$${(s.price || 0).toFixed(2)}</td></tr>`
              )
              .join('')}
-           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>--</td></tr>
+           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>$${(services.reduce((sum:any,s:any)=>sum+(s.price||0),0)/services.length).toFixed(2)}</td></tr>
          </tbody>
        </table>
        Instructions: creative analysis/generation of above`
@@ -202,7 +206,7 @@ ${
         const consistentTicket = Math.min(...weeklyAvgTickets)
         return `
           <table>
-            <thead><tr><th>Week</th><th>Revenue</th><th>Clients</th><th>Avg Ticket</th></tr></thead>
+            <thead><tr><th>Week</th><th>Revenue</th><th>Visits</th><th>Avg Ticket</th></tr></thead>
             <tbody>
               ${weeklyRows
                 .map(
