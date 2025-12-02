@@ -8,6 +8,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
 
+type Plan = 'monthly' | 'yearly'
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
@@ -20,10 +22,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const priceId = process.env.STRIPE_PRICE_ID
+    // Read plan from body, default to 'monthly' if missing/invalid
+    let plan: Plan = 'monthly'
+    try {
+      const body = await req.json()
+      if (body?.plan === 'yearly') {
+        plan = 'yearly'
+      }
+    } catch {
+      // no body / invalid JSON -> keep default 'monthly'
+    }
+
+    const priceId =
+      plan === 'yearly'
+        ? process.env.STRIPE_PRICE_ID_YEARLY
+        : process.env.STRIPE_PRICE_ID_MONTHLY
+
     if (!priceId) {
       return NextResponse.json(
-        { error: 'STRIPE_PRICE_ID is not configured' },
+        {
+          error:
+            'Stripe price ID is not configured (check STRIPE_PRICE_ID_MONTHLY / STRIPE_PRICE_ID_YEARLY)',
+        },
         { status: 500 },
       )
     }
@@ -31,7 +51,7 @@ export async function POST(req: NextRequest) {
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
-    // Optional: you may want to look up / reuse a stored stripe_customer_id instead
+    // Optional improvement later: reuse a stored stripe_customer_id instead
     const customer = await stripe.customers.create({
       email: user.email ?? undefined,
       metadata: {
@@ -52,6 +72,7 @@ export async function POST(req: NextRequest) {
       return_url: `${baseUrl}/pricing/return?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         supabase_user_id: user.id,
+        plan, // so you can see which plan they picked in Stripe
       },
     })
 
