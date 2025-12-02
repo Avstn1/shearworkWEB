@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
                 'X-User-Id': request.userId,
-                'x-vercel-protection-bypass': BYPASS_TOKEN
+                'x-vercel-protection-bypass': BYPASS_TOKEN,
+                // 'x-client-access-token': accessToken,
               }
             })
               .then(response => {

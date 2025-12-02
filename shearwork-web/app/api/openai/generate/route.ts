@@ -7,6 +7,8 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { openai } from '@/lib/openaiClient'
 import { prompts } from '../prompts'
 
+import { getWeeklyBreakdown, RecurringExpense } from './weeklyExpenses';
+
 interface DailyRow {
   date: string
   total_revenue: number
@@ -31,6 +33,21 @@ interface WeeklyRow {
   returning_clients: number
   [key: string]: any
 }
+
+const MONTH_MAP: Record<string, number> = {
+  January: 1,
+  February: 2,
+  March: 3,
+  April: 4,
+  May: 5,
+  June: 6,
+  July: 7,
+  August: 8,
+  September: 9,
+  October: 10,
+  November: 11,
+  December: 12,
+};
 
 async function notifyUserAboutReport(
   userId: string,
@@ -58,6 +75,7 @@ async function notifyUserAboutReport(
     console.log('Notification sent:', data)
   }
 }
+
 
 export async function POST(req: Request) {
   try {
@@ -140,6 +158,8 @@ export async function POST(req: Request) {
         start_date: firstDayOfMonth.toISOString().split('T')[0],
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
+
+      // console.log(`Summary data: ${JSON.stringify(summaryData, null, 2)}`)
 
       // Also generate weekly_rows
       // const weeklyRows: WeeklyRow[] = []
@@ -327,8 +347,8 @@ export async function POST(req: Request) {
       funnels = data
     }
 
+    // FETCH TOP CLIENTS
     let topClients;
-
     if (type.startsWith('weekly')) {
       const { data } = await supabase
         .from('weekly_top_clients')
@@ -353,12 +373,27 @@ export async function POST(req: Request) {
       topClients = data;
     }
 
-    const {data: expenses } = await supabase
-      .from("monthly_data")
-      .select("expenses")
-      .eq('user_id', user_id)
-      .eq('month', month)
-      .eq('year', year)
+    // FETCH EXPENSES
+    const numericMonth = MONTH_MAP[month];
+    const startOfMonth = new Date(year, numericMonth - 1, 1); // 0-indexed
+    const endOfMonth = new Date(year, numericMonth, 0); // 1 is first day so 0 is the last day
+
+    let weeklyExpensesData;
+    if (type === 'weekly_comparison') {
+      const { data, error } = await supabase
+        .from("recurring_expenses")
+        .select("*")
+        .eq("user_id", user_id)
+        .lte("start_date", endOfMonth.toISOString())
+        .or(`end_date.is.null,end_date.gte.${startOfMonth.toISOString()}`); // Include expenses that have no end date OR end after the start of the month
+
+      if (error) {
+        console.error("Error fetching recurring expenses:", error);
+        weeklyExpensesData = [];
+      } else {
+        weeklyExpensesData = getWeeklyBreakdown(data, year, numericMonth);
+      }
+    }
 
     // 🧠 Build dataset for OpenAI
     const dataset = {
@@ -373,7 +408,7 @@ export async function POST(req: Request) {
       services_percentage,
       marketing_funnels: funnels,
       top_clients: topClients,
-      expenses: expenses,
+      weeklyExpensesData,
       ...(barber_type === 'commission' && { commission_rate: commissionRate }),
     }
 
@@ -400,7 +435,7 @@ export async function POST(req: Request) {
 
 
     // 🧾 Store report in DB
-    console.log(`Database writing ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
+    // console.log(`Database writing ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
     const { data: newReport, error: insertError } = await supabase
       .from('reports')
       .insert({
