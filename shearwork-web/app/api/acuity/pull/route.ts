@@ -360,7 +360,7 @@ export async function GET(request: Request) {
   const referralFilter = ['unknown', 'returning', 'return', 'returning client']
 
   // console.log(JSON.stringify(appointments[0], null, 2));
-  let uniqueClients = []
+  let uniqueClients: any[] = [];
   for (const appt of appointments) {
     
     addUniqueClient(uniqueClients, appt)

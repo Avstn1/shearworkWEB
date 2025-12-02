@@ -157,7 +157,7 @@ export function getWeeklyBreakdown(expenses: RecurringExpense[], year: number, m
         break;
 
       case "yearly":
-        if ((e.yearly_month + 1) === month && e.yearly_day) {
+        if ((e.yearly_month ?? -1) + 1 === month && e.yearly_day) {
           const date = new Date(year, month - 1, e.yearly_day);
           if (date >= startDate && (!endDate || date <= endDate)) {
             const w = getWeekNumberForDate(date, year, month);

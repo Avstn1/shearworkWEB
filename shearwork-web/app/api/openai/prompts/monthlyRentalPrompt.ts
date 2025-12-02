@@ -16,7 +16,7 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
       : 0
 
   const totalNewClients = funnels.reduce(
-    (sum, f) => sum + (f.new_clients || 0),
+    (sum: number, f: any) => sum + (f.new_clients || 0),
     0
   )
 

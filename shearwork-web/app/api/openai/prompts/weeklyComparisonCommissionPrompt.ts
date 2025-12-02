@@ -35,7 +35,7 @@ export const weeklyComparisonCommissionPrompt = (dataset: any, userName: string,
       return new Date(a.date).getTime() - new Date(b.date).getTime();
     });
 
-  const weeklyExpensesDataTotals = Object.values(dataset.weeklyExpensesData || {}).map(w => w.total || 0);
+  const weeklyExpensesDataTotals = Object.values(dataset.weeklyExpensesData || {}).map((w: any) => w.total || 0);
 
   const minimalDataset = {
     weekly_rows: dataset.weekly_rows.map((w: any) => ({

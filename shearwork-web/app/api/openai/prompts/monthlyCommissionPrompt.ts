@@ -10,7 +10,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const personalEarnings = (totalRevenue * summary.commission_rate) + summary.tips || 0
   
   const totalNewClients = funnels.reduce(
-    (sum, f) => sum + (f.new_clients || 0),
+    (sum: number, f: any) => sum + (f.new_clients || 0),
     0
   )
 

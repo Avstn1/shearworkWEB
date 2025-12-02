@@ -9,6 +9,31 @@ import { prompts } from '../prompts'
 
 import { getWeeklyBreakdown, RecurringExpense } from './weeklyExpenses';
 
+interface DailyRow {
+  date: string
+  total_revenue: number
+  tips?: number
+  expenses?: number
+  num_appointments?: number
+  new_clients?: number
+  returning_clients?: number
+  [key: string]: any
+}
+
+interface WeeklyRow {
+  week_number: number
+  start_date: string
+  end_date: string
+  total_revenue: number
+  tips: number
+  // final_revenue: number // NOT USED
+  expenses: number
+  num_appointments: number
+  new_clients: number
+  returning_clients: number
+  [key: string]: any
+}
+
 const MONTH_MAP: Record<string, number> = {
   January: 1,
   February: 2,
@@ -50,6 +75,7 @@ async function notifyUserAboutReport(
     console.log('Notification sent:', data)
   }
 }
+
 
 export async function POST(req: Request) {
   try {
