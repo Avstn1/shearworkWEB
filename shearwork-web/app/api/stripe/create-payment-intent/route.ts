@@ -34,6 +34,9 @@ export async function POST(request: Request) {
         ? process.env.STRIPE_PRICE_ID_YEARLY
         : process.env.STRIPE_PRICE_ID_MONTHLY
 
+    console.log('Selected plan:', plan)
+    console.log('Price ID:', priceId)
+
     if (!priceId) {
       return NextResponse.json(
         {
@@ -52,6 +55,8 @@ export async function POST(request: Request) {
       },
     })
 
+    console.log('Customer created:', customer.id)
+
     // Create subscription with payment intent
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
@@ -67,10 +72,22 @@ export async function POST(request: Request) {
       },
     })
 
+    console.log('Subscription created:', subscription.id)
+    console.log('Subscription status:', subscription.status)
+    console.log('Latest invoice type:', typeof subscription.latest_invoice)
+    console.log('Latest invoice:', JSON.stringify(subscription.latest_invoice, null, 2))
+
     const invoice = subscription.latest_invoice as Stripe.Invoice
+    console.log('Invoice ID:', invoice?.id)
+    console.log('Invoice payment_intent:', (invoice as any)?.payment_intent)
+
     const paymentIntent = (invoice as any).payment_intent as Stripe.PaymentIntent
+    console.log('Payment intent type:', typeof paymentIntent)
+    console.log('Payment intent:', paymentIntent)
+    console.log('Client secret:', paymentIntent?.client_secret)
 
     if (!paymentIntent?.client_secret) {
+      console.error('FULL SUBSCRIPTION OBJECT:', JSON.stringify(subscription, null, 2))
       return NextResponse.json(
         { error: 'No payment intent client secret returned' },
         { status: 500 },
