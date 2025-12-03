@@ -52,7 +52,6 @@ async function logWeeklyComparisonReportOpen(user_id: string, r: any) {
 
   if (sessionError) {
     console.error('Error fetching session:', sessionError.message)
-    setUser(null)
     return
   }
 

@@ -146,7 +146,7 @@ ${
                                <td>${f.new_clients || 0}</td>
                                <td>${f.returning_clients || 0}</td>
                                <td>${(f.new_clients || 0) + (f.returning_clients || 0)}</td>
-                               <td>${(f.returning_clients && f.new_clients) ? (f.returning_clients/f.new_clients).toFixed(4) * 100 + '%' : '--'}</td>
+                               <td>${(f.returning_clients && f.new_clients) ? ((f.returning_clients/f.new_clients) * 100).toFixed(2) + '%' : '--'}</td>
                                <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
                              </tr>`
              )

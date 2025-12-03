@@ -3,11 +3,6 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 export async function POST(request: Request) {
-  // const supabase = await createSupabaseServerClient()
-  // const {
-  //   data: { user },
-  // } = await supabase.auth.getUser()
-
   const { user, supabase } = await getAuthenticatedUser(request)
 
   if (!user) {
