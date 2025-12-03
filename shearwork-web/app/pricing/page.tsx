@@ -8,7 +8,7 @@ import {
 } from '@stripe/react-stripe-js'
 import { Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import LogoutTab from '@/components/Settings/LogoutTab'
+import { supabase } from '@/utils/supabaseClient'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -250,6 +250,19 @@ export default function PricingPage() {
           </div>
         </div>
       )}
+
+      <div className="fixed top-4 left-4">
+        <button
+          onClick={async () => {
+            toast.success('Logging out...')
+            await supabase.auth.signOut()
+            setTimeout(() => (window.location.href = '/login'), 700)
+          }}
+          className="px-4 py-2 bg-red-500/10 hover:bg-red-500/40 text-white font-medium rounded-2xl shadow-sm transition"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   )
 }

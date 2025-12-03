@@ -29,6 +29,8 @@ console.log('Barber IDs:', barberData)
 Deno.serve(async (req) => {
   try {
     const now = new Date();
+    now.setHours(now.getHours() - 5);
+
     let todaysDate = now.getDate();
     let monthIndex = now.getMonth(); 
     let selectedYear = now.getFullYear()
@@ -49,7 +51,7 @@ Deno.serve(async (req) => {
     const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
     // Create an array to hold all responses
 
-    console.log(`STARTING TO GENERATE FOR ${barberData.length} BARBERS. CURRENT TIME: ${new Date()}`);
+    console.log(`STARTING TO GENERATE FOR ${barberData.length} BARBERS. CURRENT TIME: ${now}`);
     
     const CONCURRENCY_LIMIT = 100;
 

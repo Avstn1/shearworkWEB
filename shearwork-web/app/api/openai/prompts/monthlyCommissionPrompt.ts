@@ -65,9 +65,8 @@ Include:
   <thead><tr><th>Metric</th><th>Value</th></tr></thead>
   <tbody>
     <tr><td>Total Appointments</td><td>${summary.num_appointments}</td></tr>
-    <tr><td>Unique Clients</td><td>${summary.unique_clients || 0}</td></tr>
     <tr><td>New Clients</td><td>${totalNewClients || 0}</td></tr>
-    <tr><td>Returning Clients</td><td>${summary.unique_clients - totalNewClients || 0}</td></tr>
+    <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
     <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
