@@ -21,6 +21,8 @@ You are given a JSON dataset that includes:
 - marketing_funnels: referral or acquisition data
 - best_day: the best performing day in the week (if available)
 
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
 

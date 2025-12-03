@@ -52,6 +52,8 @@ Do NOT use Markdown (** or *) at all to bold text, use <b>Bold Text</b> or <stro
 After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
 
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+
 Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
 
