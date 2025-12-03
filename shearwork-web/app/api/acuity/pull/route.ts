@@ -504,22 +504,56 @@ export async function GET(request: Request) {
 
   // -----------------------------------------------
   // ---------------- Batch upserts ----------------
-  // Monthly
-  const monthlyUpserts = Object.entries(monthlyAgg).map(([key, val]) => {
-    const [yearStr, month] = key.split('||')
 
-    return {
+  // Marketing funnels
+  const funnelUpserts = Object.entries(funnelMap).flatMap(([monthKey, sources]) => {
+    const [yearStr, month] = monthKey.split('||')
+    return Object.entries(sources).map(([source, stats]) => ({
       user_id: user.id,
-      month,
-      year: parseInt(yearStr),
-      total_revenue: val.revenue,
-      num_appointments: val.count,
-      new_clients: val.new,
-      returning_clients: val.count - val.new,
-      unique_clients: uniqueClients.length,
-      updated_at: new Date().toISOString()
-    }
+      source,
+      new_clients: stats.newClients,
+      returning_clients: stats.returningClients,
+      retention: stats.newClients + stats.returningClients > 0 ? (stats.returningClients / stats.newClients) * 100 : 0,
+      avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
+      report_month: month,
+      report_year: parseInt(yearStr),
+      created_at: new Date().toISOString(),
+    }))
   })
+  // console.log(JSON.stringify(funnelUpserts, null, 2));
+  await supabase.from('marketing_funnels').upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+  
+  // Monthly
+  const monthlyUpserts = await Promise.all(
+    Object.entries(monthlyAgg).map(async ([key, val]) => {
+      const [yearStr, month] = key.split('||');
+
+      const { data: newClientsFromFunnels } = await supabase
+        .from('marketing_funnels')
+        .select('new_clients')
+        .eq('user_id', user.id)
+        .eq('report_month', month)
+        .eq('report_year', parseInt(yearStr));
+
+      const totalNewClients =
+        newClientsFromFunnels?.reduce(
+          (sum, row) => sum + (row.new_clients || 0),
+          0
+        ) || 0;
+
+      return {
+        user_id: user.id,
+        month,
+        year: parseInt(yearStr),
+        total_revenue: val.revenue,
+        num_appointments: val.count,
+        new_clients: totalNewClients,
+        returning_clients: val.count - totalNewClients,
+        unique_clients: uniqueClients.length,
+        updated_at: new Date().toISOString(),
+      };
+    })
+  );
 
   await supabase.from('monthly_data').upsert(monthlyUpserts, { onConflict: 'user_id,month,year' })
 
@@ -669,24 +703,33 @@ export async function GET(request: Request) {
     await supabase.from('report_top_clients').upsert(upserts, { onConflict: 'user_id,month,year,client_key' })
   }
 
-  // Marketing funnels
-  const funnelUpserts = Object.entries(funnelMap).flatMap(([monthKey, sources]) => {
-    const [yearStr, month] = monthKey.split('||')
-    return Object.entries(sources).map(([source, stats]) => ({
-      user_id: user.id,
-      source,
-      new_clients: stats.newClients,
-      returning_clients: stats.returningClients,
-      retention: stats.newClients + stats.returningClients > 0 ? (stats.returningClients / stats.newClients) * 100 : 0,
-      avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
-      report_month: month,
-      report_year: parseInt(yearStr),
-      created_at: new Date().toISOString(),
-    }))
-  })
-  // console.log(JSON.stringify(funnelUpserts, null, 2));
-  await supabase.from('marketing_funnels').upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
-  
+  // // Marketing funnels -> Pasted above the monthly_data upserts
+  // const funnelUpserts = Object.entries(funnelMap).flatMap(([monthKey, sources]) => {
+  //   const [yearStr, month] = monthKey.split('||')
+  //   return Object.entries(sources).map(([source, stats]) => ({
+  //     user_id: user.id,
+  //     source,
+  //     new_clients: stats.newClients,
+  //     returning_clients: stats.returningClients,
+  //     retention: stats.newClients + stats.returningClients > 0 ? (stats.returningClients / stats.newClients) * 100 : 0,
+  //     avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
+  //     report_month: month,
+  //     report_year: parseInt(yearStr),
+  //     created_at: new Date().toISOString(),
+  //   }))
+  // })
+  // // console.log(JSON.stringify(funnelUpserts, null, 2));
+  // await supabase.from('marketing_funnels').upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+
+  // const { data: newClientsFromFunnels } = await supabase
+  //   .from('marketing_funnels')
+  //   .select('new_clients')
+  //   .eq('user_id', user.id)
+  //   .eq('report_month', month)
+  //   .eq('report_year', year)
+
+  // const totalNewClients = newClientsFromFunnels?.reduce((sum, row) => sum + (row.new_clients || 0), 0) || 0;
+
   // Daily marketing funnels
   const dailyFunnelUpserts = Object.entries(funnelMapDaily).flatMap(([dayKey, sources]) => {
     return Object.entries(sources).map(([source, stats]) => ({
