@@ -62,6 +62,8 @@ IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a we
 Use HTML tags for all formatting: <strong>, <em>, <ul>/<li>, <h1>-<h3>. Do NOT use Markdown (** or *).
 Compute totals, averages, and personal earnings exactly. Report will display in TinyMCE. 
 
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+
 Dataset (JSON):
 ${JSON.stringify(minimalDataset, null, 2)}
 

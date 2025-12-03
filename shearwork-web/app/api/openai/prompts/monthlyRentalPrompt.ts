@@ -51,6 +51,8 @@ ANALYSIS AND DESCRIPTION!
 After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
 
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+
 Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
 ${JSON.stringify(dataset.daily_rows, null, 2)}

@@ -27,6 +27,8 @@ You are given a JSON dataset that includes:
 - best_day: the top daily performer in the week
 - commission_rate: the barber's commission split percentage
 
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+
 Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
 
