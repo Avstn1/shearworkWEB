@@ -3,7 +3,7 @@ export interface RecurringExpense {
   user_id: string;
   label: string;
   amount: number;
-  frequency: "daily" | "weekly" | "monthly" | "yearly";
+  frequency: "once" | "weekly" | "monthly" | "yearly";
   start_date: string; // ISO date string
   end_date?: string;  // ISO date string or null
   weekly_days?: string[]; // ["Sun", "Mon", "Tue", ...]
@@ -97,14 +97,15 @@ export function getWeeklyBreakdown(expenses: RecurringExpense[], year: number, m
     if (endDate && endDate < monthStart) continue;
 
     switch (e.frequency) {
-      case "daily":
-        for (let d = new Date(Math.max(startDate.getTime(), monthStart.getTime())); d <= monthEnd; d.setDate(d.getDate() + 1)) {
-          const w = getWeekNumberForDate(d, year, month);
+      case "once":
+        // One-time expense on the start_date
+        if (startDate >= monthStart && startDate <= monthEnd) {
+          const w = getWeekNumberForDate(startDate, year, month);
           if (w > 0) {
             weeklyData[w].expenses.push({
               label: e.label,
               frequency: e.frequency,
-              date: new Date(d),
+              date: new Date(startDate),
               amount: Number(e.amount),
             });
             weeklyData[w].total += Number(e.amount);
