@@ -27,16 +27,36 @@ interface WeeklyReportsProps {
 }
 
 async function logWeeklyReportOpen(user_id: string, r: any) {
-  const { error: insertError } = await supabase
-    .from('system_logs')
-    .insert({
-      source: user_id,
-      action: 'opened_weekly_report',
-      status: 'success',
-      details: `Opened Report: Week #${r.week_number}, ${r.month} ${r.year}`,
-    });
+  const { data: { session }, error: sessionError, } = await supabase.auth.getSession()
 
-  if (insertError) throw insertError;
+  if (sessionError) {
+    console.error('Error fetching session:', sessionError.message)
+    setUser(null)
+    return
+  }
+
+  if (session?.user) {
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (profileError) throw profileError
+    
+    if (profileData?.role != "Admin") {
+      const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+        source: user_id,
+        action: 'opened_weekly_report',
+        status: 'success',
+        details: `Opened Report: Week #${r.week_number}, ${r.month} ${r.year}`,
+      });
+
+      if (insertError) throw insertError;
+    }
+  }
 }
 
 export default function WeeklyReports({

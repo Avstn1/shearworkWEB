@@ -45,18 +45,39 @@ function getMondaysInMonth(month: number, year: number): number[] {
 }
 
 async function logWeeklyComparisonReportOpen(user_id: string, r: any) {
+  const { data: { session }, error: sessionError, } = await supabase.auth.getSession()
+
   const monthIndex = new Date(`${r.month} 1, ${r.year}`).getMonth();
   const week_number = r.week_number ?? getMondaysInMonth(monthIndex, r.year).length
-  const { error: insertError } = await supabase
-    .from('system_logs')
-    .insert({
-      source: user_id,
-      action: 'opened_wkComparison_report',
-      status: 'success',
-      details: `Opened Report: Week #${week_number}, ${r.month} ${r.year}`,
-    });
 
-  if (insertError) throw insertError;
+  if (sessionError) {
+    console.error('Error fetching session:', sessionError.message)
+    setUser(null)
+    return
+  }
+
+  if (session?.user) {
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (profileError) throw profileError
+    
+    if (profileData?.role != "Admin") {
+      const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: user_id,
+          action: 'opened_wkComparison_report',
+          status: 'success',
+          details: `Opened Report: Week #${week_number}, ${r.month} ${r.year}`,
+        });
+
+      if (insertError) throw insertError;
+    }
+  }
 }
 
 export default function WeeklyComparisonReports({
