@@ -64,7 +64,7 @@ function PricingPageContent() {
           // User came from mobile app with a one-time code
           console.log('Authenticating with mobile code...')
           
-          const response = await fetch('/api/auth/verify-web-token', {
+          const response = await fetch('/api/verify-web-token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code })
