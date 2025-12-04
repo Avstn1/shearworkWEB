@@ -1,7 +1,7 @@
 // app/pricing/page.tsx
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   EmbeddedCheckout,
@@ -31,7 +31,18 @@ type PricingResponse = {
   yearly: PriceInfo
 }
 
-export default function PricingPage() {
+// Loading component for Suspense fallback
+function PricingPageLoader() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+      <Loader2 className="h-8 w-8 animate-spin text-[#7affc9]" />
+      <p className="mt-4 text-gray-300">Loading...</p>
+    </div>
+  )
+}
+
+// Main pricing component
+function PricingPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
@@ -53,7 +64,7 @@ export default function PricingPage() {
           // User came from mobile app with a one-time code
           console.log('Authenticating with mobile code...')
           
-          const response = await fetch('/api/verify-web-token', {
+          const response = await fetch('/api/auth/verify-web-token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code })
@@ -108,9 +119,8 @@ export default function PricingPage() {
     authenticateUser()
   }, [searchParams, router])
 
-  // Fetch prices from our API (Stripe is called on the server)
+  // Fetch prices from our API
   useEffect(() => {
-    // Don't fetch pricing until authenticated
     if (!userId) return
 
     const fetchPricing = async () => {
@@ -347,5 +357,14 @@ export default function PricingPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+// Export wrapped component with Suspense
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<PricingPageLoader />}>
+      <PricingPageContent />
+    </Suspense>
   )
 }
