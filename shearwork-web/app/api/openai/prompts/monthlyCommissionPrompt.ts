@@ -63,18 +63,24 @@ Include:
 <h1>${month} ${year} Business Report</h1>
 
 <h2>🧐 Quick Overview</h2>
-<table>
-  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+<table style="table-layout: fixed; width: 100%;">
+  <thead><tr><th style="width: 50%;">Metric</th><th style="width: 50%;">Value</th></tr></thead>
   <tbody>
-    <tr><td>Total Appointments</td><td>${summary.num_appointments}</td></tr>
-    <tr><td>New Clients</td><td>${totalNewClients || 0}</td></tr>
-    <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
-    <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
     <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
     <tr><td>Personal Earnings</td><td>$${((totalRevenue * dataset.commission_rate) + summary.tips).toFixed(2)}</td></tr>
     <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
     <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
+  </tbody>
+</table>
+
+<table style="table-layout: fixed; width: 100%;">
+  <thead><tr><th style="width: 50%;">Metric</th><th style="width: 50%;">Value</th></tr></thead>
+  <tbody>
+    <tr><td>Total Appointments</td><td>${summary.num_appointments}</td></tr>
+    <tr><td>New Clients</td><td>${totalNewClients || 0}</td></tr>
+    <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
+    <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
   </tbody>
 </table>
 Instructions: creative analysis/generation of above
@@ -140,7 +146,7 @@ ${
                                <td>${f.new_clients || 0}</td>
                                <td>${f.returning_clients || 0}</td>
                                <td>${(f.new_clients || 0) + (f.returning_clients || 0)}</td>
-                               <td>${(f.returning_clients && f.new_clients) ? (f.returning_clients/f.new_clients).toFixed(1) + '%' : '--'}</td>
+                               <td>${(f.returning_clients && f.new_clients) ? ((f.returning_clients/f.new_clients) * 100).toFixed(2) + '%' : '--'}</td>
                                <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
                              </tr>`
              )

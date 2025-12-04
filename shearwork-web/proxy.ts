@@ -8,7 +8,7 @@ export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Public routes (anyone can access)
-  const publicRoutes = ['/login', '/signup', '/_next', '/api', '/pricing']
+  const publicRoutes = ['/login', '/signup', '/_next', '/api'] // Removed pricing 
 
   // Handle unauthenticated users
   if (!user) {
