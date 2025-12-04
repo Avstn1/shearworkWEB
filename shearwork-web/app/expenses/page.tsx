@@ -216,7 +216,11 @@ export default function UserExpensesPage() {
         <motion.div variants={fadeInUp} className="mt-8">
           <h2 className="font-semibold text-lg mb-4">Your Receipts</h2>
           {receipts.length === 0 ? (
-            <p className="text-sm text-[#bdbdbd]">No receipts uploaded yet.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="col-span-2 sm:col-span-4 flex items-center justify-center h-40 border border-white/10 rounded-lg">
+                <p className="text-sm text-[#bdbdbd]">No receipts uploaded yet.</p>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {receipts.map(r => (
