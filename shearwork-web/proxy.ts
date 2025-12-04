@@ -7,8 +7,19 @@ export default async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
+  // -----------------------------
+  // SPECIAL CASE: Mobile App Authentication Passthrough
+  // -----------------------------
+  // Routes that can bypass auth when they have a 'code' query parameter
+  const codePassthroughRoutes = ['/pricing']
+  
+  if (codePassthroughRoutes.includes(pathname) && request.nextUrl.searchParams.has('code')) {
+    console.log(`Allowing mobile app auth code through middleware for ${pathname}`)
+    return NextResponse.next()
+  }
+
   // Public routes (anyone can access)
-  const publicRoutes = ['/login', '/signup', '/_next', '/api'] // Removed pricing 
+  const publicRoutes = ['/login', '/signup', '/_next', '/api']
 
   // Handle unauthenticated users
   if (!user) {
