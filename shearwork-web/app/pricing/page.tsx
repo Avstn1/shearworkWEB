@@ -1,3 +1,4 @@
+// app/pricing/page.tsx
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -9,6 +10,7 @@ import {
 import { Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -18,7 +20,7 @@ type Plan = 'monthly' | 'yearly'
 
 type PriceInfo = {
   id: string
-  amount: number // in cents
+  amount: number
   currency: string
   interval: string | null
   interval_count: number | null
@@ -30,14 +32,87 @@ type PricingResponse = {
 }
 
 export default function PricingPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [pricing, setPricing] = useState<PricingResponse | null>(null)
   const [loadingPrices, setLoadingPrices] = useState(true)
+  const [authenticating, setAuthenticating] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Handle authentication from mobile app code or existing session
+  useEffect(() => {
+    const authenticateUser = async () => {
+      try {
+        const code = searchParams.get('code')
+        
+        if (code) {
+          // User came from mobile app with a one-time code
+          console.log('Authenticating with mobile code...')
+          
+          const response = await fetch('/api/verify-web-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+          })
+
+          const data = await response.json()
+          
+          if (!response.ok || !data.access_token) {
+            toast.error(data.error || 'Invalid or expired code. Please try again from the app.')
+            router.push('/login')
+            return
+          }
+
+          // Set session with the tokens from the verified code
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token
+          })
+
+          if (sessionError) {
+            console.error('Session error:', sessionError)
+            throw sessionError
+          }
+          
+          setUserId(data.user.id)
+          toast.success('Successfully authenticated!')
+          
+          // Clean URL - remove the code parameter
+          router.replace('/pricing')
+          
+        } else {
+          // No code - check for existing web session
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          if (!session?.user) {
+            toast.error('Please login to continue')
+            router.push('/login')
+            return
+          }
+          
+          setUserId(session.user.id)
+        }
+      } catch (err: any) {
+        console.error('Auth error:', err)
+        toast.error('Authentication failed')
+        router.push('/login')
+      } finally {
+        setAuthenticating(false)
+      }
+    }
+
+    authenticateUser()
+  }, [searchParams, router])
 
   // Fetch prices from our API (Stripe is called on the server)
   useEffect(() => {
+    // Don't fetch pricing until authenticated
+    if (!userId) return
+
     const fetchPricing = async () => {
       try {
         const res = await fetch('/api/stripe/pricing')
@@ -57,7 +132,7 @@ export default function PricingPage() {
     }
 
     fetchPricing()
-  }, [])
+  }, [userId])
 
   const formatAmount = (amount: number, currency: string) =>
     new Intl.NumberFormat('en-US', {
@@ -76,7 +151,7 @@ export default function PricingPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ plan }), // 'monthly' or 'yearly'
+        body: JSON.stringify({ plan }),
       })
 
       const data = await res.json()
@@ -103,6 +178,16 @@ export default function PricingPage() {
   const closeCheckout = () => {
     setClientSecret(null)
     setSelectedPlan(null)
+  }
+
+  // Show loading state while authenticating
+  if (authenticating) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#7affc9]" />
+        <p className="mt-4 text-gray-300">Authenticating...</p>
+      </div>
+    )
   }
 
   const monthly = pricing?.monthly
@@ -186,7 +271,6 @@ export default function PricingPage() {
                     per year • cancel anytime
                   </p>
                   <p className="text-xs text-[#f5e29a] mb-4">
-                    {/* simple hint – you can compute "save X%" here if you want */}
                     Best value for growing shops
                   </p>
                 </>
@@ -214,14 +298,13 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Small helper text */}
         <p className="mt-4 text-[11px] text-gray-400">
           All payments are processed securely by Stripe. You can manage or cancel
           your subscription at any time.
         </p>
       </div>
 
-      {/* Modal: embedded checkout in the middle of the screen */}
+      {/* Modal: embedded checkout */}
       {clientSecret && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl">
