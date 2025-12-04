@@ -1,11 +1,11 @@
 // app/api/auth/generate-web-token/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { authCodeCache } from '@/lib/redis'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { user, supabase } = await getAuthenticatedUser(req)
+    const { user, supabase } = await getAuthenticatedUser(request)
 
     // Generate a random one-time code
     const code = crypto.randomUUID()
