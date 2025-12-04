@@ -79,9 +79,9 @@ export async function POST(req: NextRequest) {
 
     console.log('🔐 Generating magic link for user:', user.email)
 
-    // Generate link
+    // Generate link - use 'magiclink' here
     const { data, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'email',
+      type: 'magiclink',  // ← Use 'magiclink' for generateLink
       email: user.email,
     })
 
@@ -119,9 +119,9 @@ export async function POST(req: NextRequest) {
     console.log('✅ Token hash obtained:', tokenHash.substring(0, 20) + '...')
     console.log('🔓 Verifying OTP with Supabase...')
 
-    // Verify the OTP
+    // Verify the OTP - use 'email' here (NOT 'magiclink')
     const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
-      type: 'email',
+      type: 'email',  // ← Use 'email' for verifyOtp
       token_hash: tokenHash,
       email: user.email,
     })
