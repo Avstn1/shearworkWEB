@@ -119,11 +119,9 @@ export async function POST(req: NextRequest) {
     console.log('✅ Token hash obtained:', tokenHash.substring(0, 20) + '...')
     console.log('🔓 Verifying OTP with Supabase...')
 
-    // Verify the OTP - use 'email' here (NOT 'magiclink')
     const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
-      type: 'email',  // ← Use 'email' for verifyOtp
+      type: 'magiclink',  
       token_hash: tokenHash,
-      email: user.email,
     })
 
     if (sessionError) {
