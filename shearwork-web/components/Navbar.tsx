@@ -10,6 +10,21 @@ import TipsDropdown from '@/components/TipsDropdown'
 import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
 
+// Color palette matching React Native app
+const COLORS = {
+  background: '#181818',
+  cardBg: '#1a1a1a',
+  navBg: '#1b1d1b', 
+  surface: 'rgba(37, 37, 37, 0.6)',
+  surfaceSolid: '#252525',
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  text: '#FFFFFF',
+  textMuted: 'rgba(255, 255, 255, 0.6)',
+  green: '#73aa57',
+  greenLight: '#5b8f52',
+  greenGlow: 'rgba(115, 170, 87, 0.4)',
+}
+
 async function logNavLinkClick(user_id: string, linkName: string) {
   const { error: insertError } = await supabase
     .from('system_logs')
@@ -91,22 +106,58 @@ export default function Navbar() {
     <>
       <Tooltip label="Dashboard">
         <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
-            <Grid className="w-6 h-6 text-[var(--foreground)]" />
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+            onClick={() => {logNavLinkClick(user.id, 'dashboard')}}
+          >
+            <Grid className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
         </Link>
       </Tooltip>
       <Tooltip label="User Editor">
         <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
-            <UserCog className="w-6 h-6 text-[var(--foreground)]" />
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+            onClick={() => {logNavLinkClick(user.id, 'user-editor')}}
+          >
+            <UserCog className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
         </Link>
       </Tooltip>
       <Tooltip label="Expenses">
         <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors" onClick={() => {logNavLinkClick(user.id, 'expenses')}}>
-            <CreditCard className="w-6 h-6 text-[var(--foreground)]" />
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+            onClick={() => {logNavLinkClick(user.id, 'expenses')}}
+          >
+            <CreditCard className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
         </Link>
       </Tooltip>
@@ -117,11 +168,57 @@ export default function Navbar() {
     if (!user) {
       return (
         <>
-          <a href="#features" onClick={() => setOpen(false)} className="hover:text-[var(--highlight)] transition">Features</a>
-          <a href="#pricing" onClick={() => setOpen(false)} className="hover:text-[var(--highlight)] transition">Pricing</a>
-          <a href="#contact" onClick={() => setOpen(false)} className="hover:text-[var(--highlight)] transition">Contact</a>
-          <Link href="/login" onClick={() => setOpen(false)} className="hover:text-[var(--highlight)] transition">Sign In</Link>
-          <Link href="/signup" onClick={() => setOpen(false)} className="bg-[var(--highlight)] px-4 sm:px-6 py-1 sm:py-2 rounded-md text-[var(--accent-4)] font-semibold hover:scale-105 transition">Sign Up</Link>
+          {/* <a 
+            href="#features" 
+            onClick={() => setOpen(false)} 
+            className="transition"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          >
+            Features
+          </a>
+          <a 
+            href="#pricing" 
+            onClick={() => setOpen(false)} 
+            className="transition"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          >
+            Pricing
+          </a>
+          <a 
+            href="#contact" 
+            onClick={() => setOpen(false)} 
+            className="transition"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          >
+            Contact
+          </a> */}
+          <Link 
+            href="/login" 
+            onClick={() => setOpen(false)} 
+            className="transition"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          >
+            Sign In
+          </Link>
+          <Link 
+            href="/signup" 
+            onClick={() => setOpen(false)} 
+            className="px-4 sm:px-6 py-1 sm:py-2 rounded-md font-semibold hover:scale-105 transition"
+            style={{ 
+              backgroundColor: COLORS.green,
+              color: '#000000',
+            }}
+          >
+            Sign Up
+          </Link>
         </>
       )
     }
@@ -130,20 +227,35 @@ export default function Navbar() {
       return (
         <>
           <Link href="/admin/syslogs" className="relative flex flex-col items-center group hidden md:flex">
-            <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-              <FileText className="w-6 h-6 text-[var(--foreground)]" />
+            <div 
+              className="p-2 rounded-full transition-colors"
+              style={{ backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            >
+              <FileText className="w-6 h-6" style={{ color: COLORS.text }} />
             </div>
           </Link>
 
           <Link href="/admin/analytics" className="relative flex flex-col items-center group hidden md:flex">
-            <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-              <ChartBar className="w-6 h-6 text-[var(--foreground)]" />
+            <div 
+              className="p-2 rounded-full transition-colors"
+              style={{ backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            >
+              <ChartBar className="w-6 h-6" style={{ color: COLORS.text }} />
             </div>
           </Link>
 
           <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-            <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-              <Grid className="w-6 h-6 text-[var(--foreground)]" />
+            <div 
+              className="p-2 rounded-full transition-colors"
+              style={{ backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            >
+              <Grid className="w-6 h-6" style={{ color: COLORS.text }} />
             </div>
           </Link>
 
@@ -155,13 +267,34 @@ export default function Navbar() {
     return (
       <>
         {/* --- NON-ADMIN MOBILE MENU --- */}
-        <Link href="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-1 sm:gap-2 hover:text-[var(--highlight)] transition">
+        <Link 
+          href="/dashboard" 
+          onClick={() => setOpen(false)} 
+          className="flex items-center gap-1 sm:gap-2 transition"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+        >
           <Grid className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Dashboard
         </Link>
-        <Link href="/user-editor" onClick={() => setOpen(false)} className="flex items-center gap-1 sm:gap-2 hover:text-[var(--highlight)] transition">
+        <Link 
+          href="/user-editor" 
+          onClick={() => setOpen(false)} 
+          className="flex items-center gap-1 sm:gap-2 transition"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+        >
           <UserCog className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> User Editor
         </Link>
-        <Link href="/expenses" onClick={() => setOpen(false)} className="flex items-center gap-1 sm:gap-2 hover:text-[var(--highlight)] transition">
+        <Link 
+          href="/expenses" 
+          onClick={() => setOpen(false)} 
+          className="flex items-center gap-1 sm:gap-2 transition"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+        >
           <CreditCard className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Expenses
         </Link>
       </>
@@ -173,8 +306,25 @@ export default function Navbar() {
   if (!user) {
     rightSideContent = (
       <div className="hidden md:flex items-center gap-4 text-[clamp(0.8rem,2vw,1rem)]">
-        <Link href="/login" className="hover:text-[var(--highlight)] transition font-medium">Sign In</Link>
-        <Link href="/signup" className="bg-[var(--highlight)] text-[var(--accent-4)] px-4 sm:px-5 py-1 sm:py-2 rounded-md font-semibold hover:scale-105 transition">Sign Up</Link>
+        <Link 
+          href="/login" 
+          className="transition font-medium"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+        >
+          Sign In
+        </Link>
+        <Link 
+          href="/signup" 
+          className="px-4 sm:px-5 py-1 sm:py-2 rounded-md font-semibold hover:scale-105 transition"
+          style={{ 
+            backgroundColor: COLORS.green,
+            color: '#000000',
+          }}
+        >
+          Sign Up
+        </Link>
       </div>
     )
   } else if (userRole === 'Admin') {
@@ -182,19 +332,34 @@ export default function Navbar() {
       <>
         {/* --- ADMIN CONTENT --- */}
         <Link href="/admin/syslogs" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-            <FileText className="w-6 h-6 text-[var(--foreground)]" />
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <FileText className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
         </Link>
 
         <Link href="/admin/analytics" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-            <ChartBar className="w-6 h-6 text-[var(--foreground)]" />
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <ChartBar className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
         </Link>
         <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-          <div className="p-2 rounded-full hover:bg-[var(--highlight)] transition-colors">
-            <Grid className="w-6 h-6 text-[var(--foreground)]" />
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <Grid className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
         </Link>
 
@@ -214,27 +379,71 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-[var(--navbar)]/90 backdrop-blur-md shadow-sm">
+    <nav 
+      className="fixed top-0 w-full z-50 backdrop-blur-md shadow-sm"
+      style={{
+        backgroundColor: `${COLORS.navBg}f0`, // 94% opacity with greenish tint
+        borderBottom: `1px solid rgba(115, 170, 87, 0.2)`, // Subtle green border
+      }}
+    >
       <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
         {/* --- LEFT: Logo --- */}
-        <Link href="/" className="text-[clamp(1.25rem,4vw,2rem)] font-bold text-[var(--highlight)]">
+        <Link 
+          href="/" 
+          className="text-[clamp(1.25rem,4vw,2rem)] font-bold"
+          style={{ color: COLORS.green }}
+        >
           ✂️ ShearWork
         </Link>
 
         {/* --- CENTER: Links (only when signed out) --- */}
-        {!user && (
-          <div className="hidden md:flex gap-6 text-[var(--foreground)] absolute left-1/2 -translate-x-1/2 text-[clamp(0.8rem,2vw,1rem)]">
-            <a href="#features" className="hover:text-[var(--highlight)]">Features</a>
-            <a href="#pricing" className="hover:text-[var(--highlight)]">Pricing</a>
-            <a href="#contact" className="hover:text-[var(--highlight)]">Contact</a>
+        {/* {!user && (
+          <div 
+            className="hidden md:flex gap-6 absolute left-1/2 -translate-x-1/2 text-[clamp(0.8rem,2vw,1rem)]"
+            style={{ color: COLORS.text }}
+          >
+            <a 
+              href="#features" 
+              className="transition"
+              onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+            >
+              Features
+            </a>
+            <a 
+              href="#pricing" 
+              className="transition"
+              onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+            >
+              Pricing
+            </a>
+            <a 
+              href="#contact" 
+              className="transition"
+              onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+            >
+              Contact
+            </a>
           </div>
-        )}
+        )} */}
 
         {/* --- RIGHT SIDE --- */}
         <div className="flex items-center gap-2 sm:gap-4 ml-auto">
           {rightSideContent}
           <button
-            className="md:hidden p-[clamp(4px,1vw,8px)] rounded hover:bg-[var(--highlight)] transition-colors"
+            className="md:hidden p-[clamp(4px,1vw,8px)] rounded transition-colors"
+            style={{
+              backgroundColor: 'transparent',
+              color: COLORS.text,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
             onClick={() => setOpen(!open)}
           >
             {open ? (
@@ -248,7 +457,14 @@ export default function Navbar() {
 
       {/* --- MOBILE MENU --- */}
       {open && (
-        <div ref={menuRef} className="md:hidden bg-[var(--background)] border-t border-[var(--accent-2)] w-full shadow-lg">
+        <div 
+          ref={menuRef} 
+          className="md:hidden w-full shadow-lg"
+          style={{
+            backgroundColor: COLORS.navBg,
+            borderTop: `1px solid rgba(115, 170, 87, 0.2)`,
+          }}
+        >
           <div className="flex flex-col items-center py-2 sm:py-4 space-y-2 sm:space-y-4 text-[clamp(0.9rem,3vw,1.2rem)]">
             {renderMobileMenu()}
           </div>
