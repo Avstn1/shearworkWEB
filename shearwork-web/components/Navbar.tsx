@@ -9,6 +9,7 @@ import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
 import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
+import Image from 'next/image'
 
 // Color palette matching React Native app
 const COLORS = {
@@ -388,13 +389,22 @@ export default function Navbar() {
     >
       <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
         {/* --- LEFT: Logo --- */}
-        <Link 
-          href="/" 
-          className="text-[clamp(1.25rem,4vw,2rem)] font-bold"
-          style={{ color: COLORS.green }}
-        >
-          ✂️ ShearWork
-        </Link>
+<Link 
+  href="/" 
+  className="flex items-center gap-2"
+>
+  <img 
+    src="/images/shearworklogo.png" 
+    alt="ShearWork Logo" 
+    className="h-8 w-auto"
+  />
+  <span 
+    className="text-[clamp(1.25rem,4vw,2rem)] font-bold"
+    style={{ color: COLORS.green }}
+  >
+    ShearWork
+  </span>
+</Link>
 
         {/* --- CENTER: Links (only when signed out) --- */}
         {/* {!user && (
