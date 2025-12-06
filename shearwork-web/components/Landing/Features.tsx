@@ -2,24 +2,65 @@
 
 import { motion } from 'framer-motion'
 
+// Color palette
+const COLORS = {
+  background: '#181818',
+  cardBg: '#1a1a1a',
+  navBg: '#1b1d1b', 
+  surface: 'rgba(37, 37, 37, 0.6)',
+  surfaceSolid: '#252525',
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  text: '#FFFFFF',
+  textMuted: 'rgba(255, 255, 255, 0.6)',
+  green: '#73aa57',
+  greenLight: '#5b8f52',
+  greenGlow: 'rgba(115, 170, 87, 0.4)',
+}
+
 export default function Features() {
-  const features = [
+ const features = [
     {
       title: 'Business Insights',
-      desc: 'See your revenue, trends, and performance in real-time.',
+      desc: 'See your revenue, trends, and performance in real-time with comprehensive analytics.',
       icon: '📊',
     },
-    // Add more features freely — layout stays centered
+    {
+      title: 'Automated Reports',
+      desc: 'Weekly and monthly reports automatically generated and delivered to your inbox.',
+      icon: '📈',
+    },
+    {
+      title: 'Expense Tracking',
+      desc: 'Monitor all your business expenses in one place with our built-in tracker.',
+      icon: '💰',
+    },
+    {
+      title: 'Tip Tracker',
+      desc: 'Never lose track of your daily tips with easy logging and totals.',
+      icon: '💵',
+    },
+    {
+      title: 'Acuity Integration',
+      desc: 'Seamlessly sync your appointments from Acuity Scheduling.',
+      icon: '🔗',
+    },
   ]
 
   return (
-    <section id="features" className="py-24 bg-[var(--text-bright)] text-center">
+    <section 
+      id="features" 
+      className="py-24 text-center"
+      style={{
+        background: `linear-gradient(180deg, #181818 0%, #1a1a1a 50%, #181818 100%)`,
+      }}
+    >
       <motion.h2
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.25 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="text-4xl font-bold text-[var(--accent-4)] mb-12"
+        className="text-4xl font-bold mb-12"
+        style={{ color: COLORS.text }}
       >
         Why Barbers Choose ShearWork
       </motion.h2>
@@ -37,14 +78,24 @@ export default function Features() {
           >
             <div
               className="
-                p-8 rounded-2xl shadow-md bg-[var(--accent-1)] text-[var(--text-bright)]
-                hover:shadow-xl hover:-translate-y-1 transition-transform duration-300
-                border border-[var(--accent-2)] text-center w-72
+                p-8 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 
+                transition-all duration-300 text-center w-72 backdrop-blur-lg
               "
+              style={{
+                backgroundColor: COLORS.cardBg,
+                borderWidth: 1,
+                borderColor: COLORS.glassBorder,
+                boxShadow: `0 4px 20px ${COLORS.greenGlow}`,
+              }}
             >
               <div className="text-4xl mb-4">{f.icon}</div>
-              <h3 className="text-2xl font-semibold mb-2 text-[var(--highlight)]">{f.title}</h3>
-              <p className="text-[var(--text-subtle)]">{f.desc}</p>
+              <h3 
+                className="text-2xl font-semibold mb-2"
+                style={{ color: COLORS.green }}
+              >
+                {f.title}
+              </h3>
+              <p style={{ color: COLORS.textMuted }}>{f.desc}</p>
             </div>
           </motion.div>
         ))}

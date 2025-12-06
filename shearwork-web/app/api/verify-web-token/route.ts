@@ -9,27 +9,18 @@ const supabase = createClient(
 )
 
 export async function POST(req: NextRequest) {
-  console.log('========================================')
-  console.log('🚀 VERIFY WEB TOKEN - START')
-  console.log('========================================')
-  
   try {
     const { code } = await req.json()
-    console.log('📥 Received code:', code)
 
     if (!code) {
-      console.log('❌ No code provided')
       return NextResponse.json(
         { error: 'Code is required' }, 
         { status: 400 }
       )
     }
 
-    console.log('🔍 Looking up code in Redis...')
-    
     // Get userId from Redis
     const userId = await authCodeCache.get(code)
-    console.log('📦 Redis lookup result:', userId ? `Found user: ${userId}` : 'NOT FOUND')
     
     if (!userId) {
       console.error('❌ Code not found or expired:', code)
@@ -38,14 +29,8 @@ export async function POST(req: NextRequest) {
       }, { status: 401 })
     }
 
-    console.log('✅ Code valid for user:', userId)
-    console.log('🗑️  Deleting code from Redis...')
-
     // Delete code immediately (one-time use)
     await authCodeCache.delete(code)
-    console.log('✅ Code deleted from Redis')
-
-    console.log('👤 Fetching user from Supabase...')
 
     // Get user from Supabase
     const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId)
@@ -63,12 +48,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('✅ User found:', {
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at
-    })
-
     if (!user.email) {
       console.error('❌ User has no email:', user.id)
       return NextResponse.json(
@@ -77,11 +56,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('🔐 Generating magic link for user:', user.email)
-
-    // Generate link - use 'magiclink' here
     const { data, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',  // ← Use 'magiclink' for generateLink
+      type: 'magiclink', 
       email: user.email,
     })
 
@@ -100,11 +76,6 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('✅ Link generated successfully')
-    console.log('📋 Link data keys:', Object.keys(data))
-    console.log('📋 Properties keys:', data.properties ? Object.keys(data.properties) : 'NO PROPERTIES')
-    console.log('📋 Full link data:', JSON.stringify(data, null, 2))
-
     // Get the hashed token
     const tokenHash = data.properties.hashed_token
 
@@ -115,9 +86,6 @@ export async function POST(req: NextRequest) {
         error: 'Failed to generate session tokens - no hash' 
       }, { status: 500 })
     }
-
-    console.log('✅ Token hash obtained:', tokenHash.substring(0, 20) + '...')
-    console.log('🔓 Verifying OTP with Supabase...')
 
     const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
       type: 'magiclink',  
@@ -140,8 +108,6 @@ export async function POST(req: NextRequest) {
         error: 'Failed to create session - no data'
       }, { status: 500 })
     }
-
-    console.log('📋 Session data keys:', Object.keys(sessionData))
     
     if (!sessionData.session) {
       console.error('❌ No session in sessionData')
@@ -151,12 +117,6 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('✅ Session created successfully!')
-    console.log('📋 Session keys:', Object.keys(sessionData.session))
-    console.log('🎫 Access token (first 20 chars):', sessionData.session.access_token.substring(0, 20) + '...')
-    console.log('🎫 Refresh token exists:', !!sessionData.session.refresh_token)
-    console.log('👤 Session user ID:', sessionData.session.user?.id)
-
     const response = { 
       access_token: sessionData.session.access_token,
       refresh_token: sessionData.session.refresh_token,
@@ -165,16 +125,6 @@ export async function POST(req: NextRequest) {
         email: user.email
       }
     }
-
-    console.log('📤 Sending response:', {
-      access_token: response.access_token.substring(0, 20) + '...',
-      refresh_token: response.refresh_token ? response.refresh_token.substring(0, 20) + '...' : 'MISSING',
-      user: response.user
-    })
-
-    console.log('========================================')
-    console.log('✅ VERIFY WEB TOKEN - SUCCESS')
-    console.log('========================================')
 
     return NextResponse.json(response)
     

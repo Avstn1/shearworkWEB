@@ -18,14 +18,11 @@ export async function POST(request: Request) {
       )
     }
     
-    console.log(`Generating code for user ${user?.id}: ${code}`)
-    
-    // Store in Redis: code -> userId (expires in 5 minutes)
-    await authCodeCache.set(code, user?.id, 300)
+    await authCodeCache.set(code, user?.id, 10)
 
     return NextResponse.json({ 
       code,
-      expiresIn: 300 // 5 minutes
+      expiresIn: 10
     })
     
   } catch (err: any) {

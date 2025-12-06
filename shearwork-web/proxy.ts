@@ -19,7 +19,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   // Public routes (anyone can access)
-  const publicRoutes = ['/login', '/signup', '/_next', '/api']
+  const publicRoutes = ['/login', '/signup', '/_next', '/api', '/images']
 
   // Handle unauthenticated users
   if (!user) {
