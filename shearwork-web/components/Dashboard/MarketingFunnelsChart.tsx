@@ -132,13 +132,13 @@ export default function MarketingFunnelsChart({
         📣 Marketing Funnels
       </h2>
 
-<div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             layout="vertical"
-            data={data}
+            data={data.filter(d => d.new_clients > 0)}
             margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
-            barCategoryGap={data.length > 10 ? '30%' : '15%'}
+            barCategoryGap={data.filter(d => d.new_clients > 0).length > 10 ? '30%' : '15%'}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
 
@@ -193,20 +193,23 @@ export default function MarketingFunnelsChart({
               radius={[8, 8, 0, 0]}
               barSize={barSize}
             >
-              {/* Show new_clients value on the right */}
               <LabelList
                 dataKey="new_clients"
                 content={(props: any) => {
                   const { x, y, width, height, value, index } = props;
-                  const entry = data[index];
-                  const maxNewClients = Math.max(...data.map(d => d.new_clients));
+                  const filteredData = data.filter(d => d.new_clients > 0);
+                  const entry = filteredData[index];
+                  
+                  if (!entry) return null; // Safety check
+                  
+                  const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
                   const percentage = (entry.new_clients / maxNewClients) * 100;
                   
                   if (percentage > 70) {
                     // Position inside on the left, after the source text
                     return (
                       <text
-                        x={x + 5} // Offset to appear after source label (adjust 60 based on source text width)
+                        x={x + 5}
                         y={y + height / 2}
                         fill="#2a3612ff"
                         fontSize={labelFontSize}
@@ -241,15 +244,19 @@ export default function MarketingFunnelsChart({
                 dataKey="source"
                 content={(props: any) => {
                   const { x, y, width, height, value, index } = props;
-                  const entry = data[index];
-                  const maxNewClients = Math.max(...data.map(d => d.new_clients));
+                  const filteredData = data.filter(d => d.new_clients > 0);
+                  const entry = filteredData[index];
+                  
+                  if (!entry) return null; // Safety check
+                  
+                  const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
                   const percentage = (entry.new_clients / maxNewClients) * 100;
                   
                   if (percentage > 70) {
                     // Position inside on the left
                     return (
                       <text
-                        x={x + 25} // 10px from left edge of bar
+                        x={x + 25}
                         y={y + height / 2}
                         fill="#2a3612ff"
                         fontSize={labelFontSize}
@@ -264,7 +271,7 @@ export default function MarketingFunnelsChart({
                     // Position outside on the right
                     return (
                       <text
-                        x={x + width + 25} // 10px to the right of bar
+                        x={x + width + 25}
                         y={y + height / 2}
                         fill="#7ba72bff"
                         fontSize={labelFontSize}
