@@ -136,9 +136,9 @@ export default function MarketingFunnelsChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             layout="vertical"
-            data={data}
+            data={data.filter(d => d.new_clients > 0)}
             margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
-            barCategoryGap={data.length > 10 ? '30%' : '15%'}
+            barCategoryGap={data.filter(d => d.new_clients > 0).length > 10 ? '30%' : '15%'}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
 
@@ -147,10 +147,9 @@ export default function MarketingFunnelsChart({
               type="category"
               dataKey="source"
               stroke="#E8EDC7"
-              width={60}   // MORE ROOM ON THE LEFT
+              width={60}   
               style={{ fontSize: labelFontSize }}
             />
-
 
             <Tooltip
               labelFormatter={(value, payload) => {
@@ -185,7 +184,6 @@ export default function MarketingFunnelsChart({
               axisLine={false}  
               tick={false}      
               width={0}      
-              
             />
 
             <Bar
@@ -195,22 +193,98 @@ export default function MarketingFunnelsChart({
               radius={[8, 8, 0, 0]}
               barSize={barSize}
             >
-
-              {/* Show new_clients value on the right */}
               <LabelList
                 dataKey="new_clients"
-                position="right"
-                style={{ fill: '#E8EDC7', fontSize: labelFontSize, fontWeight: 'bold' }}
+                content={(props: any) => {
+                  const { x, y, width, height, value, index } = props;
+                  const filteredData = data.filter(d => d.new_clients > 0);
+                  const entry = filteredData[index];
+                  
+                  if (!entry) return null; // Safety check
+                  
+                  const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
+                  const percentage = (entry.new_clients / maxNewClients) * 100;
+                  
+                  if (percentage > 70) {
+                    // Position inside on the left, after the source text
+                    return (
+                      <text
+                        x={x + 5}
+                        y={y + height / 2}
+                        fill="#2a3612ff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  } else {
+                    // Position outside on the right
+                    return (
+                      <text
+                        x={x + width + 5}
+                        y={y + height / 2}
+                        fill="#7ba72bff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  }
+                }}
               />
 
-              {/* Show source name inside the bar */}
+              {/* Show source name - conditionally positioned based on % of max */}
               <LabelList
                 dataKey="source"
-                offset={18}
-                position="right"
-                style={{ fill: '#c4df92ff', fontSize: labelFontSize, fontWeight: 'bold' }}
+                content={(props: any) => {
+                  const { x, y, width, height, value, index } = props;
+                  const filteredData = data.filter(d => d.new_clients > 0);
+                  const entry = filteredData[index];
+                  
+                  if (!entry) return null; // Safety check
+                  
+                  const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
+                  const percentage = (entry.new_clients / maxNewClients) * 100;
+                  
+                  if (percentage > 70) {
+                    // Position inside on the left
+                    return (
+                      <text
+                        x={x + 25}
+                        y={y + height / 2}
+                        fill="#2a3612ff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  } else {
+                    // Position outside on the right
+                    return (
+                      <text
+                        x={x + width + 25}
+                        y={y + height / 2}
+                        fill="#7ba72bff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  }
+                }}
               />
-
             </Bar>
 
             <Bar
@@ -245,7 +319,6 @@ export default function MarketingFunnelsChart({
                 style={{ fill: '#E8EDC7', fontSize: 8, fontWeight: 'bold' }}
               />
             </Bar>
-
           </BarChart>
         </ResponsiveContainer>
       </div>
