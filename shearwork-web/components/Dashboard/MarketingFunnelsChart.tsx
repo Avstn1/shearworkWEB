@@ -132,7 +132,7 @@ export default function MarketingFunnelsChart({
         📣 Marketing Funnels
       </h2>
 
-      <div className="flex-1 flex items-center justify-center">
+<div className="flex-1 flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             layout="vertical"
@@ -147,10 +147,9 @@ export default function MarketingFunnelsChart({
               type="category"
               dataKey="source"
               stroke="#E8EDC7"
-              width={60}   // MORE ROOM ON THE LEFT
+              width={60}   
               style={{ fontSize: labelFontSize }}
             />
-
 
             <Tooltip
               labelFormatter={(value, payload) => {
@@ -185,7 +184,6 @@ export default function MarketingFunnelsChart({
               axisLine={false}  
               tick={false}      
               width={0}      
-              
             />
 
             <Bar
@@ -195,22 +193,91 @@ export default function MarketingFunnelsChart({
               radius={[8, 8, 0, 0]}
               barSize={barSize}
             >
-
               {/* Show new_clients value on the right */}
               <LabelList
                 dataKey="new_clients"
-                position="right"
-                style={{ fill: '#E8EDC7', fontSize: labelFontSize, fontWeight: 'bold' }}
+                content={(props: any) => {
+                  const { x, y, width, height, value, index } = props;
+                  const entry = data[index];
+                  const maxNewClients = Math.max(...data.map(d => d.new_clients));
+                  const percentage = (entry.new_clients / maxNewClients) * 100;
+                  
+                  if (percentage > 70) {
+                    // Position inside on the left, after the source text
+                    return (
+                      <text
+                        x={x + 5} // Offset to appear after source label (adjust 60 based on source text width)
+                        y={y + height / 2}
+                        fill="#2a3612ff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  } else {
+                    // Position outside on the right
+                    return (
+                      <text
+                        x={x + width + 5}
+                        y={y + height / 2}
+                        fill="#7ba72bff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  }
+                }}
               />
 
-              {/* Show source name inside the bar */}
+              {/* Show source name - conditionally positioned based on % of max */}
               <LabelList
                 dataKey="source"
-                offset={18}
-                position="right"
-                style={{ fill: '#c4df92ff', fontSize: labelFontSize, fontWeight: 'bold' }}
+                content={(props: any) => {
+                  const { x, y, width, height, value, index } = props;
+                  const entry = data[index];
+                  const maxNewClients = Math.max(...data.map(d => d.new_clients));
+                  const percentage = (entry.new_clients / maxNewClients) * 100;
+                  
+                  if (percentage > 70) {
+                    // Position inside on the left
+                    return (
+                      <text
+                        x={x + 25} // 10px from left edge of bar
+                        y={y + height / 2}
+                        fill="#2a3612ff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  } else {
+                    // Position outside on the right
+                    return (
+                      <text
+                        x={x + width + 25} // 10px to the right of bar
+                        y={y + height / 2}
+                        fill="#7ba72bff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  }
+                }}
               />
-
             </Bar>
 
             <Bar
@@ -245,7 +312,6 @@ export default function MarketingFunnelsChart({
                 style={{ fill: '#E8EDC7', fontSize: 8, fontWeight: 'bold' }}
               />
             </Bar>
-
           </BarChart>
         </ResponsiveContainer>
       </div>
