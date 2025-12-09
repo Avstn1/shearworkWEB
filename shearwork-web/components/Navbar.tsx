@@ -124,8 +124,8 @@ export default function Navbar() {
           </div>
         </Link>
       </Tooltip>
-      <Tooltip label="User Editor">
-        <Link href="/user-editor" className="relative flex flex-col items-center group hidden md:flex">
+      <Tooltip label="Client Manager">
+        <Link href="/client-manager" className="relative flex flex-col items-center group hidden md:flex">
           <div 
             className="p-2 rounded-full transition-colors"
             style={{
@@ -137,7 +137,7 @@ export default function Navbar() {
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent'
             }}
-            onClick={() => {logNavLinkClick(user.id, 'user-editor')}}
+            onClick={() => {logNavLinkClick(user.id, 'client-manager')}}
           >
             <UserCog className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
@@ -279,14 +279,14 @@ export default function Navbar() {
           <Grid className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Dashboard
         </Link>
         <Link 
-          href="/user-editor" 
+          href="/client-manager" 
           onClick={() => setOpen(false)} 
           className="flex items-center gap-1 sm:gap-2 transition"
           style={{ color: COLORS.text }}
           onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
           onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
         >
-          <UserCog className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> User Editor
+          <UserCog className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Client Manager
         </Link>
         <Link 
           href="/expenses" 

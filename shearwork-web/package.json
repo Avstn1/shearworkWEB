@@ -17,6 +17,7 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.79.0",
     "@tinymce/tinymce-react": "^6.3.0",
+    "@upstash/qstash": "^2.8.4",
     "@upstash/redis": "^1.35.7",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
@@ -33,7 +34,8 @@
     "react-icons": "^5.5.0",
     "recharts": "^3.3.0",
     "stripe": "^20.0.0",
-    "tinymce": "^8.2.0"
+    "tinymce": "^8.2.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
