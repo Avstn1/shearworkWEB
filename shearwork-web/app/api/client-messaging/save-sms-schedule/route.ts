@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
+import { qstashClient } from '@/lib/qstashClient'
 
 function getCronExpression(
   frequency: 'weekly' | 'biweekly' | 'monthly',
@@ -49,8 +50,6 @@ function getCronText(
   const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
   const timeStr = `${displayHour}:${m.toString().padStart(2, '0')} ${period}`;
 
-  if (!dayOfWeek) throw new Error("dayOfWeek is required");
-  
   if (frequency === 'monthly') {
     return `Every month on day ${dayOfMonth} at ${timeStr}`;
   } else if (frequency === 'biweekly') {
@@ -59,6 +58,38 @@ function getCronText(
   } else {
     const day = dayOfWeek?.charAt(0).toUpperCase() + dayOfWeek?.slice(1);
     return `Every ${day} at ${timeStr}`;
+  }
+}
+
+async function createQStashSchedule(messageId: string, cron: string) {
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app'
+    
+    const schedule = await qstashClient.schedules.create({
+      destination: `${appUrl}/api/client-messaging/qstash-sms-send?messageId=${messageId}`,
+      cron: cron,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    console.log('✅ QStash schedule created:', schedule.scheduleId)
+    return schedule.scheduleId
+  } catch (error) {
+    console.error('❌ Failed to create QStash schedule:', error)
+    throw error
+  }
+}
+
+async function deleteQStashSchedule(scheduleId: string) {
+  if (!scheduleId) return
+
+  try {
+    await qstashClient.schedules.delete(scheduleId)
+    console.log('✅ QStash schedule deleted:', scheduleId)
+  } catch (error) {
+    console.error('❌ Failed to delete QStash schedule:', error)
+    throw error
   }
 }
 
@@ -96,8 +127,6 @@ export async function POST(request: Request) {
           )
         }
       }
-      
-      // DRAFT messages can be saved without validation
     }
 
     // Process each message (upsert by id)
@@ -122,52 +151,75 @@ export async function POST(request: Request) {
         // Check if message already exists in database by id
         const { data: existing } = await supabase
           .from('sms_scheduled_messages')
-          .select('id')
+          .select('id, qstash_schedule_id, status, cron')
           .eq('id', msg.id)
           .eq('user_id', user.id)
           .single()
 
-        let result;
+        let qstashScheduleId = existing?.qstash_schedule_id || null
         
         if (existing) {
+          // Always recreate schedule for existing ACCEPTED messages
+          if (msg.validationStatus === 'ACCEPTED') {
+            console.log('🔄 Recreating QStash schedule for ACCEPTED message')
+            // Delete old schedule if exists
+            if (existing.qstash_schedule_id) {
+              await deleteQStashSchedule(existing.qstash_schedule_id)
+            }
+            // Create new schedule
+            qstashScheduleId = await createQStashSchedule(msg.id, cron)
+          } else {
+            // Status is DRAFT - delete schedule if exists
+            console.log('🗑️  Message is DRAFT - removing QStash schedule')
+            if (existing.qstash_schedule_id) {
+              await deleteQStashSchedule(existing.qstash_schedule_id)
+            }
+            qstashScheduleId = null
+          }
+
           // Update existing message
           const { data, error } = await supabase
             .from('sms_scheduled_messages')
             .update({
               title: msg.title || 'Untitled Message',
               message: msg.message,
-              status: msg.validationStatus, // Update status (can go from ACCEPTED to DRAFT)
+              status: msg.validationStatus,
               cron: cron,
               cron_text: cronText,
+              qstash_schedule_id: qstashScheduleId,
             })
             .eq('id', msg.id)
             .select()
             .single()
 
           if (error) throw error
-          result = data
+          return { success: true, data }
         } else {
+          // New message - create QStash schedule if ACCEPTED
+          if (msg.validationStatus === 'ACCEPTED') {
+            console.log('➕ New ACCEPTED message - creating QStash schedule')
+            qstashScheduleId = await createQStashSchedule(msg.id, cron)
+          }
+
           // Insert new message with the frontend-generated id
           const { data, error } = await supabase
             .from('sms_scheduled_messages')
             .insert({
-              id: msg.id, // Use the id from frontend
+              id: msg.id,
               user_id: user.id,
               title: msg.title || 'Untitled Message',
               message: msg.message,
-              status: msg.validationStatus, // Can be 'DRAFT' or 'ACCEPTED'
+              status: msg.validationStatus,
               cron: cron,
               cron_text: cronText,
-              qstash_schedule_id: null,
+              qstash_schedule_id: qstashScheduleId,
             })
             .select()
             .single()
 
           if (error) throw error
-          result = data
+          return { success: true, data }
         }
-
-        return { success: true, data: result }
       } catch (error: any) {
         console.error('Failed to save message:', error)
         return { success: false, error: error.message }
@@ -231,6 +283,21 @@ export async function DELETE(request: Request) {
 
     const { id } = await request.json()
 
+    // Get message to check for QStash schedule
+    const { data: message } = await supabase
+      .from('sms_scheduled_messages')
+      .select('qstash_schedule_id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    // Delete QStash schedule if exists
+    if (message?.qstash_schedule_id) {
+      console.log('🗑️  Deleting QStash schedule:', message.qstash_schedule_id)
+      await deleteQStashSchedule(message.qstash_schedule_id)
+    }
+
+    // Delete from database
     const { error } = await supabase
       .from('sms_scheduled_messages')
       .delete()
@@ -241,6 +308,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
+    console.error('❌ Delete error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
