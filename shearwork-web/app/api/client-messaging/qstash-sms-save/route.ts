@@ -68,8 +68,7 @@ async function handleInsert(message: any) {
   }
 
   try {
-    // const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app' ------------------------------------- CHANGE THISSSSSSSSSSSSSSSSSSSSSSS
-    const appUrl = 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app'
     
     const schedule = await qstashClient.schedules.create({
       destination: `${appUrl}/api/client-messaging/qstash-sms-send?messageId=${message.id}`,
@@ -142,9 +141,7 @@ async function handleUpdate(newMessage: any, oldMessage: any) {
 
     // Create new schedule
     try {
-      // const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app' -------------------------------------- CHANGE THISSSSSSSSSSSSSSSSSSSSSSS
-      const appUrl = 'http://localhost:3000'
-      
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app'
       const schedule = await qstashClient.schedules.create({
         destination: `${appUrl}/api/client-messaging/qstash-sms-send?messageId=${newMessage.id}`,
         cron: newMessage.cron,
