@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AppProvider } from '@/contexts/AppContext'
 
 export const metadata = {
-  title: 'ShearWork',
+  title: 'Corva',
   description: 'Barber management made easy.',
 };
 

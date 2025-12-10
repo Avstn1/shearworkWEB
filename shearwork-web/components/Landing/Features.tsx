@@ -62,7 +62,7 @@ export default function Features() {
         className="text-4xl font-bold mb-12"
         style={{ color: COLORS.text }}
       >
-        Why Barbers Choose ShearWork
+        Why Barbers Choose Corva
       </motion.h2>
 
       {/* ✅ Switched from grid to flex for proper horizontal centering */}

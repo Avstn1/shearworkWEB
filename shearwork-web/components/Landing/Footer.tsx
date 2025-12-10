@@ -25,7 +25,7 @@ export default function Footer() {
         filter: 'brightness(0.6)',
         color: '#FFFFFF',
       }}>
-        © {new Date().getFullYear()} ShearWork. All rights reserved.
+        © {new Date().getFullYear()} Corva. All rights reserved.
       </div>
     </footer>
   )

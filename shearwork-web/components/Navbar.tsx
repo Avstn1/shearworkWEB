@@ -402,7 +402,7 @@ export default function Navbar() {
     className="text-[clamp(1.25rem,4vw,2rem)] font-bold"
     style={{ color: COLORS.green }}
   >
-    ShearWork
+    Corva
   </span>
 </Link>
 

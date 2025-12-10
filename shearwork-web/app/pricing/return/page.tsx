@@ -86,7 +86,7 @@ function PricingReturnContent() {
             <p className="text-lg font-semibold">Thanks for subscribing 🎉</p>
             <p className="text-sm text-gray-300">
               You&apos;re now on the{' '}
-              <span className="font-semibold">ShearWork Pro</span>{' '}
+              <span className="font-semibold">Corva Pro</span>{' '}
               <span className="font-semibold">{intervalLabel}</span> plan.
             </p>
             <p className="text-sm text-gray-300">

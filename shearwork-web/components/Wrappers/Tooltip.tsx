@@ -13,7 +13,7 @@ export default function Tooltip({
     <div className="relative group flex justify-center items-center">
       {children}
 
-      {/* Tooltip — themed for ShearWork */}
+      {/* Tooltip — themed for Corva */}
       <div
         className="
           absolute top-full mt-2

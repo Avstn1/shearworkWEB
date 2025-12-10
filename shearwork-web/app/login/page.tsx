@@ -310,7 +310,7 @@ export default function LoginPage() {
                   style={{ color: COLORS.text }}
                 >
                   <span>Welcome back to</span>
-                  <span style={{ color: COLORS.green }}>ShearWork</span>
+                  <span style={{ color: COLORS.green }}>Corva</span>
                 </h3>
                 <p 
                   className="text-sm leading-relaxed mb-4"
