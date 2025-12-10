@@ -53,10 +53,10 @@ function getCronText(
   if (frequency === 'monthly') {
     return `Every month on day ${dayOfMonth} at ${timeStr}`;
   } else if (frequency === 'biweekly') {
-    const day = dayOfWeek?.charAt(0).toUpperCase() + dayOfWeek?.slice(1);
+    const day = dayOfWeek ? dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1) : 'Monday';
     return `Every other ${day} at ${timeStr}`;
   } else {
-    const day = dayOfWeek?.charAt(0).toUpperCase() + dayOfWeek?.slice(1);
+    const day = dayOfWeek ? dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1) : 'Monday';
     return `Every ${day} at ${timeStr}`;
   }
 }
