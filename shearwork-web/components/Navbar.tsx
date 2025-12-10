@@ -394,9 +394,9 @@ export default function Navbar() {
   className="flex items-center gap-2"
 >
   <img 
-    src="/images/shearworklogo.png" 
+    src="/images/corvalogo.png" 
     alt="ShearWork Logo" 
-    className="h-8 w-auto"
+    className="h-12 w-auto"
   />
   <span 
     className="text-[clamp(1.25rem,4vw,2rem)] font-bold"

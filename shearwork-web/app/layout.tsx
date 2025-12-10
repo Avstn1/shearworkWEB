@@ -6,11 +6,17 @@ import { AppProvider } from '@/contexts/AppContext'
 export const metadata = {
   title: 'Corva',
   description: 'Barber management made easy.',
+  icons: {
+    icon: '/images/corvalogo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" type="image/png" href="/images/corvalogo.png" />
+      </head>
       <body className="bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 font-sans min-h-screen">
         <AppProvider>
           <div className="min-h-screen">{children}</div>

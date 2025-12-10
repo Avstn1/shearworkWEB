@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard';
-import SMSManager from '@/components/Dashboard/ClientManager/SMSManager'
+import SMSManager from '@/components/Dashboard/ClientManager/SMSManager/SMSManager'
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
