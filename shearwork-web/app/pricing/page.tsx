@@ -220,7 +220,7 @@ function PricingPageContent() {
           <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col justify-between">
             <div>
               <h2 className="text-lg font-semibold mb-2">
-                ShearWork Pro (Monthly)
+                Corva Pro (Monthly)
               </h2>
 
               {loadingPrices || !monthly ? (
@@ -264,7 +264,7 @@ function PricingPageContent() {
           <div className="bg-white/5 rounded-2xl p-4 border border-[#f5e29a]/40 flex flex-col justify-between">
             <div>
               <h2 className="text-lg font-semibold mb-2">
-                ShearWork Pro (Yearly)
+                Corva Pro (Yearly)
               </h2>
 
               {loadingPrices || !yearly ? (

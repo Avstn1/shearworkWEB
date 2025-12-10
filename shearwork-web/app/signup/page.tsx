@@ -357,7 +357,7 @@ export default function SignUpPage() {
                   style={{ color: COLORS.text }}
                 >
                   <span>Welcome to</span>
-                  <span style={{ color: COLORS.green }}>ShearWork</span>
+                  <span style={{ color: COLORS.green }}>Corva</span>
                 </h3>
                 <p 
                   className="text-sm leading-relaxed mb-4"

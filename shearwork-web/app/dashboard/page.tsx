@@ -387,7 +387,7 @@ export default function DashboardPage() {
           <div className="absolute inset-0 backdrop-blur-sm bg-black/40" onClick={() => setMobileMenuOpen(false)} />
           <div className="relative bg-[var(--accent-2)] p-4 w-64 shadow-lg z-50 flex flex-col min-h-full">
             <div className="flex justify-between items-center mb-6">
-              <span className="text-[var(--highlight)] text-2xl font-bold">✂️ ShearWork</span>
+              <span className="text-[var(--highlight)] text-2xl font-bold">✂️ Corva</span>
               <button onClick={() => setMobileMenuOpen(false)} className="text-[var(--text-bright)] text-xl">✕</button>
             </div>
             <nav className="flex flex-col space-y-3 flex-1">

@@ -160,7 +160,7 @@ export default function BillingSection() {
           Current plan
         </p>
         <p className="text-base font-semibold">
-          {hasSub ? 'ShearWork Pro' : 'No active subscription'}
+          {hasSub ? 'Corva Pro' : 'No active subscription'}
         </p>
         {hasSub && (
           <p className="text-xs text-gray-400">1 active subscription</p>

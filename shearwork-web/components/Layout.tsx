@@ -85,7 +85,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             href="/"
             className="text-3xl font-extrabold mb-10 text-center text-[var(--highlight)]"
           >
-            ✂️ ShearWork
+            ✂️ Corva
           </Link>
           <nav className="flex flex-col space-y-3 mb-6">
             {navLinks.map((link, i) => (
@@ -119,7 +119,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {isMobile && (
         <header className="w-full flex justify-between items-center p-4 bg-[var(--accent-2)] flex-shrink-0">
           <h1 className="text-lg font-bold text-[var(--highlight)] truncate">
-            ✂️ ShearWork
+            ✂️ Corva
           </h1>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -134,7 +134,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {isMobile && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex flex-col">
           <div className="bg-[var(--accent-2)] p-4 flex justify-between items-center">
-            <span className="text-[var(--highlight)] font-bold">✂️ ShearWork</span>
+            <span className="text-[var(--highlight)] font-bold">✂️ Corva</span>
             <button
               onClick={() => setMobileMenuOpen(false)}
               className="text-[var(--text-bright)] text-xl"
