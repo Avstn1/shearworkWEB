@@ -389,22 +389,21 @@ export default function Navbar() {
     >
       <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
         {/* --- LEFT: Logo --- */}
-<Link 
-  href="/" 
-  className="flex items-center gap-2"
->
-  <img 
-    src="/images/shearworklogo.png" 
-    alt="ShearWork Logo" 
-    className="h-8 w-auto"
-  />
-  <span 
-    className="text-[clamp(1.25rem,4vw,2rem)] font-bold"
-    style={{ color: COLORS.green }}
-  >
-    Corva
-  </span>
-</Link>
+        <Link 
+          href="/" 
+          className="flex items-center gap-0"
+        >
+          <img 
+            src="/images/corvalogo.png" 
+            alt="ShearWork Logo" 
+            className="h-12 w-auto"
+          />
+          <span 
+            className="text-[clamp(1.25rem,4vw,2rem)] -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent"
+          >
+            orva
+          </span>
+        </Link>
 
         {/* --- CENTER: Links (only when signed out) --- */}
         {/* {!user && (
