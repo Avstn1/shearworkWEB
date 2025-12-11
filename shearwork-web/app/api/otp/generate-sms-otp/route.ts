@@ -9,9 +9,6 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
 
-// Initialize Twilio client
-const client = twilio(accountSid, authToken);
-
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthenticatedUser(request)
@@ -43,11 +40,23 @@ export async function POST(request: Request) {
       )
     }
     
+    // Validate Twilio credentials
+    if (!accountSid || !authToken || !messagingServiceSid) {
+      console.error('Missing Twilio credentials')
+      return NextResponse.json(
+        { error: 'SMS service not configured' },
+        { status: 500 }
+      )
+    }
+
     // Generate 6-digit code
     const code = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
     
     // Store code in Redis with 10 minute expiry (600 seconds)
     await authCodeCache.set(code, user?.id, 600)
+
+    // Initialize Twilio client here (not at module level)
+    const client = twilio(accountSid, authToken);
 
     // Send SMS via Twilio
     try {
