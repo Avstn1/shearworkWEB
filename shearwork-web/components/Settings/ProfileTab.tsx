@@ -113,7 +113,7 @@ export default function ProfileTab() {
       if (!user) return
 
       // Generate and send OTP code
-      const response = await fetch('/api/otp/generate-otp', {
+      const response = await fetch('/api/otp/generate-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -199,7 +199,7 @@ export default function ProfileTab() {
       const rawPhone = getRawPhoneNumber(editedPhone)
 
       // Generate and send OTP code
-      const response = await fetch('/api/otp/generate-otp', {
+      const response = await fetch('/api/otp/generate-phone-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
