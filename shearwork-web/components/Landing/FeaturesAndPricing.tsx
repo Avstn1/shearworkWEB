@@ -32,13 +32,13 @@ export default function FeaturesAndPricing() {
 
   return (
     <section
-      className="h-screen flex items-center justify-center px-4 md:px-6"
+      className="h-screen flex items-center justify-center px-4 md:px-6 lg:px-8"
       style={{
         background: `linear-gradient(135deg, #181818 0%, #1a1a1a 30%, #1c1e1c 70%, #181818 100%)`,
         color: COLORS.text,
       }}
     >
-      <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row gap-4 md:gap-6 items-center justify-center">
+      <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row gap-4 md:gap-8 lg:gap-12 items-center justify-center">
 
         {/* LEFT — FEATURES */}
         <div className="w-full md:flex-[1.1] flex flex-col justify-center">
@@ -46,12 +46,12 @@ export default function FeaturesAndPricing() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-base md:text-lg font-bold mb-2"
+            className="text-base md:text-xl lg:text-2xl font-bold mb-2 md:mb-4"
           >
             Features
           </motion.h2>
 
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 md:gap-4">
             {features.map((f, i) => (
               <motion.div
                 key={i}
@@ -61,18 +61,18 @@ export default function FeaturesAndPricing() {
                 className={i === features.length - 1 ? 'col-span-2' : ''} // <-- last card spans 2 columns
               >
                 <div
-                  className="p-2.5 rounded-lg shadow hover:shadow-lg transition-all duration-300 backdrop-blur-lg cursor-pointer"
+                  className="p-2.5 md:p-4 lg:p-5 rounded-lg md:rounded-xl shadow hover:shadow-lg transition-all duration-300 backdrop-blur-lg cursor-pointer hover:scale-[1.02]"
                   style={{
                     background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
                     borderWidth: 1,
                     borderColor: COLORS.glassBorder,
                   }}
                 >
-                  <div className="text-base mb-0.5">{f.icon}</div>
-                  <h3 className="text-[11px] font-bold" style={{ color: COLORS.green }}>
+                  <div className="text-base md:text-2xl lg:text-3xl mb-0.5 md:mb-2">{f.icon}</div>
+                  <h3 className="text-[11px] md:text-sm lg:text-base font-bold" style={{ color: COLORS.green }}>
                     {f.title}
                   </h3>
-                  <p className="text-[9px] leading-tight" style={{ color: COLORS.textMuted }}>
+                  <p className="text-[9px] md:text-xs lg:text-sm leading-tight md:leading-relaxed" style={{ color: COLORS.textMuted }}>
                     {f.desc}
                   </p>
                 </div>
@@ -83,7 +83,7 @@ export default function FeaturesAndPricing() {
 
         {/* DIVIDER (desktop only) */}
         <div
-          className="hidden md:block w-px h-52"
+          className="hidden md:block w-px h-52 md:h-64 lg:h-96"
           style={{
             background: `linear-gradient(180deg, transparent 0%, ${COLORS.glassBorder} 50%, transparent 100%)`,
           }}
@@ -95,7 +95,7 @@ export default function FeaturesAndPricing() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-base md:text-lg font-bold mb-2"
+            className="text-base md:text-xl lg:text-2xl font-bold mb-2 md:mb-4"
           >
             Pricing
           </motion.h2>
@@ -108,33 +108,33 @@ export default function FeaturesAndPricing() {
               transition={{ duration: 0.3 }}
             >
               <div
-                className="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-3 backdrop-blur-lg flex flex-col"
+                className="rounded-lg md:rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-3 md:p-5 lg:p-6 backdrop-blur-lg flex flex-col"
                 style={{
                   background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1e221e 100%)`,
                   borderWidth: 2,
                   borderColor: COLORS.green,
                 }}
               >
-                <h3 className="text-sm font-bold mb-1">{p.name}</h3>
+                <h3 className="text-sm md:text-lg lg:text-xl font-bold mb-1 md:mb-3">{p.name}</h3>
 
-                <div className="flex items-baseline gap-1 mb-2">
-                  <p className="text-2xl font-bold" style={{ color: COLORS.green }}>
+                <div className="flex items-baseline gap-1 md:gap-2 mb-2 md:mb-4">
+                  <p className="text-2xl md:text-4xl lg:text-5xl font-bold" style={{ color: COLORS.green }}>
                     {p.price.split('/')[0]}
                   </p>
-                  <span className="text-xs" style={{ color: COLORS.textMuted }}>
+                  <span className="text-xs md:text-sm lg:text-base" style={{ color: COLORS.textMuted }}>
                     /{p.price.split('/')[1]}
                   </span>
                 </div>
 
-                <div className="space-y-1 mb-2">
+                <div className="space-y-1 md:space-y-2 mb-2 md:mb-4">
                   {['Automated reports', 'Expense tracking', 'Analytics', 'Acuity integration'].map(
                     (feature, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5">
+                      <div key={idx} className="flex items-center gap-1.5 md:gap-2">
                         <div
-                          className="w-1 h-1 rounded-full"
+                          className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full"
                           style={{ backgroundColor: COLORS.green }}
                         />
-                        <span className="text-[10px]" style={{ color: COLORS.textMuted }}>
+                        <span className="text-[10px] md:text-sm" style={{ color: COLORS.textMuted }}>
                           {feature}
                         </span>
                       </div>
@@ -143,7 +143,7 @@ export default function FeaturesAndPricing() {
                 </div>
 
                 <button
-                  className="w-full py-1.5 rounded-md font-semibold text-xs transition-all duration-300 hover:scale-105"
+                  className="w-full py-1.5 md:py-3 rounded-md md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-300 hover:scale-105"
                   onClick={() => router.push('/signup')}
                   style={{
                     background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,

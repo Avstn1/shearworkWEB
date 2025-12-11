@@ -107,14 +107,14 @@ export default function LoginPage() {
       </div>
 
       <section 
-        className="h-screen flex items-center overflow-hidden px-4 sm:px-5 lg:px-8 py-4 lg:py-0 relative"
+        className="h-screen flex items-center overflow-auto lg:overflow-hidden px-4 sm:px-5 lg:px-8 py-4 lg:py-0 relative"
         style={{
           background: `linear-gradient(135deg, #181818 0%, #1a1a1a 30%, #1c1e1c 70%, #181818 100%)`,
           color: COLORS.text,
         }}
         onWheel={(e) => {
-          if (e.deltaY < 0 && window.innerWidth >= 1024) {
-            // Scroll up = go back to landing page (only on desktop)
+          if (e.deltaY < 0) {
+            // Scroll up = go back to landing page
             window.location.href = '/'
           }
         }}
@@ -130,14 +130,14 @@ export default function LoginPage() {
         />
 
         <div className="max-w-7xl mx-auto w-full relative z-10">
-          <div className="flex flex-col lg:flex-row gap-2 lg:gap-12 items-start">
+          <div className="flex flex-col lg:flex-row gap-2 lg:gap-12 items-stretch">
           {/* Left Side: Login Form */}
-          <div className="flex-1 w-full lg:w-auto">
+          <div className="flex-1 w-full lg:w-auto lg:h-[430px]">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-              className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden"
+              className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
               style={{
                 background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
                 borderWidth: 1,
@@ -286,7 +286,7 @@ export default function LoginPage() {
           />
 
           {/* Right Side: Welcome Back & Sign Up */}
-          <div className="flex-1 w-full lg:w-auto flex flex-col justify-between gap-2 lg:gap-4">
+          <div className="flex-1 w-full lg:w-auto lg:h-[430px] flex flex-col justify-between gap-2 lg:gap-4">
             {/* Welcome Back Card */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
