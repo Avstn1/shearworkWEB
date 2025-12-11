@@ -70,7 +70,7 @@ export async function POST(request: Request) {
           phone_verified: true,
           updated_at: new Date().toISOString()
         })
-        .eq('id', user.id)
+        .eq('user_id', user.id)
 
       if (updateError) {
         console.error('Failed to update phone verification:', updateError)
