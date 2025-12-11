@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard';
-import SMSManager from '@/components/Dashboard/ClientManager/SMSManager'
+import SMSManager from '@/components/Dashboard/ClientManager/SMSManager';
+import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -76,36 +77,12 @@ export default function ClientManagerPage() {
             className="flex-1"
           >
             {activeView === 'sheets' && (
-              <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-12 text-center h-full flex items-center justify-center">
-                <div className="max-w-md mx-auto">
-                  <div className="w-16 h-16 bg-lime-300/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg
-                      className="w-8 h-8 text-lime-300"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                      />
-                    </svg>
-                  </div>
-                  <h2 className="text-xl font-semibold text-white mb-2">
-                    Client Sheets
-                  </h2>
-                  <p className="text-[#bdbdbd]">
-                    View and manage detailed client information, visit history, and preferences.
-                  </p>
-                </div>
+              <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 h-full">
+                <ClientSheets />
               </div>
             )}
 
-            {activeView === 'sms' && (
-              <SMSManager />
-            )}
+            {activeView === 'sms' && <SMSManager />}
           </motion.div>
         </AnimatePresence>
       </div>
