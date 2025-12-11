@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { authCodeCache } from '@/lib/redis'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import crypto from "node:crypto";
+
+// @ts-ignore
 import { SendMailClient } from "zeptomail";
 
 const url = "https://api.zeptomail.ca/v1.1/email";

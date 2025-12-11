@@ -50,6 +50,13 @@ export default function ProfileTab() {
     return formatted.replace(/\D/g, '')
   }
 
+  // Convert raw phone to E.164 format for Twilio
+  const getE164PhoneNumber = (formatted: string) => {
+    const raw = getRawPhoneNumber(formatted)
+    // Assuming North American numbers, prepend +1 if not present
+    return raw.startsWith('1') ? `+${raw}` : `+1${raw}`
+  }
+
   useEffect(() => {
     fetchProfile()
   }, [])
@@ -193,18 +200,30 @@ export default function ProfileTab() {
   const handleSendPhoneCode = async () => {
     setIsSendingPhoneCode(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Not authenticated')
+        return
+      }
 
+      const e164Phone = getE164PhoneNumber(editedPhone)
+
+      // Validate phone number has enough digits
       const rawPhone = getRawPhoneNumber(editedPhone)
+      if (rawPhone.length < 10) {
+        toast.error('Please enter a valid phone number')
+        return
+      }
 
-      // Generate and send OTP code
-      const response = await fetch('/api/otp/generate-phone-otp', {
+      // Generate and send SMS OTP code
+      const response = await fetch('/api/otp/generate-sms-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ 
-          phone: rawPhone,
-          user_id: user.id 
+          phoneNumber: e164Phone
         }),
       })
 
@@ -231,19 +250,24 @@ export default function ProfileTab() {
 
     setIsVerifyingPhone(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Not authenticated')
+        return
+      }
 
-      const rawPhone = getRawPhoneNumber(editedPhone)
+      const e164Phone = getE164PhoneNumber(editedPhone)
 
-      // Verify the OTP code
-      const response = await fetch('/api/otp/verify-otp', {
+      // Verify the SMS OTP code
+      const response = await fetch('/api/otp/verify-sms-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ 
           code: phoneVerificationCode,
-          user_id: user.id,
-          phone: rawPhone
+          phoneNumber: e164Phone
         }),
       })
 
@@ -251,19 +275,6 @@ export default function ProfileTab() {
 
       if (!response.ok) {
         throw new Error(data.error || 'Invalid verification code')
-      }
-
-      // Now save the phone to database as verified
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          phone: rawPhone,
-          phone_verified: true
-        })
-        .eq('user_id', user.id)
-
-      if (updateError) {
-        throw new Error('Failed to save phone number')
       }
 
       toast.success('Phone verified successfully!')
@@ -623,7 +634,7 @@ export default function ProfileTab() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleSendPhoneCode}
-                    disabled={isSendingPhoneCode}
+                    disabled={isSendingPhoneCode || getRawPhoneNumber(editedPhone).length < 10}
                     className="flex-1 px-3 py-2 text-sm bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-lg font-semibold hover:bg-lime-300/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingPhoneCode ? 'Sending...' : 'Send Code'}
