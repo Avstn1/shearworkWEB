@@ -46,8 +46,8 @@ export async function POST(request: Request) {
     // Generate 6-digit code
     const code = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
     
-    // Store code in Redis with 10 minute expiry
-    await authCodeCache.set(code, user?.id, 10)
+    // Store code in Redis with 10 minute expiry (600 seconds)
+    await authCodeCache.set(code, user?.id, 600)
 
     // Send SMS via Twilio
     try {
