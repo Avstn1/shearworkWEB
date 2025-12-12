@@ -20,6 +20,18 @@ export function MessageContent({
   const [isTesting, setIsTesting] = useState(false);
 
   const handleTestMessage = async () => {
+    // Check if message is saved
+    if (!msg.isSaved) {
+      toast.error('Please save the message as a draft before testing');
+      return;
+    }
+
+    // Check if message is in DRAFT status
+    if (msg.validationStatus !== 'DRAFT') {
+      toast.error('To test your message, save the message as draft first.');
+      return;
+    }
+
     if (!msg.message.trim()) {
       toast.error('Please enter a message first');
       return;
@@ -32,13 +44,9 @@ export function MessageContent({
 
     setIsTesting(true);
     try {
-      const response = await fetch('/api/client-messaging/qstash-sms-send?user_id=test', {
+      const response = await fetch(`/api/client-messaging/qstash-sms-send?messageId=${msg.id}&action=test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: msg.message,
-          title: msg.title 
-        }),
       });
 
       const data = await response.json();
@@ -47,7 +55,7 @@ export function MessageContent({
         throw new Error(data.error || 'Failed to send test message');
       }
 
-      toast.success('Test message sent successfully!');
+      toast.success(`Test message sent successfully to your phone!`);
     } catch (error: any) {
       console.error('Test message error:', error);
       toast.error(error.message || 'Failed to send test message');
@@ -63,6 +71,25 @@ export function MessageContent({
         <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-rose-300">{msg.validationReason}</p>
+        </div>
+      )}
+
+      {/* Test Requirements Info */}
+      {!msg.isSaved && (
+        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-300">
+            Save this message as a draft before you can test it
+          </p>
+        </div>
+      )}
+
+      {msg.isSaved && msg.validationStatus === 'ACCEPTED' && (
+        <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-sky-400 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-sky-300">
+            This message is active. To test changes, save as draft first.
+          </p>
         </div>
       )}
 
@@ -129,7 +156,12 @@ export function MessageContent({
           {/* Test Message Button */}
           <button
             onClick={handleTestMessage}
-            disabled={msg.message.length < 100 || isTesting}
+            disabled={
+              !msg.isSaved || 
+              msg.validationStatus !== 'DRAFT' || 
+              msg.message.length < 100 || 
+              isTesting
+            }
             className="flex items-center justify-center gap-2 px-6 py-2.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-xl font-semibold hover:bg-sky-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isTesting ? (

@@ -46,7 +46,7 @@ export default function ProfileTab() {
     setEditedPhone(formatted)
   }
 
-  const getRawPhoneNumber = (formatted: string) => {
+  const getRawPhoneNumber = (formatted: string) => {  
     return formatted.replace(/\D/g, '')
   }
 
