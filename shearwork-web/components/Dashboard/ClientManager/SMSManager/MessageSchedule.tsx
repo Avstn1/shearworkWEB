@@ -223,14 +223,12 @@ export function MessageSchedule({
               disabled={
                 isSaving ||
                 msg.message.length < 100 ||
-                !msg.isValidated ||
-                msg.validationStatus !== 'ACCEPTED'
+                !msg.isValidated  // ← REMOVED the validationStatus check
               }
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
                 isSaving ||
                 msg.message.length < 100 ||
-                !msg.isValidated ||
-                msg.validationStatus !== 'ACCEPTED'
+                !msg.isValidated
                   ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)]'
               }`}

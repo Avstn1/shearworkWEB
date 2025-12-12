@@ -86,6 +86,8 @@ export default function SMSManager() {
             dayOfWeek = dayMap[dayOfWeekCron];
           }
 
+          const isValidated = dbMsg.status !== 'DENIED';
+
           return {
             id: dbMsg.id,
             title: dbMsg.title,
@@ -98,8 +100,8 @@ export default function SMSManager() {
             period,
             enabled: true,
             isSaved: true,
-            isValidated: dbMsg.status === 'ACCEPTED',
-            validationStatus: dbMsg.status,
+            isValidated: isValidated, 
+            validationStatus: dbMsg.status, // DRAFT, ACCEPTED, or DENIED
             validationReason: undefined,
             isEditing: false,
           };
@@ -233,14 +235,6 @@ export default function SMSManager() {
       delete newOriginals[id];
       setOriginalMessages(newOriginals);
     }
-
-    const { data: clients } = await supabase
-    .from('acuity_clients')
-    .select('first_name, last_name, phone_normalized')
-    .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1')
-    .limit(10);
-
-    console.log(JSON.stringify(clients));
   };
 
   const handleSave = async (msgId: string, mode: 'draft' | 'activate') => {
