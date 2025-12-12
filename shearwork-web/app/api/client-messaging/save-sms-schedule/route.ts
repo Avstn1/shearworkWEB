@@ -132,26 +132,22 @@ export async function POST(request: Request) {
     // Process each message (upsert by id)
     const upsertPromises = messages.map(async (msg: any) => {
       try {
-        // Convert user's local time to UTC
-        const localDate = new Date();
-        localDate.setHours(msg.hour, msg.minute, 0, 0);
-        
-        const utcHour = localDate.getUTCHours();
-        const utcMinute = localDate.getUTCMinutes();
+        const utcHour = msg.utcHour;
+        const utcMinute = msg.utcMinute;
 
         // Generate cron expression in UTC and display text in local time
         const cron = getCronExpression(
           msg.frequency,
           msg.dayOfWeek,
           msg.dayOfMonth,
-          utcHour,  // Use UTC hour for cron
+          utcHour,  
           utcMinute
         )
         const cronText = getCronText(
           msg.frequency,
           msg.dayOfWeek,
           msg.dayOfMonth,
-          msg.hour,  // Use local hour for display text
+          msg.hour,  
           msg.minute
         )
 
