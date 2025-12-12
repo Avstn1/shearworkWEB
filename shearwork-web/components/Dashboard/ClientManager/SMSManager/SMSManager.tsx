@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage } from './types';
+import { supabase } from '@/utils/supabaseClient'
 
 // Main component
 export default function SMSManager() {
@@ -222,7 +223,7 @@ export default function SMSManager() {
     }
   };
 
-  const cancelEdit = (id: string) => {
+  const cancelEdit = async (id: string) => {
     const original = originalMessages[id];
     if (original) {
       // Restore original state
@@ -232,6 +233,14 @@ export default function SMSManager() {
       delete newOriginals[id];
       setOriginalMessages(newOriginals);
     }
+
+    const { data: clients } = await supabase
+    .from('acuity_clients')
+    .select('first_name, last_name, phone_normalized')
+    .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1')
+    .limit(10);
+
+    console.log(JSON.stringify(clients));
   };
 
   const handleSave = async (msgId: string, mode: 'draft' | 'activate') => {
@@ -251,7 +260,7 @@ export default function SMSManager() {
 
     // For activate mode, validation is required
     if (mode === 'activate') {
-      if (!msg.isValidated || msg.validationStatus !== 'ACCEPTED') {
+      if (!msg.isValidated) {
         toast.error('Message must be validated and approved before activating');
         return;
       }
@@ -271,7 +280,7 @@ export default function SMSManager() {
       const messageToSave = {
         ...msg,
         hour: hour24,
-        validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
+        validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED', // Only ACCEPTED when activating
       };
 
       console.log(JSON.stringify({ messages: [messageToSave] }))
@@ -295,7 +304,7 @@ export default function SMSManager() {
             ...m, 
             isSaved: true,
             isEditing: false,
-            validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
+            validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED', // Only ACCEPTED when activating
           };
         }));
         
