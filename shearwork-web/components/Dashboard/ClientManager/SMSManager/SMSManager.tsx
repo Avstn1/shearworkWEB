@@ -241,43 +241,41 @@ export default function SMSManager() {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
 
-    // Validate message content
     if (!msg.message.trim()) {
       toast.error('Please fill in message content');
       return;
     }
-
     if (msg.message.length < 100) {
       toast.error('Message must be at least 100 characters');
       return;
     }
-
-    // For activate mode, validation is required
-    if (mode === 'activate') {
-      if (!msg.isValidated) {
-        toast.error('Message must be validated and approved before activating');
-        return;
-      }
+    if (mode === 'activate' && !msg.isValidated) {
+      toast.error('Message must be validated and approved before activating');
+      return;
     }
 
     setIsSaving(true);
     setSavingMode(mode);
     try {
-      // Convert 12hr to 24hr format for backend
+      // Convert 12hr to 24hr
       let hour24 = msg.hour;
-      if (msg.period === 'PM' && msg.hour !== 12) {
-        hour24 = msg.hour + 12;
-      } else if (msg.period === 'AM' && msg.hour === 12) {
-        hour24 = 0;
-      }
+      if (msg.period === 'PM' && msg.hour !== 12) hour24 += 12;
+      else if (msg.period === 'AM' && msg.hour === 12) hour24 = 0;
+
+      // Convert local 24hr time to UTC
+      const local = new Date();
+      local.setHours(hour24, msg.minute, 0, 0);
+      const utcHour = local.getUTCHours();
+      const utcMinute = local.getUTCMinutes();
 
       const messageToSave = {
         ...msg,
-        hour: hour24,
-        validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED', // Only ACCEPTED when activating
+        hour: hour24, // local hour for display text
+        minute: msg.minute,
+        utcHour,
+        utcMinute,
+        validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
       };
-
-      console.log(JSON.stringify({ messages: [messageToSave] }))
 
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
         method: 'POST',
@@ -286,41 +284,27 @@ export default function SMSManager() {
       });
 
       if (!response.ok) throw new Error('Failed to save schedule');
-      
-      const data = await response.json();
-      
-      console.log('Save Response:', data);
 
+      const data = await response.json();
       if (data.success) {
-        setMessages(messages.map(m => {
-          if (m.id !== msgId) return m;
-          return { 
-            ...m, 
-            isSaved: true,
-            isEditing: false,
-            validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED', // Only ACCEPTED when activating
-          };
-        }));
-        
-        // Clear original message state
-        if (originalMessages[msgId]) {
-          const newOriginals = { ...originalMessages };
-          delete newOriginals[msgId];
-          setOriginalMessages(newOriginals);
-        }
-        
-        toast.success(mode === 'draft' ? 'Draft saved successfully!' : 'Schedule activated successfully!');
+        setMessages(messages.map(m =>
+          m.id === msgId
+            ? { ...m, isSaved: true, isEditing: false, validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED' }
+            : m
+        ));
+        toast.success(mode === 'draft' ? 'Draft saved!' : 'Schedule activated!');
       } else {
         toast.error('Failed to save');
       }
-    } catch (error) {
-      console.error('Save error:', error);
+    } catch (err: any) {
+      console.error(err);
       toast.error('Failed to save SMS schedule');
     } finally {
       setIsSaving(false);
       setSavingMode(null);
     }
   };
+
 
   // Show loading state
   if (isLoading) {
