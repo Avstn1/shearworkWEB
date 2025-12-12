@@ -293,7 +293,6 @@ export async function DELETE(request: Request) {
 
     // Delete QStash schedule if exists
     if (message?.qstash_schedule_id) {
-      console.log('🗑️  Deleting QStash schedule:', message.qstash_schedule_id)
       await deleteQStashSchedule(message.qstash_schedule_id)
     }
 

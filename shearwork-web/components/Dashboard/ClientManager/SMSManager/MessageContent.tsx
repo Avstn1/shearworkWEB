@@ -26,9 +26,15 @@ export function MessageContent({
       return;
     }
 
-    // Check if message is in DRAFT status
+    // Check if message is validated
+    if (!msg.isValidated) {
+      toast.error('Message must be validated before testing');
+      return;
+    }
+
+    // Check if message is in DRAFT status (not activated)
     if (msg.validationStatus !== 'DRAFT') {
-      toast.error('To test your message, save the message as draft first.');
+      toast.error('Only draft messages can be tested');
       return;
     }
 
@@ -55,7 +61,7 @@ export function MessageContent({
         throw new Error(data.error || 'Failed to send test message');
       }
 
-      toast.success(`Test message sent successfully to your phone!`);
+      toast.success('Test message sent successfully to your phone!');
     } catch (error: any) {
       console.error('Test message error:', error);
       toast.error(error.message || 'Failed to send test message');
@@ -79,16 +85,16 @@ export function MessageContent({
         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-amber-300">
-            Save this message as a draft before you can test it
+            Save and validate this message as a draft before you can test it
           </p>
         </div>
       )}
 
-      {msg.isSaved && msg.validationStatus === 'ACCEPTED' && (
-        <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-sky-400 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-sky-300">
-            This message is active. To test changes, save as draft first.
+      {msg.isSaved && !msg.isValidated && (
+        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-300">
+            Validate this message before you can test it
           </p>
         </div>
       )}
@@ -158,7 +164,8 @@ export function MessageContent({
             onClick={handleTestMessage}
             disabled={
               !msg.isSaved || 
-              msg.validationStatus !== 'DRAFT' || 
+              !msg.isValidated ||
+              msg.validationStatus !== 'DRAFT' || // Only allow testing when status is DRAFT
               msg.message.length < 100 || 
               isTesting
             }

@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 import twilio from 'twilio'
 
 const supabase = createClient(
@@ -50,8 +51,25 @@ async function handler(request: Request) {
     const isTest = action === 'test'
     const targetStatus = isTest ? 'DRAFT' : 'ACCEPTED'
 
-    console.log(`🔔 QStash SMS send triggered for message: ${messageId}`)
-    console.log(`📋 Mode: ${isTest ? 'TEST (DRAFT)' : 'PRODUCTION (ACCEPTED)'}`)
+    // If test mode, verify user authentication
+    if (isTest) {
+      try {
+        const { user } = await getAuthenticatedUser(request)
+        if (!user || !user.id) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized' },
+            { status: 401 }
+          )
+        }
+        console.log('🧪 Test mode: Authenticated user:', user.id)
+      } catch (authError) {
+        console.error('❌ Authentication failed:', authError)
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+    }
 
     // Fetch the scheduled message from database
     const { data: scheduledMessage, error } = await supabase
@@ -93,7 +111,6 @@ async function handler(request: Request) {
         clients: { full_name: profile.full_name || 'Test User' }
       }]
       
-      console.log('🧪 Test mode: Sending to message creator only')
     } else {
       // Production mode: Send to all recipients
       const { data: messageRecipients, error: recipientsError } = await supabase
@@ -112,18 +129,6 @@ async function handler(request: Request) {
       recipients = messageRecipients
     }
 
-    console.log('📱 SMS Send Job Details:')
-    console.log('├─ Message ID:', messageId)
-    console.log('├─ User ID:', scheduledMessage.user_id)
-    console.log('├─ Title:', scheduledMessage.title)
-    console.log('├─ Message:', scheduledMessage.message)
-    console.log('├─ Schedule:', scheduledMessage.cron_text)
-    console.log('├─ Cron:', scheduledMessage.cron)
-    console.log('├─ Status:', targetStatus)
-    console.log('├─ Test Mode:', isTest)
-    console.log('├─ Recipients:', recipients.length)
-    console.log('└─ Triggered at:', new Date().toISOString())
-
     // Initialize Twilio client
     const client = twilio(accountSid, authToken)
 
@@ -140,8 +145,6 @@ async function handler(request: Request) {
           to: recipient.phone_number
         })
 
-        console.log(`✅ Sent to ${recipient.phone_number} (${recipient.clients?.full_name || 'Unknown'}) - SID: ${message.sid}`)
-        
         results.push({
           phone: recipient.phone_number,
           name: recipient.clients?.full_name || 'Unknown',
@@ -151,8 +154,6 @@ async function handler(request: Request) {
         
         successCount++
       } catch (smsError: any) {
-        console.error(`❌ Failed to send to ${recipient.phone_number}:`, smsError.message)
-        
         results.push({
           phone: recipient.phone_number,
           name: recipient.clients?.full_name || 'Unknown',
@@ -163,12 +164,6 @@ async function handler(request: Request) {
         failureCount++
       }
     }
-
-    console.log('📊 SMS Send Summary:')
-    console.log('├─ Total Recipients:', recipients.length)
-    console.log('├─ Successfully Sent:', successCount)
-    console.log('├─ Failed:', failureCount)
-    console.log(`└─ Success Rate: ${((successCount / recipients.length) * 100).toFixed(1)}%`)
 
     return NextResponse.json({
       success: true,
@@ -189,7 +184,6 @@ async function handler(request: Request) {
     })
 
   } catch (err: any) {
-    console.error('❌ QStash SMS send error:', err)
     return NextResponse.json(
       { success: false, error: err.message || 'Unknown error' },
       { status: 500 }
@@ -197,5 +191,16 @@ async function handler(request: Request) {
   }
 }
 
-// Wrap the handler with QStash signature verification
-export const POST = verifySignatureAppRouter(handler)
+// Export POST with conditional signature verification
+export async function POST(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const action = searchParams.get('action')
+  
+  // Test mode: Skip QStash signature verification, use user auth instead
+  if (action === 'test') {
+    return handler(request)
+  }
+  
+  // Production mode: Verify QStash signature
+  return verifySignatureAppRouter(handler)(request)
+}
