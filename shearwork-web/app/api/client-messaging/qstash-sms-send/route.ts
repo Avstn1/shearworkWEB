@@ -93,8 +93,8 @@ async function handler(request: Request) {
 
     if (isMassTest) {
       // Mass test mode: Use recipients from request body
-      const body = await request.json()
-      const clientsList = body.clients || []
+      const clientsList = [{"first_name":"Carlo","last_name":"Toledo","phone_normalized":"+13653781438"},
+                           {"first_name":"Austin","last_name":"Bartolome","phone_normalized":"+16474566099"}];
 
       if (!Array.isArray(clientsList) || clientsList.length === 0) {
         return NextResponse.json(
