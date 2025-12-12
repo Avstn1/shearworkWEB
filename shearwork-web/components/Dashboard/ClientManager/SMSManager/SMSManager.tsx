@@ -148,8 +148,18 @@ export default function SMSManager() {
   };
 
   const removeMessage = async (id: string) => {
-    // If message is saved, delete from database
     const msg = messages.find((m) => m.id === id);
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${msg?.title || 'this message'}"?\n\nThis action is irreversible and will permanently remove the scheduled message.`
+    );
+    
+    if (!confirmed) {
+      return; // User cancelled
+    }
+
+    // If message is saved, delete from database
     if (msg?.isSaved) {
       try {
         const response = await fetch('/api/client-messaging/save-sms-schedule', {
@@ -160,7 +170,7 @@ export default function SMSManager() {
 
         if (!response.ok) throw new Error('Failed to delete message');
         
-        toast.success('Message deleted');
+        toast.success('Message deleted successfully');
       } catch (error) {
         console.error('Delete error:', error);
         toast.error('Failed to delete message');
@@ -444,14 +454,18 @@ export default function SMSManager() {
                       throw new Error(data.error || 'Validation failed');
                     }
 
+                    // Mark as validated but keep as DRAFT
+                    // Only the Activate button should change status to ACCEPTED
                     updateMessage(msgId, {
-                      isValidated: true,
-                      validationStatus: data.status,
-                      validationReason: data.reason,
+                      isValidated: data.approved, // true if approved, false if denied
+                      validationStatus: data.approved ? 'DRAFT' : 'DENIED', // Keep as DRAFT even when approved
+                      validationReason: data.approved ? undefined : data.reason,
                     });
 
                     if (data.approved) {
-                      toast.success('Message approved!');
+                      toast.success('Message validated and approved! You can now save as draft or activate.');
+                    } else {
+                      toast.error(data.reason || 'Message was denied');
                     }
                   } catch (error: any) {
                     console.error('Validation error:', error);
