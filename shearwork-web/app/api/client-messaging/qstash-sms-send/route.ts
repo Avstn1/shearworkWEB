@@ -143,8 +143,10 @@ async function handler(request: Request) {
         clients: { full_name: profile.full_name || 'Test User' }
       }]
       
-    } else {
-      // Production mode: Send to all recipients
+    } else { 
+      // CHANGE THIS ------------------------------
+      // CHANGE THIS ------------------------------
+      // CHANGE THIS ------------------------------
       const { data: messageRecipients, error: recipientsError } = await supabase
         .from('sms_message_recipients')
         .select('client_id, phone_number, clients(full_name)')
@@ -158,8 +160,11 @@ async function handler(request: Request) {
         )
       }
 
-      recipients = messageRecipients
+      recipients = messageRecipients 
     }
+    // CHANGE THIS ------------------------------
+    // CHANGE THIS ------------------------------
+    // CHANGE THIS ------------------------------
 
     // Initialize Twilio client
     const client = twilio(accountSid, authToken)
