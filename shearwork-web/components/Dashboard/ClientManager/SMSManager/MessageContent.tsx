@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Shield, AlertCircle, Send } from 'lucide-react';
+import { Shield, AlertCircle, Send, Sparkles } from 'lucide-react';
 import { SMSMessage } from './types';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -18,6 +18,35 @@ export function MessageContent({
   onValidate,
 }: MessageContentProps) {
   const [isTesting, setIsTesting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateTemplate = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/client-messaging/generate-sms-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: 'Generate a professional barbershop marketing SMS message with placeholders for customization'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate template');
+      }
+
+      // Update the message with generated template
+      onUpdate(msg.id, { message: data.message });
+      toast.success('Template generated successfully!');
+    } catch (error: any) {
+      console.error('Template generation error:', error);
+      toast.error(error.message || 'Failed to generate template');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleTestMessage = async () => {
     // Check if message is saved
@@ -110,7 +139,7 @@ export function MessageContent({
             onChange={(e) =>
               onUpdate(msg.id, { message: e.target.value })
             }
-            placeholder="Type your marketing message here..."
+            placeholder="Type your marketing message here or generate a template..."
             rows={8}
             disabled={!msg.isEditing}
             className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-20 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none ${
@@ -134,12 +163,36 @@ export function MessageContent({
 
       {/* Action Buttons */}
       {msg.isEditing && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
+          {/* Generate Template Button */}
+          <button
+            onClick={handleGenerateTemplate}
+            disabled={isGenerating}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl font-semibold hover:bg-purple-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGenerating ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Sparkles className="w-5 h-5" />
+                </motion.div>
+                <span className="hidden sm:inline">Generating...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                <span className="hidden sm:inline">Generate</span>
+              </>
+            )}
+          </button>
+
           {/* Validate Button */}
           <button
             onClick={() => onValidate(msg.id)}
             disabled={msg.message.length < 100 || validatingId === msg.id}
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {validatingId === msg.id ? (
               <>
@@ -149,12 +202,12 @@ export function MessageContent({
                 >
                   <Shield className="w-5 h-5" />
                 </motion.div>
-                Validating...
+                <span className="hidden sm:inline">Validating...</span>
               </>
             ) : (
               <>
                 <Shield className="w-5 h-5" />
-                Validate
+                <span className="hidden sm:inline">Validate</span>
               </>
             )}
           </button>
@@ -165,11 +218,11 @@ export function MessageContent({
             disabled={
               !msg.isSaved || 
               !msg.isValidated ||
-              msg.validationStatus !== 'DRAFT' || // Only allow testing when status is DRAFT
+              msg.validationStatus !== 'DRAFT' ||
               msg.message.length < 100 || 
               isTesting
             }
-            className="flex items-center justify-center gap-2 px-6 py-2.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-xl font-semibold hover:bg-sky-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-xl font-semibold hover:bg-sky-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isTesting ? (
               <>
@@ -179,12 +232,12 @@ export function MessageContent({
                 >
                   <Send className="w-5 h-5" />
                 </motion.div>
-                Sending...
+                <span className="hidden sm:inline">Sending...</span>
               </>
             ) : (
               <>
                 <Send className="w-5 h-5" />
-                Test
+                <span className="hidden sm:inline">Test</span>
               </>
             )}
           </button>

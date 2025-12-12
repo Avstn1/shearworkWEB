@@ -49,9 +49,10 @@ async function handler(request: Request) {
 
     // Determine status based on action parameter
     const isTest = action === 'test'
-    const targetStatus = isTest ? 'DRAFT' : 'ACCEPTED'
+    const isMassTest = action === 'mass_test'
+    const targetStatus = (isTest || isMassTest) ? 'DRAFT' : 'ACCEPTED'
 
-    // If test mode, verify user authentication
+    // Only test mode (single user) requires authentication
     if (isTest) {
       try {
         const { user } = await getAuthenticatedUser(request)
@@ -87,10 +88,41 @@ async function handler(request: Request) {
       )
     }
 
-    // Fetch recipients based on test mode
+    // Fetch recipients based on mode
     let recipients: any[] = []
 
-    if (isTest) {
+    if (isMassTest) {
+      // Mass test mode: Use recipients from request body
+      const body = await request.json()
+      const clientsList = body.clients || []
+
+      if (!Array.isArray(clientsList) || clientsList.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'No clients provided in request body' },
+          { status: 400 }
+        )
+      }
+
+      // Filter out clients without phone numbers and format for sending
+      recipients = clientsList
+        .filter((client: any) => client.phone_normalized)
+        .map((client: any) => ({
+          phone_number: client.phone_normalized,
+          clients: { 
+            full_name: `${client.first_name} ${client.last_name}`.trim() 
+          }
+        }))
+
+      if (recipients.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'No valid phone numbers found in clients list' },
+          { status: 400 }
+        )
+      }
+
+      console.log('🧪 Mass test mode: Sending to', recipients.length, 'clients')
+      
+    } else if (isTest) {
       // Test mode: Send only to the message creator
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -172,7 +204,8 @@ async function handler(request: Request) {
       userId: scheduledMessage.user_id,
       schedule: scheduledMessage.cron_text,
       status: targetStatus,
-      testMode: isTest,
+      testMode: isTest || isMassTest,
+      massTest: isMassTest,
       stats: {
         total: recipients.length,
         sent: successCount,
@@ -196,11 +229,9 @@ export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
   const action = searchParams.get('action')
   
-  // Test mode: Skip QStash signature verification, use user auth instead
   if (action === 'test') {
     return handler(request)
   }
   
-  // Production mode: Verify QStash signature
   return verifySignatureAppRouter(handler)(request)
 }
