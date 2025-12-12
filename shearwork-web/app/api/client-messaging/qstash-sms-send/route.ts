@@ -50,7 +50,7 @@ async function handler(request: Request) {
     // Determine status based on action parameter
     const isTest = action === 'test'
     const isMassTest = action === 'mass_test'
-    const targetStatus = (isTest || isMassTest) ? 'DRAFT' : 'ACCEPTED'
+    const targetStatus = isTest ? 'DRAFT' : 'ACCEPTED'
 
     // Only test mode (single user) requires authentication
     if (isTest) {
