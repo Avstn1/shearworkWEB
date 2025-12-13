@@ -12,6 +12,21 @@ interface CalendarItem {
   [k: string]: any
 }
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
 export default function AcuityTab() {
   const [profile, setProfile] = useState<any>(null)
   const [calendars, setCalendars] = useState<CalendarItem[]>([])
@@ -51,6 +66,7 @@ export default function AcuityTab() {
       setCalendars(data.calendars || [])
     } catch (err: any) {
       // ignore
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -102,30 +118,53 @@ export default function AcuityTab() {
     })
   }
 
-  // ----- Sync Clients -----
+  /**
+   * Sync clients & client stats for the whole year
+   * using the NEW /api/acuity/pull?month=...&year=... route.
+   * This is what fixes first_appt / last_appt in acuity_clients.
+   */
   const syncYear = async () => {
     if (!profile) return
+
     setSyncingClients(true)
     const toastId = toast.loading(`Syncing clients for ${year}...`)
-    try {
-      const res = await fetch(
-        `/api/acuity/pull-clients?year=${encodeURIComponent(year)}`
-      )
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Client sync failed')
 
-      toast.success(`Synced ${data.totalClients} clients for ${year}!`, {
+    try {
+      for (const month of MONTHS) {
+        const res = await fetch(
+          `/api/acuity/pull?month=${encodeURIComponent(
+            month
+          )}&year=${encodeURIComponent(year)}`,
+          { method: 'GET' }
+        )
+
+        const body = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+          throw new Error(
+            body.error || `Sync failed for ${month} ${year}`
+          )
+        }
+      }
+
+      toast.success(`Synced clients + visits for all of ${year}`, {
         id: toastId,
       })
     } catch (err: any) {
       console.error(err)
-      toast.error(`Failed to sync clients for ${year}`, { id: toastId })
+      toast.error(
+        `Failed to sync clients for ${year}: ${
+          err.message || 'Unknown error'
+        }`,
+        { id: toastId }
+      )
     } finally {
       setSyncingClients(false)
     }
   }
 
-  // ----- FIXED: Full Year Appointment Sync -----
+  // Existing "Sync All Appointments" button – still hits /pull-all
+  // for any extra revenue/weekly/monthly aggregates you’re using.
   const syncFullYear = async () => {
     if (!profile) return
 
@@ -149,13 +188,14 @@ export default function AcuityTab() {
         throw new Error(data?.error || 'Full Acuity sync failed')
       }
 
-      toast.success(
-        `Successfully synced all appointments for ${year}!`,
-        { id: toastId }
-      )
+      toast.success(`Successfully synced all appointments for ${year}!`, {
+        id: toastId,
+      })
     } catch (err: any) {
       console.error(err)
-      toast.error(`Failed to sync appointments for ${year}`, { id: toastId })
+      toast.error(`Failed to sync appointments for ${year}`, {
+        id: toastId,
+      })
     } finally {
       setSyncingAppointments(false)
     }
@@ -195,7 +235,10 @@ export default function AcuityTab() {
           />
 
           {!isEditingCalendar ? (
-            <button onClick={() => setIsEditingCalendar(true)} className={secondaryBtn}>
+            <button
+              onClick={() => setIsEditingCalendar(true)}
+              className={secondaryBtn}
+            >
               Change
             </button>
           ) : (
@@ -223,8 +266,8 @@ export default function AcuityTab() {
         {confirmingChange && (
           <div className="mt-3 bg-white/5 border border-[var(--accent-2)] rounded-lg p-3">
             <p className="text-sm">
-              Changing your calendar will sync all data for this calendar. Confirm if you want to
-              continue.
+              Changing your calendar will sync all data for this calendar.
+              Confirm if you want to continue.
             </p>
 
             <div className="mt-3 flex gap-3">
@@ -264,16 +307,24 @@ export default function AcuityTab() {
           <button
             onClick={syncYear}
             disabled={syncingClients}
-            className={syncingClients ? 'bg-white/20 text-white cursor-not-allowed' : primaryBtn}
+            className={
+              syncingClients
+                ? 'px-4 py-2 bg-white/20 text-white cursor-not-allowed rounded-xl'
+                : primaryBtn
+            }
           >
-            {syncingClients ? `Syncing clients ${year}...` : `Sync Clients`}
+            {syncingClients
+              ? `Syncing clients ${year}...`
+              : `Sync Clients`}
           </button>
 
           <button
             onClick={syncFullYear}
             disabled={syncingAppointments}
             className={
-              syncingAppointments ? 'bg-white/20 text-white cursor-not-allowed' : secondaryBtn
+              syncingAppointments
+                ? 'px-4 py-2 bg-white/20 text-white cursor-not-allowed rounded-xl'
+                : secondaryBtn
             }
           >
             {syncingAppointments
