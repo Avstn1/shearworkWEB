@@ -3,18 +3,13 @@
 'use server'
 
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 import { openai } from '@/lib/openaiClient'
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient()
-    
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, supabase } = await getAuthenticatedUser(req)
+    if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
     const body = await req.json()
     const { message } = body
@@ -43,6 +38,7 @@ export async function POST(req: Request) {
     }
 
     const promptTemplate = `Your goal is to verify whether this message is appropriate as a barber's marketing message. Make sure that it is not harmful or out of scope. This message will be sent as an SMS.
+                            Beware of placeholders in square brackets like [barber_name], [shop_name], etc. These error message should be: Please replace the placeholders.
 
 Your response format:
 - If ACCEPTED: Reply with "ACCEPTED | Your message has been verified and accepted"

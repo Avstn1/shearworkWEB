@@ -5,6 +5,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
+import { getAuthenticatedUser } from '@/utils/api-auth'
+import twilio from 'twilio'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,11 +19,16 @@ const supabase = createClient(
   }
 )
 
+const accountSid = process.env.TWILIO_ACCOUNT_SID
+const authToken = process.env.TWILIO_AUTH_TOKEN
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
+
 async function handler(request: Request) {
   try {
-    // Get message ID from query parameters
+    // Get parameters from query
     const { searchParams } = new URL(request.url)
     const messageId = searchParams.get('messageId')
+    const action = searchParams.get('action')
 
     if (!messageId) {
       console.error('❌ Missing messageId parameter')
@@ -31,35 +38,169 @@ async function handler(request: Request) {
       )
     }
 
-    console.log(`🔔 QStash SMS send triggered for message: ${messageId}`)
+    // Validate Twilio credentials
+    if (!accountSid || !authToken || !messagingServiceSid) {
+      console.error('❌ Missing Twilio credentials')
+      return NextResponse.json(
+        { success: false, error: 'SMS service not configured' },
+        { status: 500 }
+      )
+    }
+
+    // Determine status based on action parameter
+    const isTest = action === 'test'
+    const isMassTest = action === 'mass_test'
+    const targetStatus = isTest ? 'DRAFT' : 'ACCEPTED'
+
+    // Only test mode (single user) requires authentication
+    if (isTest) {
+      try {
+        const { user } = await getAuthenticatedUser(request)
+        if (!user || !user.id) {
+          return NextResponse.json(
+            { success: false, error: 'Unauthorized' },
+            { status: 401 }
+          )
+        }
+        console.log('🧪 Test mode: Authenticated user:', user.id)
+      } catch (authError) {
+        console.error('❌ Authentication failed:', authError)
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+    }
 
     // Fetch the scheduled message from database
     const { data: scheduledMessage, error } = await supabase
       .from('sms_scheduled_messages')
       .select('*')
       .eq('id', messageId)
-      .eq('status', 'ACCEPTED')
+      .eq('status', targetStatus)
       .single()
 
     if (error || !scheduledMessage) {
       console.error('❌ Failed to fetch scheduled message:', error)
       return NextResponse.json(
-        { success: false, error: 'Message not found' },
+        { success: false, error: `Message not found with status ${targetStatus}` },
         { status: 404 }
       )
     }
 
-    // Log the message details
-    console.log('📱 SMS Send Job Details:')
-    console.log('├─ Message ID:', messageId)
-    console.log('├─ User ID:', scheduledMessage.user_id)
-    console.log('├─ Title:', scheduledMessage.title)
-    console.log('├─ Message:', scheduledMessage.message)
-    console.log('├─ Schedule:', scheduledMessage.cron_text)
-    console.log('├─ Cron:', scheduledMessage.cron)
-    console.log('└─ Triggered at:', new Date().toISOString())
+    // Fetch recipients based on mode
+    let recipients: any[] = []
 
-    console.log('✅ SMS send job completed successfully')
+    if (isMassTest) {
+      // Mass test mode: Use recipients from request body
+      const clientsList = [{"first_name":"Carlo","last_name":"Toledo","phone_normalized":"+13653781438"},
+                           {"first_name":"Austin","last_name":"Bartolome","phone_normalized":"+16474566099"}];
+
+      if (!Array.isArray(clientsList) || clientsList.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'No clients provided in request body' },
+          { status: 400 }
+        )
+      }
+
+      // Filter out clients without phone numbers and format for sending
+      recipients = clientsList
+        .filter((client: any) => client.phone_normalized)
+        .map((client: any) => ({
+          phone_number: client.phone_normalized,
+          clients: { 
+            full_name: `${client.first_name} ${client.last_name}`.trim() 
+          }
+        }))
+
+      if (recipients.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'No valid phone numbers found in clients list' },
+          { status: 400 }
+        )
+      }
+
+      console.log('🧪 Mass test mode: Sending to', recipients.length, 'clients')
+      
+    } else if (isTest) {
+      // Test mode: Send only to the message creator
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('phone, full_name')
+        .eq('user_id', scheduledMessage.user_id)
+        .single()
+
+      if (profileError || !profile || !profile.phone) {
+        console.error('❌ Failed to fetch user profile or phone not set:', profileError)
+        return NextResponse.json(
+          { success: false, error: 'User phone number not found. Please set your phone number in profile settings.' },
+          { status: 404 }
+        )
+      }
+
+      recipients = [{
+        phone_number: profile.phone,
+        clients: { full_name: profile.full_name || 'Test User' }
+      }]
+      
+    } else { 
+      // CHANGE THIS ------------------------------
+      // CHANGE THIS ------------------------------
+      // CHANGE THIS ------------------------------
+      const { data: messageRecipients, error: recipientsError } = await supabase
+        .from('sms_message_recipients')
+        .select('client_id, phone_number, clients(full_name)')
+        .eq('message_id', messageId)
+
+      if (recipientsError || !messageRecipients || messageRecipients.length === 0) {
+        console.error('❌ Failed to fetch recipients:', recipientsError)
+        return NextResponse.json(
+          { success: false, error: 'No recipients found for this message' },
+          { status: 404 }
+        )
+      }
+
+      recipients = messageRecipients 
+    }
+    // CHANGE THIS ------------------------------
+    // CHANGE THIS ------------------------------
+    // CHANGE THIS ------------------------------
+
+    // Initialize Twilio client
+    const client = twilio(accountSid, authToken)
+
+    // Send SMS to each recipient
+    const results = []
+    let successCount = 0
+    let failureCount = 0
+
+    for (const recipient of recipients) {
+      try {
+        const message = await client.messages.create({
+          body: scheduledMessage.message,
+          messagingServiceSid: messagingServiceSid,
+          to: recipient.phone_number
+        })
+
+        results.push({
+          phone: recipient.phone_number,
+          name: recipient.clients?.full_name || 'Unknown',
+          status: 'sent',
+          sid: message.sid
+        })
+        
+        successCount++
+      } catch (smsError: any) {
+        results.push({
+          phone: recipient.phone_number,
+          name: recipient.clients?.full_name || 'Unknown',
+          status: 'failed',
+          error: smsError.message
+        })
+        
+        failureCount++
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -67,11 +208,20 @@ async function handler(request: Request) {
       messageId,
       userId: scheduledMessage.user_id,
       schedule: scheduledMessage.cron_text,
+      status: targetStatus,
+      testMode: isTest || isMassTest,
+      massTest: isMassTest,
+      stats: {
+        total: recipients.length,
+        sent: successCount,
+        failed: failureCount,
+        successRate: `${((successCount / recipients.length) * 100).toFixed(1)}%`
+      },
+      results,
       timestamp: new Date().toISOString(),
     })
 
   } catch (err: any) {
-    console.error('❌ QStash SMS send error:', err)
     return NextResponse.json(
       { success: false, error: err.message || 'Unknown error' },
       { status: 500 }
@@ -79,5 +229,14 @@ async function handler(request: Request) {
   }
 }
 
-// Wrap the handler with QStash signature verification
-export const POST = verifySignatureAppRouter(handler)
+// Export POST with conditional signature verification
+export async function POST(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const action = searchParams.get('action')
+  
+  if (action === 'test') {
+    return handler(request)
+  }
+  
+  return verifySignatureAppRouter(handler)(request)
+}

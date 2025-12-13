@@ -132,21 +132,30 @@ export async function POST(request: Request) {
     // Process each message (upsert by id)
     const upsertPromises = messages.map(async (msg: any) => {
       try {
-        // Generate cron expression and text
+        const utcHour = msg.utcHour;
+        const utcMinute = msg.utcMinute;
+
+        // Generate cron expression in UTC and display text in local time
         const cron = getCronExpression(
           msg.frequency,
           msg.dayOfWeek,
           msg.dayOfMonth,
-          msg.hour,
-          msg.minute
+          utcHour,  
+          utcMinute
         )
         const cronText = getCronText(
           msg.frequency,
           msg.dayOfWeek,
           msg.dayOfMonth,
-          msg.hour,
+          msg.hour,  
           msg.minute
         )
+
+        console.log('🕐 Time conversion:', {
+          localTime: `${msg.hour}:${msg.minute}`,
+          utcTime: `${utcHour}:${utcMinute}`,
+          cron
+        })
 
         // Check if message already exists in database by id
         const { data: existing } = await supabase
@@ -220,6 +229,7 @@ export async function POST(request: Request) {
           if (error) throw error
           return { success: true, data }
         }
+        
       } catch (error: any) {
         console.error('Failed to save message:', error)
         return { success: false, error: error.message }
@@ -293,7 +303,6 @@ export async function DELETE(request: Request) {
 
     // Delete QStash schedule if exists
     if (message?.qstash_schedule_id) {
-      console.log('🗑️  Deleting QStash schedule:', message.qstash_schedule_id)
       await deleteQStashSchedule(message.qstash_schedule_id)
     }
 
