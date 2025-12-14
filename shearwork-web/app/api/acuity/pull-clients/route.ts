@@ -1,7 +1,6 @@
 'use server'
 
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import crypto from 'crypto'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
@@ -17,28 +16,63 @@ function normalizePhone(phone?: string) {
 function buildClientKey(client: any, userId: string) {
   const email = (client.email || '').toLowerCase().trim()
   const phone = normalizePhone(client.phone)
-  const name = `${client.firstName || ''} ${client.lastName || ''}`.trim().toLowerCase()
+  const name = `${client.firstName || ''} ${client.lastName || ''}`
+    .trim()
+    .toLowerCase()
+
   const raw = email || phone || name
-  if (raw) return `${userId}_${raw}`  // prefix userId for global uniqueness
+  if (raw) return `${userId}_${raw}` // prefix userId for global uniqueness
 
   // fallback for missing identifiers → deterministic internal ID
-  const seed = `${userId}|${client.id || ''}|${client.datetime || ''}|${client.firstName || ''}|${client.lastName || ''}`
+  const seed = `${userId}|${client.id || ''}|${client.datetime || ''}|${
+    client.firstName || ''
+  }|${client.lastName || ''}`
   return crypto.createHash('sha256').update(seed).digest('hex')
+}
+
+function dateOnly(datetime: string | undefined | null): string | null {
+  if (!datetime) return null
+  return datetime.split('T')[0] ?? null
+}
+
+function compareDateStr(a: string | null, b: string | null): number {
+  if (!a && !b) return 0
+  if (!a) return -1
+  if (!b) return 1
+  if (a < b) return -1
+  if (a > b) return 1
+  return 0
 }
 
 export async function GET(request: Request) {
   const { user, supabase } = await getAuthenticatedUser(request)
-  // const supabase = await createSupabaseServerClient()
-  // const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+  if (!user || !supabase) {
+    return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+  }
 
   const { searchParams } = new URL(request.url)
-  const requestedYear = searchParams.get('year') ? parseInt(searchParams.get('year') as string, 10) : null
-  if (!requestedYear) return NextResponse.json({ error: 'Year parameter required' }, { status: 400 })
+  const requestedYear = searchParams.get('year')
+    ? parseInt(searchParams.get('year') as string, 10)
+    : null
+  if (!requestedYear) {
+    return NextResponse.json(
+      { error: 'Year parameter required' },
+      { status: 400 },
+    )
+  }
 
   // Fetch Acuity token
-  const { data: tokenRow } = await supabase.from('acuity_tokens').select('*').eq('user_id', user.id).single()
-  if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
+  const { data: tokenRow } = await supabase
+    .from('acuity_tokens')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+  if (!tokenRow) {
+    return NextResponse.json(
+      { error: 'No Acuity connection found' },
+      { status: 400 },
+    )
+  }
 
   let accessToken = tokenRow.access_token
   const nowSec = Math.floor(Date.now() / 1000)
@@ -46,70 +80,97 @@ export async function GET(request: Request) {
   // Refresh token if expired
   if (tokenRow.expires_at && tokenRow.expires_at < nowSec) {
     try {
-      const refreshRes = await fetch('https://acuityscheduling.com/oauth2/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: tokenRow.refresh_token,
-          client_id: process.env.ACUITY_CLIENT_ID!,
-          client_secret: process.env.ACUITY_CLIENT_SECRET!,
-        }),
-      })
+      const refreshRes = await fetch(
+        'https://acuityscheduling.com/oauth2/token',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: tokenRow.refresh_token,
+            client_id: process.env.ACUITY_CLIENT_ID!,
+            client_secret: process.env.ACUITY_CLIENT_SECRET!,
+          }),
+        },
+      )
       const newTokens = await refreshRes.json()
       if (refreshRes.ok) {
         accessToken = newTokens.access_token
-        await supabase.from('acuity_tokens').update({
-          access_token: newTokens.access_token,
-          refresh_token: newTokens.refresh_token ?? tokenRow.refresh_token,
-          expires_at: nowSec + newTokens.expires_in,
-          updated_at: new Date().toISOString(),
-        }).eq('user_id', user.id)
+        await supabase
+          .from('acuity_tokens')
+          .update({
+            access_token: newTokens.access_token,
+            refresh_token: newTokens.refresh_token ?? tokenRow.refresh_token,
+            expires_at: nowSec + newTokens.expires_in,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
       } else {
-        return NextResponse.json({ error: 'Token refresh failed', details: newTokens }, { status: 500 })
+        return NextResponse.json(
+          { error: 'Token refresh failed', details: newTokens },
+          { status: 500 },
+        )
       }
     } catch (err) {
-      return NextResponse.json({ error: 'Failed to refresh token', details: String(err) })
+      return NextResponse.json({
+        error: 'Failed to refresh token',
+        details: String(err),
+      })
     }
   }
 
   // ------------------- Get barber profile -------------------------
   const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("calendar")
-    .eq("user_id", user.id)
+    .from('profiles')
+    .select('calendar')
+    .eq('user_id', user.id)
     .single()
   if (profileError || !profile) {
     console.log(profileError)
-    return NextResponse.json({ error: "No profile found" }, { status: 400 })
+    return NextResponse.json({ error: 'No profile found' }, { status: 400 })
   }
 
-  const barberCalendarName = (profile.calendar || "").trim().toLowerCase()
+  const barberCalendarName = (profile.calendar || '').trim().toLowerCase()
 
   // ------------------- Fetch calendars ----------------------------
   let allCalendars: any[] = []
   try {
     const calRes = await fetch('https://acuityscheduling.com/api/v1/calendars', {
-      headers: { Authorization: `Bearer ${accessToken}` }
+      headers: { Authorization: `Bearer ${accessToken}` },
     })
-    if (!calRes.ok) throw new Error(`Calendars fetch failed: ${calRes.status}`)
+    if (!calRes.ok)
+      throw new Error(`Calendars fetch failed: ${calRes.status}`)
     allCalendars = await calRes.json()
   } catch (err) {
     console.error('Failed to fetch calendars:', err)
-    return NextResponse.json({ error: 'Failed to fetch calendars', details: String(err) }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch calendars', details: String(err) },
+      { status: 500 },
+    )
   }
 
-  const calendarMatch = allCalendars.find(c => c.name.trim().toLowerCase() === barberCalendarName)
+  const calendarMatch = allCalendars.find(
+    (c) => c.name.trim().toLowerCase() === barberCalendarName,
+  )
   if (!calendarMatch || !calendarMatch.id) {
-    return NextResponse.json({ error: `No matching calendar found for barber: ${barberCalendarName}` }, { status: 400 })
+    return NextResponse.json(
+      {
+        error: `No matching calendar found for barber: ${barberCalendarName}`,
+      },
+      { status: 400 },
+    )
   }
   const calendarID = calendarMatch.id
 
   // ------------------- Fetch appointments by month -----------------
   const allAppointments: any[] = []
   for (let month = 0; month < 12; month++) {
-    const start = new Date(requestedYear, month, 1).toISOString().split('T')[0]
-    const end = new Date(requestedYear, month + 1, 0).toISOString().split('T')[0] // last day of month
+    const start = new Date(requestedYear, month, 1)
+      .toISOString()
+      .split('T')[0]
+    const end = new Date(requestedYear, month + 1, 0)
+      .toISOString()
+      .split('T')[0] // last day of month
 
     const url = new URL('https://acuityscheduling.com/api/v1/appointments')
     url.searchParams.set('minDate', start)
@@ -118,11 +179,20 @@ export async function GET(request: Request) {
     url.searchParams.set('max', '2000')
 
     try {
-      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
-      if (!res.ok) throw new Error(`Failed fetching appointments for ${month + 1}: ${res.statusText}`)
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (!res.ok) {
+        throw new Error(
+          `Failed fetching appointments for ${month + 1}: ${res.statusText}`,
+        )
+      }
       const monthAppointments = await res.json()
-      if (Array.isArray(monthAppointments)) allAppointments.push(...monthAppointments)
-      console.log(`Month ${month + 1} processed: ${monthAppointments.length} appointments fetched`)
+      if (Array.isArray(monthAppointments))
+        allAppointments.push(...monthAppointments)
+      console.log(
+        `Month ${month + 1} processed: ${monthAppointments.length} appointments fetched`,
+      )
     } catch (err) {
       console.error(`Failed to fetch appointments for month ${month + 1}:`, err)
     }
@@ -130,75 +200,198 @@ export async function GET(request: Request) {
 
   // ------------------- Filter past appointments -------------------
   const now = new Date()
-  const appointments = allAppointments.filter(a => new Date(a.datetime) <= now)
+  const appointments = allAppointments.filter(
+    (a) => new Date(a.datetime) <= now,
+  )
 
   // ------------------- Aggregate clients ---------------------------
-  const clientMap: Record<string, any> = {}
+  type ClientAgg = {
+    client_id: string
+    first_name: string
+    last_name: string
+    email: string
+    phone: string
+    phone_normalized: string
+    notes: string
+    total_appointments: number
+    first_appt: string | null
+    last_appt: string | null
+    total_tips_all_time: number
+    user_id: string
+  }
+
+  const clientMap: Record<string, ClientAgg> = {}
+
   for (const appt of appointments) {
     const key = buildClientKey(appt, user.id)
     if (!key) continue
 
-    const apptDateISO = appt.datetime.split('T')[0] // 'yyyy-mm-dd'
+    const apptDateISO = dateOnly(appt.datetime)
+    if (!apptDateISO) continue
+
+    const email = (appt.email || '').toLowerCase().trim()
+    const phoneRaw = appt.phone || ''
+    const phoneNorm = normalizePhone(phoneRaw)
+    const firstName = appt.firstName || ''
+    const lastName = appt.lastName || ''
+    const notes = appt.notes || ''
+
+    // crude but safe tip extraction
+    let tip = 0
+    if (appt.tip != null) {
+      const n = Number(appt.tip)
+      if (!Number.isNaN(n)) tip = n
+    }
 
     if (!clientMap[key]) {
       clientMap[key] = {
         client_id: key,
-        first_name: appt.firstName || '',
-        last_name: appt.lastName || '',
-        email: (appt.email || '').toLowerCase().trim(),
-        phone: normalizePhone(appt.phone),
-        notes: appt.notes || '',
-        total_appointments: 0,
-        user_id: user.id,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone: phoneRaw,
+        phone_normalized: phoneNorm,
+        notes,
+        total_appointments: 1,
         first_appt: apptDateISO,
+        last_appt: apptDateISO,
+        total_tips_all_time: tip,
+        user_id: user.id,
       }
     } else {
-      // keep earliest date seen in this pull
-      if (apptDateISO < clientMap[key].first_appt) {
-        clientMap[key].first_appt = apptDateISO
+      const entry = clientMap[key]
+
+      // prefer non-empty values
+      if (!entry.first_name && firstName) entry.first_name = firstName
+      if (!entry.last_name && lastName) entry.last_name = lastName
+      if (!entry.email && email) entry.email = email
+      if (!entry.phone && phoneRaw) entry.phone = phoneRaw
+      if (!entry.phone_normalized && phoneNorm) entry.phone_normalized = phoneNorm
+      if (!entry.notes && notes) entry.notes = notes
+
+      entry.total_appointments += 1
+      entry.total_tips_all_time += tip
+
+      // earliest first_appt
+      if (
+        !entry.first_appt ||
+        compareDateStr(apptDateISO, entry.first_appt) < 0
+      ) {
+        entry.first_appt = apptDateISO
+      }
+
+      // latest last_appt
+      if (
+        !entry.last_appt ||
+        compareDateStr(apptDateISO, entry.last_appt) > 0
+      ) {
+        entry.last_appt = apptDateISO
       }
     }
-
-    clientMap[key].total_appointments++
   }
 
-  // --------- Load existing client records to preserve earliest first_appt ------
+  // --------- Load existing client records to preserve global min/max dates ------
   const { data: existingRows, error: existingErr } = await supabase
     .from('acuity_clients')
-    .select('client_id, first_appt')
+    .select(
+      'client_id, first_appt, last_appt, total_appointments, total_tips_all_time',
+    )
     .eq('user_id', user.id)
 
   if (existingErr) {
     console.error('Error loading existing acuity_clients:', existingErr)
   }
 
-  const existingMap: Record<string, string | null> = {}
-  existingRows?.forEach(row => {
-    existingMap[row.client_id] = row.first_appt
+  const existingMap: Record<
+    string,
+    {
+      first_appt: string | null
+      last_appt: string | null
+      total_appointments: number | null
+      total_tips_all_time: number | null
+    }
+  > = {}
+  existingRows?.forEach((row) => {
+    existingMap[row.client_id] = {
+      first_appt: row.first_appt,
+      last_appt: row.last_appt,
+      total_appointments: row.total_appointments,
+      total_tips_all_time: row.total_tips_all_time,
+    }
   })
 
-  // Merge: keep the earliest date between DB and this pull
+  // Merge: keep earliest first_appt, latest last_appt, and max totals
   for (const entry of Object.values(clientMap)) {
     const existing = existingMap[entry.client_id]
-    if (existing) {
-      // if DB has an earlier date, keep that
-      if (!entry.first_appt || existing < entry.first_appt) {
-        entry.first_appt = existing
+    if (!existing) continue
+
+    if (existing.first_appt) {
+      if (
+        !entry.first_appt ||
+        compareDateStr(existing.first_appt, entry.first_appt) < 0
+      ) {
+        // existing is earlier
+        entry.first_appt = existing.first_appt
       }
+    }
+
+    if (existing.last_appt) {
+      if (
+        !entry.last_appt ||
+        compareDateStr(existing.last_appt, entry.last_appt) > 0
+      ) {
+        // existing is later
+        entry.last_appt = existing.last_appt
+      }
+    }
+
+    if (existing.total_appointments != null) {
+      entry.total_appointments = Math.max(
+        entry.total_appointments,
+        existing.total_appointments,
+      )
+    }
+
+    if (existing.total_tips_all_time != null) {
+      entry.total_tips_all_time = Math.max(
+        entry.total_tips_all_time,
+        existing.total_tips_all_time,
+      )
     }
   }
 
   // ------------------- Upsert into Supabase ------------------------
-
   const upserts = Object.values(clientMap)
   console.log('Sample upsert row', upserts[0])
 
-  const { error: upsertErr } = await supabase.from('acuity_clients').upsert(upserts, {
-    onConflict: 'user_id,client_id'
-  })
+  const { error: upsertErr } = await supabase
+    .from('acuity_clients')
+    .upsert(
+      upserts.map((c) => ({
+        user_id: c.user_id,
+        client_id: c.client_id,
+        first_name: c.first_name || null,
+        last_name: c.last_name || null,
+        email: c.email || null,
+        phone: c.phone || null,
+        phone_normalized: c.phone_normalized || null,
+        notes: c.notes || null,
+        first_appt: c.first_appt,
+        last_appt: c.last_appt,
+        total_appointments: c.total_appointments,
+        total_tips_all_time: c.total_tips_all_time,
+        updated_at: new Date().toISOString(),
+      })),
+      {
+        onConflict: 'user_id,client_id',
+      },
+    )
 
   if (upsertErr) {
-    return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: upsertErr.message },
+      { status: 500 },
+    )
   }
 
   return NextResponse.json({
