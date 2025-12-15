@@ -85,7 +85,6 @@ export default function TimeframeMarketingFunnelsChart({
           setData([])
           return
         }
-        console.log(funnels)
         setData(funnels)
 
       } catch (err) {
@@ -98,8 +97,6 @@ export default function TimeframeMarketingFunnelsChart({
 
     fetchData()
   }, [barberId, year, timeframe])
-
-  console.log(data)
 
   if (loading) {
     return (
