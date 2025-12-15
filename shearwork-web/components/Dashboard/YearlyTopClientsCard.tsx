@@ -56,18 +56,85 @@ export default function YearlyTopClientsCard({
       try {
         setLoading(true)
 
-        // YEAR: use the existing yearly_top_clients view
+        // YEAR: Fetch all 4 quarters and combine them
         if (timeframe === 'year') {
-          const { data: topClients, error } = await supabase
-            .from('yearly_top_clients')
-            .select('client_id, client_name, total_paid, num_visits')
+          const { data: weeklyRowsYear, error: yearError } = await supabase
+          .from('weekly_top_clients')
+          .select('client_id, client_name, total_paid, num_visits, month, year')
+          .eq('user_id', userId)
+          .eq('year', year)
+          .in('month', MONTHS)
+
+          // Fetch Q1
+          const { data: q1Rows, error: q1Error } = await supabase
+            .from('weekly_top_clients')
+            .select('client_id, client_name, total_paid, num_visits, month, year')
             .eq('user_id', userId)
             .eq('year', year)
-            .order('total_paid', { ascending: false })
+            .in('month', QUARTER_MONTHS['Q1'])
 
-          if (error) throw error
+          if (q1Error) throw q1Error
 
-          const filtered = (topClients as TopClient[]).filter(
+          // Fetch Q2
+          const { data: q2Rows, error: q2Error } = await supabase
+            .from('weekly_top_clients')
+            .select('client_id, client_name, total_paid, num_visits, month, year')
+            .eq('user_id', userId)
+            .eq('year', year)
+            .in('month', QUARTER_MONTHS['Q2'])
+
+          if (q2Error) throw q2Error
+
+          // Fetch Q3
+          const { data: q3Rows, error: q3Error } = await supabase
+            .from('weekly_top_clients')
+            .select('client_id, client_name, total_paid, num_visits, month, year')
+            .eq('user_id', userId)
+            .eq('year', year)
+            .in('month', QUARTER_MONTHS['Q3'])
+
+          if (q3Error) throw q3Error
+
+          // Fetch Q4
+          const { data: q4Rows, error: q4Error } = await supabase
+            .from('weekly_top_clients')
+            .select('client_id, client_name, total_paid, num_visits, month, year')
+            .eq('user_id', userId)
+            .eq('year', year)
+            .in('month', QUARTER_MONTHS['Q4'])
+
+          if (q4Error) throw q4Error
+
+          // Combine all quarters
+          const allData = [
+            ...(q1Rows ?? []),
+            ...(q2Rows ?? []),
+            ...(q3Rows ?? []),
+            ...(q4Rows ?? [])
+          ]
+
+          // Aggregate by client_name
+          const map = new Map<string, TopClient>()
+
+          allData.forEach((row: any) => {
+            const key = row.client_name?.toLowerCase().trim() || 'unknown'
+            
+            const existing = map.get(key) || {
+              client_id: null,
+              client_name: row.client_name,
+              total_paid: 0,
+              num_visits: 0,
+            }
+
+            existing.total_paid = (existing.total_paid ?? 0) + (Number(row.total_paid) || 0)
+            existing.num_visits = (existing.num_visits ?? 0) + (Number(row.num_visits) || 0)
+
+            map.set(key, existing)
+          })
+
+          const aggregated = Array.from(map.values())
+
+          const filtered = aggregated.filter(
             (f) =>
               f.client_name &&
               f.client_name !== 'Unknown' &&
@@ -75,7 +142,10 @@ export default function YearlyTopClientsCard({
               !/walk/i.test(f.client_name)
           )
 
-          setClients(filtered || [])
+          // Sort by total_paid desc
+          filtered.sort((a, b) => (b.total_paid ?? 0) - (a.total_paid ?? 0))
+
+          setClients(filtered)
           return
         }
 
@@ -92,10 +162,10 @@ export default function YearlyTopClientsCard({
         if (error) throw error
 
         // aggregate totals per client
-        const map = new Map<string, TopClient>()
+        const map = new Map<string, TopClient>();
 
-        ;(weeklyRows ?? []).forEach((row: any) => {
-          const key = row.client_id || row.client_name || 'unknown'
+        (weeklyRows ?? []).forEach((row: any) => {
+          const key = row.client_name?.toLowerCase().trim() || 'unknown'
           const existing = map.get(key) || {
             client_id: row.client_id ?? null,
             client_name: row.client_name ?? null,
@@ -123,6 +193,8 @@ export default function YearlyTopClientsCard({
         filtered.sort(
           (a, b) => (b.total_paid ?? 0) - (a.total_paid ?? 0)
         )
+
+        console.log('Filtered Top Clients:', filtered)
 
         setClients(filtered)
       } catch (err) {

@@ -72,7 +72,6 @@ export default function AdminDashboardPage() {
 
   const [activeTab, setActiveTab] = useState<'revenue' | 'clients' | 'ticket' | 'breakdown' | 'funnels' | 'addReport'>('addReport')
 
-  // 🟢 CHANGED ONLY THIS FUNCTION:
   const handleGenerateReport = async (type: 
     'monthly/rental' | 'monthly/commission' |
     'weekly/rental' | 'weekly/commission' |
@@ -86,7 +85,6 @@ export default function AdminDashboardPage() {
     try {
       toast.loading('Generating report...')
 
-      // ✅ Added week_number param
       const url = `/api/openai/generate`
       const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       const response = await fetch(url, {
@@ -123,7 +121,7 @@ export default function AdminDashboardPage() {
 
   const handleYearlySync = async () => {
     try {
-      toast.loading('Syncing all Acuity data...')
+      toast.loading('Syncing all Acuity appointments...')
       
       const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       const response = await fetch('/api/analytics/acuity_sync_yearly', {
@@ -138,18 +136,44 @@ export default function AdminDashboardPage() {
       toast.dismiss()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to sync Acuity data.')
+        throw new Error(data.error || 'Failed to sync Acuity appointments.')
       }
 
-      toast.success('✅ Yearly sync completed successfully!')
+      toast.success('✅ Yearly appointments sync completed successfully!')
     } catch (err: any) {
       console.error(err)
       toast.dismiss()
-      toast.error(err.message || 'Failed to sync Acuity data.')
+      toast.error(err.message || 'Failed to sync Acuity appointments.')
     }
   }
-  // everything else is identical — no other logic changed
-  // ↓↓↓
+
+  const handleClientsSync = async () => {
+    try {
+      toast.loading('Syncing all Acuity clients...')
+      
+      const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const response = await fetch('/api/analytics/acuity_sync_clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      toast.dismiss()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to sync Acuity clients.')
+      }
+
+      toast.success('✅ Client sync completed successfully!')
+    } catch (err: any) {
+      console.error(err)
+      toast.dismiss()
+      toast.error(err.message || 'Failed to sync Acuity clients.')
+    }
+  }
 
   // --- User & Profile ---
   useEffect(() => {
@@ -313,9 +337,15 @@ export default function AdminDashboardPage() {
           </select>
           <button
             onClick={handleYearlySync}
-            className="h-10 px-4 rounded-md bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] text-sm whitespace-nowrap"
+            className="h-10 px-4 rounded-md bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] text-sm whitespace-nowrap"
           >
             Manual Yearly Acuity Sync (ALL)
+          </button>
+          <button
+            onClick={handleClientsSync}
+            className="h-10 px-4 rounded-md bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] text-sm whitespace-nowrap"
+          >
+            Manual Yearly Client Sync (ALL)
           </button>
         </div>
 
@@ -444,7 +474,7 @@ export default function AdminDashboardPage() {
                           setReportData(prev => ({
                             ...prev,
                             type: newType,
-                            week_number: newType === 'weekly_comparison' ? 2 : 1, // default week 2 for comparison
+                            week_number: newType === 'weekly_comparison' ? 2 : 1,
                           }))
                         }}
                         className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
@@ -467,7 +497,7 @@ export default function AdminDashboardPage() {
                         >
                           {(reportData.type === 'weekly'
                             ? [1, 2, 3, 4, 5]
-                            : [2, 3, 4, 5] // weekly_comparison starts at 2
+                            : [2, 3, 4, 5]
                           ).map(w => (
                             <option key={w} value={w}>
                               Week {w}
