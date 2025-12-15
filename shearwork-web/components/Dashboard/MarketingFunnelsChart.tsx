@@ -142,7 +142,9 @@ export default function MarketingFunnelsChart({
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
 
-            <XAxis type="number" stroke="#E8EDC7" />
+            <XAxis xAxisId="clients" type="number" stroke="#E8EDC7" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
+            <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#E8EDC7" hide />
+            
             <YAxis
               type="category"
               dataKey="source"
@@ -158,7 +160,7 @@ export default function MarketingFunnelsChart({
               }}
               formatter={(value: any, name: string) =>
                 name === 'Retention'
-                  ? [`${(Number(value) * 10).toFixed(2)}%`, name]
+                  ? [`${(Number(value)).toFixed(2)}%`, name]
                   : [value, name]
               }
               contentStyle={{
@@ -187,6 +189,7 @@ export default function MarketingFunnelsChart({
             />
 
             <Bar
+              xAxisId="clients"
               dataKey="new_clients"
               name="New Clients"
               fill={COLORS[1]}
@@ -226,7 +229,7 @@ export default function MarketingFunnelsChart({
                       <text
                         x={x + width + 5}
                         y={y + height / 2}
-                        fill="#7ba72bff"
+                        fill="#E8EDC7"
                         fontSize={labelFontSize}
                         fontWeight="bold"
                         textAnchor="start"
@@ -273,7 +276,7 @@ export default function MarketingFunnelsChart({
                       <text
                         x={x + width + 25}
                         y={y + height / 2}
-                        fill="#7ba72bff"
+                        fill="#E8EDC7"
                         fontSize={labelFontSize}
                         fontWeight="bold"
                         textAnchor="start"
@@ -288,35 +291,116 @@ export default function MarketingFunnelsChart({
             </Bar>
 
             <Bar
+              xAxisId="clients"
               dataKey="returning_clients"
               name="Returning Clients"
               fill={COLORS[3]}
               radius={[8, 8, 0, 0]}
               barSize={barSize}
             >
-              {/* Show returning_clients value on the right */}
+              {/* Show returning_clients value - conditionally positioned based on % of max */}
               <LabelList
                 dataKey="returning_clients"
-                position="right"
-                style={{ fill: '#E8EDC7', fontSize: labelFontSize, fontWeight: 'bold' }}
+                content={(props: any) => {
+                  const { x, y, width, height, value, index } = props;
+                  const filteredData = data.filter(d => d.new_clients > 0);
+                  const entry = filteredData[index];
+                  
+                  if (!entry) return null; // Safety check
+                  
+                  // Find max of both new and returning clients for proper scaling
+                  const maxClients = Math.max(
+                    ...filteredData.map(d => Math.max(d.new_clients, d.returning_clients))
+                  );
+                  const percentage = (entry.returning_clients / maxClients) * 100;
+                  
+                  if (percentage > 70) {
+                    // Position inside on the left
+                    return (
+                      <text
+                        x={x + 5}
+                        y={y + height / 2}
+                        fill="#2a3612ff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  } else {
+                    // Position outside on the right
+                    return (
+                      <text
+                        x={x + width + 5}
+                        y={y + height / 2}
+                        fill="#E8EDC7"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value}
+                      </text>
+                    );
+                  }
+                }}
               />
             </Bar>
 
             <Bar
-              dataKey={(entry) => entry.retention / 10}
+              xAxisId="retention"
+              dataKey="retention"
               name="Retention"
               fill={COLORS[2]}
               radius={[8, 8, 0, 0]}
               barSize={barSize}
             >
-              {/* Show retention % value on the right */}
+              {/* Show retention % value - conditionally positioned based on percentage */}
               <LabelList
                 dataKey="retention"
-                position="right"
-                formatter={(val: any) =>
-                  val !== undefined && val !== null ? `${Number(val).toFixed(2)}%` : ''
-                }
-                style={{ fill: '#E8EDC7', fontSize: 8, fontWeight: 'bold' }}
+                content={(props: any) => {
+                  const { x, y, width, height, value, index } = props;
+                  const filteredData = data.filter(d => d.new_clients > 0);
+                  const entry = filteredData[index];
+                  
+                  if (!entry) return null; // Safety check
+                  
+                  const percentage = entry.retention; // retention is already a percentage
+                  
+                  if (percentage > 70) {
+                    // Position inside on the left
+                    return (
+                      <text
+                        x={x + 5}
+                        y={y + height / 2}
+                        fill="#2a3612ff"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
+                      </text>
+                    );
+                  } else {
+                    // Position outside on the right
+                    return (
+                      <text
+                        x={x + width + 5}
+                        y={y + height / 2}
+                        fill="#E8EDC7"
+                        fontSize={labelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                        dominantBaseline="middle"
+                      >
+                        {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
+                      </text>
+                    );
+                  }
+                }}
               />
             </Bar>
           </BarChart>

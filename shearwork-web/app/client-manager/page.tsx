@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard';
 import SMSManager from '@/components/Dashboard/ClientManager/SMSManager/SMSManager'
 import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
+import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -78,11 +79,17 @@ export default function ClientManagerPage() {
           >
             {activeView === 'sheets' && (
               <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 h-full">
-                <ClientSheets />
+                <UnderConstructionWrapper>
+                  <ClientSheets />
+                </UnderConstructionWrapper>
               </div>
             )}
 
-            {activeView === 'sms' && <SMSManager />}
+            {activeView === 'sms' && (
+              <UnderConstructionWrapper>
+                <SMSManager />
+              </UnderConstructionWrapper>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
