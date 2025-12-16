@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
-import { selectClientsForSMS } from '@/lib/clientSmsSelectionAlgorithm'
+import { selectClientsForSMS } from '@/lib/clientSmsSelectionAlgorithm_DSLV'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

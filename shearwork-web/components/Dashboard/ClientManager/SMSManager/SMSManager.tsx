@@ -157,7 +157,12 @@ export default function SMSManager() {
       const data = await response.json();
       
       if (data.success) {
-        setPreviewClients(data.clients);
+        // Sort by days_since_last_visit ascending (closest to 21 days first)
+        const sortedClients = [...data.clients].sort((a, b) => 
+          a.days_since_last_visit - b.days_since_last_visit
+        );
+        
+        setPreviewClients(sortedClients);
         setPreviewStats(data.stats);
         setShowPreview(true);
       } else {
@@ -515,7 +520,7 @@ export default function SMSManager() {
                         <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
                           <span>{client.phone_normalized}</span>
                           <span>•</span>
-                          <span>{client.days_since_last_visit} days since visit</span>
+                          <span>{client.days_since_last_visit} days since last visit</span>
                           <span>•</span>
                           <span className="text-orange-400">{client.days_overdue} days overdue</span>
                         </div>
