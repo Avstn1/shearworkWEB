@@ -2,12 +2,36 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2 } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage } from './types';
 import { supabase } from '@/utils/supabaseClient'
+
+interface PreviewClient {
+  client_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone_normalized: string | null;
+  visiting_type: string | null;
+  avg_weekly_visits: number | null;
+  last_appt: string | null;
+  total_appointments: number;
+  days_since_last_visit: number;
+  days_overdue: number;
+  expected_visit_interval_days: number;
+  score: number;
+  date_last_sms_sent: string | null;
+}
+
+interface PreviewStats {
+  total_selected: number;
+  breakdown: Record<string, number>;
+  avg_score: string;
+  avg_days_overdue: string;
+  avg_days_since_last_visit: string;
+}
 
 // Main component
 export default function SMSManager() {
@@ -19,6 +43,12 @@ export default function SMSManager() {
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [tempTitle, setTempTitle] = useState<string>('');
   const [originalMessages, setOriginalMessages] = useState<Record<string, SMSMessage>>({});
+  
+  // Preview modal state
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewClients, setPreviewClients] = useState<PreviewClient[]>([]);
+  const [previewStats, setPreviewStats] = useState<PreviewStats | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Load existing messages on mount
   useEffect(() => {
@@ -101,7 +131,7 @@ export default function SMSManager() {
             enabled: true,
             isSaved: true,
             isValidated: isValidated, 
-            validationStatus: dbMsg.status, // DRAFT, ACCEPTED, or DENIED
+            validationStatus: dbMsg.status,
             validationReason: undefined,
             isEditing: false,
           };
@@ -117,13 +147,36 @@ export default function SMSManager() {
     }
   };
 
+  const loadClientPreview = async () => {
+    setLoadingPreview(true);
+    try {
+      const response = await fetch('/api/client-messaging/preview-recipients?limit=50');
+      
+      if (!response.ok) throw new Error('Failed to load preview');
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setPreviewClients(data.clients);
+        setPreviewStats(data.stats);
+        setShowPreview(true);
+      } else {
+        toast.error(data.message || 'Failed to load preview');
+      }
+    } catch (error) {
+      console.error('Failed to load preview:', error);
+      toast.error('Failed to load client preview');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   const addMessage = () => {
     if (messages.length >= 3) {
       toast.error('Maximum of 3 scheduled messages allowed');
       return;
     }
 
-    // Check if there's an unsaved draft
     const hasDraft = messages.some((msg) => !msg.isSaved);
     if (hasDraft) {
       toast.error('Please save or delete your current draft before creating a new message');
@@ -153,16 +206,14 @@ export default function SMSManager() {
   const removeMessage = async (id: string) => {
     const msg = messages.find((m) => m.id === id);
     
-    // Show confirmation dialog
     const confirmed = window.confirm(
       `Are you sure you want to delete "${msg?.title || 'this message'}"?\n\nThis action is irreversible and will permanently remove the scheduled message.`
     );
     
     if (!confirmed) {
-      return; // User cancelled
+      return;
     }
 
-    // If message is saved, delete from database
     if (msg?.isSaved) {
       try {
         const response = await fetch('/api/client-messaging/save-sms-schedule', {
@@ -190,14 +241,12 @@ export default function SMSManager() {
         if (msg.id === id) {
           const updated = { ...msg, ...updates };
           
-          // If message content changes, reset validation
           if (updates.message !== undefined && updates.message !== msg.message) {
             updated.isValidated = false;
             updated.validationStatus = 'DRAFT';
             updated.validationReason = undefined;
           }
           
-          // Clear irrelevant fields based on frequency
           if (updated.frequency === 'monthly') {
             delete updated.dayOfWeek;
             if (!updated.dayOfMonth) updated.dayOfMonth = 1;
@@ -216,7 +265,6 @@ export default function SMSManager() {
   const enableEditMode = (id: string) => {
     const msg = messages.find((m) => m.id === id);
     if (msg) {
-      // Store original state for cancel functionality
       setOriginalMessages({
         ...originalMessages,
         [id]: { ...msg },
@@ -228,9 +276,7 @@ export default function SMSManager() {
   const cancelEdit = async (id: string) => {
     const original = originalMessages[id];
     if (original) {
-      // Restore original state
       setMessages(messages.map((msg) => (msg.id === id ? { ...original, isEditing: false } : msg)));
-      // Clean up stored original
       const newOriginals = { ...originalMessages };
       delete newOriginals[id];
       setOriginalMessages(newOriginals);
@@ -257,12 +303,10 @@ export default function SMSManager() {
     setIsSaving(true);
     setSavingMode(mode);
     try {
-      // Convert 12hr to 24hr
       let hour24 = msg.hour;
       if (msg.period === 'PM' && msg.hour !== 12) hour24 += 12;
       else if (msg.period === 'AM' && msg.hour === 12) hour24 = 0;
 
-      // Convert local 24hr time to UTC
       const local = new Date();
       local.setHours(hour24, msg.minute, 0, 0);
       const utcHour = local.getUTCHours();
@@ -270,7 +314,7 @@ export default function SMSManager() {
 
       const messageToSave = {
         ...msg,
-        hour: hour24, // local hour for display text
+        hour: hour24,
         minute: msg.minute,
         utcHour,
         utcMinute,
@@ -305,8 +349,6 @@ export default function SMSManager() {
     }
   };
 
-
-  // Show loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -333,15 +375,30 @@ export default function SMSManager() {
             </p>
           </div>
           
-          {messages.length < 3 && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={addMessage}
-              className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+              onClick={loadClientPreview}
+              disabled={loadingPreview}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4" />
-              Create Message
+              {loadingPreview ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Users className="w-4 h-4" />
+              )}
+              Client Preview
             </button>
-          )}
+            
+            {messages.length < 3 && (
+              <button
+                onClick={addMessage}
+                className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+              >
+                <Plus className="w-4 h-4" />
+                Create Message
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Usage indicator */}
@@ -363,6 +420,118 @@ export default function SMSManager() {
           </span>
         </div>
       </div>
+
+      {/* Client Preview Modal */}
+      <AnimatePresence>
+        {showPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowPreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <div>
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-sky-300" />
+                    Clients Selected for Next Campaign
+                  </h3>
+                  {previewStats && (
+                    <p className="text-sm text-[#bdbdbd] mt-1">
+                      {previewStats.total_selected} clients will receive your next SMS
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-[#bdbdbd]" />
+                </button>
+              </div>
+
+              {/* Stats */}
+              {previewStats && (
+                <div className="p-6 border-b border-white/10 bg-white/5">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-[#bdbdbd] mb-1">Total Selected</p>
+                      <p className="text-2xl font-bold text-white">{previewStats.total_selected}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Score</p>
+                      <p className="text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Overdue</p>
+                      <p className="text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#bdbdbd] mb-1">Breakdown</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {Object.entries(previewStats.breakdown).map(([type, count]) => (
+                          <span key={type} className="text-xs px-2 py-1 bg-white/10 rounded-full text-white">
+                            {type}: {count}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Clients List */}
+              <div className="overflow-y-auto max-h-[50vh] p-6">
+                <div className="space-y-2">
+                  {previewClients.map((client) => (
+                    <div
+                      key={client.client_id}
+                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h4 className="font-semibold text-white">
+                            {client.first_name} {client.last_name}
+                          </h4>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
+                            client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
+                            client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
+                            client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {client.visiting_type}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
+                          <span>{client.phone_normalized}</span>
+                          <span>•</span>
+                          <span>{client.days_since_last_visit} days since visit</span>
+                          <span>•</span>
+                          <span className="text-orange-400">{client.days_overdue} days overdue</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
+                        <p className="text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Messages List */}
       <AnimatePresence mode="popLayout">
@@ -429,23 +598,13 @@ export default function SMSManager() {
 
                     const data = await response.json();
                     
-                    console.log('Validation Response:', {
-                      success: data.success,
-                      approved: data.approved,
-                      status: data.status,
-                      reason: data.reason,
-                      message: data.message,
-                    });
-
                     if (!response.ok) {
                       throw new Error(data.error || 'Validation failed');
                     }
 
-                    // Mark as validated but keep as DRAFT
-                    // Only the Activate button should change status to ACCEPTED
                     updateMessage(msgId, {
-                      isValidated: data.approved, // true if approved, false if denied
-                      validationStatus: data.approved ? 'DRAFT' : 'DENIED', // Keep as DRAFT even when approved
+                      isValidated: data.approved,
+                      validationStatus: data.approved ? 'DRAFT' : 'DENIED',
                       validationReason: data.approved ? undefined : data.reason,
                     });
 
