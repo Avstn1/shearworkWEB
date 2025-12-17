@@ -62,15 +62,15 @@ export async function selectClientsForSMS(
       // Apply time-based filters
       switch (client.visiting_type) {
         case 'consistent':
-          return daysSinceLastVisit < 60;
+          return daysSinceLastVisit < 45;
         case 'semi-consistent':
-          return daysSinceLastVisit < 90;
+          return daysSinceLastVisit < 75;
         case 'easy-going':
-          return daysSinceLastVisit < 120;
+          return daysSinceLastVisit < 105;
         case 'rare':
-          return daysSinceLastVisit < 210;
+          return daysSinceLastVisit < 195;
         default:
-          return daysSinceLastVisit < 90;
+          return daysSinceLastVisit < 75;
       }
     });
 

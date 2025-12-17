@@ -85,7 +85,7 @@ export default function HorizontalLandingPage() {
       <Navbar/>
       
       {/* Section indicators at bottom */}
-      <div className="fixed bottom-15 left-1/2 -translate-x-1/2 z-50 flex gap-3">
+      {/* <div className="fixed bottom-15 left-1/2 -translate-x-1/2 z-50 flex gap-3">
         {Array.from({ length: totalSections }).map((_, index) => (
           <button
             key={index}
@@ -98,7 +98,7 @@ export default function HorizontalLandingPage() {
             aria-label={`Go to section ${index + 1}`}
           />
         ))}
-      </div>
+      </div> */}
 
       {/* Horizontal scrolling container */}
       <div

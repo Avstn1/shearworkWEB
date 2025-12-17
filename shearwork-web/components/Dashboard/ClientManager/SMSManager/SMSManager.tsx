@@ -33,6 +33,12 @@ interface PreviewStats {
   avg_days_since_last_visit: string;
 }
 
+interface PhoneNumber {
+  first_name: string | null;
+  last_name: string | null;
+  phone_normalized: string | null;
+}
+
 // Main component
 export default function SMSManager() {
   const [messages, setMessages] = useState<SMSMessage[]>([]);
@@ -49,10 +55,12 @@ export default function SMSManager() {
   const [previewClients, setPreviewClients] = useState<PreviewClient[]>([]);
   const [previewStats, setPreviewStats] = useState<PreviewStats | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [phoneNumbersByType, setPhoneNumbersByType] = useState<Record<string, PhoneNumber[]>>({});
 
   // Load existing messages on mount
   useEffect(() => {
     loadMessages();
+    loadClientPreview(); // Load on mount
   }, []);
 
   const loadMessages = async () => {
@@ -122,6 +130,7 @@ export default function SMSManager() {
             id: dbMsg.id,
             title: dbMsg.title,
             message: dbMsg.message,
+            visitingType: dbMsg.visiting_type || 'consistent',
             frequency,
             dayOfWeek,
             dayOfMonth,
@@ -138,13 +147,53 @@ export default function SMSManager() {
         });
 
         setMessages(loadedMessages);
+      } else {
+        // Create default 4 messages if none exist
+        createDefaultMessages();
       }
     } catch (error) {
       console.error('Failed to load messages:', error);
       toast.error('Failed to load existing messages');
+      createDefaultMessages();
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const createDefaultMessages = () => {
+    const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare'> = [
+      'consistent',
+      'semi-consistent',
+      'easy-going',
+      'rare'
+    ];
+
+    const titles = {
+      'consistent': 'Consistent',
+      'semi-consistent': 'Semi-Consistent',
+      'easy-going': 'Easy-Going',
+      'rare': 'Rare'
+    };
+
+    const defaultMessages: SMSMessage[] = visitingTypes.map((type, index) => ({
+      id: uuidv4(),
+      title: titles[type],
+      message: '',
+      visitingType: type,
+      frequency: 'weekly',
+      dayOfWeek: 'monday',
+      hour: 10,
+      minute: 0,
+      period: 'AM',
+      enabled: true,
+      isSaved: false,
+      isValidated: false,
+      validationStatus: 'DRAFT',
+      validationReason: undefined,
+      isEditing: true,
+    }));
+
+    setMessages(defaultMessages);
   };
 
   const loadClientPreview = async () => {
@@ -157,14 +206,34 @@ export default function SMSManager() {
       const data = await response.json();
       
       if (data.success) {
-        // Sort by days_since_last_visit ascending (closest to 21 days first)
         const sortedClients = [...data.clients].sort((a, b) => 
           a.days_since_last_visit - b.days_since_last_visit
         );
         
         setPreviewClients(sortedClients);
         setPreviewStats(data.stats);
-        setShowPreview(true);
+
+        // Group phone numbers by visiting type
+        if (data.phoneNumbers) {
+          const grouped: Record<string, PhoneNumber[]> = {
+            consistent: [],
+            'semi-consistent': [],
+            'easy-going': [],
+            rare: []
+          };
+
+          data.clients.forEach((client: PreviewClient) => {
+            if (client.visiting_type && grouped[client.visiting_type]) {
+              grouped[client.visiting_type].push({
+                first_name: client.first_name,
+                last_name: client.last_name,
+                phone_normalized: client.phone_normalized
+              });
+            }
+          });
+
+          setPhoneNumbersByType(grouped);
+        }
       } else {
         toast.error(data.message || 'Failed to load preview');
       }
@@ -174,38 +243,6 @@ export default function SMSManager() {
     } finally {
       setLoadingPreview(false);
     }
-  };
-
-  const addMessage = () => {
-    if (messages.length >= 3) {
-      toast.error('Maximum of 3 scheduled messages allowed');
-      return;
-    }
-
-    const hasDraft = messages.some((msg) => !msg.isSaved);
-    if (hasDraft) {
-      toast.error('Please save or delete your current draft before creating a new message');
-      return;
-    }
-
-    const newMessage: SMSMessage = {
-      id: uuidv4(),
-      title: `Message ${messages.length + 1}`,
-      message: '',
-      frequency: 'weekly',
-      dayOfWeek: 'monday',
-      hour: 10,
-      minute: 0,
-      period: 'AM',
-      enabled: true,
-      isSaved: false,
-      isValidated: false,
-      validationStatus: 'DRAFT',
-      validationReason: undefined,
-      isEditing: true,
-    };
-
-    setMessages([...messages, newMessage]);
   };
 
   const removeMessage = async (id: string) => {
@@ -376,53 +413,25 @@ export default function SMSManager() {
               SMS Marketing Manager
             </h2>
             <p className="text-[#bdbdbd] text-sm">
-              Schedule up to 3 automated marketing messages to keep your clients engaged
+              Manage automated marketing messages for each client type
             </p>
           </div>
           
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadClientPreview}
-              disabled={loadingPreview}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingPreview ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Users className="w-4 h-4" />
-              )}
-              Client Preview
-            </button>
-            
-            {messages.length < 3 && (
-              <button
-                onClick={addMessage}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
-              >
-                <Plus className="w-4 h-4" />
-                Create Message
-              </button>
+          <button
+            onClick={() => {
+              loadClientPreview();
+              setShowPreview(true); // Add this line
+            }}
+            disabled={loadingPreview}
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingPreview ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Users className="w-4 h-4" />
             )}
-          </div>
-        </div>
-
-        {/* Usage indicator */}
-        <div className="flex items-center gap-2 text-xs text-[#bdbdbd]">
-          <div className="flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className={`w-16 h-1 rounded-full transition-all duration-300 ${
-                  i < messages.length
-                    ? 'bg-sky-300 shadow-[0_0_4px_rgba(125,211,252,0.6)]'
-                    : 'bg-white/10'
-                }`}
-              />
-            ))}
-          </div>
-          <span>
-            {messages.length} / 3 messages scheduled
-          </span>
+            Client Preview
+          </button>
         </div>
       </div>
 
@@ -467,7 +476,7 @@ export default function SMSManager() {
               {/* Stats */}
               {previewStats && (
                 <div className="p-6 border-b border-white/10 bg-white/5">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
                       <p className="text-xs text-[#bdbdbd] mb-1">Total Selected</p>
                       <p className="text-2xl font-bold text-white">{previewStats.total_selected}</p>
@@ -475,6 +484,10 @@ export default function SMSManager() {
                     <div>
                       <p className="text-xs text-[#bdbdbd] mb-1">Avg Score</p>
                       <p className="text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Since Visit</p>
+                      <p className="text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
                     </div>
                     <div>
                       <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Overdue</p>
@@ -539,113 +552,86 @@ export default function SMSManager() {
       </AnimatePresence>
 
       {/* Messages List */}
-      <AnimatePresence mode="popLayout">
-        {messages.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-12 text-center"
-          >
-            <div className="w-20 h-20 bg-sky-300/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageSquare className="w-10 h-10 text-sky-300" />
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              No messages scheduled
-            </h3>
-            <p className="text-[#bdbdbd] mb-6 max-w-md mx-auto">
-              Create your first automated SMS message to stay connected with your clients
-            </p>
-            <button
-              onClick={addMessage}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-sky-300 text-black rounded-full font-semibold hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
-            >
-              <Plus className="w-5 h-5" />
-              Create Message
-            </button>
-          </motion.div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((msg, index) => (
-              <MessageCard
-                key={msg.id}
-                message={msg}
-                index={index}
-                isSaving={isSaving}
-                savingMode={savingMode}
-                validatingId={validatingId}
-                editingTitleId={editingTitleId}
-                tempTitle={tempTitle}
-                onUpdate={updateMessage}
-                onRemove={removeMessage}
-                onEnableEdit={enableEditMode}
-                onCancelEdit={cancelEdit}
-                onSave={handleSave}
-                onValidate={async (msgId: string) => {
-                  const msg = messages.find((m) => m.id === msgId);
-                  if (!msg || !msg.message.trim()) {
-                    toast.error('Please enter a message first');
-                    return;
-                  }
+      <div className="space-y-4">
+        {messages.map((msg, index) => (
+          <MessageCard
+            key={msg.id}
+            message={msg}
+            index={index}
+            isSaving={isSaving}
+            savingMode={savingMode}
+            validatingId={validatingId}
+            editingTitleId={editingTitleId}
+            tempTitle={tempTitle}
+            phoneNumbers={phoneNumbersByType[msg.visitingType || 'consistent'] || []}
+            onUpdate={updateMessage}
+            onRemove={removeMessage}
+            onEnableEdit={enableEditMode}
+            onCancelEdit={cancelEdit}
+            onSave={handleSave}
+            onValidate={async (msgId: string) => {
+              const msg = messages.find((m) => m.id === msgId);
+              if (!msg || !msg.message.trim()) {
+                toast.error('Please enter a message first');
+                return;
+              }
 
-                  if (msg.message.length < 100) {
-                    toast.error('Message must be at least 100 characters');
-                    return;
-                  }
+              if (msg.message.length < 100) {
+                toast.error('Message must be at least 100 characters');
+                return;
+              }
 
-                  setValidatingId(msgId);
-                  try {
-                    const response = await fetch('/api/client-messaging/verify-message', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ message: msg.message }),
-                    });
+              setValidatingId(msgId);
+              try {
+                const response = await fetch('/api/client-messaging/verify-message', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: msg.message }),
+                });
 
-                    const data = await response.json();
-                    
-                    if (!response.ok) {
-                      throw new Error(data.error || 'Validation failed');
-                    }
+                const data = await response.json();
+                
+                if (!response.ok) {
+                  throw new Error(data.error || 'Validation failed');
+                }
 
-                    updateMessage(msgId, {
-                      isValidated: data.approved,
-                      validationStatus: data.approved ? 'DRAFT' : 'DENIED',
-                      validationReason: data.approved ? undefined : data.reason,
-                    });
+                updateMessage(msgId, {
+                  isValidated: data.approved,
+                  validationStatus: data.approved ? 'DRAFT' : 'DENIED',
+                  validationReason: data.approved ? undefined : data.reason,
+                });
 
-                    if (data.approved) {
-                      toast.success('Message validated and approved! You can now save as draft or activate.');
-                    } else {
-                      toast.error(data.reason || 'Message was denied');
-                    }
-                  } catch (error: any) {
-                    console.error('Validation error:', error);
-                    toast.error(error.message || 'Failed to validate message');
-                  } finally {
-                    setValidatingId(null);
-                  }
-                }}
-                onStartEditingTitle={(id: string, currentTitle: string) => {
-                  setEditingTitleId(id);
-                  setTempTitle(currentTitle);
-                }}
-                onSaveTitle={(id: string) => {
-                  if (tempTitle.trim()) {
-                    updateMessage(id, { title: tempTitle.trim() });
-                  }
-                  setEditingTitleId(null);
-                  setTempTitle('');
-                }}
-                onCancelEditTitle={() => {
-                  setEditingTitleId(null);
-                  setTempTitle('');
-                }}
-                onTempTitleChange={setTempTitle}
-              />
-            ))}
-          </div>
-        )}
-      </AnimatePresence>
+                if (data.approved) {
+                  toast.success('Message validated and approved! You can now save as draft or activate.');
+                } else {
+                  toast.error(data.reason || 'Message was denied');
+                }
+              } catch (error: any) {
+                console.error('Validation error:', error);
+                toast.error(error.message || 'Failed to validate message');
+              } finally {
+                setValidatingId(null);
+              }
+            }}
+            onStartEditingTitle={(id: string, currentTitle: string) => {
+              setEditingTitleId(id);
+              setTempTitle(currentTitle);
+            }}
+            onSaveTitle={(id: string) => {
+              if (tempTitle.trim()) {
+                updateMessage(id, { title: tempTitle.trim() });
+              }
+              setEditingTitleId(null);
+              setTempTitle('');
+            }}
+            onCancelEditTitle={() => {
+              setEditingTitleId(null);
+              setTempTitle('');
+            }}
+            onTempTitleChange={setTempTitle}
+          />
+        ))}
+      </div>
     </div>
   );
 }

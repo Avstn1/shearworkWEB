@@ -40,14 +40,25 @@ export async function GET(request: Request) {
         success: true,
         message: 'No eligible clients found',
         clients: [],
+        phoneNumbers: [],
         stats: {
           total_selected: 0,
           breakdown: {},
           avg_score: 0,
-          avg_days_overdue: 0
+          avg_days_overdue: 0,
+          avg_days_since_last_visit: 0
         }
       })
     }
+
+    // Extract phone numbers
+    const phoneNumbers = selectedClients.map(client => ({
+      first_name: client.first_name,
+      last_name: client.last_name,
+      phone_normalized: client.phone_normalized
+    }))
+
+    console.log(phoneNumbers)
 
     // Calculate statistics
     const breakdown = selectedClients.reduce((acc, client) => {
@@ -67,6 +78,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       clients: selectedClients,
+      phoneNumbers,
       stats,
       timestamp: new Date().toISOString()
     })

@@ -4,6 +4,12 @@ import { SMSMessage, DAYS_OF_WEEK } from './types';
 import { MessageContent } from './MessageContent';
 import { MessageSchedule } from './MessageSchedule';
 
+interface PhoneNumber {
+  first_name: string | null;
+  last_name: string | null;
+  phone_normalized: string | null;
+}
+
 interface MessageCardProps {
   message: SMSMessage;
   index: number;
@@ -12,6 +18,7 @@ interface MessageCardProps {
   validatingId: string | null;
   editingTitleId: string | null;
   tempTitle: string;
+  phoneNumbers: PhoneNumber[];
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onRemove: (id: string) => void;
   onEnableEdit: (id: string) => void;
@@ -32,6 +39,7 @@ export function MessageCard({
   validatingId,
   editingTitleId,
   tempTitle,
+  phoneNumbers,
   onUpdate,
   onRemove,
   onEnableEdit,
@@ -213,14 +221,10 @@ export function MessageCard({
             onValidate={onValidate}
           />
 
-          {/* RIGHT: Schedule Settings (50%) */}
+          {/* RIGHT: Recipients (50%) */}
           <MessageSchedule
             message={msg}
-            isSaving={isSaving}
-            savingMode={savingMode}
-            onUpdate={onUpdate}
-            onSave={onSave}
-            onCancelEdit={onCancelEdit}
+            phoneNumbers={phoneNumbers}
           />
         </div>
       </div>
@@ -229,8 +233,8 @@ export function MessageCard({
       <div className="bg-sky-300/10 border-t border-sky-300/20 px-6 py-3">
         <p className="text-xs text-sky-300 flex items-center gap-2">
           <Send className="w-3 h-3" />
-          <span className="font-medium">Next send:</span>
-          <span className="text-sky-200">{getSchedulePreview(msg)}</span>
+          <span className="font-medium">Will send to:</span>
+          <span className="text-sky-200">{phoneNumbers.length} {msg.visitingType} clients</span>
         </p>
       </div>
     </motion.div>

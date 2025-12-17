@@ -208,7 +208,7 @@ function scoreClient(client: AcuityClient, today: Date): ScoredClient {
     score,
     days_since_last_visit: daysSinceLastVisit,
     expected_visit_interval_days: expectedVisitIntervalDays,
-    days_overdue: daysOverdue, // Can now be negative!
+    days_overdue: daysOverdue, 
   };
 }
 
