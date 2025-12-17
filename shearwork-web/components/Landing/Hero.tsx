@@ -25,27 +25,194 @@ export default function Hero() {
         color: COLORS.text,
       }}
     >
-      {/* Enhanced gradient background effects */}
+      {/* Enhanced gradient background effects - darker for more contrast */}
       <div 
-        className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full blur-3xl opacity-10"
+        className="absolute top-1/4 left-1/4 w-[600px] h-[600px] rounded-full blur-3xl opacity-20"
         style={{ backgroundColor: COLORS.green }}
       />
       <div 
-        className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-10"
-        style={{ backgroundColor: COLORS.cyan }}
+        className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-15"
+        style={{ backgroundColor: '#2a2a2a' }}
       />
       <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-3xl opacity-5"
-        style={{ backgroundColor: COLORS.teal }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-3xl opacity-15"
+        style={{ backgroundColor: '#1a1a1a' }}
       />
 
-      {/* Content Container */}
-      <div className="relative z-10 max-w-7xl w-full">
+      {/* Background Screenshot Showcase - Faded */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-10">
+        <div className="relative w-full max-w-7xl mx-auto flex items-center justify-center gap-8">
+          {/* Left Side - Two Cards Stacked */}
+          <div className="flex flex-col gap-6 items-end">
+            {/* Recurring Expenses */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
+              }}
+            >
+              <div 
+                className="relative w-[200px] md:w-[240px] h-[200px] md:h-[240px] rounded-2xl overflow-hidden"
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
+                }}
+              >
+                <div 
+                  className="absolute inset-0 z-10 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
+                  }}
+                />
+                <Image
+                  src="/heroImages/recurringExpenses.png"
+                  alt="Recurring Expenses"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </motion.div>
+
+            {/* Service Breakdown */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
+              }}
+            >
+              <div 
+                className="relative w-[260px] md:w-[450px] h-[160px] md:h-[215px] rounded-2xl overflow-hidden"
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
+                }}
+              >
+                <div 
+                  className="absolute inset-0 z-10 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
+                  }}
+                />
+                <Image
+                  src="/heroImages/serviceBreakdown.png"
+                  alt="Service Breakdown"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Center - Mobile Dashboard */}
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              filter: 'drop-shadow(0 30px 80px rgba(115, 170, 87, 0.3))',
+            }}
+          >
+            <div 
+              className="relative rounded-[32px] p-2"
+              style={{
+                background: 'linear-gradient(145deg, #1a1a1a 0%, #0f0f0f 100%)',
+                border: `1px solid ${COLORS.border}`,
+              }}
+            >
+              <div 
+                className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-4 rounded-full z-30"
+                style={{ backgroundColor: '#000' }}
+              />
+              <div className="relative w-[220px] md:w-[260px] h-[440px] md:h-[520px] rounded-[28px] overflow-hidden bg-black">
+                <Image
+                  src="/heroImages/mobileDashboard.png"
+                  alt="Mobile Dashboard"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right Side - Two Cards Stacked */}
+          <div className="flex flex-col gap-6 items-start">
+            {/* Weekly Reports */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
+              }}
+            >
+              <div 
+                className="relative w-[200px] md:w-[240px] h-[200px] md:h-[240px] rounded-2xl overflow-hidden"
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
+                }}
+              >
+                <div 
+                  className="absolute inset-0 z-10 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
+                  }}
+                />
+                <Image
+                  src="/heroImages/weeklyReports.png"
+                  alt="Weekly Reports"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </motion.div>
+
+            {/* Monthly Expenses */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
+              }}
+            >
+              <div 
+                className="relative w-[260px] md:w-[450px] h-[160px] md:h-[210px] rounded-2xl overflow-hidden"
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
+                }}
+              >
+                <div 
+                  className="absolute inset-0 z-10 pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
+                  }}
+                />
+                <Image
+                  src="/heroImages/marketingFunnels.png"
+                  alt="Marketing Funnels"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Centered Content - In Front */}
+      <div className="relative z-10 max-w-3xl w-full">
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-5xl md:text-7xl font-bold mb-6 mt-5 leading-tight"
+          className="text-5xl md:text-6xl font-bold mb-6 leading-tight"
           style={{ color: COLORS.text }}
         >
           Understand your business.
@@ -57,7 +224,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
-          className="text-lg md:text-xl max-w-2xl mb-5 mx-auto"
+          className="text-lg md:text-xl mb-8 mx-auto"
           style={{ color: COLORS.textMuted }}
         >
           Analyze performance, track expenses, and retain clients effortlessly.
@@ -67,7 +234,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
-          className="flex gap-4 justify-center mb-5"
+          className="flex gap-4 justify-center"
         >
           <a
             href="/signup"
@@ -116,176 +283,6 @@ export default function Hero() {
             Learn More
           </button>
         </motion.div>
-
-        {/* Screenshot Showcase - Mobile-Centric Layout */}
-        <div className="relative w-full max-w-7xl mx-auto flex items-center justify-center gap-8">
-          {/* Left Side - Two Square Cards Stacked */}
-          <div className="flex flex-col gap-6 items-end">
-            {/* Recurring Expenses */}
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ x: -8, scale: 1.05, transition: { duration: 0.2 } }}
-              style={{
-                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
-              }}
-            >
-              <div 
-                className="relative w-[200px] md:w-[240px] h-[200px] md:h-[240px] rounded-2xl overflow-hidden"
-                style={{
-                  border: `1px solid ${COLORS.border}`,
-                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
-                }}
-              >
-                <div 
-                  className="absolute inset-0 z-10 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
-                  }}
-                />
-                <Image
-                  src="/heroImages/recurringExpenses.png"
-                  alt="Recurring Expenses"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </motion.div>
-
-            {/* Service Breakdown */}
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ x: -8, scale: 1.05, transition: { duration: 0.2 } }}
-              style={{
-                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
-              }}
-            >
-              <div 
-                className="relative w-[260px] md:w-[450px] h-[160px] md:h-[215px] rounded-2xl overflow-hidden"
-                style={{
-                  border: `1px solid ${COLORS.border}`,
-                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
-                }}
-              >
-                <div 
-                  className="absolute inset-0 z-10 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
-                  }}
-                />
-                <Image
-                  src="/heroImages/serviceBreakdown.png"
-                  alt="Service Breakdown"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Center - Mobile Dashboard */}
-          <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            whileHover={{ y: -8, scale: 1.05, transition: { duration: 0.2 } }}
-            style={{
-              filter: 'drop-shadow(0 30px 80px rgba(115, 170, 87, 0.3))',
-            }}
-          >
-            <div 
-              className="relative rounded-[32px] p-2"
-              style={{
-                background: 'linear-gradient(145deg, #1a1a1a 0%, #0f0f0f 100%)',
-                border: `1px solid ${COLORS.border}`,
-              }}
-            >
-              <div 
-                className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-4 rounded-full z-30"
-                style={{ backgroundColor: '#000' }}
-              />
-              <div className="relative w-[220px] md:w-[260px] h-[440px] md:h-[520px] rounded-[28px] overflow-hidden bg-black">
-                <Image
-                  src="/heroImages/mobileDashboard.png"
-                  alt="Mobile Dashboard"
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Right Side - Two Cards Stacked */}
-          <div className="flex flex-col gap-6 items-start">
-            {/* Weekly Reports */}
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ x: 8, scale: 1.05, transition: { duration: 0.2 } }}
-              style={{
-                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
-              }}
-            >
-              <div 
-                className="relative w-[200px] md:w-[240px] h-[200px] md:h-[240px] rounded-2xl overflow-hidden"
-                style={{
-                  border: `1px solid ${COLORS.border}`,
-                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
-                }}
-              >
-                <div 
-                  className="absolute inset-0 z-10 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
-                  }}
-                />
-                <Image
-                  src="/heroImages/weeklyReports.png"
-                  alt="Weekly Reports"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </motion.div>
-
-            {/* Monthly Expenses */}
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ x: 8, scale: 1.05, transition: { duration: 0.2 } }}
-              style={{
-                filter: 'drop-shadow(0 20px 50px rgba(0, 0, 0, 0.4))',
-              }}
-            >
-              <div 
-                className="relative w-[260px] md:w-[450px] h-[160px] md:h-[210px] rounded-2xl overflow-hidden"
-                style={{
-                  border: `1px solid ${COLORS.border}`,
-                  background: 'linear-gradient(145deg, #1e1e1e 0%, #181818 100%)',
-                }}
-              >
-                <div 
-                  className="absolute inset-0 z-10 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
-                  }}
-                />
-                <Image
-                  src="/heroImages/marketingFunnels.png"
-                  alt="Marketing Funnels"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </motion.div>
-          </div>
-        </div>
       </div>
     </section>
   )
