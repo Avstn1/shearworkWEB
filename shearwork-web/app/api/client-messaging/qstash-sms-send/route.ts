@@ -86,7 +86,7 @@ async function handler(request: Request) {
       const recipients = clientsList
       .filter((client: any) => client.phone_normalized)
       .map((client: any) => ({
-        phone_number: client.phone_normalized,
+        phone_normalized: client.phone_normalized,
         full_name: `${client.first_name} ${client.last_name}`.trim(),
       }))
 
@@ -116,7 +116,7 @@ async function handler(request: Request) {
       }
 
       recipients = [{
-        phone_number: profile.phone,
+        phone_normalized: profile.phone,
         full_name: profile.full_name || 'User'
       }]
       
@@ -148,11 +148,11 @@ async function handler(request: Request) {
         const message = await client.messages.create({
           body: `${scheduledMessage.message}\n\nReply STOP to unsubscribe.`,
           messagingServiceSid: messagingServiceSid,
-          to: recipient.phone_number
+          to: recipient.phone_normalized
         })
 
         results.push({
-          phone: recipient.phone_number,
+          phone: recipient.phone_normalized,
           name: recipient.full_name || 'Unknown',
           status: 'sent',
           sid: message.sid
@@ -161,7 +161,7 @@ async function handler(request: Request) {
         successCount++
       } catch (smsError: any) {
         results.push({
-          phone: recipient.phone_number,
+          phone: recipient.phone_normalized,
           name: recipient.full_name || 'Unknown',
           status: 'failed',
           error: smsError.message
