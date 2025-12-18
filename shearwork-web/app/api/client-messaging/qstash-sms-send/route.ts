@@ -144,27 +144,16 @@ async function handler(request: Request) {
       }]
       
     } else { 
-      // CHANGE THIS ------------------------------
-      // CHANGE THIS ------------------------------
-      // CHANGE THIS ------------------------------
-      const { data: messageRecipients, error: recipientsError } = await supabase
-        .from('sms_message_recipients')
-        .select('client_id, phone_number, clients(full_name)')
-        .eq('message_id', messageId)
+      const response = await fetch('/api/client-messaging/preview-recipients?limit=25');
 
-      if (recipientsError || !messageRecipients || messageRecipients.length === 0) {
-        console.error('❌ Failed to fetch recipients:', recipientsError)
-        return NextResponse.json(
-          { success: false, error: 'No recipients found for this message' },
-          { status: 404 }
-        )
+      if (!response.ok) {
+        throw new Error('Failed to load preview');
       }
 
-      recipients = messageRecipients 
+      const data = await response.json();
+
+      recipients = data.phoneNumbers 
     }
-    // CHANGE THIS ------------------------------
-    // CHANGE THIS ------------------------------
-    // CHANGE THIS ------------------------------
 
     // Initialize Twilio client
     const client = twilio(accountSid, authToken)
@@ -177,7 +166,7 @@ async function handler(request: Request) {
     for (const recipient of recipients) {
       try {
         const message = await client.messages.create({
-          body: scheduledMessage.message,
+          body: `${scheduledMessage.message}\n\nReply STOP to unsubscribe.`,
           messagingServiceSid: messagingServiceSid,
           to: recipient.phone_number
         })

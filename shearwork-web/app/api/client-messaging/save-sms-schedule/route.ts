@@ -6,18 +6,49 @@ import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { qstashClient } from '@/lib/qstashClient'
 
-function getCronExpression(
-  frequency: 'weekly' | 'biweekly' | 'monthly',
-  dayOfWeek?: string,
-  dayOfMonth?: number,
-  hour?: number,
-  minute?: number
-): string {
+// Helper function to generate multiple cron expressions for days 29-31
+function generateCronExpressions(
+    frequency: 'weekly' | 'biweekly' | 'monthly',
+    dayOfWeek?: string,
+    dayOfMonth?: number,
+    hour?: number,
+    minute?: number
+    ): string[] {
   const h = hour ?? 10;
   const m = minute ?? 0;
 
   if (frequency === 'monthly') {
-    return `${m} ${h} ${dayOfMonth} * *`;
+    const day = dayOfMonth ?? 1;
+
+    // For days 1-28, single cron works for all months
+    if (day <= 28) {
+      return [`${m} ${h} ${day} * *`];
+    }
+
+    // For day 29: runs on 29th in most months, 28th in Feb
+    if (day === 29) {
+      return [
+        `${m} ${h} 29 1,3,4,5,6,7,8,9,10,11,12 *`, // 29th in 31-day and 30-day months
+        `${m} ${h} 28 2 *`, // 28th in February
+      ];
+    }
+
+    // For day 30: runs on 30th in 30/31-day months, 28th in Feb
+    if (day === 30) {
+      return [
+        `${m} ${h} 30 1,3,4,5,6,7,8,9,10,11,12 *`, // 30th in 31-day and 30-day months
+        `${m} ${h} 28 2 *`, // 28th in February
+      ];
+    }
+
+    // For day 31: runs on 31st in 31-day months, 30th in 30-day months, 28th in Feb
+    if (day === 31) {
+      return [
+        `${m} ${h} 31 1,3,5,7,8,10,12 *`, // 31st in 31-day months (Jan, Mar, May, Jul, Aug, Oct, Dec)
+        `${m} ${h} 30 4,6,9,11 *`, // 30th in 30-day months (Apr, Jun, Sep, Nov)
+        `${m} ${h} 28 2 *`, // 28th in February
+      ];
+    }
   } else if (frequency === 'weekly' || frequency === 'biweekly') {
     const dayMap: Record<string, number> = {
       sunday: 0,
@@ -29,10 +60,10 @@ function getCronExpression(
       saturday: 6,
     };
     const cronDay = dayMap[dayOfWeek?.toLowerCase() ?? 'monday'];
-    return `${m} ${h} * * ${cronDay}`;
+    return [`${m} ${h} * * ${cronDay}`];
   }
 
-  throw new Error('Invalid frequency');
+  throw new Error('Invalid frequency or day of month');
 }
 
 function getCronText(
@@ -51,7 +82,10 @@ function getCronText(
   const timeStr = `${displayHour}:${m.toString().padStart(2, '0')} ${period}`;
 
   if (frequency === 'monthly') {
-    return `Every month on day ${dayOfMonth} at ${timeStr}`;
+    const day = dayOfMonth ?? 1;
+    const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+    const smartNote = day > 28 ? ' (or last day of month)' : '';
+    return `Every month on the ${day}${suffix}${smartNote} at ${timeStr}`;
   } else if (frequency === 'biweekly') {
     const day = dayOfWeek ? dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1) : 'Monday';
     return `Every other ${day} at ${timeStr}`;
@@ -67,7 +101,7 @@ async function createQStashSchedule(messageId: string, cron: string) {
     
     const schedule = await qstashClient.schedules.create({
       destination: `${appUrl}/api/client-messaging/qstash-sms-send?messageId=${messageId}`,
-      cron: cron,
+      cron: `CRON_TZ=America/Toronto ${cron}`,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -91,6 +125,14 @@ async function deleteQStashSchedule(scheduleId: string) {
     console.error('❌ Failed to delete QStash schedule:', error)
     throw error
   }
+}
+
+async function deleteMultipleQStashSchedules(scheduleIds: string[]) {
+  if (!scheduleIds || scheduleIds.length === 0) return
+
+  const deletePromises = scheduleIds.map(id => deleteQStashSchedule(id))
+  await Promise.all(deletePromises)
+  console.log(`✅ Deleted ${scheduleIds.length} QStash schedules`)
 }
 
 export async function POST(request: Request) {
@@ -135,14 +177,18 @@ export async function POST(request: Request) {
         const utcHour = msg.utcHour;
         const utcMinute = msg.utcMinute;
 
-        // Generate cron expression in UTC and display text in local time
-        const cron = getCronExpression(
+        // Generate multiple cron expressions (for days 29-31)
+        const cronExpressions = generateCronExpressions(
           msg.frequency,
           msg.dayOfWeek,
           msg.dayOfMonth,
-          utcHour,  
-          utcMinute
+          msg.hour, // utcHour  
+          msg.minute // utcMinute
         )
+        
+        // Use the first cron for display purposes (represents the primary schedule)
+        const primaryCron = cronExpressions[0]
+        
         const cronText = getCronText(
           msg.frequency,
           msg.dayOfWeek,
@@ -154,36 +200,42 @@ export async function POST(request: Request) {
         console.log('🕐 Time conversion:', {
           localTime: `${msg.hour}:${msg.minute}`,
           utcTime: `${utcHour}:${utcMinute}`,
-          cron
+          cronExpressions,
+          numberOfSchedules: cronExpressions.length
         })
 
         // Check if message already exists in database by id
         const { data: existing } = await supabase
           .from('sms_scheduled_messages')
-          .select('id, qstash_schedule_id, status, cron')
+          .select('id, qstash_schedule_ids, status, cron')
           .eq('id', msg.id)
           .eq('user_id', user.id)
           .single()
 
-        let qstashScheduleId = existing?.qstash_schedule_id || null
+        let qstashScheduleIds: string[] = []
         
         if (existing) {
-          // Always recreate schedule for existing ACCEPTED messages
+          // Always recreate schedules for existing ACCEPTED messages
           if (msg.validationStatus === 'ACCEPTED') {
-            console.log('🔄 Recreating QStash schedule for ACCEPTED message')
-            // Delete old schedule if exists
-            if (existing.qstash_schedule_id) {
-              await deleteQStashSchedule(existing.qstash_schedule_id)
+            console.log('🔄 Recreating QStash schedules for ACCEPTED message')
+            // Delete old schedules if exist
+            if (existing.qstash_schedule_ids && existing.qstash_schedule_ids.length > 0) {
+              await deleteMultipleQStashSchedules(existing.qstash_schedule_ids)
             }
-            // Create new schedule
-            qstashScheduleId = await createQStashSchedule(msg.id, cron)
+            
+            // Create new schedules for each cron expression
+            const schedulePromises = cronExpressions.map(cron => 
+              createQStashSchedule(msg.id, cron)
+            )
+            qstashScheduleIds = await Promise.all(schedulePromises)
+            console.log(`✅ Created ${qstashScheduleIds.length} QStash schedules:`, qstashScheduleIds)
           } else {
-            // Status is DRAFT - delete schedule if exists
-            console.log('🗑️  Message is DRAFT - removing QStash schedule')
-            if (existing.qstash_schedule_id) {
-              await deleteQStashSchedule(existing.qstash_schedule_id)
+            // Status is DRAFT - delete schedules if exist
+            console.log('🗑️  Message is DRAFT - removing QStash schedules')
+            if (existing.qstash_schedule_ids && existing.qstash_schedule_ids.length > 0) {
+              await deleteMultipleQStashSchedules(existing.qstash_schedule_ids)
             }
-            qstashScheduleId = null
+            qstashScheduleIds = []
           }
 
           // Update existing message
@@ -193,9 +245,10 @@ export async function POST(request: Request) {
               title: msg.title || 'Untitled Message',
               message: msg.message,
               status: msg.validationStatus,
-              cron: cron,
+              cron: primaryCron,
               cron_text: cronText,
-              qstash_schedule_id: qstashScheduleId,
+              qstash_schedule_ids: qstashScheduleIds,
+              visiting_type: msg.visitingType,
             })
             .eq('id', msg.id)
             .select()
@@ -204,10 +257,14 @@ export async function POST(request: Request) {
           if (error) throw error
           return { success: true, data }
         } else {
-          // New message - create QStash schedule if ACCEPTED
+          // New message - create QStash schedules if ACCEPTED
           if (msg.validationStatus === 'ACCEPTED') {
-            console.log('➕ New ACCEPTED message - creating QStash schedule')
-            qstashScheduleId = await createQStashSchedule(msg.id, cron)
+            console.log('➕ New ACCEPTED message - creating QStash schedules')
+            const schedulePromises = cronExpressions.map(cron => 
+              createQStashSchedule(msg.id, cron)
+            )
+            qstashScheduleIds = await Promise.all(schedulePromises)
+            console.log(`✅ Created ${qstashScheduleIds.length} QStash schedules:`, qstashScheduleIds)
           }
 
           // Insert new message with the frontend-generated id
@@ -219,9 +276,10 @@ export async function POST(request: Request) {
               title: msg.title || 'Untitled Message',
               message: msg.message,
               status: msg.validationStatus,
-              cron: cron,
+              cron: primaryCron,
               cron_text: cronText,
-              qstash_schedule_id: qstashScheduleId,
+              qstash_schedule_ids: qstashScheduleIds,
+              visiting_type: msg.visitingType
             })
             .select()
             .single()
@@ -293,17 +351,17 @@ export async function DELETE(request: Request) {
 
     const { id } = await request.json()
 
-    // Get message to check for QStash schedule
+    // Get message to check for QStash schedules
     const { data: message } = await supabase
       .from('sms_scheduled_messages')
-      .select('qstash_schedule_id')
+      .select('qstash_schedule_ids')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
-    // Delete QStash schedule if exists
-    if (message?.qstash_schedule_id) {
-      await deleteQStashSchedule(message.qstash_schedule_id)
+    // Delete QStash schedules if exist
+    if (message?.qstash_schedule_ids && message.qstash_schedule_ids.length > 0) {
+      await deleteMultipleQStashSchedules(message.qstash_schedule_ids)
     }
 
     // Delete from database

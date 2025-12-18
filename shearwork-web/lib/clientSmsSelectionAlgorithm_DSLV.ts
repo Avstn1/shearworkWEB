@@ -1,4 +1,4 @@
-// lib/sms/clientSmsSelectionAlgorithm.ts
+// lib/sms/clientSmsSelectionAlgorithm-days-since-visit.ts
 import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface AcuityClient {
@@ -24,7 +24,9 @@ export interface ScoredClient extends AcuityClient {
 /**
  * Selects up to 50 clients to send SMS marketing messages to.
  * Heavily prioritizes consistent and semi-consistent clients (90%).
- * Requires clients to be at least 14 days overdue based on their visit pattern.
+ * Uses DAYS SINCE LAST VISIT for scoring.
+ * PRIORITIZES clients closer to 21 days (inverse scoring - closer to 21 = higher score)
+ * Hard minimum: 14 days since last visit
  */
 export async function selectClientsForSMS(
   supabase: SupabaseClient,
@@ -35,7 +37,7 @@ export async function selectClientsForSMS(
   
   // Fetch eligible clients
   const { data: clients, error } = await supabase
-    .from('acuity_clients_testing')
+    .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -59,18 +61,18 @@ export async function selectClientsForSMS(
 
       const daysSinceLastVisit = client.days_since_last_visit;
 
-      // Apply time-based filters
+      // Apply time-based filters to avoid wasting SMS on clients who may have moved on
       switch (client.visiting_type) {
         case 'consistent':
-          return daysSinceLastVisit < 60;
+          return daysSinceLastVisit < 45;
         case 'semi-consistent':
-          return daysSinceLastVisit < 90;
+          return daysSinceLastVisit < 75;
         case 'easy-going':
-          return daysSinceLastVisit < 120;
+          return daysSinceLastVisit < 105;
         case 'rare':
-          return daysSinceLastVisit < 210;
+          return daysSinceLastVisit < 195;
         default:
-          return daysSinceLastVisit < 90;
+          return daysSinceLastVisit < 75;
       }
     });
 
@@ -137,6 +139,11 @@ function deduplicateByPhone(clients: ScoredClient[]): ScoredClient[] {
   return Array.from(phoneMap.values());
 }
 
+/**
+ * Scores a client based on DAYS SINCE LAST VISIT.
+ * INVERSE SCORING: The CLOSER to 21 days, the HIGHER the score (works both above AND below 21).
+ * Hard minimum: Must be at least 14 days since last visit.
+ */
 function scoreClient(client: AcuityClient, today: Date): ScoredClient {
   let score = 0;
   
@@ -157,46 +164,57 @@ function scoreClient(client: AcuityClient, today: Date): ScoredClient {
     return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
   }
 
+  // HARD MINIMUM: Must be at least 14 days since last visit
+  if (daysSinceLastVisit < 14) {
+    return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
+  }
+
   const expectedVisitIntervalDays = client.avg_weekly_visits 
     ? Math.round(7 / client.avg_weekly_visits)
     : 0;
 
-  const daysOverdue = Math.max(0, daysSinceLastVisit - expectedVisitIntervalDays);
+  // ALLOW NEGATIVE: Don't clamp to 0, allow negative values
+  const daysOverdue = daysSinceLastVisit - expectedVisitIntervalDays;
 
-  // UNIVERSAL REQUIREMENT: Must be at least 14 days overdue
-  if (daysOverdue < 14) {
-    return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
-  }
-
-  // CONSISTENT: Score if at least 14 days overdue
+  // INVERSE SCORING: Closer to 21 days = higher score (works for both above AND below 21)
+  const distanceFrom21 = Math.abs(daysSinceLastVisit - 21);
+  const proximityPenalty = Math.min(distanceFrom21 * 5, 200);
+  
+  // CONSISTENT: Higher base, penalized by distance from 21
   if (client.visiting_type === 'consistent') {
-    score = 195 + (daysOverdue * 3);
+    score = 400 - proximityPenalty;
   }
   
-  // SEMI-CONSISTENT: Score if at least 14 days overdue
+  // SEMI-CONSISTENT: Highest base, penalized by distance from 21
   else if (client.visiting_type === 'semi-consistent') {
-    score = 200 + (daysOverdue * 3);
+    score = 420 - proximityPenalty;
   }
   
-  // EASY-GOING: Score if at least 14 days overdue
+  // EASY-GOING: Lower base, penalized by distance from 21
   else if (client.visiting_type === 'easy-going') {
-    score = 25 + Math.min(daysOverdue, 10);
+    score = 200 - proximityPenalty;
   }
   
-  // RARE: Score if at least 14 days overdue
+  // RARE: MUCH LOWER base, penalized by distance from 21
   else if (client.visiting_type === 'rare') {
-    score = 10;
+    score = 50 - proximityPenalty;
   }
+
+  // Ensure score doesn't go negative
+  score = Math.max(score, 0);
 
   return {
     ...client,
     score,
     days_since_last_visit: daysSinceLastVisit,
     expected_visit_interval_days: expectedVisitIntervalDays,
-    days_overdue: daysOverdue,
+    days_overdue: daysOverdue, 
   };
 }
 
+/**
+ * Updates the date_last_sms_sent for selected clients after sending messages.
+ */
 export async function markClientsAsMessaged(
   supabase: SupabaseClient,
   clientIds: string[]
