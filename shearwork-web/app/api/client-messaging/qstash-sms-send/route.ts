@@ -145,6 +145,7 @@ async function handler(request: Request) {
 
     for (const recipient of recipients) {
       try {
+        console.log(`📲 Sending SMS to ${recipient.full_name} at ${recipient.phone_normalized}`)
         const message = await client.messages.create({
           body: `${scheduledMessage.message}\n\nReply STOP to unsubscribe.`,
           messagingServiceSid: messagingServiceSid,
