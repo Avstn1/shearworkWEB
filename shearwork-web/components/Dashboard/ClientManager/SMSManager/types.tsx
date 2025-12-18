@@ -46,3 +46,8 @@ export const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, i) => ({
   value: i + 1,
   label: (i + 1).toString(),
 }));
+
+export type PhoneNumber = {
+  phone_normalized: string;
+  full_name: string;
+};

@@ -6,14 +6,14 @@ import { Plus, MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle } 
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
-import { SMSMessage } from './types';
+import { SMSMessage, PhoneNumber } from './types';
 import { supabase } from '@/utils/supabaseClient'
 
 interface PreviewClient {
   client_id: string;
   first_name: string | null;
   last_name: string | null;
-  phone_normalized: string | null;
+  phone_normalized: string;
   visiting_type: string | null;
   avg_weekly_visits: number | null;
   last_appt: string | null;
@@ -31,12 +31,6 @@ interface PreviewStats {
   avg_score: string;
   avg_days_overdue: string;
   avg_days_since_last_visit: string;
-}
-
-interface PhoneNumber {
-  first_name: string | null;
-  last_name: string | null;
-  phone_normalized: string | null;
 }
 
 // Main component
@@ -292,7 +286,9 @@ export default function SMSManager() {
   const loadClientPreview = async () => {
     setLoadingPreview(true);
     try {
-      const response = await fetch('/api/client-messaging/preview-recipients?limit=25');
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || '';
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=25&userId=${userId}`);
       
       if (!response.ok) {
         throw new Error('Failed to load preview');
@@ -320,8 +316,7 @@ export default function SMSManager() {
           data.clients.forEach((client: PreviewClient) => {
             if (client.visiting_type && grouped[client.visiting_type]) {
               grouped[client.visiting_type].push({
-                first_name: client.first_name,
-                last_name: client.last_name,
+                full_name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
                 phone_normalized: client.phone_normalized
               });
             }
@@ -459,7 +454,7 @@ export default function SMSManager() {
 
     // Check if schedule is set
     if (!hasSchedule) {
-      toast.error('Please set a bi-weekly schedule first');
+      toast.error('Please set a monthly schedule first');
       setShowScheduleModal(true);
       return;
     }
@@ -513,7 +508,13 @@ export default function SMSManager() {
       if (data.success) {
         setMessages(messages.map(m =>
           m.id === msgId
-            ? { ...m, isSaved: true, isEditing: false, validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED' }
+            ? { 
+                ...m, 
+                isSaved: true, 
+                isEditing: false, 
+                validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
+                enabled: mode === 'activate' // ← ADD THIS LINE
+              }
             : m
         ));
         toast.success(mode === 'draft' ? 'Draft saved!' : 'Schedule activated!');
@@ -836,7 +837,7 @@ export default function SMSManager() {
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
                       {/* {[0, 15, 30, 45].map((minute) => ( */}
-                      {Array.from({ length: 60 }, (_, i) => i + 1).map((minute) => (
+                      {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
                         <option key={minute} value={minute} className="bg-[#1a1a1a]">
                           {minute.toString().padStart(2, '0')}
                         </option>

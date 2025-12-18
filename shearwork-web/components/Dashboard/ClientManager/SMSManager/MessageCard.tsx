@@ -1,14 +1,8 @@
 import { motion } from 'framer-motion';
 import { Trash2, Clock, CheckCircle, XCircle, Edit, Pencil, Check, X, Send, Loader2 } from 'lucide-react';
-import { SMSMessage, DAYS_OF_WEEK } from './types';
+import { SMSMessage, DAYS_OF_WEEK, PhoneNumber } from './types';
 import { MessageContent } from './MessageContent';
 import { MessageClientList } from './MessageClientList';
-
-interface PhoneNumber {
-  first_name: string | null;
-  last_name: string | null;
-  phone_normalized: string | null;
-}
 
 interface MessageCardProps {
   message: SMSMessage;

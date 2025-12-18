@@ -103,15 +103,12 @@ async function handler(request: Request) {
         )
       }
 
-      // Filter out clients without phone numbers and format for sending
-      recipients = clientsList
-        .filter((client: any) => client.phone_normalized)
-        .map((client: any) => ({
-          phone_number: client.phone_normalized,
-          clients: { 
-            full_name: `${client.first_name} ${client.last_name}`.trim() 
-          }
-        }))
+      const recipients = clientsList
+      .filter((client: any) => client.phone_normalized)
+      .map((client: any) => ({
+        phone_number: client.phone_normalized,
+        full_name: `${client.first_name} ${client.last_name}`.trim(),
+      }))
 
       if (recipients.length === 0) {
         return NextResponse.json(
@@ -140,11 +137,11 @@ async function handler(request: Request) {
 
       recipients = [{
         phone_number: profile.phone,
-        clients: { full_name: profile.full_name || 'Test User' }
+        full_name: profile.full_name || 'User'
       }]
       
     } else { 
-      const response = await fetch('/api/client-messaging/preview-recipients?limit=25');
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=25&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}`);
 
       if (!response.ok) {
         throw new Error('Failed to load preview');
@@ -173,7 +170,7 @@ async function handler(request: Request) {
 
         results.push({
           phone: recipient.phone_number,
-          name: recipient.clients?.full_name || 'Unknown',
+          name: recipient.full_name || 'Unknown',
           status: 'sent',
           sid: message.sid
         })
@@ -182,7 +179,7 @@ async function handler(request: Request) {
       } catch (smsError: any) {
         results.push({
           phone: recipient.phone_number,
-          name: recipient.clients?.full_name || 'Unknown',
+          name: recipient.full_name || 'Unknown',
           status: 'failed',
           error: smsError.message
         })
