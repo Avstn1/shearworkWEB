@@ -177,7 +177,7 @@ async function handler(request: Request) {
     for (const recipient of recipients) {
       try {
         const message = await client.messages.create({
-          body: scheduledMessage.message,
+          body: `${scheduledMessage.message}\n\nReply STOP to unsubscribe.`,
           messagingServiceSid: messagingServiceSid,
           to: recipient.phone_number
         })

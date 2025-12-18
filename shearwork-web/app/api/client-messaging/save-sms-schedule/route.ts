@@ -196,6 +196,7 @@ export async function POST(request: Request) {
               cron: cron,
               cron_text: cronText,
               qstash_schedule_id: qstashScheduleId,
+              visiting_type: msg.visitingType,
             })
             .eq('id', msg.id)
             .select()
@@ -222,6 +223,7 @@ export async function POST(request: Request) {
               cron: cron,
               cron_text: cronText,
               qstash_schedule_id: qstashScheduleId,
+              visiting_type: msg.visitingType
             })
             .select()
             .single()

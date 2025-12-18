@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { Trash2, Clock, CheckCircle, XCircle, Edit, Pencil, Check, X, Send } from 'lucide-react';
+import { Trash2, Clock, CheckCircle, XCircle, Edit, Pencil, Check, X, Send, Loader2 } from 'lucide-react';
 import { SMSMessage, DAYS_OF_WEEK } from './types';
 import { MessageContent } from './MessageContent';
-import { MessageSchedule } from './MessageSchedule';
+import { MessageClientList } from './MessageClientList';
 
 interface PhoneNumber {
   first_name: string | null;
@@ -20,7 +20,6 @@ interface MessageCardProps {
   tempTitle: string;
   phoneNumbers: PhoneNumber[];
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
-  onRemove: (id: string) => void;
   onEnableEdit: (id: string) => void;
   onCancelEdit: (id: string) => void;
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
@@ -41,7 +40,6 @@ export function MessageCard({
   tempTitle,
   phoneNumbers,
   onUpdate,
-  onRemove,
   onEnableEdit,
   onCancelEdit,
   onSave,
@@ -84,51 +82,10 @@ export function MessageCard({
               <span className="text-sky-300 font-bold">{index + 1}</span>
             </div>
             <div>
-              {/* Editable Title */}
-              {editingTitleId === msg.id ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={tempTitle}
-                    onChange={(e) => onTempTitleChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') onSaveTitle(msg.id);
-                      if (e.key === 'Escape') onCancelEditTitle();
-                    }}
-                    className="bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-300/50"
-                    maxLength={30}
-                    autoFocus
-                    disabled={!msg.isEditing}
-                  />
-                  <button
-                    onClick={() => onSaveTitle(msg.id)}
-                    className="p-1 rounded hover:bg-lime-300/20 text-lime-300 transition-all"
-                    disabled={!msg.isEditing}
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={onCancelEditTitle}
-                    className="p-1 rounded hover:bg-rose-300/20 text-rose-300 transition-all"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <h3 className="text-white font-semibold">
-                    {msg.title}
-                  </h3>
-                  {msg.isEditing && (
-                    <button
-                      onClick={() => onStartEditingTitle(msg.id, msg.title)}
-                      className="p-1 rounded hover:bg-white/10 text-[#bdbdbd] hover:text-white transition-all"
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* Title - Not Editable */}
+              <h3 className="text-white font-semibold">
+                {msg.title}
+              </h3>
               <p className="text-xs text-[#bdbdbd] flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {getSchedulePreview(msg)}
@@ -200,14 +157,6 @@ export function MessageCard({
                 </div>
               </>
             )}
-
-            {/* Delete Button */}
-            <button
-              onClick={() => onRemove(msg.id)}
-              className="p-2 rounded-full bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-300"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
@@ -221,21 +170,67 @@ export function MessageCard({
             onValidate={onValidate}
           />
 
-          {/* RIGHT: Recipients (50%) */}
-          <MessageSchedule
+          {/* RIGHT: Recipients List (50%) */}
+          <MessageClientList
             message={msg}
             phoneNumbers={phoneNumbers}
           />
         </div>
       </div>
 
-      {/* Preview Banner */}
+      {/* Preview Banner with Save Buttons */}
       <div className="bg-sky-300/10 border-t border-sky-300/20 px-6 py-3">
-        <p className="text-xs text-sky-300 flex items-center gap-2">
-          <Send className="w-3 h-3" />
-          <span className="font-medium">Will send to:</span>
-          <span className="text-sky-200">{phoneNumbers.length} {msg.visitingType} clients</span>
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-sky-300 flex items-center gap-2">
+            <Send className="w-3 h-3" />
+            <span className="font-medium">Will send to:</span>
+            <span className="text-sky-200">{phoneNumbers.length} {msg.visitingType} clients</span>
+          </p>
+          
+          {/* Save Buttons - Only show when editing */}
+          {msg.isEditing && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onSave(msg.id, 'draft')}
+                disabled={isSaving || !msg.message.trim() || msg.message.length < 100}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl font-semibold text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving && savingMode === 'draft' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>Save Draft</>
+                )}
+              </button>
+              
+              <button
+                onClick={() => onSave(msg.id, 'activate')}
+                disabled={isSaving || !msg.isValidated || msg.validationStatus !== 'DRAFT' || !msg.message.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-lime-300/20 border border-lime-300/30 text-lime-300 rounded-xl font-semibold text-sm hover:bg-lime-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving && savingMode === 'activate' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Activating...
+                  </>
+                ) : (
+                  <>Activate</>
+                )}
+              </button>
+              
+              {msg.isSaved && (
+                <button
+                  onClick={() => onCancelEdit(msg.id)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl font-semibold text-sm hover:bg-white/10 transition-all duration-300"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   );

@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
-import { selectClientsForSMS } from '@/lib/clientSmsSelectionAlgorithm_DSLV'
+import { selectClientsForSMS } from '@/lib/clientSmsSelectionAlgorithm' // _DSLV is days since last visit algorithm
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
     // Get limit from query params
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limit = parseInt(searchParams.get('limit') || '25')
 
     // Select clients using the algorithm
     const selectedClients = await selectClientsForSMS(supabase, user.id, limit)
@@ -57,8 +57,6 @@ export async function GET(request: Request) {
       last_name: client.last_name,
       phone_normalized: client.phone_normalized
     }))
-
-    console.log(phoneNumbers)
 
     // Calculate statistics
     const breakdown = selectedClients.reduce((acc, client) => {
