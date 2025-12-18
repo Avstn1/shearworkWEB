@@ -1,11 +1,5 @@
 import { Users, Loader2 } from 'lucide-react';
-import { SMSMessage } from './types';
-
-interface PhoneNumber {
-  first_name: string | null;
-  last_name: string | null;
-  phone_normalized: string | null;
-}
+import { SMSMessage, PhoneNumber } from './types';
 
 interface MessageClientListProps {
   message: SMSMessage;
@@ -27,13 +21,12 @@ export function MessageClientList({
     
     // Find the max number width for alignment
     const maxNumberWidth = phoneNumbers.length.toString().length;
-    
     return phoneNumbers
       .map((client, idx) => {
-        const name = `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Unknown';
+        const name = client.full_name || 'No name';
         const phone = client.phone_normalized || 'No phone';
         const number = (idx + 1).toString().padStart(maxNumberWidth, ' ');
-        return `${number}. ${name} - ${phone}`;
+        return `${number}. ${name}: ${phone}`;
       })
       .join('\n');
   };

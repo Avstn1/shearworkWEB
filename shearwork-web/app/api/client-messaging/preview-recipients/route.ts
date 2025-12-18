@@ -20,20 +20,25 @@ const supabase = createClient(
 export async function GET(request: Request) {
   try {
     // Authenticate user
-    const { user } = await getAuthenticatedUser(request)
-    if (!user || !user.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    // const { user } = await getAuthenticatedUser(request)
+    // if (!user || !user.id) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Unauthorized' },
+    //     { status: 401 }
+    //   )
+    // }
 
     // Get limit from query params
     const { searchParams } = new URL(request.url)
+    
+    const userId = searchParams.get('userId')
+    if (!userId) throw new Error('userId is required');
+
+    const visitingType = searchParams.get('visitingType')
     const limit = parseInt(searchParams.get('limit') || '25')
 
     // Select clients using the algorithm
-    const selectedClients = await selectClientsForSMS(supabase, user.id, limit)
+    const selectedClients = await selectClientsForSMS(supabase, userId, limit, visitingType || undefined)
 
     if (selectedClients.length === 0) {
       return NextResponse.json({
@@ -53,10 +58,11 @@ export async function GET(request: Request) {
 
     // Extract phone numbers
     const phoneNumbers = selectedClients.map(client => ({
-      first_name: client.first_name,
-      last_name: client.last_name,
+      full_name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
       phone_normalized: client.phone_normalized
     }))
+
+    console.log(phoneNumbers)
 
     // Calculate statistics
     const breakdown = selectedClients.reduce((acc, client) => {

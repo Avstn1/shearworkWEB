@@ -29,12 +29,13 @@ export interface ScoredClient extends AcuityClient {
 export async function selectClientsForSMS(
   supabase: SupabaseClient,
   userId: string,
-  limit: number = 50
+  limit: number = 50,
+  visitingType?: string
 ): Promise<ScoredClient[]> {
   const today = new Date();
   
   // Fetch eligible clients
-  const { data: clients, error } = await supabase
+  let query = supabase
     .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
@@ -42,6 +43,13 @@ export async function selectClientsForSMS(
     .not('last_appt', 'is', null)
     .gt('total_appointments', 1)
     .order('last_appt', { ascending: false });
+
+  // Conditionally add visiting_type filter if provided
+  if (visitingType) {
+    query = query.eq('visiting_type', visitingType);
+  }
+
+  const { data: clients, error } = await query;
 
   if (error) {
     throw new Error(`Failed to fetch clients: ${error.message}`);
