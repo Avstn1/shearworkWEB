@@ -35,7 +35,7 @@ export async function selectClientsForSMS(
   
   // Fetch eligible clients
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -62,15 +62,15 @@ export async function selectClientsForSMS(
       // Apply time-based filters
       switch (client.visiting_type) {
         case 'consistent':
-          return daysSinceLastVisit < 45;
+          return daysSinceLastVisit < 60;
         case 'semi-consistent':
-          return daysSinceLastVisit < 75;
+          return daysSinceLastVisit < 90;
         case 'easy-going':
-          return daysSinceLastVisit < 105;
+          return daysSinceLastVisit < 120;
         case 'rare':
-          return daysSinceLastVisit < 195;
+          return daysSinceLastVisit < 210;
         default:
-          return daysSinceLastVisit < 75;
+          return daysSinceLastVisit < 90;
       }
     });
 

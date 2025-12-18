@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Clock } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
@@ -59,8 +59,13 @@ export default function SMSManager() {
   
   // Schedule modal state
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState<number>(1);
+  const [scheduleHour, setScheduleHour] = useState<number>(10);
+  const [scheduleMinute, setScheduleMinute] = useState<number>(0);
+  const [schedulePeriod, setSchedulePeriod] = useState<'AM' | 'PM'>('AM');
   const [scheduleStartDate, setScheduleStartDate] = useState<string>('');
   const [scheduleEndDate, setScheduleEndDate] = useState<string>('');
+  const [hasSchedule, setHasSchedule] = useState(false);
   const [isDraftingAll, setIsDraftingAll] = useState(false);
 
   // Load existing messages on mount
@@ -77,7 +82,6 @@ export default function SMSManager() {
       createDefaultMessages();
     }
   }, [isLoading, messages.length]);
-
 
   const loadMessages = async () => {
     console.log('📥 loadMessages: Starting...');
@@ -134,7 +138,6 @@ export default function SMSManager() {
           const cronParts = dbMsg.cron.split(' ');
           const minute = parseInt(cronParts[0]);
           const hour24 = parseInt(cronParts[1]);
-          const dayOfMonthCron = cronParts[2];
           const dayOfWeekCron = cronParts[4];
           
           // Convert 24hr to 12hr format
@@ -155,42 +158,23 @@ export default function SMSManager() {
             period = 'PM';
           }
 
-          // Determine frequency and day
-          let frequency: 'weekly' | 'biweekly' | 'monthly' = 'weekly';
-          let dayOfWeek: string | undefined;
-          let dayOfMonth: number | undefined;
-          
-          if (dayOfMonthCron !== '*') {
-            frequency = 'monthly';
-            dayOfMonth = parseInt(dayOfMonthCron);
-          } else if (dayOfWeekCron !== '*') {
-            frequency = 'weekly';
-            const dayMap: Record<string, string> = {
-              '0': 'sunday',
-              '1': 'monday',
-              '2': 'tuesday',
-              '3': 'wednesday',
-              '4': 'thursday',
-              '5': 'friday',
-              '6': 'saturday',
-            };
-            dayOfWeek = dayMap[dayOfWeekCron];
-          }
+          // Get day of month
+          const dayOfMonthCron = cronParts[2];
+          const dayOfMonth = dayOfMonthCron !== '*' ? parseInt(dayOfMonthCron) : 1;
 
           const isValidated = dbMsg.status !== 'DENIED';
 
           const convertedMsg: SMSMessage = {
             id: dbMsg.id,
-            title: dbMsg.title, // Use the title from database
+            title: dbMsg.title,
             message: dbMsg.message,
             visitingType: dbMsg.visiting_type || 'consistent',
-            frequency,
-            dayOfWeek,
+            frequency: 'monthly',
             dayOfMonth,
             hour: hour12,
             minute,
             period,
-            enabled: dbMsg.status === 'ACCEPTED', // Only enabled if ACCEPTED
+            enabled: dbMsg.status === 'ACCEPTED',
             isSaved: true,
             isValidated: isValidated, 
             validationStatus: dbMsg.status,
@@ -203,6 +187,15 @@ export default function SMSManager() {
           if (dbMsg.visiting_type) {
             loadedTypes.add(dbMsg.visiting_type);
             console.log('✅ Added saved message for type:', dbMsg.visiting_type);
+          }
+
+          // Set schedule from first saved message if exists
+          if (!hasSchedule && allMessages.length === 1) {
+            setScheduleDayOfMonth(dayOfMonth);
+            setScheduleHour(hour12);
+            setScheduleMinute(minute);
+            setSchedulePeriod(period);
+            setHasSchedule(true);
           }
         });
       } else {
@@ -218,8 +211,8 @@ export default function SMSManager() {
             title: titles[type],
             message: '',
             visitingType: type,
-            frequency: 'weekly',
-            dayOfWeek: 'monday',
+            frequency: 'monthly',
+            dayOfMonth: 1,
             hour: 10,
             minute: 0,
             period: 'AM',
@@ -233,7 +226,7 @@ export default function SMSManager() {
         }
       });
 
-      // Sort messages to maintain consistent order (consistent, semi-consistent, easy-going, rare)
+      // Sort messages to maintain consistent order
       const typeOrder = { 'consistent': 0, 'semi-consistent': 1, 'easy-going': 2, 'rare': 3 };
       allMessages.sort((a, b) => {
         const orderA = typeOrder[a.visitingType as keyof typeof typeOrder] ?? 999;
@@ -259,8 +252,6 @@ export default function SMSManager() {
     }
   };
 
-  
-
   const createDefaultMessages = () => {
     const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare'> = [
       'consistent',
@@ -276,17 +267,17 @@ export default function SMSManager() {
       'rare': 'Rare (Less than once every 2 months)',
     };
 
-    const defaultMessages: SMSMessage[] = visitingTypes.map((type, index) => ({
+    const defaultMessages: SMSMessage[] = visitingTypes.map((type) => ({
       id: uuidv4(),
       title: titles[type],
       message: '',
       visitingType: type,
-      frequency: 'weekly',
-      dayOfWeek: 'monday',
+      frequency: 'monthly',
+      dayOfMonth: 1,
       hour: 10,
       minute: 0,
       period: 'AM',
-      enabled: true,
+      enabled: false,
       isSaved: false,
       isValidated: false,
       validationStatus: 'DRAFT',
@@ -304,7 +295,6 @@ export default function SMSManager() {
       const response = await fetch('/api/client-messaging/preview-recipients?limit=25');
       
       if (!response.ok) {
-        console.log('❌ Preview response not OK');
         throw new Error('Failed to load preview');
       }
       
@@ -337,12 +327,6 @@ export default function SMSManager() {
             }
           });
 
-          console.log('✅ Phone numbers grouped by type:', {
-            consistent: grouped.consistent.length,
-            'semi-consistent': grouped['semi-consistent'].length,
-            'easy-going': grouped['easy-going'].length,
-            rare: grouped.rare.length
-          });
           setPhoneNumbersByType(grouped);
         }
       } else {
@@ -372,7 +356,6 @@ export default function SMSManager() {
 
     setIsDraftingAll(true);
     try {
-      // Update all activated messages to draft status
       const updatePromises = activatedMessages.map(msg =>
         fetch('/api/client-messaging/save-sms-schedule', {
           method: 'POST',
@@ -389,7 +372,6 @@ export default function SMSManager() {
 
       await Promise.all(updatePromises);
 
-      // Update local state
       setMessages(messages.map(m =>
         activatedMessages.find(am => am.id === m.id)
           ? { ...m, validationStatus: 'DRAFT', enabled: false }
@@ -406,50 +388,29 @@ export default function SMSManager() {
   };
 
   const handleSetSchedule = () => {
+    if (!scheduleDayOfMonth) {
+      toast.error('Please select a day of the month');
+      return;
+    }
+
     if (!scheduleStartDate) {
       toast.error('Please select a start date');
       return;
     }
 
-    // Update all messages with the schedule dates
-    // This will be used when saving messages
-    console.log('Schedule set:', { start: scheduleStartDate, end: scheduleEndDate });
-    
-    // Close modal and show success
+    // Apply schedule to all messages
+    setMessages(messages.map(msg => ({
+      ...msg,
+      dayOfMonth: scheduleDayOfMonth,
+      hour: scheduleHour,
+      minute: scheduleMinute,
+      period: schedulePeriod,
+      frequency: 'monthly',
+    })));
+
+    setHasSchedule(true);
     setShowScheduleModal(false);
-    toast.success('Schedule dates set! Save your messages to apply the schedule.');
-  };
-
-  const removeMessage = async (id: string) => {
-    const msg = messages.find((m) => m.id === id);
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${msg?.title || 'this message'}"?\n\nThis action is irreversible and will permanently remove the scheduled message.`
-    );
-    
-    if (!confirmed) {
-      return;
-    }
-
-    if (msg?.isSaved) {
-      try {
-        const response = await fetch('/api/client-messaging/save-sms-schedule', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-
-        if (!response.ok) throw new Error('Failed to delete message');
-        
-        toast.success('Message deleted successfully');
-      } catch (error) {
-        console.error('Delete error:', error);
-        toast.error('Failed to delete message');
-        return;
-      }
-    }
-    
-    setMessages(messages.filter((msg) => msg.id !== id));
+    toast.success('Schedule applied to all messages!');
   };
 
   const updateMessage = (id: string, updates: Partial<SMSMessage>) => {
@@ -462,14 +423,6 @@ export default function SMSManager() {
             updated.isValidated = false;
             updated.validationStatus = 'DRAFT';
             updated.validationReason = undefined;
-          }
-          
-          if (updated.frequency === 'monthly') {
-            delete updated.dayOfWeek;
-            if (!updated.dayOfMonth) updated.dayOfMonth = 1;
-          } else {
-            delete updated.dayOfMonth;
-            if (!updated.dayOfWeek) updated.dayOfWeek = 'monday';
           }
           
           return updated;
@@ -504,6 +457,13 @@ export default function SMSManager() {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
 
+    // Check if schedule is set
+    if (!hasSchedule) {
+      toast.error('Please set a bi-weekly schedule first');
+      setShowScheduleModal(true);
+      return;
+    }
+
     if (!msg.message.trim()) {
       toast.error('Please fill in message content');
       return;
@@ -531,12 +491,14 @@ export default function SMSManager() {
 
       const messageToSave = {
         ...msg,
-        visiting_type: msg.visitingType, 
+        visiting_type: msg.visitingType,
         hour: hour24,
         minute: msg.minute,
         utcHour,
         utcMinute,
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
+        startDate: scheduleStartDate,
+        endDate: scheduleEndDate || null,
       };
 
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
@@ -568,7 +530,6 @@ export default function SMSManager() {
   };
 
   if (isLoading) {
-    console.log('⏳ Rendering loading state...');
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -578,10 +539,6 @@ export default function SMSManager() {
       </div>
     );
   }
-
-  console.log('📊 Rendering main component with messages:', messages.length);
-  console.log('📋 Messages state:', messages);
-  console.log('📞 Phone numbers by type:', phoneNumbersByType);
 
   return (
     <div className="space-y-6">
@@ -594,7 +551,7 @@ export default function SMSManager() {
               SMS Marketing Manager
             </h2>
             <p className="text-[#bdbdbd] text-sm">
-              Manage automated marketing messages for each client type
+              Manage automated monthly marketing messages for each client type
             </p>
           </div>
           
@@ -632,14 +589,41 @@ export default function SMSManager() {
           </div>
         </div>
         
-        {/* Set Schedule Button */}
-        <button
-          onClick={() => setShowScheduleModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full font-semibold text-sm hover:bg-purple-500/30 transition-all duration-300"
-        >
-          <Clock className="w-4 h-4" />
-          Set Schedule
-        </button>
+        {/* Schedule Info & Button */}
+        <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+          {hasSchedule ? (
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-lime-300" />
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  Monthly on day {scheduleDayOfMonth} at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
+                  {scheduleDayOfMonth > 28 && <span className="text-amber-300 ml-2">*</span>}
+                </p>
+                {scheduleDayOfMonth > 28 && (
+                  <p className="text-xs text-amber-300 mt-0.5">
+                    * Adjusts to last day in shorter months
+                  </p>
+                )}
+                <p className="text-xs text-[#bdbdbd]">
+                  {scheduleStartDate && `Starting ${new Date(scheduleStartDate).toLocaleDateString()}`}
+                  {scheduleEndDate && ` • Ending ${new Date(scheduleEndDate).toLocaleDateString()}`}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-amber-300" />
+              <p className="text-sm text-amber-300">No schedule set - required to save messages</p>
+            </div>
+          )}
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-xl font-semibold text-sm hover:bg-purple-500/30 transition-all duration-300"
+          >
+            <Clock className="w-4 h-4" />
+            {hasSchedule ? 'Edit Schedule' : 'Set Schedule'}
+          </button>
+        </div>
       </div>
 
       {/* Client Preview Modal */}
@@ -758,7 +742,7 @@ export default function SMSManager() {
         )}
       </AnimatePresence>
 
-      {/* Schedule Date Range Modal */}
+      {/* Schedule Modal */}
       <AnimatePresence>
         {showScheduleModal && (
           <motion.div
@@ -773,17 +757,17 @@ export default function SMSManager() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full"
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
                 <div>
                   <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-purple-300" />
-                    Set Campaign Schedule
+                    <Calendar className="w-5 h-5 text-purple-300" />
+                    Set Monthly SMS Schedule
                   </h3>
                   <p className="text-sm text-[#bdbdbd] mt-1">
-                    Define when your SMS campaigns will run
+                    All messages will be sent on this schedule
                   </p>
                 </div>
                 <button
@@ -796,6 +780,81 @@ export default function SMSManager() {
 
               {/* Modal Body */}
               <div className="p-6 space-y-6">
+                {/* Day of Week */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Day of Month *
+                  </label>
+                  <select
+                    value={scheduleDayOfMonth}
+                    onChange={(e) => setScheduleDayOfMonth(parseInt(e.target.value))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                      <option key={day} value={day} className="bg-[#1a1a1a]">
+                        {day}
+                      </option>
+                    ))}
+                  </select>
+                  {scheduleDayOfMonth > 28 && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 mt-2">
+                      <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-amber-300">
+                        <strong>Note:</strong> In months with fewer than {scheduleDayOfMonth} days, messages will be sent on the last available day of that month.
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-xs text-[#bdbdbd] mt-1">
+                    Messages will be sent on the {scheduleDayOfMonth}{scheduleDayOfMonth === 1 ? 'st' : scheduleDayOfMonth === 2 ? 'nd' : scheduleDayOfMonth === 3 ? 'rd' : 'th'} of every month
+                  </p>
+                </div>
+
+                {/* Time */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    Time *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Hour */}
+                    <select
+                      value={scheduleHour}
+                      onChange={(e) => setScheduleHour(parseInt(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => i === 0 ? 12 : i).map((hour) => (
+                        <option key={hour} value={hour} className="bg-[#1a1a1a]">
+                          {hour.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Minute */}
+                    <select
+                      value={scheduleMinute}
+                      onChange={(e) => setScheduleMinute(parseInt(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    >
+                      {/* {[0, 15, 30, 45].map((minute) => ( */}
+                      {Array.from({ length: 60 }, (_, i) => i + 1).map((minute) => (
+                        <option key={minute} value={minute} className="bg-[#1a1a1a]">
+                          {minute.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* AM/PM */}
+                    <select
+                      value={schedulePeriod}
+                      onChange={(e) => setSchedulePeriod(e.target.value as 'AM' | 'PM')}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    >
+                      <option value="AM" className="bg-[#1a1a1a]">AM</option>
+                      <option value="PM" className="bg-[#1a1a1a]">PM</option>
+                    </select>
+                  </div>
+                </div>
+
                 {/* Start Date */}
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -805,11 +864,10 @@ export default function SMSManager() {
                     type="date"
                     value={scheduleStartDate}
                     onChange={(e) => setScheduleStartDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                   />
                   <p className="text-xs text-[#bdbdbd] mt-1">
-                    When should the campaign start sending messages?
+                    When should the campaign start?
                   </p>
                 </div>
 
@@ -826,14 +884,14 @@ export default function SMSManager() {
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                   />
                   <p className="text-xs text-[#bdbdbd] mt-1">
-                    All messages will be drafted after this date
+                    Messages will be drafted after this date
                   </p>
                 </div>
 
                 {/* Info Box */}
                 <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
                   <p className="text-sm text-purple-300">
-                    <strong>Note:</strong> These dates will apply to all messages when you save them as drafts or activate them.
+                    <strong>Monthly Schedule:</strong> Messages will be sent on day {scheduleDayOfMonth} of every month at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
                   </p>
                 </div>
               </div>
@@ -843,8 +901,6 @@ export default function SMSManager() {
                 <button
                   onClick={() => {
                     setShowScheduleModal(false);
-                    setScheduleStartDate('');
-                    setScheduleEndDate('');
                   }}
                   className="px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl font-semibold hover:bg-white/10 transition-all"
                 >
@@ -852,10 +908,10 @@ export default function SMSManager() {
                 </button>
                 <button
                   onClick={handleSetSchedule}
-                  disabled={!scheduleStartDate}
+                  disabled={!scheduleDayOfMonth || !scheduleStartDate}
                   className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl font-semibold hover:bg-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Set Schedule
+                  Apply Schedule
                 </button>
               </div>
             </motion.div>
