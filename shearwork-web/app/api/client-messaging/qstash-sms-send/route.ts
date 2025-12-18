@@ -52,26 +52,6 @@ async function handler(request: Request) {
     const isMassTest = action === 'mass_test'
     const targetStatus = isTest ? 'DRAFT' : 'ACCEPTED'
 
-    // Only test mode (single user) requires authentication
-    if (isTest) {
-      try {
-        const { user } = await getAuthenticatedUser(request)
-        if (!user || !user.id) {
-          return NextResponse.json(
-            { success: false, error: 'Unauthorized' },
-            { status: 401 }
-          )
-        }
-        console.log('🧪 Test mode: Authenticated user:', user.id)
-      } catch (authError) {
-        console.error('❌ Authentication failed:', authError)
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-    }
-
     // Fetch the scheduled message from database
     const { data: scheduledMessage, error } = await supabase
       .from('sms_scheduled_messages')
@@ -93,8 +73,8 @@ async function handler(request: Request) {
 
     if (isMassTest) {
       // Mass test mode: Use recipients from request body
-      const clientsList = [{"first_name":"Carlo","last_name":"Toledo","phone_normalized":"+13653781438"},
-                           {"first_name":"Austin","last_name":"Bartolome","phone_normalized":"+16474566099"}];
+      const clientsList = [{"first_name":"Carlo","last_name":"Toledo","phone_normalized":"+13653781438"},];
+                          //  {"first_name":"Austin","last_name":"Bartolome","phone_normalized":"+16474566099"}];
 
       if (!Array.isArray(clientsList) || clientsList.length === 0) {
         return NextResponse.json(
@@ -141,15 +121,18 @@ async function handler(request: Request) {
       }]
       
     } else { 
-      const response = await fetch(`/api/client-messaging/preview-recipients?limit=25&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}`);
-
+      console.log('Fetching preview recipients for message:', messageId)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=25&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}`);
       if (!response.ok) {
         throw new Error('Failed to load preview');
       }
 
       const data = await response.json();
+      console.log(JSON.stringify(data));
 
       recipients = data.phoneNumbers 
+
+      console.log(recipients)
     }
 
     // Initialize Twilio client
