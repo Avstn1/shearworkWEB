@@ -3,6 +3,26 @@ import { createClient } from '@supabase/supabase-js'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 import twilio from 'twilio'
 
+type SmsCounter = 'success' | 'fail'
+
+async function incrementSmsCounter(
+  supabase: any,
+  messageId: string,
+  field: SmsCounter
+) {
+  const { error } = await supabase
+    .from('sms_scheduled_messages')
+    .update({
+      [field]: supabase.sql`${supabase.sql.identifier(field)} + 1`
+    })
+    .eq('id', messageId)
+
+  if (error) {
+    console.error(`Failed to increment ${field}`, error)
+    throw error
+  }
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -20,9 +40,9 @@ const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
 
 
 export async function POST(request: Request) {
+  const { messageId, message, phone_normalized } = await request.json();
+  
   try {
-    const { message, phone_normalized } = await request.json();
-
     // Validate required fields
     if (!message || !phone_normalized) {
       return Response.json(
@@ -48,13 +68,25 @@ export async function POST(request: Request) {
       to: phone_normalized
     });
 
+
+    await incrementSmsCounter(
+      supabase,
+      messageId,
+      'success'
+    )
+
     return Response.json(
       { success: true, messageSid: twilioMessage.sid },
       { status: 200 }
     );
 
   } catch (error) {
-    console.error('Error sending message:', error);
+    await incrementSmsCounter(
+      supabase,
+      messageId,
+      'fail'
+    )
+
     return Response.json(
       { 
         error: 'Failed to send message',
