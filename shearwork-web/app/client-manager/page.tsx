@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard';
 import SMSManager from '@/components/Dashboard/ClientManager/SMSManager/SMSManager'
+import SMSCampaigns from '@/components/Dashboard/ClientManager/SMSCampaigns/SMSCampaigns';
 import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 
@@ -18,7 +19,7 @@ const fadeInUp = {
 };
 
 export default function ClientManagerPage() {
-  const [activeView, setActiveView] = useState<'sheets' | 'sms'>('sheets');
+  const [activeView, setActiveView] = useState<'sheets' | 'sms' | 'sms-campaign'>('sheets');
 
   return (
     <OnboardingGuard>
@@ -63,6 +64,16 @@ export default function ClientManagerPage() {
               >
                 SMS Manager
               </button>
+              <button
+                onClick={() => setActiveView('sms-campaign')}
+                className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                  activeView === 'sms-campaign'
+                    ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
+                    : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+                }`}
+              >
+                SMS Campaigns
+              </button>
             </div>
           </div>
         </motion.div>
@@ -88,6 +99,12 @@ export default function ClientManagerPage() {
             {activeView === 'sms' && (
               <UnderConstructionWrapper>
                 <SMSManager />
+              </UnderConstructionWrapper>
+            )}
+
+            {activeView === 'sms-campaign' && (
+              <UnderConstructionWrapper>
+                <SMSCampaigns />
               </UnderConstructionWrapper>
             )}
           </motion.div>
