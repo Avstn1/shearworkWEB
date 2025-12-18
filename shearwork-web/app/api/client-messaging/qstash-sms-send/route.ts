@@ -6,6 +6,12 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 import { qstashClient } from '@/lib/qstashClient'
+import pMap from "p-map"
+
+export type Recipients = {
+  phone_normalized: string;
+  full_name: string;
+};
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,7 +74,7 @@ async function handler(request: Request) {
     }
 
     // Fetch recipients based on mode
-    let recipients: any[] = []
+    let recipients: Recipients[] = []
 
     if (isMassTest) {
       // Mass test mode: Use recipients from request body
@@ -133,21 +139,23 @@ async function handler(request: Request) {
 
       console.log(recipients)
     }
-
+    
     const queue = qstashClient.queue({
-      queueName: "sms-queue"
+      queueName: `sms-queue-${scheduledMessage.user_id}`,
     })    
 
-    await Promise.all(
-      recipients.map(recipient =>
+    await pMap(
+      recipients,
+      recipient =>
         queue.enqueueJSON({
           url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/enqueue-sms`,
-          body: { 
-            message: scheduledMessage.message, 
-            phone_normalized: recipient.phone_normalized 
+          body: {
+            messageId: scheduledMessage.id,
+            message: scheduledMessage.message,
+            phone_normalized: recipient.phone_normalized
           }
-        })
-      )
+        }),
+      { concurrency: 15 }
     )
 
     return NextResponse.json({
