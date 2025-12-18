@@ -5,8 +5,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
-import { getAuthenticatedUser } from '@/utils/api-auth'
-import twilio from 'twilio'
+import { qstashClient } from '@/lib/qstashClient'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -135,59 +134,26 @@ async function handler(request: Request) {
       console.log(recipients)
     }
 
-    // Initialize Twilio client
-    const client = twilio(accountSid, authToken)
+    const queue = qstashClient.queue({
+      queueName: "sms-queue"
+    })    
 
-    // Send SMS to each recipient
-    const results = []
-    let successCount = 0
-    let failureCount = 0
-
-    for (const recipient of recipients) {
-      try {
-        console.log(`📲 Sending SMS to ${recipient.full_name} at ${recipient.phone_normalized}`)
-        const message = await client.messages.create({
-          body: `${scheduledMessage.message}\n\nReply STOP to unsubscribe.`,
-          messagingServiceSid: messagingServiceSid,
-          to: recipient.phone_normalized
+    await Promise.all(
+      recipients.map(recipient =>
+        queue.enqueueJSON({
+          url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/enqueue-sms`,
+          body: { 
+            message: scheduledMessage.message, 
+            phone_normalized: recipient.phone_normalized 
+          }
         })
-
-        results.push({
-          phone: recipient.phone_normalized,
-          name: recipient.full_name || 'Unknown',
-          status: 'sent',
-          sid: message.sid
-        })
-        
-        successCount++
-      } catch (smsError: any) {
-        results.push({
-          phone: recipient.phone_normalized,
-          name: recipient.full_name || 'Unknown',
-          status: 'failed',
-          error: smsError.message
-        })
-        
-        failureCount++
-      }
-    }
+      )
+    )
 
     return NextResponse.json({
       success: true,
       message: 'SMS send job completed',
       messageId,
-      userId: scheduledMessage.user_id,
-      schedule: scheduledMessage.cron_text,
-      status: targetStatus,
-      testMode: isTest || isMassTest,
-      massTest: isMassTest,
-      stats: {
-        total: recipients.length,
-        sent: successCount,
-        failed: failureCount,
-        successRate: `${((successCount / recipients.length) * 100).toFixed(1)}%`
-      },
-      results,
       timestamp: new Date().toISOString(),
     })
 

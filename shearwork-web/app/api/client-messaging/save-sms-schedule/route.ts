@@ -107,7 +107,6 @@ async function createQStashSchedule(messageId: string, cron: string) {
       },
     })
 
-    console.log('✅ QStash schedule created:', schedule.scheduleId)
     return schedule.scheduleId
   } catch (error) {
     console.error('❌ Failed to create QStash schedule:', error)

@@ -35,6 +35,7 @@ interface PreviewStats {
 
 // Main component
 export default function SMSManager() {
+  // #region UseStates are here
   const [messages, setMessages] = useState<SMSMessage[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [savingMode, setSavingMode] = useState<'draft' | 'activate' | null>(null);
@@ -61,10 +62,10 @@ export default function SMSManager() {
   const [scheduleEndDate, setScheduleEndDate] = useState<string>('');
   const [hasSchedule, setHasSchedule] = useState(false);
   const [isDraftingAll, setIsDraftingAll] = useState(false);
+  // #endregion
 
   // Load existing messages on mount
   useEffect(() => {
-    console.log('🚀 SMSManager mounted, loading messages...');
     loadMessages();
     loadClientPreview();
   }, []);
@@ -72,21 +73,16 @@ export default function SMSManager() {
   // Safety check - if messages is still empty after loading, create defaults
   useEffect(() => {
     if (!isLoading && messages.length === 0) {
-      console.log('⚠️ Messages array is empty after loading! Force creating defaults...');
       createDefaultMessages();
     }
   }, [isLoading, messages.length]);
 
   const loadMessages = async () => {
-    console.log('📥 loadMessages: Starting...');
     setIsLoading(true);
     try {
-      console.log('📡 Fetching from /api/client-messaging/save-sms-schedule...');
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
         method: 'GET',
       });
-
-      console.log('📡 Response status:', response.status, response.ok);
 
       if (!response.ok) {
         console.log('❌ Response not OK, throwing error');
@@ -94,7 +90,6 @@ export default function SMSManager() {
       }
 
       const data = await response.json();
-      console.log('📦 Received data:', JSON.stringify(data, null, 2));
       
       // Define all possible visiting types and their titles
       const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare'> = [
@@ -119,7 +114,6 @@ export default function SMSManager() {
       
       // First, process all saved messages from the database
       if (data.success && data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
-        console.log('✅ Found existing messages:', data.messages.length);
         
         data.messages.forEach((dbMsg: any) => {
           console.log('📝 Processing saved message:', {
@@ -228,11 +222,6 @@ export default function SMSManager() {
         return orderA - orderB;
       });
 
-      console.log('✅ Final messages array:', allMessages.map(m => ({
-        type: m.visitingType,
-        isSaved: m.isSaved,
-        title: m.title
-      })));
       setMessages(allMessages);
       
     } catch (error) {
@@ -279,7 +268,6 @@ export default function SMSManager() {
       isEditing: true,
     }));
 
-    console.log('✅ Default messages created:', defaultMessages);
     setMessages(defaultMessages);
   };
 
