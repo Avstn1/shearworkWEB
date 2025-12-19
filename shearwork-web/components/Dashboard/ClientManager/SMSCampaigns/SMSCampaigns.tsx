@@ -68,7 +68,7 @@ export default function SMSCampaigns() {
         loadMessagePreview(msg.id, msg.clientLimit);
       }
     });
-  }, [messages.length]); // Only run when messages array length changes
+  }, [messages.length]);
 
   const fetchCredits = async () => {
     try {
@@ -100,68 +100,100 @@ export default function SMSCampaigns() {
 
       const data = await response.json();
       
+      console.log('📥 Loaded messages from API:', data);
+      
       if (data.success && data.messages) {
-        // Convert database messages to frontend format
         const loadedMessages = data.messages.map((dbMsg: any) => {
-          // Parse cron to extract time
-          const cronParts = dbMsg.cron.split(' ');
-          const minute = parseInt(cronParts[0]);
-          const hour24 = parseInt(cronParts[1]);
-          const dayOfMonthCron = cronParts[2];
-          const dayOfWeekCron = cronParts[4];
+          console.log('🔄 Processing loaded message:', dbMsg);
           
-          // Convert 24hr to 12hr format
-          let hour12 = hour24;
-          let period: 'AM' | 'PM' = 'AM';
+          // Check if this is a one-time schedule (ISO timestamp) or recurring (cron)
+          const isOneTime = dbMsg.cron && dbMsg.cron.includes('T');
           
-          if (hour24 === 0) {
-            hour12 = 12;
-            period = 'AM';
-          } else if (hour24 < 12) {
-            hour12 = hour24;
-            period = 'AM';
-          } else if (hour24 === 12) {
-            hour12 = 12;
-            period = 'PM';
-          } else {
-            hour12 = hour24 - 12;
-            period = 'PM';
-          }
-
-          // Determine frequency and day
-          let frequency: 'weekly' | 'biweekly' | 'monthly' = 'weekly';
+          let hour12: number;
+          let minute: number;
+          let period: 'AM' | 'PM';
+          let scheduleDate: string | undefined;
+          let frequency: 'weekly' | 'biweekly' | 'monthly' | undefined;
           let dayOfWeek: string | undefined;
           let dayOfMonth: number | undefined;
           
-          if (dayOfMonthCron !== '*') {
-            frequency = 'monthly';
-            dayOfMonth = parseInt(dayOfMonthCron);
-          } else if (dayOfWeekCron !== '*') {
+          if (isOneTime) {
+            console.log('📅 Loading one-time schedule:', dbMsg.cron);
+            const scheduleDateTime = new Date(dbMsg.cron);
+            scheduleDate = scheduleDateTime.toISOString().split('T')[0];
+            const hour24 = scheduleDateTime.getHours();
+            minute = scheduleDateTime.getMinutes();
+            
+            // Convert to 12hr format
+            if (hour24 === 0) {
+              hour12 = 12;
+              period = 'AM';
+            } else if (hour24 < 12) {
+              hour12 = hour24;
+              period = 'AM';
+            } else if (hour24 === 12) {
+              hour12 = 12;
+              period = 'PM';
+            } else {
+              hour12 = hour24 - 12;
+              period = 'PM';
+            }
+            
+            console.log('📅 Parsed one-time schedule:', { scheduleDate, hour12, minute, period, hour24 });
+          } else {
+            console.log('🔄 Loading recurring schedule:', dbMsg.cron);
+            const cronParts = dbMsg.cron.split(' ');
+            minute = parseInt(cronParts[0]) || 0;
+            const hour24 = parseInt(cronParts[1]) || 10;
+            const dayOfMonthCron = cronParts[2];
+            const dayOfWeekCron = cronParts[4];
+            
+            // Convert 24hr to 12hr format
+            if (hour24 === 0) {
+              hour12 = 12;
+              period = 'AM';
+            } else if (hour24 < 12) {
+              hour12 = hour24;
+              period = 'AM';
+            } else if (hour24 === 12) {
+              hour12 = 12;
+              period = 'PM';
+            } else {
+              hour12 = hour24 - 12;
+              period = 'PM';
+            }
+
             frequency = 'weekly';
-            const dayMap: Record<string, string> = {
-              '0': 'sunday',
-              '1': 'monday',
-              '2': 'tuesday',
-              '3': 'wednesday',
-              '4': 'thursday',
-              '5': 'friday',
-              '6': 'saturday',
-            };
-            dayOfWeek = dayMap[dayOfWeekCron];
+            
+            if (dayOfMonthCron !== '*') {
+              frequency = 'monthly';
+              dayOfMonth = parseInt(dayOfMonthCron);
+            } else if (dayOfWeekCron !== '*') {
+              frequency = 'weekly';
+              const dayMap: Record<string, string> = {
+                '0': 'sunday', '1': 'monday', '2': 'tuesday',
+                '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday',
+              };
+              dayOfWeek = dayMap[dayOfWeekCron];
+            }
+            
+            console.log('🔄 Parsed recurring schedule:', { frequency, dayOfWeek, dayOfMonth, hour12, minute, period, hour24 });
           }
 
           const isValidated = dbMsg.status !== 'DENIED';
 
-          return {
+          const message = {
             id: dbMsg.id,
             title: dbMsg.title,
             message: dbMsg.message,
+            scheduleDate,
             frequency,
             dayOfWeek,
             dayOfMonth,
             hour: hour12,
             minute,
             period,
+            clientLimit: dbMsg.message_limit || dbMsg.message_limit || 100,
             enabled: true,
             isSaved: true,
             isValidated: isValidated, 
@@ -169,12 +201,15 @@ export default function SMSCampaigns() {
             validationReason: undefined,
             isEditing: false,
           };
+          
+          console.log('✅ Loaded message:', message);
+          return message;
         });
 
         setMessages(loadedMessages);
       }
     } catch (error) {
-      console.error('Failed to load messages:', error);
+      console.error('❌ Failed to load messages:', error);
       toast.error('Failed to load existing messages');
     } finally {
       setIsLoading(false);
@@ -202,7 +237,7 @@ export default function SMSCampaigns() {
           
           setPreviewClients(sortedClients);
           setPreviewStats(data.stats);
-          setShowPreview(true); // Open the modal
+          setShowPreview(true);
         } else {
           toast.error(data.message || 'Failed to load preview');
         }
@@ -317,7 +352,6 @@ export default function SMSCampaigns() {
               updated.validationReason = undefined;
             }
             
-            // Reload preview if client limit changed
             if (updates.clientLimit !== undefined && updates.clientLimit !== msg.clientLimit) {
               loadMessagePreview(id, updates.clientLimit);
             }
@@ -354,6 +388,18 @@ export default function SMSCampaigns() {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
 
+    console.log('💾 SAVE ATTEMPT:', {
+      msgId,
+      mode,
+      messageLength: msg.message?.length,
+      isValidated: msg.isValidated,
+      validationStatus: msg.validationStatus,
+      hour: msg.hour,
+      minute: msg.minute,
+      period: msg.period,
+      scheduleDate: msg.scheduleDate
+    });
+
     if (!msg.message.trim()) {
       toast.error('Please fill in message content');
       return;
@@ -370,24 +416,48 @@ export default function SMSCampaigns() {
     setIsSaving(true);
     setSavingMode(mode);
     try {
-      let hour24 = msg.hour;
-      if (msg.period === 'PM' && msg.hour !== 12) hour24 += 12;
-      else if (msg.period === 'AM' && msg.hour === 12) hour24 = 0;
+      let hour24 = msg.hour || 10;
+      if (msg.period === 'PM' && msg.hour !== 12) {
+        hour24 = msg.hour + 12;
+      } else if (msg.period === 'AM' && msg.hour === 12) {
+        hour24 = 0;
+      }
+
+      console.log('⏰ TIME CONVERSION:', {
+        original: `${msg.hour}:${msg.minute} ${msg.period}`,
+        hour24,
+        minute: msg.minute
+      });
 
       const local = new Date();
-      local.setHours(hour24, msg.minute, 0, 0);
+      local.setHours(hour24, msg.minute || 0, 0, 0);
       const utcHour = local.getUTCHours();
       const utcMinute = local.getUTCMinutes();
 
+      console.log('🌍 UTC CONVERSION:', {
+        localTime: local.toString(),
+        utcHour,
+        utcMinute
+      });
+
       const messageToSave = {
-        ...msg,
-        hour: hour24,
-        minute: msg.minute,
+        id: msg.id,
+        title: msg.title,
+        message: msg.message,
+        scheduleDate: msg.scheduleDate,
+        clientLimit: msg.clientLimit,
+        // Keep original 12-hour format for backend conversion
+        hour: msg.hour || 10,
+        minute: msg.minute || 0,
+        period: msg.period || 'AM',
         utcHour,
         utcMinute,
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
+        isValidated: msg.isValidated,
         purpose: 'campaign',
       };
+
+      console.log('📤 SENDING TO API:', messageToSave);
 
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
         method: 'POST',
@@ -395,22 +465,37 @@ export default function SMSCampaigns() {
         body: JSON.stringify({ messages: [messageToSave] }),
       });
 
-      if (!response.ok) throw new Error('Failed to save schedule');
+      console.log('📥 API RESPONSE STATUS:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ API ERROR RESPONSE:', errorData);
+        throw new Error(errorData.error || 'Failed to save schedule');
+      }
 
       const data = await response.json();
+      console.log('✅ API SUCCESS RESPONSE:', data);
+
       if (data.success) {
         setMessages(messages.map(m =>
           m.id === msgId
-            ? { ...m, isSaved: true, isEditing: false, validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED' }
+            ? { 
+                ...m, 
+                isSaved: true, 
+                isEditing: false, 
+                validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
+                isValidated: mode === 'activate' ? true : m.isValidated
+              }
             : m
         ));
         toast.success(mode === 'draft' ? 'Draft saved!' : 'Schedule activated!');
       } else {
-        toast.error('Failed to save');
+        console.error('❌ SAVE FAILED:', data);
+        toast.error(data.error || 'Failed to save the campaign schedule');
       }
     } catch (err: any) {
-      console.error(err);
-      toast.error('Failed to save SMS schedule');
+      console.error('❌ SAVE ERROR:', err);
+      toast.error(err.message || 'Failed to save SMS schedule');
     } finally {
       setIsSaving(false);
       setSavingMode(null);
@@ -456,22 +541,6 @@ export default function SMSCampaigns() {
           </div>
           
           <div className="flex items-center gap-2">
-            {/* <button
-              onClick={() => {
-                loadClientPreview();
-                setShowPreview(true);
-              }}
-              disabled={loadingPreview}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingPreview ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Users className="w-4 h-4" />
-              )}
-              Client Preview
-            </button> */}
-            
             {messages.length < 3 && (
               <button
                 onClick={addMessage}

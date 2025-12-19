@@ -309,7 +309,7 @@ export async function POST(request: Request) {
               cron_text: cronText,
               qstash_schedule_ids: qstashScheduleIds,
               visiting_type: msg.visitingType,
-              client_limit: msg.clientLimit,
+              message_limit: msg.clientLimit,
             })
             .eq('id', msg.id)
             .select()
