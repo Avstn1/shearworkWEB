@@ -10,17 +10,27 @@ async function incrementSmsCounter(
   messageId: string,
   field: SmsCounter
 ) {
-  const { error } = await supabase
+  // 1. Fetch current value
+  const { data, error: fetchError } = await supabase
     .from('sms_scheduled_messages')
-    .update({
-      [field]: supabase.sql`${supabase.sql.identifier(field)} + 1`
-    })
+    .select(field)
+    .eq('id', messageId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  const currentValue = data?.[field] ?? 0
+
+  // 2. Increment
+  const newValue = currentValue + 1
+
+  // 3. Update
+  const { error: updateError } = await supabase
+    .from('sms_scheduled_messages')
+    .update({ [field]: newValue })
     .eq('id', messageId)
 
-  if (error) {
-    console.error(`Failed to increment ${field}`, error)
-    throw error
-  }
+  if (updateError) throw updateError
 }
 
 const supabase = createClient(
@@ -38,8 +48,7 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
 
-
-export async function POST(request: Request) {
+async function handler(request: Request) {
   const { messageId, message, phone_normalized } = await request.json();
   
   try {
@@ -68,6 +77,7 @@ export async function POST(request: Request) {
       to: phone_normalized
     });
 
+    console.log('✅ SMS sent:', twilioMessage.sid, 'to', phone_normalized)
 
     await incrementSmsCounter(
       supabase,
@@ -81,6 +91,8 @@ export async function POST(request: Request) {
     );
 
   } catch (error) {
+    console.error('❌ Error sending SMS:', error)
+    
     await incrementSmsCounter(
       supabase,
       messageId,
@@ -96,3 +108,6 @@ export async function POST(request: Request) {
     );
   }
 }
+
+// Wrap with QStash signature verification
+export const POST = verifySignatureAppRouter(handler)
