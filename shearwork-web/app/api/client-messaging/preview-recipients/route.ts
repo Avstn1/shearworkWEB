@@ -64,8 +64,6 @@ export async function GET(request: Request) {
       phone_normalized: client.phone_normalized
     }))
 
-    console.log(phoneNumbers)
-
     // Calculate statistics
     const breakdown = selectedClients.reduce((acc, client) => {
       const type = client.visiting_type || 'unknown'
