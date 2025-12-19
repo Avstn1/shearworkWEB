@@ -4,7 +4,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
-import { selectClientsForSMS } from '@/lib/clientSmsSelectionAlgorithm' // _DSLV is days since last visit algorithm
+
+// import { selectClientsForSMS_DSLV } from '@/lib/clientSmsSelectionAlgorithm_DSLV' 
+import { selectClientsForSMS_Overdue } from '@/lib/clientSmsSelectionAlgorithm_Overdue' 
+import { selectClientsForSMS_Campaign } from '@/lib/clientSmsSelectionAlgorithm_Campaign' 
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,15 +22,6 @@ const supabase = createClient(
 
 export async function GET(request: Request) {
   try {
-    // Authenticate user
-    // const { user } = await getAuthenticatedUser(request)
-    // if (!user || !user.id) {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Unauthorized' },
-    //     { status: 401 }
-    //   )
-    // }
-
     // Get limit from query params
     const { searchParams } = new URL(request.url)
     
@@ -38,7 +32,15 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '25')
 
     // Select clients using the algorithm
-    const selectedClients = await selectClientsForSMS(supabase, userId, limit, visitingType || undefined)
+    const algorithm = searchParams.get('algorithm')
+
+    let selectedClients;
+
+    if (algorithm === 'overdue') {
+      selectedClients = await selectClientsForSMS_Overdue(supabase, userId, limit, visitingType || undefined)
+    } else {
+      selectedClients = await selectClientsForSMS_Campaign(supabase, userId, limit, visitingType || undefined)
+    } 
 
     if (selectedClients.length === 0) {
       return NextResponse.json({

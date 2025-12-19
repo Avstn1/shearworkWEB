@@ -2,12 +2,12 @@ export interface SMSMessage {
   id: string;
   title: string;
   message: string;
-  frequency: 'weekly' | 'biweekly' | 'monthly';
-  dayOfWeek?: string;
-  dayOfMonth?: number;
+  // ONE-TIME SCHEDULE FIELDS
+  scheduleDate?: string; // YYYY-MM-DD format
   hour: number;
   minute: number;
   period: 'AM' | 'PM';
+  clientLimit: number; // Number of clients to target
   enabled: boolean;
   isSaved: boolean;
   isValidated?: boolean;
@@ -15,16 +15,6 @@ export interface SMSMessage {
   validationReason?: string;
   isEditing?: boolean;
 }
-
-export const DAYS_OF_WEEK = [
-  { value: 'monday', label: 'Monday' },
-  { value: 'tuesday', label: 'Tuesday' },
-  { value: 'wednesday', label: 'Wednesday' },
-  { value: 'thursday', label: 'Thursday' },
-  { value: 'friday', label: 'Friday' },
-  { value: 'saturday', label: 'Saturday' },
-  { value: 'sunday', label: 'Sunday' },
-];
 
 export const HOURS_12 = Array.from({ length: 12 }, (_, i) => ({
   value: i === 0 ? 12 : i,
@@ -41,7 +31,17 @@ export const PERIODS = [
   { value: 'PM', label: 'PM' },
 ];
 
-export const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, i) => ({
-  value: i + 1,
-  label: (i + 1).toString(),
-}));
+export const CLIENT_LIMITS = [
+  { value: 100, label: '100 clients' },
+  { value: 250, label: '250 clients' },
+  { value: 500, label: '500 clients' },
+  { value: 750, label: '750 clients' },
+  { value: 1000, label: '1,000 clients' },
+  { value: -1, label: 'Custom' },
+  { value: -2, label: 'Max (use all credits)' }, // NEW
+];
+
+export interface PhoneNumber {
+  full_name: string;
+  phone_normalized: string;
+}

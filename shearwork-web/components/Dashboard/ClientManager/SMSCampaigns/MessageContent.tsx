@@ -142,9 +142,10 @@ export function MessageContent({
             placeholder="Type your marketing message here or generate a template..."
             rows={8}
             disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-20 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none ${
+            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 pr-20 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 ${
               !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
             }`}
+            style={{ scrollbarWidth: 'thin' }}
             maxLength={240}
           />
           <span

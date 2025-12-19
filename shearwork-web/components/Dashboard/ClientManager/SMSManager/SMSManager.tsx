@@ -80,7 +80,7 @@ export default function SMSManager() {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/client-messaging/save-sms-schedule', {
+      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=marketing', {
         method: 'GET',
       });
 
@@ -276,7 +276,7 @@ export default function SMSManager() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || '';
-      const response = await fetch(`/api/client-messaging/preview-recipients?limit=25&userId=${userId}`);
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=25&userId=${userId}&algorithm=overdue`);
       
       if (!response.ok) {
         throw new Error('Failed to load preview');
@@ -482,6 +482,7 @@ export default function SMSManager() {
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
         startDate: scheduleStartDate,
         endDate: scheduleEndDate || null,
+        purpose: 'marketing'
       };
 
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
