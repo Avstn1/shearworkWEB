@@ -73,13 +73,21 @@ async function handler(request: Request) {
       )
     }
 
+    console.log('📨 Processing message:', {
+      messageId,
+      purpose: scheduledMessage.purpose,
+      visitingType: scheduledMessage.visiting_type,
+      messageLimit: scheduledMessage.message_limit
+    })
+
     // Fetch recipients based on mode
     let recipients: Recipients[] = []
 
     if (isMassTest) {
       // Mass test mode: Use recipients from request body
-      const clientsList = [{"first_name":"Carlo","last_name":"Toledo","phone_normalized":"+13653781438"},];
-                          //  {"first_name":"Austin","last_name":"Bartolome","phone_normalized":"+16474566099"}];
+      const clientsList = [
+        {"first_name":"Carlo","last_name":"Toledo","phone_normalized":"+13653781438"},
+      ];
 
       if (!Array.isArray(clientsList) || clientsList.length === 0) {
         return NextResponse.json(
@@ -88,12 +96,12 @@ async function handler(request: Request) {
         )
       }
 
-      const recipients = clientsList
-      .filter((client: any) => client.phone_normalized)
-      .map((client: any) => ({
-        phone_normalized: client.phone_normalized,
-        full_name: `${client.first_name} ${client.last_name}`.trim(),
-      }))
+      recipients = clientsList
+        .filter((client: any) => client.phone_normalized)
+        .map((client: any) => ({
+          phone_normalized: client.phone_normalized,
+          full_name: `${client.first_name} ${client.last_name}`.trim(),
+        }))
 
       if (recipients.length === 0) {
         return NextResponse.json(
@@ -126,23 +134,55 @@ async function handler(request: Request) {
       }]
       
     } else { 
-      console.log('Fetching preview recipients for message:', messageId)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=25&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}`);
+      // Production mode: Determine algorithm based on message purpose
+      const algorithm = scheduledMessage.purpose === 'campaign' ? 'campaign' : 'overdue';
+      const limit = scheduledMessage.message_limit || 100;
+      
+      console.log(`📊 Fetching recipients with ${algorithm} algorithm, limit: ${limit}`);
+      
+      const apiUrl = scheduledMessage.visiting_type 
+        ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}&algorithm=${algorithm}`
+        : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}`;
+      
+      console.log('🔗 API URL:', apiUrl);
+      
+      const response = await fetch(apiUrl);
+      
       if (!response.ok) {
-        throw new Error('Failed to load preview');
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch recipients:', errorText);
+        throw new Error('Failed to load recipients');
       }
 
       const data = await response.json();
-      console.log(JSON.stringify(data));
+      console.log('✅ Recipients fetched:', {
+        count: data.phoneNumbers?.length || 0,
+        algorithm,
+        limit
+      });
 
-      recipients = data.phoneNumbers 
+      recipients = data.phoneNumbers || [];
 
-      console.log(recipients)
+      if (recipients.length === 0) {
+        console.warn('⚠️ No recipients found for this message');
+        return NextResponse.json({
+          success: true,
+          message: 'No recipients found',
+          messageId,
+          recipientCount: 0,
+          timestamp: new Date().toISOString(),
+        })
+      }
+
+      console.log('📱 Sending to', recipients.length, 'recipients');
     }
     
+    // Enqueue SMS messages
     const queue = qstashClient.queue({
       queueName: `sms-queue-${scheduledMessage.user_id}`,
     })    
+
+    console.log('📤 Enqueueing', recipients.length, 'SMS messages');
 
     await pMap(
       recipients,
@@ -158,14 +198,18 @@ async function handler(request: Request) {
       { concurrency: 15 }
     )
 
+    console.log('✅ SMS send job completed successfully');
+
     return NextResponse.json({
       success: true,
       message: 'SMS send job completed',
       messageId,
+      recipientCount: recipients.length,
       timestamp: new Date().toISOString(),
     })
 
   } catch (err: any) {
+    console.error('❌ SMS send error:', err);
     return NextResponse.json(
       { success: false, error: err.message || 'Unknown error' },
       { status: 500 }
@@ -178,7 +222,7 @@ export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
   const action = searchParams.get('action')
   
-  if (action === 'test') {
+  if (action === 'test' || action === 'mass_test') {
     return handler(request)
   }
   
