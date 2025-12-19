@@ -149,12 +149,29 @@ export async function POST(request: Request) {
       )
     }
 
+    // Get user's available credits
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('available_credits')
+      .eq('user_id', user.id)
+      .single()
+
+    const availableCredits = profile?.available_credits || 0
+
     // Validate messages based on their status
     for (const msg of messages) {
       // All messages need content
       if (!msg.message || msg.message.trim().length < 100) {
         return NextResponse.json(
           { success: false, error: 'Message must be at least 100 characters' },
+          { status: 400 }
+        )
+      }
+
+      // Check if client limit exceeds available credits
+      if (msg.clientLimit && msg.clientLimit > availableCredits) {
+        return NextResponse.json(
+          { success: false, error: `Cannot schedule message for ${msg.clientLimit} clients. You only have ${availableCredits} credits available.` },
           { status: 400 }
         )
       }
@@ -173,35 +190,96 @@ export async function POST(request: Request) {
     // Process each message (upsert by id)
     const upsertPromises = messages.map(async (msg: any) => {
       try {
-        const utcHour = msg.utcHour;
-        const utcMinute = msg.utcMinute;
+        let cronValue: string
+        let cronText: string
+        let qstashScheduleIds: string[] = []
 
-        // Generate multiple cron expressions (for days 29-31)
-        const cronExpressions = generateCronExpressions(
-          msg.frequency,
-          msg.dayOfWeek,
-          msg.dayOfMonth,
-          msg.hour, // utcHour  
-          msg.minute // utcMinute
-        )
-        
-        // Use the first cron for display purposes (represents the primary schedule)
-        const primaryCron = cronExpressions[0]
-        
-        const cronText = getCronText(
-          msg.frequency,
-          msg.dayOfWeek,
-          msg.dayOfMonth,
-          msg.hour,  
-          msg.minute
-        )
+        // Check if this is a one-time schedule (has scheduleDate)
+        if (msg.scheduleDate) {
+          // ONE-TIME SCHEDULE
+          console.log('📅 Creating one-time schedule for:', msg.scheduleDate, `${msg.hour}:${msg.minute} ${msg.period}`)
+          
+          // Convert 12hr to 24hr
+          let hour24 = msg.hour
+          if (msg.period === 'PM' && msg.hour !== 12) hour24 += 12
+          else if (msg.period === 'AM' && msg.hour === 12) hour24 = 0
 
-        console.log('🕐 Time conversion:', {
-          localTime: `${msg.hour}:${msg.minute}`,
-          utcTime: `${utcHour}:${utcMinute}`,
-          cronExpressions,
-          numberOfSchedules: cronExpressions.length
-        })
+          // Create ISO timestamp for the scheduled time
+          const scheduleDateTime = new Date(`${msg.scheduleDate}T${hour24.toString().padStart(2, '0')}:${msg.minute.toString().padStart(2, '0')}:00`)
+          
+          // Convert to Toronto time (America/Toronto)
+          const torontoTime = new Date(scheduleDateTime.toLocaleString('en-US', { timeZone: 'America/Toronto' }));
+          cronValue = torontoTime.toISOString();
+          
+          // Human readable text
+          const dateStr = scheduleDateTime.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          })
+          const timeStr = `${msg.hour}:${msg.minute.toString().padStart(2, '0')} ${msg.period}`
+          cronText = `One-time on ${dateStr} at ${timeStr}`
+
+          // Create QStash schedule (ONE-TIME) if ACCEPTED
+          if (msg.validationStatus === 'ACCEPTED') {
+            const now = new Date()
+            const delaySeconds = Math.floor((scheduleDateTime.getTime() - now.getTime()) / 1000)
+            
+            if (delaySeconds > 0) {
+              console.log(`⏰ Scheduling one-time message with ${delaySeconds}s delay`)
+              
+              // Create one-time QStash message with delay
+              const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app'
+              
+              try {
+                const response = await qstashClient.publishJSON({
+                  url: `${appUrl}/api/client-messaging/qstash-sms-send?messageId=${msg.id}`,
+                  delay: delaySeconds, // delay in seconds
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                })
+                
+                // Store the message ID for potential cancellation
+                qstashScheduleIds = [response.messageId]
+                console.log(`✅ Created one-time QStash message: ${response.messageId}`)
+              } catch (error) {
+                console.error('❌ Failed to create one-time QStash message:', error)
+                throw error
+              }
+            }
+          }
+        } else {
+          // RECURRING SCHEDULE (existing cron logic)
+          const utcHour = msg.utcHour
+          const utcMinute = msg.utcMinute
+
+          const cronExpressions = generateCronExpressions(
+            msg.frequency,
+            msg.dayOfWeek,
+            msg.dayOfMonth,
+            msg.hour,
+            msg.minute
+          )
+          
+          cronValue = cronExpressions[0]
+          cronText = getCronText(
+            msg.frequency,
+            msg.dayOfWeek,
+            msg.dayOfMonth,
+            msg.hour,
+            msg.minute
+          )
+
+          // Create QStash schedules if ACCEPTED
+          if (msg.validationStatus === 'ACCEPTED') {
+            const schedulePromises = cronExpressions.map(cron => 
+              createQStashSchedule(msg.id, cron)
+            )
+            qstashScheduleIds = await Promise.all(schedulePromises)
+            console.log(`✅ Created ${qstashScheduleIds.length} QStash schedules:`, qstashScheduleIds)
+          }
+        }
 
         // Check if message already exists in database by id
         const { data: existing } = await supabase
@@ -211,43 +289,27 @@ export async function POST(request: Request) {
           .eq('user_id', user.id)
           .single()
 
-        let qstashScheduleIds: string[] = []
-        
         if (existing) {
-          // Always recreate schedules for existing ACCEPTED messages
-          if (msg.validationStatus === 'ACCEPTED') {
-            console.log('🔄 Recreating QStash schedules for ACCEPTED message')
-            // Delete old schedules if exist
-            if (existing.qstash_schedule_ids && existing.qstash_schedule_ids.length > 0) {
-              await deleteMultipleQStashSchedules(existing.qstash_schedule_ids)
-            }
-            
-            // Create new schedules for each cron expression
-            const schedulePromises = cronExpressions.map(cron => 
-              createQStashSchedule(msg.id, cron)
-            )
-            qstashScheduleIds = await Promise.all(schedulePromises)
-            console.log(`✅ Created ${qstashScheduleIds.length} QStash schedules:`, qstashScheduleIds)
-          } else {
-            // Status is DRAFT - delete schedules if exist
-            console.log('🗑️  Message is DRAFT - removing QStash schedules')
+          // Update existing message
+          if (msg.validationStatus !== 'ACCEPTED') {
+            // DRAFT - delete any existing schedules
             if (existing.qstash_schedule_ids && existing.qstash_schedule_ids.length > 0) {
               await deleteMultipleQStashSchedules(existing.qstash_schedule_ids)
             }
             qstashScheduleIds = []
           }
 
-          // Update existing message
           const { data, error } = await supabase
             .from('sms_scheduled_messages')
             .update({
               title: msg.title || 'Untitled Message',
               message: msg.message,
               status: msg.validationStatus,
-              cron: primaryCron,
+              cron: cronValue,
               cron_text: cronText,
               qstash_schedule_ids: qstashScheduleIds,
               visiting_type: msg.visitingType,
+              client_limit: msg.clientLimit,
             })
             .eq('id', msg.id)
             .select()
@@ -256,17 +318,7 @@ export async function POST(request: Request) {
           if (error) throw error
           return { success: true, data }
         } else {
-          // New message - create QStash schedules if ACCEPTED
-          if (msg.validationStatus === 'ACCEPTED') {
-            console.log('➕ New ACCEPTED message - creating QStash schedules')
-            const schedulePromises = cronExpressions.map(cron => 
-              createQStashSchedule(msg.id, cron)
-            )
-            qstashScheduleIds = await Promise.all(schedulePromises)
-            console.log(`✅ Created ${qstashScheduleIds.length} QStash schedules:`, qstashScheduleIds)
-          }
-
-          // Insert new message with the frontend-generated id
+          // Insert new message
           const { data, error } = await supabase
             .from('sms_scheduled_messages')
             .insert({
@@ -275,10 +327,12 @@ export async function POST(request: Request) {
               title: msg.title || 'Untitled Message',
               message: msg.message,
               status: msg.validationStatus,
-              cron: primaryCron,
+              cron: cronValue,
               cron_text: cronText,
               qstash_schedule_ids: qstashScheduleIds,
-              visiting_type: msg.visitingType
+              visiting_type: msg.visitingType,
+              purpose: msg.purpose,
+              message_limit: msg.clientLimit,
             })
             .select()
             .single()
@@ -320,10 +374,14 @@ export async function GET(request: Request) {
     const { user, supabase } = await getAuthenticatedUser(request)
     if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
+    const { searchParams } = new URL(request.url)
+    const purpose = searchParams.get('purpose')
+    
     const { data: messages, error } = await supabase
       .from('sms_scheduled_messages')
       .select('*')
       .eq('user_id', user.id)
+      .eq('purpose', purpose)
       .order('created_at', { ascending: true })
 
     if (error) throw error

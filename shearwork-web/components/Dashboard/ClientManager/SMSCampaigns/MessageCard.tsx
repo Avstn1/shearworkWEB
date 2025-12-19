@@ -1,10 +1,37 @@
-import { motion } from 'framer-motion';
-import { Trash2, Clock, CheckCircle, XCircle, Edit, Pencil, Check, X, Send } from 'lucide-react';
-import { SMSMessage, DAYS_OF_WEEK } from './types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trash2, Clock, CheckCircle, XCircle, Edit, Pencil, Check, X, Send, Loader2, Users } from 'lucide-react';
+import { SMSMessage } from './types';
 import { MessageContent } from './MessageContent';
 import { MessageSchedule } from './MessageSchedule';
+import { supabase } from '@/utils/supabaseClient';
+import { useState } from 'react';
+
+interface PreviewClient {
+  client_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone_normalized: string;
+  visiting_type: string | null;
+  avg_weekly_visits: number | null;
+  last_appt: string | null;
+  total_appointments: number;
+  days_since_last_visit: number;
+  days_overdue: number;
+  expected_visit_interval_days: number;
+  score: number;
+  date_last_sms_sent: string | null;
+}
+
+interface PreviewStats {
+  total_selected: number;
+  breakdown: Record<string, number>;
+  avg_score: string;
+  avg_days_overdue: string;
+  avg_days_since_last_visit: string;
+}
 
 interface MessageCardProps {
+  availableCredits?: number;
   message: SMSMessage;
   index: number;
   isSaving: boolean;
@@ -12,6 +39,9 @@ interface MessageCardProps {
   validatingId: string | null;
   editingTitleId: string | null;
   tempTitle: string;
+  previewCount?: number;
+  loadingPreview: boolean; // NEW
+  onLoadPreview: (limit: number) => void; // NEW
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onRemove: (id: string) => void;
   onEnableEdit: (id: string) => void;
@@ -25,6 +55,7 @@ interface MessageCardProps {
 }
 
 export function MessageCard({
+  availableCredits,
   message: msg,
   index,
   isSaving,
@@ -32,6 +63,9 @@ export function MessageCard({
   validatingId,
   editingTitleId,
   tempTitle,
+  previewCount,
+  loadingPreview, // NEW
+  onLoadPreview, // NEW
   onUpdate,
   onRemove,
   onEnableEdit,
@@ -49,15 +83,19 @@ export function MessageCard({
     const displayHour = msg.hour === 0 ? 12 : msg.hour > 12 ? msg.hour - 12 : msg.hour;
     const timeStr = `${displayHour}:${minute.toString().padStart(2, '0')} ${msg.period || 'AM'}`;
     
-    if (msg.frequency === 'monthly') {
-      return `Every month on day ${msg.dayOfMonth} at ${timeStr}`;
-    } else if (msg.frequency === 'biweekly') {
-      const day = DAYS_OF_WEEK.find((d) => d.value === msg.dayOfWeek)?.label;
-      return `Every other ${day} at ${timeStr}`;
-    } else {
-      const day = DAYS_OF_WEEK.find((d) => d.value === msg.dayOfWeek)?.label;
-      return `Every ${day} at ${timeStr}`;
+    // Format the date
+    if (msg.scheduleDate) {
+      const date = new Date(msg.scheduleDate + 'T00:00:00'); // Prevent timezone issues
+      const dateStr = date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+      return `Scheduled for ${dateStr} at ${timeStr}`;
     }
+    
+    // Fallback if no date is set
+    return `Send at ${timeStr}`;
   };
 
   return (
@@ -129,6 +167,21 @@ export function MessageCard({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Preview Button */}
+            <button
+              onClick={() => onLoadPreview(msg.clientLimit)}
+              disabled={loadingPreview}
+              className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Preview Recipients"
+            >
+              {loadingPreview ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Users className="w-3 h-3" />
+              )}
+              Preview
+            </button>
+
             {/* Edit Button (only show if not editing and message is saved) */}
             {!msg.isEditing && msg.isSaved && (
               <button
@@ -215,9 +268,11 @@ export function MessageCard({
 
           {/* RIGHT: Schedule Settings (50%) */}
           <MessageSchedule
+            availableCredits={availableCredits}
             message={msg}
             isSaving={isSaving}
             savingMode={savingMode}
+            previewCount={previewCount}
             onUpdate={onUpdate}
             onSave={onSave}
             onCancelEdit={onCancelEdit}

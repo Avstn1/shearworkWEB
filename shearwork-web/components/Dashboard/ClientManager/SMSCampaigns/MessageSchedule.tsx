@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Calendar, Clock, FileText, Zap } from 'lucide-react';
-import { SMSMessage, DAYS_OF_WEEK, DAYS_OF_MONTH, HOURS_12, MINUTES, PERIODS } from './types';
+import { Calendar, Clock, FileText, Zap, Users, Hash } from 'lucide-react';
+import { SMSMessage, HOURS_12, MINUTES, PERIODS, CLIENT_LIMITS } from './types';
+import { useState } from 'react';
 
 interface MessageScheduleProps {
   message: SMSMessage;
@@ -9,6 +10,8 @@ interface MessageScheduleProps {
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
   onCancelEdit: (id: string) => void;
+  previewCount?: number;
+  availableCredits?: number; 
 }
 
 // Right side of the MessageCard
@@ -19,96 +22,155 @@ export function MessageSchedule({
   onUpdate,
   onSave,
   onCancelEdit,
+  previewCount = 0,
+  availableCredits = 0, 
 }: MessageScheduleProps) {
+
+
+  const [customLimit, setCustomLimit] = useState<string>(
+    msg.clientLimit > 1000 ? msg.clientLimit.toString() : ''
+  );
+  
+  // Check if it's a predefined limit or special case
+  const isPredefinedLimit = [100, 250, 500, 750, 1000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
+  const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
+
+  // Get minimum date (today)
+  const today = new Date().toISOString().split('T')[0];
+
+  const handleLimitChange = (value: number) => {
+    if (value === -1) {
+      // Custom selected
+      setShowCustomInput(true);
+      const newLimit = customLimit && parseInt(customLimit) >= 100 ? parseInt(customLimit) : 100;
+      setCustomLimit(newLimit.toString());
+      onUpdate(msg.id, { clientLimit: Math.min(newLimit, availableCredits) });
+    } else if (value === -2) {
+      // Max selected - use all available credits
+      setShowCustomInput(false);
+      setCustomLimit('');
+      onUpdate(msg.id, { clientLimit: availableCredits });
+    } else {
+      // Predefined limit selected
+      setShowCustomInput(false);
+      setCustomLimit('');
+      onUpdate(msg.id, { clientLimit: Math.min(value, availableCredits) });
+    }
+  };
+
+
+  const handleCustomLimitChange = (value: string) => {
+    setCustomLimit(value);
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue >= 100) {
+      onUpdate(msg.id, { clientLimit: Math.min(numValue, availableCredits) });
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Frequency */}
+      {/* Client Limit Selection */}
       <div>
         <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          <Calendar className="w-3 h-3 inline mr-1" />
-          Frequency
+          <Users className="w-3 h-3 inline mr-1" />
+          Number of Clients to Message
         </label>
         <select
-          value={msg.frequency}
-          onChange={(e) =>
-            onUpdate(msg.id, {
-              frequency: e.target.value as SMSMessage['frequency'],
-            })
-          }
+          value={showCustomInput ? -1 : msg.clientLimit === availableCredits && availableCredits > 1000 ? -2 : msg.clientLimit}
+          onChange={(e) => handleLimitChange(parseInt(e.target.value))}
           disabled={!msg.isEditing}
           className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
             !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
           }`}
         >
-          <option value="weekly" className="bg-[#1a1a1a]">
-            Weekly
-          </option>
-          <option value="biweekly" className="bg-[#1a1a1a]">
-            Bi-weekly
-          </option>
-          <option value="monthly" className="bg-[#1a1a1a]">
-            Monthly
-          </option>
+          {CLIENT_LIMITS.map((limit) => {
+            // Skip max option if credits are less than 1000 (already covered by other options)
+            if (limit.value === -2 && availableCredits <= 1000) return null;
+            
+            // Show actual credit count for max option
+            if (limit.value === -2) {
+              return (
+                <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
+                  Max ({availableCredits.toLocaleString()} clients)
+                </option>
+              );
+            }
+            
+            return (
+              <option
+                key={limit.value}
+                value={limit.value}
+                className="bg-[#1a1a1a]"
+              >
+                {limit.label}
+              </option>
+            );
+          })}
         </select>
+
+        {/* Custom Input */}
+        {showCustomInput && (
+          <div className="mt-2">
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
+              <input
+                type="number"
+                min="100"
+                max={availableCredits}
+                value={customLimit}
+                onChange={(e) => handleCustomLimitChange(e.target.value)}
+                disabled={!msg.isEditing}
+                placeholder={`Enter custom limit (min 100, max ${availableCredits.toLocaleString()})`}
+                className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
+                  !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
+                }`}
+              />
+            </div>
+            {previewCount > 0 && (
+              <p className="text-xs text-[#bdbdbd] mt-1">
+                {previewCount} clients will receive this message
+              </p>
+            )}
+          </div>
+        )}
+        
+        {!showCustomInput && previewCount > 0 && (
+          <p className="text-xs text-[#bdbdbd] mt-2">
+            {previewCount} clients will receive this message
+          </p>
+        )}
+
+        {/* Credit warning */}
+        {msg.clientLimit > availableCredits && (
+          <p className="text-xs text-rose-400 mt-2">
+            ⚠️ You only have {availableCredits} credits available
+          </p>
+        )}
       </div>
 
-      {/* Day Selection */}
+      {/* Schedule Date */}
       <div>
         <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          {msg.frequency === 'monthly' ? 'Day of Month' : 'Day of Week'}
+          <Calendar className="w-3 h-3 inline mr-1" />
+          Send Date
         </label>
-        {msg.frequency === 'monthly' ? (
-          <select
-            value={msg.dayOfMonth || 1}
-            onChange={(e) =>
-              onUpdate(msg.id, {
-                dayOfMonth: parseInt(e.target.value),
-              })
-            }
-            disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
-              !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
-            }`}
-          >
-            {DAYS_OF_MONTH.map((day) => (
-              <option
-                key={day.value}
-                value={day.value}
-                className="bg-[#1a1a1a]"
-              >
-                {day.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <select
-            value={msg.dayOfWeek}
-            onChange={(e) =>
-              onUpdate(msg.id, { dayOfWeek: e.target.value })
-            }
-            disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
-              !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
-            }`}
-          >
-            {DAYS_OF_WEEK.map((day) => (
-              <option
-                key={day.value}
-                value={day.value}
-                className="bg-[#1a1a1a]"
-              >
-                {day.label}
-              </option>
-            ))}
-          </select>
-        )}
+        <input
+          type="date"
+          value={msg.scheduleDate || today}
+          min={today}
+          onChange={(e) => onUpdate(msg.id, { scheduleDate: e.target.value })}
+          disabled={!msg.isEditing}
+          className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
+            !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
+          }`}
+        />
       </div>
 
       {/* Time - 12hr format with AM/PM */}
       <div>
         <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
           <Clock className="w-3 h-3 inline mr-1" />
-          Time
+          Send Time
         </label>
         <div className="grid grid-cols-3 gap-2">
           {/* Hour */}
@@ -223,7 +285,7 @@ export function MessageSchedule({
               disabled={
                 isSaving ||
                 msg.message.length < 100 ||
-                !msg.isValidated  // ← REMOVED the validationStatus check
+                !msg.isValidated
               }
               className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
                 isSaving ||

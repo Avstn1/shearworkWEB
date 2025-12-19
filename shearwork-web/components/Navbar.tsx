@@ -3,13 +3,15 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar } from 'lucide-react'
+import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
 import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
 import Image from 'next/image'
+
+import CreditsModal from '@/components/Dashboard/CreditsModal'
 
 // Color palette matching React Native app
 const COLORS = {
@@ -44,6 +46,8 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -103,7 +107,7 @@ export default function Navbar() {
 
   if (loading) return null
 
-  const desktopIcons = (
+const desktopIcons = (
     <>
       <Tooltip label="Dashboard">
         <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
@@ -124,6 +128,7 @@ export default function Navbar() {
           </div>
         </Link>
       </Tooltip>
+
       <Tooltip label="Client Manager">
         <Link href="/client-manager" className="relative flex flex-col items-center group hidden md:flex">
           <div 
@@ -143,6 +148,7 @@ export default function Navbar() {
           </div>
         </Link>
       </Tooltip>
+
       <Tooltip label="Expenses">
         <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
           <div 
@@ -162,6 +168,28 @@ export default function Navbar() {
           </div>
         </Link>
       </Tooltip>
+      
+      <Tooltip label="Credits">
+        <button 
+          onClick={() => setShowCreditsModal(true)}
+          className="relative flex flex-col items-center group hidden md:flex"
+        >
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <Coins className="w-6 h-6" style={{ color: COLORS.text }} />
+          </div>
+        </button>
+      </Tooltip>
     </>
   )
 
@@ -169,36 +197,6 @@ export default function Navbar() {
     if (!user) {
       return (
         <>
-          {/* <a 
-            href="#features" 
-            onClick={() => setOpen(false)} 
-            className="transition"
-            style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
-          >
-            Features
-          </a>
-          <a 
-            href="#pricing" 
-            onClick={() => setOpen(false)} 
-            className="transition"
-            style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
-          >
-            Pricing
-          </a>
-          <a 
-            href="#contact" 
-            onClick={() => setOpen(false)} 
-            className="transition"
-            style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
-          >
-            Contact
-          </a> */}
           <Link 
             href="/login" 
             onClick={() => setOpen(false)} 
@@ -373,13 +371,13 @@ export default function Navbar() {
         {/* --- NON-ADMIN CONTENT --- */}
         {desktopIcons}
         <NotificationsDropdown userId={user.id} />
-        {/* <TipsDropdown barberId={user.id} /> */}
         <UserProfile />
       </>
     )
   }
 
   return (
+    <>
     <nav 
       className="fixed top-0 w-full z-50 backdrop-blur-md shadow-sm"
       style={{
@@ -404,39 +402,6 @@ export default function Navbar() {
             orva
           </span>
         </Link>
-
-        {/* --- CENTER: Links (only when signed out) --- */}
-        {/* {!user && (
-          <div 
-            className="hidden md:flex gap-6 absolute left-1/2 -translate-x-1/2 text-[clamp(0.8rem,2vw,1rem)]"
-            style={{ color: COLORS.text }}
-          >
-            <a 
-              href="#features" 
-              className="transition"
-              onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
-            >
-              Features
-            </a>
-            <a 
-              href="#pricing" 
-              className="transition"
-              onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
-            >
-              Pricing
-            </a>
-            <a 
-              href="#contact" 
-              className="transition"
-              onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
-            >
-              Contact
-            </a>
-          </div>
-        )} */}
 
         {/* --- RIGHT SIDE --- */}
         <div className="flex items-center gap-2 sm:gap-4 ml-auto">
@@ -480,5 +445,11 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+    <CreditsModal
+      isOpen={showCreditsModal}
+      onClose={() => setShowCreditsModal(false)}
+    />
+
+    </>
   )
 }

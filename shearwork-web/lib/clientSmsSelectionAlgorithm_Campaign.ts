@@ -1,4 +1,4 @@
-// lib/sms/clientSmsSelectionAlgorithm.ts
+// lib/sms/holidayMassCampaignAlgorithm.ts
 import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface AcuityClient {
@@ -22,26 +22,32 @@ export interface ScoredClient extends AcuityClient {
 }
 
 /**
- * Selects up to 50 clients to send SMS marketing messages to.
- * Heavily prioritizes consistent and semi-consistent clients (90%).
- * Requires clients to be at least 14 days overdue based on their visit pattern.
+ * Selects clients for holiday mass campaigns.
+ * Targets clients who haven't visited in 2+ weeks but less than 8 months.
+ * Purpose: Re-engage clients during holiday periods when they have more free time.
  */
-export async function selectClientsForSMS(
+export async function selectClientsForSMS_Campaign(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
   visitingType?: string
 ): Promise<ScoredClient[]> {
   const today = new Date();
+  const twoWeeksAgo = new Date(today);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const eightMonthsAgo = new Date(today);
+  eightMonthsAgo.setMonth(eightMonthsAgo.getMonth() - 8);
   
-  // Fetch eligible clients
+  // Fetch eligible clients who haven't visited in 2 weeks to 8 months
   let query = supabase
-    .from('acuity_clients_testing')
+    .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
-    .gt('total_appointments', 1)
+    .lt('last_appt', twoWeeksAgo.toISOString())
+    .gt('last_appt', eightMonthsAgo.toISOString())
+    .gt('total_appointments', 0)
     .order('last_appt', { ascending: false });
 
   // Conditionally add visiting_type filter if provided
@@ -61,25 +67,14 @@ export async function selectClientsForSMS(
 
   // Score and filter clients
   const allScoredClients: ScoredClient[] = clients
-    .map((client) => scoreClient(client, today))
+    .map((client) => scoreClientForHoliday(client, today))
     .filter((client) => {
       if (client.score <= 0) return false;
 
       const daysSinceLastVisit = client.days_since_last_visit;
 
-      // Apply time-based filters
-      switch (client.visiting_type) {
-        case 'consistent':
-          return daysSinceLastVisit < 60;
-        case 'semi-consistent':
-          return daysSinceLastVisit < 90;
-        case 'easy-going':
-          return daysSinceLastVisit < 120;
-        case 'rare':
-          return daysSinceLastVisit < 210;
-        default:
-          return daysSinceLastVisit < 90;
-      }
+      // Ensure within 2 weeks to 8 months window
+      return daysSinceLastVisit >= 14 && daysSinceLastVisit <= 240;
     });
 
   // Remove duplicates based on phone_normalized (keep the one with highest score)
@@ -88,37 +83,12 @@ export async function selectClientsForSMS(
   // Sort by score (highest first)
   uniqueClients.sort((a, b) => b.score - a.score);
 
-  // Separate by type
-  const consistentAndSemiConsistent = uniqueClients.filter(
-    c => c.visiting_type === 'consistent' || c.visiting_type === 'semi-consistent'
-  );
-  const others = uniqueClients.filter(
-    c => c.visiting_type !== 'consistent' && c.visiting_type !== 'semi-consistent'
-  );
+  console.log(`🎄 Holiday Campaign - Available clients: ${uniqueClients.length}`);
 
-  console.log(`📊 Available clients: Consistent/Semi=${consistentAndSemiConsistent.length}, Others=${others.length}`);
+  // For mass campaigns, no complex distribution logic - just take top scoring clients
+  const selectedClients = uniqueClients.slice(0, limit);
 
-  // Target 90% consistent/semi-consistent
-  const targetConsistentCount = Math.floor(limit * 0.9);
-  
-  const selectedClients: ScoredClient[] = [];
-
-  // Fill with consistent/semi-consistent first
-  selectedClients.push(...consistentAndSemiConsistent.slice(0, targetConsistentCount));
-
-  // Fill remaining with others
-  const remainingSlots = limit - selectedClients.length;
-  if (remainingSlots > 0) {
-    selectedClients.push(...others.slice(0, remainingSlots));
-  }
-
-  // If still under limit, add more consistent/semi-consistent
-  if (selectedClients.length < limit && consistentAndSemiConsistent.length > targetConsistentCount) {
-    const additionalNeeded = limit - selectedClients.length;
-    selectedClients.push(...consistentAndSemiConsistent.slice(targetConsistentCount, targetConsistentCount + additionalNeeded));
-  }
-
-  console.log(`✅ Selected ${selectedClients.length} clients`);
+  console.log(`✅ Selected ${selectedClients.length} clients for holiday campaign`);
 
   return selectedClients;
 }
@@ -145,7 +115,7 @@ function deduplicateByPhone(clients: ScoredClient[]): ScoredClient[] {
   return Array.from(phoneMap.values());
 }
 
-function scoreClient(client: AcuityClient, today: Date): ScoredClient {
+function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient {
   let score = 0;
   
   const lastApptDate = client.last_appt ? new Date(client.last_appt) : null;
@@ -160,8 +130,8 @@ function scoreClient(client: AcuityClient, today: Date): ScoredClient {
     ? Math.floor((today.getTime() - lastSmsSentDate.getTime()) / (1000 * 60 * 60 * 24))
     : Infinity;
 
-  // Don't message if SMS sent in last 14 days
-  if (daysSinceLastSms < 14) {
+  // More lenient - don't message if SMS sent in last 7 days (vs 14 days in regular algorithm)
+  if (daysSinceLastSms < 7) {
     return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
   }
 
@@ -169,31 +139,52 @@ function scoreClient(client: AcuityClient, today: Date): ScoredClient {
     ? Math.round(7 / client.avg_weekly_visits)
     : 0;
 
-  const daysOverdue = Math.max(0, daysSinceLastVisit - expectedVisitIntervalDays);
+  const daysOverdue = daysSinceLastVisit - expectedVisitIntervalDays;
 
-  // UNIVERSAL REQUIREMENT: Must be at least 14 days overdue
-  if (daysOverdue < 14) {
-    return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
-  }
-
-  // CONSISTENT: Score if at least 14 days overdue
+  // LENIENT OVERDUE REQUIREMENTS FOR HOLIDAY CAMPAIGNS
+  // Allow negative values (meaning they're not technically overdue yet)
+  
+  // CONSISTENT: Must be at exactly expected interval (0 days overdue or more)
   if (client.visiting_type === 'consistent') {
-    score = 195 + (daysOverdue * 3);
+    if (daysOverdue >= 0) {
+      score = 150 + (daysOverdue * 2);
+    }
   }
   
-  // SEMI-CONSISTENT: Score if at least 14 days overdue
+  // SEMI-CONSISTENT: Can be up to 3 days early (-3 days overdue)
   else if (client.visiting_type === 'semi-consistent') {
-    score = 200 + (daysOverdue * 3);
+    if (daysOverdue >= -3) {
+      score = 160 + ((daysOverdue + 3) * 2);
+    }
   }
   
-  // EASY-GOING: Score if at least 14 days overdue
+  // EASY-GOING: Can be up to 10 days early (-10 days overdue)
   else if (client.visiting_type === 'easy-going') {
-    score = 25 + Math.min(daysOverdue, 10);
+    if (daysOverdue >= -10) {
+      score = 100 + ((daysOverdue + 10) * 1.5);
+    }
   }
   
-  // RARE: Score if at least 14 days overdue
+  // RARE: Can be up to 20 days early (-20 days overdue)
   else if (client.visiting_type === 'rare') {
-    score = 10;
+    if (daysOverdue >= -20) {
+      score = 80 + ((daysOverdue + 20) * 1);
+    }
+  }
+  
+  // NEW or NULL: Treat like easy-going
+  else {
+    if (daysOverdue >= -10) {
+      score = 90 + ((daysOverdue + 10) * 1.5);
+    }
+  }
+
+  // Bonus for longer absence (they really need re-engagement)
+  if (daysSinceLastVisit > 365) {
+    score += 20; // Been away over a year
+  }
+  if (daysSinceLastVisit > 540) {
+    score += 30; // Been away over 18 months
   }
 
   return {
