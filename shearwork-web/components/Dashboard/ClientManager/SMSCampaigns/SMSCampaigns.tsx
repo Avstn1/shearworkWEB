@@ -363,14 +363,63 @@ export default function SMSCampaigns() {
       );
   };
 
-  const enableEditMode = (id: string) => {
+  const enableEditMode = async (id: string) => {
     const msg = messages.find((m) => m.id === id);
     if (msg) {
+      if (msg.validationStatus === 'ACCEPTED' && previewCounts[id]) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          // Get current credits
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('available_credits, reserved_credits')
+            .eq('user_id', user.id)
+            .single();
+
+          if (!profile) return;
+
+          // Refund: move from reserved back to available
+          const refundAmount = Math.min(previewCounts[id], profile.reserved_credits || 0);
+          
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              available_credits: (profile.available_credits || 0) + refundAmount,
+              reserved_credits: Math.max(0, (profile.reserved_credits || 0) - refundAmount),
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+
+          if (error) {
+            console.error('Failed to refund credits:', error);
+            toast.error('Failed to refund credits');
+            return;
+          }
+
+          // Update local state
+          setAvailableCredits(prev => prev + refundAmount);
+          toast.success(`${refundAmount} credits refunded - message set to draft`);
+
+        } catch (error) {
+          console.error('Failed to refund credits:', error);
+          toast.error('Failed to refund credits');
+          return;
+        }
+      }
+
+      // Store original for cancel
       setOriginalMessages({
         ...originalMessages,
         [id]: { ...msg },
       });
-      updateMessage(id, { isEditing: true });
+
+      // Set to editing and change status to DRAFT
+      updateMessage(id, { 
+        isEditing: true,
+        validationStatus: 'DRAFT'
+      });
     }
   };
 
@@ -383,7 +432,7 @@ export default function SMSCampaigns() {
       setOriginalMessages(newOriginals);
     }
   };
-
+  
   const handleSave = async (msgId: string, mode: 'draft' | 'activate') => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
@@ -413,8 +462,56 @@ export default function SMSCampaigns() {
       return;
     }
 
+    // NEW: Check credits before activation
+    if (mode === 'activate') {
+      const requiredCredits = previewCounts[msgId] || 0;
+      
+      if (requiredCredits === 0) {
+        toast.error('Please preview recipients before activating');
+        return;
+      }
+      
+      if (availableCredits < requiredCredits) {
+        toast.error(`Insufficient credits. You need ${requiredCredits} but only have ${availableCredits} available.`);
+        return;
+      }
+    }
+
+    // NEW: If saving as draft and message was previously activated, refund credits
+    if (mode === 'draft' && msg.validationStatus === 'ACCEPTED' && previewCounts[msgId]) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('available_credits, reserved_credits')
+            .eq('user_id', user.id)
+            .single();
+
+          if (profile) {
+            const refundAmount = Math.min(previewCounts[msgId], profile.reserved_credits || 0);
+            
+            await supabase
+              .from('profiles')
+              .update({
+                available_credits: (profile.available_credits || 0) + refundAmount,
+                reserved_credits: Math.max(0, (profile.reserved_credits || 0) - refundAmount),
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+
+            setAvailableCredits(prev => prev + refundAmount);
+            console.log(`✅ Refunded ${refundAmount} credits when saving as draft`);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refund credits:', error);
+      }
+    }
+
     setIsSaving(true);
     setSavingMode(mode);
+    
     try {
       let hour24 = msg.hour || 10;
       if (msg.period === 'PM' && msg.hour !== 12) {
@@ -446,7 +543,6 @@ export default function SMSCampaigns() {
         message: msg.message,
         scheduleDate: msg.scheduleDate,
         clientLimit: msg.clientLimit,
-        // Keep original 12-hour format for backend conversion
         hour: msg.hour || 10,
         minute: msg.minute || 0,
         period: msg.period || 'AM',
@@ -455,6 +551,8 @@ export default function SMSCampaigns() {
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
         isValidated: msg.isValidated,
         purpose: 'campaign',
+        // Only pass preview count for activation
+        previewCount: mode === 'activate' ? previewCounts[msgId] : undefined,
       };
 
       console.log('📤 SENDING TO API:', messageToSave);
@@ -477,6 +575,11 @@ export default function SMSCampaigns() {
       console.log('✅ API SUCCESS RESPONSE:', data);
 
       if (data.success) {
+        // Only deduct credits on activation (not when saving as draft)
+        if (mode === 'activate' && previewCounts[msgId]) {
+          setAvailableCredits(prev => prev - previewCounts[msgId]);
+        }
+        
         setMessages(messages.map(m =>
           m.id === msgId
             ? { 

@@ -73,7 +73,7 @@ export function MessageSchedule({
       <div>
         <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
           <Users className="w-3 h-3 inline mr-1" />
-          Number of Clients to Message
+          Maximum Number of Clients to Message
         </label>
         <select
           value={showCustomInput ? -1 : msg.clientLimit === availableCredits && availableCredits > 1000 ? -2 : msg.clientLimit}

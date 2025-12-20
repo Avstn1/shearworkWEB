@@ -74,7 +74,8 @@ async function handler(request: Request) {
     const twilioMessage = await twilio_client.messages.create({
       body: `${message}\n\nReply STOP to unsubscribe.`,
       messagingServiceSid: messagingServiceSid,
-      to: phone_normalized
+      to: phone_normalized,
+      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/client-messaging/sms-status`
     });
 
     console.log('✅ SMS sent:', twilioMessage.sid, 'to', phone_normalized)
