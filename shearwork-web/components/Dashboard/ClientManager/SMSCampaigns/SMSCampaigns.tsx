@@ -106,79 +106,40 @@ export default function SMSCampaigns() {
         const loadedMessages = data.messages.map((dbMsg: any) => {
           console.log('🔄 Processing loaded message:', dbMsg);
           
-          // Check if this is a one-time schedule (ISO timestamp) or recurring (cron)
-          const isOneTime = dbMsg.cron && dbMsg.cron.includes('T');
+          // Parse the ISO timestamp directly
+          const scheduleDateTime = new Date(dbMsg.cron);
+          const scheduleDate = scheduleDateTime.toISOString().split('T')[0];
           
+          // Get local time components
+          const hour24 = scheduleDateTime.getHours();
+          const minute = scheduleDateTime.getMinutes();
+          
+          // Convert to 12hr format
           let hour12: number;
-          let minute: number;
           let period: 'AM' | 'PM';
-          let scheduleDate: string | undefined;
-          let frequency: 'weekly' | 'biweekly' | 'monthly' | undefined;
-          let dayOfWeek: string | undefined;
-          let dayOfMonth: number | undefined;
           
-          if (isOneTime) {
-            console.log('📅 Loading one-time schedule:', dbMsg.cron);
-            const scheduleDateTime = new Date(dbMsg.cron);
-            scheduleDate = scheduleDateTime.toISOString().split('T')[0];
-            const hour24 = scheduleDateTime.getHours();
-            minute = scheduleDateTime.getMinutes();
-            
-            // Convert to 12hr format
-            if (hour24 === 0) {
-              hour12 = 12;
-              period = 'AM';
-            } else if (hour24 < 12) {
-              hour12 = hour24;
-              period = 'AM';
-            } else if (hour24 === 12) {
-              hour12 = 12;
-              period = 'PM';
-            } else {
-              hour12 = hour24 - 12;
-              period = 'PM';
-            }
-            
-            console.log('📅 Parsed one-time schedule:', { scheduleDate, hour12, minute, period, hour24 });
+          if (hour24 === 0) {
+            hour12 = 12;
+            period = 'AM';
+          } else if (hour24 < 12) {
+            hour12 = hour24;
+            period = 'AM';
+          } else if (hour24 === 12) {
+            hour12 = 12;
+            period = 'PM';
           } else {
-            console.log('🔄 Loading recurring schedule:', dbMsg.cron);
-            const cronParts = dbMsg.cron.split(' ');
-            minute = parseInt(cronParts[0]) || 0;
-            const hour24 = parseInt(cronParts[1]) || 10;
-            const dayOfMonthCron = cronParts[2];
-            const dayOfWeekCron = cronParts[4];
-            
-            // Convert 24hr to 12hr format
-            if (hour24 === 0) {
-              hour12 = 12;
-              period = 'AM';
-            } else if (hour24 < 12) {
-              hour12 = hour24;
-              period = 'AM';
-            } else if (hour24 === 12) {
-              hour12 = 12;
-              period = 'PM';
-            } else {
-              hour12 = hour24 - 12;
-              period = 'PM';
-            }
-
-            frequency = 'weekly';
-            
-            if (dayOfMonthCron !== '*') {
-              frequency = 'monthly';
-              dayOfMonth = parseInt(dayOfMonthCron);
-            } else if (dayOfWeekCron !== '*') {
-              frequency = 'weekly';
-              const dayMap: Record<string, string> = {
-                '0': 'sunday', '1': 'monday', '2': 'tuesday',
-                '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday',
-              };
-              dayOfWeek = dayMap[dayOfWeekCron];
-            }
-            
-            console.log('🔄 Parsed recurring schedule:', { frequency, dayOfWeek, dayOfMonth, hour12, minute, period, hour24 });
+            hour12 = hour24 - 12;
+            period = 'PM';
           }
+          
+          console.log('📅 Parsed schedule:', {
+            iso: dbMsg.cron,
+            scheduleDate,
+            hour12,
+            minute,
+            period,
+            localDisplay: scheduleDateTime.toLocaleString()
+          });
 
           const isValidated = dbMsg.status !== 'DENIED';
 
@@ -187,13 +148,10 @@ export default function SMSCampaigns() {
             title: dbMsg.title,
             message: dbMsg.message,
             scheduleDate,
-            frequency,
-            dayOfWeek,
-            dayOfMonth,
             hour: hour12,
             minute,
             period,
-            clientLimit: dbMsg.message_limit || dbMsg.message_limit || 100,
+            clientLimit: dbMsg.message_limit || 100,
             enabled: true,
             isSaved: true,
             isValidated: isValidated, 
@@ -432,7 +390,7 @@ export default function SMSCampaigns() {
       setOriginalMessages(newOriginals);
     }
   };
-  
+
   const handleSave = async (msgId: string, mode: 'draft' | 'activate') => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
@@ -462,7 +420,7 @@ export default function SMSCampaigns() {
       return;
     }
 
-    // NEW: Check credits before activation
+    // Check credits before activation
     if (mode === 'activate') {
       const requiredCredits = previewCounts[msgId] || 0;
       
@@ -477,7 +435,7 @@ export default function SMSCampaigns() {
       }
     }
 
-    // NEW: If saving as draft and message was previously activated, refund credits
+    // If saving as draft and message was previously activated, refund credits
     if (mode === 'draft' && msg.validationStatus === 'ACCEPTED' && previewCounts[msgId]) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -513,6 +471,7 @@ export default function SMSCampaigns() {
     setSavingMode(mode);
     
     try {
+      // Convert 12hr to 24hr format
       let hour24 = msg.hour || 10;
       if (msg.period === 'PM' && msg.hour !== 12) {
         hour24 = msg.hour + 12;
@@ -520,21 +479,16 @@ export default function SMSCampaigns() {
         hour24 = 0;
       }
 
-      console.log('⏰ TIME CONVERSION:', {
-        original: `${msg.hour}:${msg.minute} ${msg.period}`,
+      // Create ISO timestamp in user's local timezone
+      const scheduleDateTime = new Date(msg.scheduleDate + 'T00:00:00');
+      scheduleDateTime.setHours(hour24, msg.minute || 0, 0, 0);
+      const scheduledFor = scheduleDateTime.toISOString();
+
+      console.log('📅 SCHEDULE CREATION:', {
+        userSelected: `${msg.scheduleDate} ${msg.hour}:${msg.minute} ${msg.period}`,
         hour24,
-        minute: msg.minute
-      });
-
-      const local = new Date();
-      local.setHours(hour24, msg.minute || 0, 0, 0);
-      const utcHour = local.getUTCHours();
-      const utcMinute = local.getUTCMinutes();
-
-      console.log('🌍 UTC CONVERSION:', {
-        localTime: local.toString(),
-        utcHour,
-        utcMinute
+        scheduledFor,
+        localTime: scheduleDateTime.toString()
       });
 
       const messageToSave = {
@@ -546,8 +500,7 @@ export default function SMSCampaigns() {
         hour: msg.hour || 10,
         minute: msg.minute || 0,
         period: msg.period || 'AM',
-        utcHour,
-        utcMinute,
+        scheduledFor, // ISO timestamp
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
         isValidated: msg.isValidated,
         purpose: 'campaign',
