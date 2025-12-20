@@ -2,8 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Coins, History, ShoppingCart, Zap, Clock, Check, Sparkles, Loader2, Lock, Gem, Crown, Star } from 'lucide-react';
+import { X, Coins, History, ShoppingCart, Zap, Lock, Gem, Crown, Star, Loader2, Check } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
+);
 
 type CreditView = 'balance' | 'history' | 'purchase';
 
@@ -12,35 +23,137 @@ interface CreditsModalProps {
   onClose: () => void;
 }
 
+interface CreditPrice {
+  id: string;
+  amount: number;
+  currency: string;
+}
+
+interface CreditPricing {
+  credits100: CreditPrice;
+  credits250: CreditPrice;
+  credits500: CreditPrice;
+  credits1000: CreditPrice;
+}
+
 const CREDIT_PACKAGES = [
   {
     amount: 100,
-    price: 6.50,
+    package: '100',
     popular: false,
     icon: Coins,
   },
   {
     amount: 250,
-    price: 14.50,
+    package: '250',
     popular: false,
     savings: '11% off',
     icon: Star,
   },
   {
     amount: 500,
-    price: 27.50,
+    package: '500',
     popular: false,
     savings: '15% off',
     icon: Gem,
   },
   {
     amount: 1000,
-    price: 50,
+    package: '1000',
     popular: true,
     savings: '23% off',
     icon: Crown,
   },
 ];
+
+// Payment Form Component
+function CheckoutForm({ 
+  onSuccess, 
+  onCancel, 
+  packageAmount,
+  packagePrice
+}: { 
+  onSuccess: () => void; 
+  onCancel: () => void; 
+  packageAmount: number;
+  packagePrice: number;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements || !isReady) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMessage(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/credits/success`,
+      },
+      redirect: 'if_required',
+    });
+
+    if (error) {
+      setErrorMessage(error.message || 'An error occurred');
+      setIsProcessing(false);
+    } else {
+      onSuccess();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <PaymentElement 
+        onReady={() => setIsReady(true)}
+      />
+
+      {errorMessage && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={onCancel}
+          disabled={isProcessing}
+          className="flex-1 px-6 py-3 bg-white/10 text-white rounded-lg font-semibold hover:bg-white/20 transition-all duration-300 border border-white/20 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={!stripe || !isReady || isProcessing}
+          className="flex-1 px-6 py-3 bg-lime-300 text-black rounded-lg font-semibold hover:bg-lime-400 transition-all duration-300 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {!isReady && !isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading...
+            </>
+          ) : isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Check className="w-4 h-4" />
+              Pay ${packagePrice.toFixed(2)}
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function CreditsModal({
   isOpen,
@@ -50,10 +163,15 @@ export default function CreditsModal({
   const [availableCredits, setAvailableCredits] = useState<number>(0);
   const [reservedCredits, setReservedCredits] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [pricing, setPricing] = useState<CreditPricing | null>(null);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchCredits();
+      fetchPricing();
     }
   }, [isOpen]);
 
@@ -73,8 +191,6 @@ export default function CreditsModal({
         .eq('user_id', user.id)
         .single();
 
-      console.log('Fetched profile:', profile);
-
       if (error) {
         console.error('Error fetching credits:', error);
         return;
@@ -91,7 +207,107 @@ export default function CreditsModal({
     }
   };
 
+  const fetchPricing = async () => {
+    try {
+      const response = await fetch('/api/stripe-credits/pricing');
+      if (!response.ok) {
+        throw new Error('Failed to fetch pricing');
+      }
+      const data = await response.json();
+      setPricing(data);
+    } catch (error) {
+      console.error('Error fetching pricing:', error);
+    }
+  };
+
+  const handlePurchase = async (packageType: string) => {
+    setIsPurchasing(true);
+    setSelectedPackage(packageType);
+    try {
+      const response = await fetch('/api/stripe-credits/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ package: packageType }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment intent');
+      }
+
+      const { clientSecret } = await response.json();
+
+      if (!clientSecret) {
+        throw new Error('No clientSecret in response');
+      }
+
+      setClientSecret(clientSecret);
+      
+    } catch (error) {
+      console.error('Error purchasing credits:', error);
+      setSelectedPackage(null);
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const closeCheckout = () => {
+    setClientSecret(null);
+    setSelectedPackage(null);
+  };
+
+  const handlePaymentSuccess = async () => {
+    await fetchCredits();
+    closeCheckout();
+    setActiveView('balance');
+  };
+
+  const getPrice = (packageType: string): number => {
+    if (!pricing) return 0;
+    const key = `credits${packageType}` as keyof CreditPricing;
+    return (pricing[key]?.amount || 0) / 100;
+  };
+
+  const getPackageAmount = (packageType: string): number => {
+    const pkg = CREDIT_PACKAGES.find(p => p.package === packageType);
+    return pkg?.amount || 0;
+  };
+
   if (!isOpen) return null;
+
+  const stripeOptions = {
+    clientSecret: clientSecret || '',
+    appearance: {
+      theme: 'night' as const,
+      variables: {
+        colorPrimary: '#c4ff85',
+        colorBackground: '#1a1a1a',
+        colorText: '#ffffff',
+        colorDanger: '#ef4444',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        spacingUnit: '4px',
+        borderRadius: '8px',
+        colorTextSecondary: '#bdbdbd',
+        colorTextPlaceholder: '#6b7280',
+      },
+      rules: {
+        '.Input': {
+          backgroundColor: '#0a0a0a',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: 'none',
+        },
+        '.Input:focus': {
+          border: '1px solid #c4ff85',
+          boxShadow: '0 0 0 1px #c4ff85',
+        },
+        '.Label': {
+          color: '#bdbdbd',
+          fontSize: '14px',
+        },
+      },
+    },
+  };
 
   return (
     <AnimatePresence>
@@ -297,6 +513,8 @@ export default function CreditsModal({
                     <div className="grid grid-cols-2 gap-3">
                       {CREDIT_PACKAGES.map((pkg) => {
                         const Icon = pkg.icon;
+                        const price = getPrice(pkg.package);
+                        
                         return (
                           <div
                             key={pkg.amount}
@@ -330,18 +548,28 @@ export default function CreditsModal({
                             {/* Credits for Price - Single Line */}
                             <div className="mb-4">
                               <p className="text-white font-semibold text-lg">
-                                {pkg.amount.toLocaleString()} credits for ${pkg.price.toFixed(2)}
+                                {pkg.amount.toLocaleString()} credits for ${price.toFixed(2)}
                               </p>
                             </div>
 
                             {/* Buy Button */}
-                            <button className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
-                              pkg.popular
-                                ? 'bg-lime-300 text-black hover:bg-lime-400 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)]'
-                                : 'bg-white/10 text-white border border-white/20 hover:bg-white/20 hover:border-lime-300/50'
-                            }`}>
-                              <ShoppingCart className="w-4 h-4" />
-                              Purchase
+                            <button 
+                              onClick={() => handlePurchase(pkg.package)}
+                              disabled={isPurchasing || !pricing}
+                              className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+                                pkg.popular
+                                  ? 'bg-lime-300 text-black hover:bg-lime-400 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)] disabled:opacity-50'
+                                  : 'bg-white/10 text-white border border-white/20 hover:bg-white/20 hover:border-lime-300/50 disabled:opacity-50'
+                              }`}
+                            >
+                              {isPurchasing && selectedPackage === pkg.package ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <ShoppingCart className="w-4 h-4" />
+                                  Purchase
+                                </>
+                              )}
                             </button>
                           </div>
                         );
@@ -377,6 +605,51 @@ export default function CreditsModal({
             )}
           </div>
         </motion.div>
+
+        {/* Payment Modal */}
+        {clientSecret && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4"
+            onClick={closeCheckout}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+            >
+              <button
+                onClick={closeCheckout}
+                className="absolute top-4 right-4 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition p-2 z-10"
+                aria-label="Close checkout"
+              >
+                <X className="w-4 h-4 text-gray-200" />
+              </button>
+
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-white mb-1">
+                  Complete Your Purchase
+                </h2>
+                <p className="text-sm text-[#bdbdbd] mt-2 -mb-4">
+                  {selectedPackage && `${getPackageAmount(selectedPackage).toLocaleString()} credits • $${getPrice(selectedPackage).toFixed(2)}`}
+                </p>
+              </div>
+
+              <Elements stripe={stripePromise} options={stripeOptions}>
+                <CheckoutForm 
+                  onSuccess={handlePaymentSuccess}
+                  onCancel={closeCheckout}
+                  packageAmount={selectedPackage ? getPackageAmount(selectedPackage) : 0}
+                  packagePrice={selectedPackage ? getPrice(selectedPackage) : 0}
+                />
+              </Elements>
+            </motion.div>
+          </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

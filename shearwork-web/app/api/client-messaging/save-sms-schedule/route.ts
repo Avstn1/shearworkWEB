@@ -193,8 +193,12 @@ export async function POST(request: Request) {
         let cronText: string
         let qstashScheduleIds: string[] = []
 
-        // Use the ISO timestamp directly from frontend
-        if (msg.scheduledFor) {
+        // DETERMINE IF THIS IS ONE-TIME (campaign) OR RECURRING (marketing)
+        const isOneTime = msg.scheduledFor !== undefined
+        const isRecurring = !isOneTime && msg.frequency && (msg.dayOfMonth || msg.dayOfWeek)
+
+        if (isOneTime) {
+          // ===== ONE-TIME CAMPAIGN MESSAGE =====
           cronValue = msg.scheduledFor
           
           // Parse for human readable text
@@ -240,9 +244,56 @@ export async function POST(request: Request) {
               }
             }
           }
+
+        } else if (isRecurring) {
+          // ===== RECURRING MARKETING MESSAGE =====
+          
+          // Convert 12hr to 24hr for cron
+          let hour24 = msg.hour
+          if (msg.period === 'PM' && msg.hour !== 12) {
+            hour24 += 12
+          } else if (msg.period === 'AM' && msg.hour === 12) {
+            hour24 = 0
+          }
+
+          // Generate cron expression(s)
+          const cronExpressions = generateCronExpressions(
+            msg.frequency,
+            msg.dayOfWeek,
+            msg.dayOfMonth,
+            hour24,
+            msg.minute
+          )
+
+          // Store first cron as the primary value
+          cronValue = cronExpressions[0]
+          
+          // Generate human-readable text
+          cronText = getCronText(
+            msg.frequency,
+            msg.dayOfWeek,
+            msg.dayOfMonth,
+            hour24,
+            msg.minute
+          )
+
+          console.log('🔄 Saving recurring schedule:', {
+            frequency: msg.frequency,
+            cron: cronValue,
+            text: cronText
+          })
+
+          // Create QStash schedules if ACCEPTED
+          if (msg.validationStatus === 'ACCEPTED') {
+            const schedulePromises = cronExpressions.map(cron => 
+              createQStashSchedule(msg.id, cron)
+            )
+            qstashScheduleIds = await Promise.all(schedulePromises)
+            console.log(`✅ Created ${qstashScheduleIds.length} QStash schedule(s)`)
+          }
+
         } else {
-          // This shouldn't happen for campaign messages, but keeping as fallback
-          throw new Error('Missing scheduledFor timestamp')
+          throw new Error('Invalid message format: missing schedule information')
         }
 
         // Check if message already exists in database by id
