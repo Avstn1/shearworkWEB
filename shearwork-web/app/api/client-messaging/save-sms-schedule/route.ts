@@ -160,30 +160,38 @@ export async function POST(request: Request) {
 
     // Validate messages based on their status
     for (const msg of messages) {
-      // All messages need content
-      if (!msg.message || msg.message.trim().length < 100) {
-        return NextResponse.json(
-          { success: false, error: 'Message must be at least 100 characters' },
-          { status: 400 }
-        )
-      }
+      if (msg.validationStatus === 'ACCEPTED' && msg.previewCount) {
+        // 1. Get current credits
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('available_credits, reserved_credits')
+          .eq('user_id', user.id)
+          .single();
 
-      // Check if client limit exceeds available credits
-      if (msg.clientLimit && msg.clientLimit > availableCredits) {
-        return NextResponse.json(
-          { success: false, error: `Cannot schedule message for ${msg.clientLimit} clients. You only have ${availableCredits} credits available.` },
-          { status: 400 }
-        )
-      }
-
-      // Only ACCEPTED messages need validation approval
-      if (msg.validationStatus === 'ACCEPTED') {
-        if (!msg.isValidated || msg.validationStatus !== 'ACCEPTED') {
-          return NextResponse.json(
-            { success: false, error: 'Approved messages must be validated' },
-            { status: 400 }
-          )
+        if (!profile) {
+          throw new Error('Profile not found');
         }
+
+        // 2. Verify sufficient credits
+        if (profile.available_credits < msg.previewCount) {
+          throw new Error('Insufficient credits');
+        }
+
+        // 3. Update credits: reserve from available
+        const { error: creditError } = await supabase
+          .from('profiles')
+          .update({
+            available_credits: profile.available_credits - msg.previewCount,
+            reserved_credits: (profile.reserved_credits || 0) + msg.previewCount,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+
+        if (creditError) {
+          throw new Error('Failed to reserve credits');
+        }
+
+        console.log(`✅ Reserved ${msg.previewCount} credits for message ${msg.id}`);
       }
     }
 
