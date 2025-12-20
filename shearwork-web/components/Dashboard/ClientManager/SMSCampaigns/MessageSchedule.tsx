@@ -36,7 +36,12 @@ export function MessageSchedule({
   const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
 
   // Get minimum date (today)
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
 
   const handleLimitChange = (value: number) => {
     if (value === -1) {
