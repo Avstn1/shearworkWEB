@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   // 🔴 STOP / Unsubscribed
   if (messageStatus === 'undelivered' && errorCode === 21610) {
     await supabase
-      .from('acuity_clients_testing')
+      .from('acuity_clients')
       .update({
         sms_subscribed: false,
         updated_at: new Date().toISOString()
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   // ✅ Delivered → update last SMS sent timestamp AND reduce reserved credits
   if (messageStatus === 'delivered') {
     await supabase
-      .from('acuity_clients_testing')
+      .from('acuity_clients')
       .update({
         date_last_sms_sent: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -78,7 +78,7 @@ async function handleCreditDeduction(
   try {
     // Get user_id from client phone
     const { data: client } = await supabase
-      .from('acuity_clients_testing')
+      .from('acuity_clients')
       .select('user_id')
       .eq('phone_normalized', phoneNormalized)
       .single()
