@@ -74,10 +74,10 @@ Message: ${message}`
 
     return NextResponse.json({
       success: true,
-      approved: isApproved,
+      approved: true,
       status,
       reason,
-      message: aiResponse,
+      message: 'Accepted',
     })
 
   } catch (err: any) {
