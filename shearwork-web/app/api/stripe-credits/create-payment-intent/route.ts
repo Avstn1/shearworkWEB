@@ -10,13 +10,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 type CreditPackage = '100' | '250' | '500' | '1000'
 
-// Price mapping (in cents)
-const PACKAGE_PRICES = {
-  '100': 6500,   
-  '250': 14500, 
-  '500': 27500,  
-  '1000': 50000,  
+const PRICE_IDS: Record<CreditPackage, string> = {
+  '100': process.env.STRIPE_PRICE_ID_100CREDITS!,
+  '250': process.env.STRIPE_PRICE_ID_250CREDITS!,
+  '500': process.env.STRIPE_PRICE_ID_500CREDITS!,
+  '1000': process.env.STRIPE_PRICE_ID_1000CREDITS!,
 }
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       // no body / invalid JSON -> keep default '100'
     }
 
-    const amount = PACKAGE_PRICES[creditPackage]
+    const amount = PRICE_IDS[creditPackage]
 
     if (!amount) {
       return NextResponse.json(
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     // Create payment intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
-      currency: 'usd',
+      currency: 'cad',
       customer: customerId,
       automatic_payment_methods: {
         enabled: true,
