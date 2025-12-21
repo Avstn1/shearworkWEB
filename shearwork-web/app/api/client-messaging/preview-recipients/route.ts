@@ -35,17 +35,17 @@ export async function GET(request: Request) {
     const algorithm = searchParams.get('algorithm')
 
     let selectedClients;
+    let result;
 
     if (algorithm === 'overdue') {
       selectedClients = await selectClientsForSMS_Overdue(supabase, userId, limit, visitingType || undefined)
     } else if (algorithm === 'mass') {
-      const massLimit = Math.min(limit, 1500);
-      selectedClients = await selectClientsForSMS_Mass(supabase, userId, massLimit || undefined);
-      selectedClients = selectedClients.slice(0, massLimit);
+       result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined);
+      selectedClients = result.clients;
     } else {
-      // Default campaign algorithm
-      selectedClients = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined)
-    } 
+      result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined);
+      selectedClients = result.clients;
+    }
 
     if (selectedClients.length === 0) {
       return NextResponse.json({
@@ -89,7 +89,8 @@ export async function GET(request: Request) {
       clients: selectedClients,
       phoneNumbers,
       stats,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      maxClient: result?.totalAvailableClients
     })
 
   } catch (err: any) {
