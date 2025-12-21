@@ -1,20 +1,6 @@
-
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
-
-export interface StripeSubscriptionFixed {
-  id: string
-  status: string
-  customer: string
-  current_period_start: number
-  current_period_end: number
-  cancel_at: number | null
-  canceled_at: number | null
-  cancel_at_period_end: boolean
-  [key: string]: any // required because Stripe always adds more fields
-}
-
 
 // Stripe client
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -28,66 +14,111 @@ export const config = {
   },
 }
 
+// Credit package mapping
+const CREDIT_AMOUNTS: Record<string, number> = {
+  '100': 100,
+  '250': 250,
+  '500': 500,
+  '1000': 1000,
+}
+
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature')
   if (!signature) return new NextResponse('Missing Stripe signature', { status: 400 })
 
-  const body = await req.text() // raw body is required
+  const body = await req.text()
 
   try {
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_CREDITS_WEBHOOK2_SECRET! 
     )
 
     const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-        const supabaseUserId = session.metadata?.supabase_user_id
-        if (!supabaseUserId) break
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session
 
-        await supabase
-          .from('profiles')
-          .upsert({
-            user_id: supabaseUserId,
-            stripe_id: session.customer as string,
-            subscription_id: session.subscription as string,
-            stripe_subscription_status: 'active',
-          })
-        break
+      const supabaseUserId = session.metadata?.supabase_user_id
+      const creditPackage = session.metadata?.credit_package
+
+      if (!supabaseUserId || !creditPackage) {
+        console.error('Missing required metadata:', { supabaseUserId, creditPackage })
+        return NextResponse.json({ received: true })
       }
 
-      case 'customer.subscription.updated': {
-        const sub = event.data.object as Stripe.Subscription
-        await supabase
-          .from('profiles')
-          .update({
-            subscription_id: sub.id,
-            stripe_subscription_status: sub.status,
-            cancel_at_period_end: sub.cancel_at_period_end
-          })
-          .eq('stripe_id', sub.customer as string)
-        break
+      const creditsToAdd = CREDIT_AMOUNTS[creditPackage]
+      if (!creditsToAdd) {
+        console.error('Invalid credit package:', creditPackage)
+        return NextResponse.json({ received: true })
       }
 
-      case 'customer.subscription.deleted': {
-        const sub = event.data.object as Stripe.Subscription
-        await supabase
-          .from('profiles')
-          .update({
-            subscription_id: null,
-            stripe_subscription_status: 'canceled',
-          })
-          .eq('stripe_id', sub.customer as string)
-        break
+      // Get current credit balance
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('available_credits, reserved_credits')
+        .eq('user_id', supabaseUserId)
+        .single()
+
+      if (profileError || !profile) {
+        console.error('Failed to fetch profile:', profileError)
+        return NextResponse.json({ received: true })
       }
+
+      const oldAvailable = profile.available_credits || 0
+      const oldReserved = profile.reserved_credits || 0
+      const newAvailable = oldAvailable + creditsToAdd
+      const newReserved = oldReserved
+
+      // Update available credits
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ available_credits: newAvailable })
+        .eq('user_id', supabaseUserId)
+
+      if (updateError) {
+        console.error('Failed to update credits:', updateError)
+        return NextResponse.json({ received: true })
+      }
+
+      // Log transaction
+      const { error: transactionError } = await supabase
+        .from('credit_transactions')
+        .insert({
+          barber_id: supabaseUserId,
+          action: `Credits purchased - ${creditPackage} pack`,
+          old_available: oldAvailable,
+          new_available: newAvailable,
+          old_reserved: oldReserved,
+          new_reserved: newReserved,
+        })
+
+      if (transactionError) {
+        console.error('Failed to log transaction:', transactionError)
+      }
+
+      // Create notification
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: supabaseUserId,
+          header: 'Credits purchased',
+          message: `${creditsToAdd} credits added to your account`,
+          reference: session.payment_intent as string,
+          reference_type: 'credit_purchase',
+        })
+
+      if (notifError) {
+        console.error('Failed to create notification:', notifError)
+      }
+
+      console.log(`✅ Added ${creditsToAdd} credits to user ${supabaseUserId}`)
     }
+
     return NextResponse.json({ received: true })
   } catch (err: any) {
     console.error('❌ Webhook error:', err.message)
