@@ -5,9 +5,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
-// import { selectClientsForSMS_DSLV } from '@/lib/clientSmsSelectionAlgorithm_DSLV' 
 import { selectClientsForSMS_Overdue } from '@/lib/clientSmsSelectionAlgorithm_Overdue' 
-import { selectClientsForSMS_Campaign } from '@/lib/clientSmsSelectionAlgorithm_Campaign' 
+import { selectClientsForSMS_Campaign } from '@/lib/clientSmsSelectionAlgorithm_Campaign'
+import { selectClientsForSMS_Mass } from '@/lib/clientSmsSelectionAlgorithm_Mass'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,7 +38,12 @@ export async function GET(request: Request) {
 
     if (algorithm === 'overdue') {
       selectedClients = await selectClientsForSMS_Overdue(supabase, userId, limit, visitingType || undefined)
+    } else if (algorithm === 'mass') {
+      const massLimit = Math.min(limit, 1500);
+      selectedClients = await selectClientsForSMS_Mass(supabase, userId, massLimit || undefined);
+      selectedClients = selectedClients.slice(0, massLimit);
     } else {
+      // Default campaign algorithm
       selectedClients = await selectClientsForSMS_Campaign(supabase, userId, limit, visitingType || undefined)
     } 
 

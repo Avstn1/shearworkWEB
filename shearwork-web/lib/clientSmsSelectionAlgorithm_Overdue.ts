@@ -36,7 +36,7 @@ export async function selectClientsForSMS_Overdue(
   
   // Fetch eligible clients
   let query = supabase
-    .from('acuity_clients_testing')
+    .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)

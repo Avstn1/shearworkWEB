@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Calendar, Clock, FileText, Zap, Users, Hash } from 'lucide-react';
-import { SMSMessage, HOURS_12, MINUTES, PERIODS, CLIENT_LIMITS } from './types';
+import { Calendar, Clock, FileText, Zap, Users, Hash, Info } from 'lucide-react';
+import { SMSMessage, HOURS_12, MINUTES, PERIODS, CLIENT_LIMITS, CAMPAIGN_TYPES } from './types';
 import { useState } from 'react';
 
 interface MessageScheduleProps {
@@ -10,12 +10,14 @@ interface MessageScheduleProps {
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
   onCancelEdit: (id: string) => void;
+  setAlgorithmType: (type: 'campaign' | 'mass') => void;
   previewCount?: number;
   availableCredits?: number; 
 }
 
 // Right side of the MessageCard
 export function MessageSchedule({
+  setAlgorithmType,
   message: msg,
   isSaving,
   savingMode,
@@ -25,7 +27,6 @@ export function MessageSchedule({
   previewCount = 0,
   availableCredits = 0, 
 }: MessageScheduleProps) {
-
 
   const [customLimit, setCustomLimit] = useState<string>(
     msg.clientLimit > 1000 ? msg.clientLimit.toString() : ''
@@ -43,37 +44,103 @@ export function MessageSchedule({
     day: '2-digit',
   });
 
+  // Get max limit based on campaign type
+  const getMaxLimit = () => {
+    return msg.purpose === 'mass' ? 1500 : availableCredits;
+  };
+
   const handleLimitChange = (value: number) => {
+    const maxLimit = getMaxLimit();
+    
     if (value === -1) {
       // Custom selected
       setShowCustomInput(true);
       const newLimit = customLimit && parseInt(customLimit) >= 100 ? parseInt(customLimit) : 100;
       setCustomLimit(newLimit.toString());
-      onUpdate(msg.id, { clientLimit: Math.min(newLimit, availableCredits) });
+      onUpdate(msg.id, { clientLimit: Math.min(newLimit, maxLimit) });
     } else if (value === -2) {
-      // Max selected - use all available credits
+      // Max selected - use all available credits (or max for mass)
       setShowCustomInput(false);
       setCustomLimit('');
-      onUpdate(msg.id, { clientLimit: availableCredits });
+      onUpdate(msg.id, { clientLimit: maxLimit });
     } else {
       // Predefined limit selected
       setShowCustomInput(false);
       setCustomLimit('');
-      onUpdate(msg.id, { clientLimit: Math.min(value, availableCredits) });
+      onUpdate(msg.id, { clientLimit: Math.min(value, maxLimit) });
     }
   };
-
 
   const handleCustomLimitChange = (value: string) => {
     setCustomLimit(value);
     const numValue = parseInt(value);
+    const maxLimit = getMaxLimit();
+    
     if (!isNaN(numValue) && numValue >= 100) {
-      onUpdate(msg.id, { clientLimit: Math.min(numValue, availableCredits) });
+      onUpdate(msg.id, { clientLimit: Math.min(numValue, maxLimit) });
     }
+  };
+
+  const handlepurposeChange = (type: 'mass' | 'campaign') => {
+    const maxLimit = type === 'mass' ? 1500 : availableCredits;
+    
+    // Adjust client limit if it exceeds new max
+    const newLimit = Math.min(msg.clientLimit, maxLimit);
+
+    setAlgorithmType(type);
+    
+    onUpdate(msg.id, { 
+      purpose: type,
+      clientLimit: newLimit
+    });
   };
 
   return (
     <div className="space-y-4">
+      {/* Campaign Type Selection */}
+      <div>
+        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
+          <Zap className="w-3 h-3 inline mr-1" />
+          Campaign Type
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {CAMPAIGN_TYPES.map((type) => (
+            <div key={type.value} className="relative group">
+              <button
+                type="button"
+                onClick={() => handlepurposeChange(type.value === 'mass' ? 'campaign' : type.value)}
+
+                disabled={!msg.isEditing}
+                className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                  msg.purpose === type.value
+                    ? 'bg-sky-300/20 text-sky-300 border-2 border-sky-300/50 shadow-[0_0_12px_rgba(125,211,252,0.3)]'
+                    : 'bg-white/5 text-[#bdbdbd] border-2 border-white/10 hover:border-white/20'
+                } ${!msg.isEditing ? 'cursor-not-allowed opacity-70' : ''}`}
+              >
+                {type.label}
+                <div className="relative">
+                  <Info className="w-3 h-3" />
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-72">
+                    <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                      <p className="whitespace-normal break-words">{type.description}</p>
+                      {type.value === 'mass' && (
+                        <div className="mt-1 text-amber-300 font-semibold">
+                          Max: 1,500 clients
+                        </div>
+                      )}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                        <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Client Limit Selection */}
       <div>
         <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
@@ -81,7 +148,7 @@ export function MessageSchedule({
           Maximum Number of Clients to Message
         </label>
         <select
-          value={showCustomInput ? -1 : msg.clientLimit === availableCredits && availableCredits > 1000 ? -2 : msg.clientLimit}
+          value={showCustomInput ? -1 : msg.clientLimit === getMaxLimit() && getMaxLimit() > 1000 ? -2 : msg.clientLimit}
           onChange={(e) => handleLimitChange(parseInt(e.target.value))}
           disabled={!msg.isEditing}
           className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
@@ -89,27 +156,63 @@ export function MessageSchedule({
           }`}
         >
           {CLIENT_LIMITS.map((limit) => {
-            // Skip max option if credits are less than 1000 (already covered by other options)
-            if (limit.value === -2 && availableCredits <= 1000) return null;
+            const maxLimit = getMaxLimit();
             
-            // Show actual credit count for max option
-            if (limit.value === -2) {
+            // For mass campaigns, reorder to show Max before Custom
+            if (msg.purpose === 'mass') {
+              // Skip max option if it's 1000 or less
+              if (limit.value === -2 && maxLimit <= 1000) return null;
+              
+              // Show actual limit for max option
+              if (limit.value === -2) {
+                return (
+                  <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
+                    Max (1,500 clients)
+                  </option>
+                );
+              }
+              
+              // Show predefined limits up to 1000
+              if (limit.value > 0 && limit.value <= 1000) {
+                return (
+                  <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
+                    {limit.label}
+                  </option>
+                );
+              }
+              
+              // Show custom last
+              if (limit.value === -1) {
+                return (
+                  <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
+                    {limit.label}
+                  </option>
+                );
+              }
+            } else {
+              // Default campaign - show all options normally
+              // Skip max option if credits are 1000 or less
+              if (limit.value === -2 && maxLimit <= 1000) return null;
+              
+              // Show actual credit count for max option
+              if (limit.value === -2) {
+                return (
+                  <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
+                    Max ({maxLimit.toLocaleString()} clients)
+                  </option>
+                );
+              }
+              
               return (
-                <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
-                  Max ({availableCredits.toLocaleString()} clients)
+                <option
+                  key={limit.value}
+                  value={limit.value}
+                  className="bg-[#1a1a1a]"
+                >
+                  {limit.label}
                 </option>
               );
             }
-            
-            return (
-              <option
-                key={limit.value}
-                value={limit.value}
-                className="bg-[#1a1a1a]"
-              >
-                {limit.label}
-              </option>
-            );
           })}
         </select>
 
@@ -121,11 +224,11 @@ export function MessageSchedule({
               <input
                 type="number"
                 min="100"
-                max={availableCredits}
+                max={getMaxLimit()}
                 value={customLimit}
                 onChange={(e) => handleCustomLimitChange(e.target.value)}
                 disabled={!msg.isEditing}
-                placeholder={`Enter custom limit (min 100, max ${availableCredits.toLocaleString()})`}
+                placeholder={`Enter custom limit (min 100, max ${getMaxLimit().toLocaleString()})`}
                 className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
                   !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
                 }`}
@@ -145,7 +248,12 @@ export function MessageSchedule({
           </p>
         )}
 
-        {/* Credit warning */}
+        {/* Credit/Limit warnings */}
+        {msg.purpose === 'mass' && msg.clientLimit > 1500 && (
+          <p className="text-xs text-rose-400 mt-2">
+            ⚠️ Mass campaigns are limited to 1,500 clients maximum
+          </p>
+        )}
         {msg.clientLimit > availableCredits && (
           <p className="text-xs text-rose-400 mt-2">
             ⚠️ You only have {availableCredits} credits available

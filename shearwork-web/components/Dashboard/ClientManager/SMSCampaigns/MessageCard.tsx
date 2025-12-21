@@ -31,6 +31,7 @@ interface PreviewStats {
 }
 
 interface MessageCardProps {
+  setAlgorithmType: (type: 'campaign' | 'mass') => void;
   availableCredits?: number;
   message: SMSMessage;
   index: number;
@@ -55,6 +56,7 @@ interface MessageCardProps {
 }
 
 export function MessageCard({
+  setAlgorithmType,
   availableCredits,
   message: msg,
   index,
@@ -268,6 +270,7 @@ export function MessageCard({
 
           {/* RIGHT: Schedule Settings (50%) */}
           <MessageSchedule
+            setAlgorithmType={setAlgorithmType}
             availableCredits={availableCredits}
             message={msg}
             isSaving={isSaving}

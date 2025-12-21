@@ -135,15 +135,19 @@ async function handler(request: Request) {
       
     } else { 
       // Production mode: Determine algorithm based on message purpose
-      const algorithm = scheduledMessage.purpose === 'campaign' ? 'campaign' : 'overdue';
+      const algorithm = scheduledMessage.purpose === 'mass' 
+        ? 'mass' 
+        : scheduledMessage.purpose === 'campaign' 
+          ? 'campaign' 
+          : 'overdue';
       const limit = scheduledMessage.message_limit || 100;
-      
+
       console.log(`📊 Fetching recipients with ${algorithm} algorithm, limit: ${limit}`);
-      
+
       const apiUrl = scheduledMessage.visiting_type 
         ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}&algorithm=${algorithm}`
         : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}`;
-      
+        
       console.log('🔗 API URL:', apiUrl);
       
       const response = await fetch(apiUrl);

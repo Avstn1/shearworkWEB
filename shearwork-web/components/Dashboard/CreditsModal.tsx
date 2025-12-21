@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Coins, History, ShoppingCart, Zap, Lock, Gem, Crown, Star, Loader2, Check } from 'lucide-react';
+import { X, Coins, History, ShoppingCart, Zap, Lock, Gem, Crown, Star, Loader2, Check, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -11,6 +11,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
+import toast from 'react-hot-toast';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -34,6 +35,16 @@ interface CreditPricing {
   credits250: CreditPrice;
   credits500: CreditPrice;
   credits1000: CreditPrice;
+}
+
+interface CreditTransaction {
+  id: string;
+  action: string;
+  old_available: number;
+  new_available: number;
+  old_reserved: number;
+  new_reserved: number;
+  created_at: string;
 }
 
 const CREDIT_PACKAGES = [
@@ -167,6 +178,8 @@ export default function CreditsModal({
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -174,6 +187,12 @@ export default function CreditsModal({
       fetchPricing();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && activeView === 'history') {
+      fetchTransactions();
+    }
+  }, [isOpen, activeView]);
 
   const fetchCredits = async () => {
     setIsLoading(true);
@@ -204,6 +223,36 @@ export default function CreditsModal({
       console.error('Error in fetchCredits:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    setIsLoadingTransactions(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error('No user found');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('credit_transactions')
+        .select('*')
+        .eq('barber_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error('Error fetching transactions:', error);
+        return;
+      }
+
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Error in fetchTransactions:', error);
+    } finally {
+      setIsLoadingTransactions(false);
     }
   };
 
@@ -259,8 +308,10 @@ export default function CreditsModal({
 
   const handlePaymentSuccess = async () => {
     await fetchCredits();
+    await fetchTransactions();
     closeCheckout();
-    setActiveView('balance');
+    setActiveView('history');
+    toast.success('Credits added successfully!')
   };
 
   const getPrice = (packageType: string): number => {
@@ -272,6 +323,55 @@ export default function CreditsModal({
   const getPackageAmount = (packageType: string): number => {
     const pkg = CREDIT_PACKAGES.find(p => p.package === packageType);
     return pkg?.amount || 0;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    const diffInDays = diffInHours / 24;
+
+    if (diffInHours < 1) {
+      const minutes = Math.floor(diffInMs / (1000 * 60));
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+    } else if (diffInHours < 24) {
+      const hours = Math.floor(diffInHours);
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    } else if (diffInDays < 7) {
+      const days = Math.floor(diffInDays);
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  };
+
+  const getTransactionType = (transaction: CreditTransaction): 'credit' | 'debit' | 'reserve' | 'release' => {
+    const availableDiff = transaction.new_available - transaction.old_available;
+    const reservedDiff = transaction.new_reserved - transaction.old_reserved;
+
+    if (availableDiff > 0 && reservedDiff === 0) return 'credit';
+    if (availableDiff < 0 && reservedDiff === 0) return 'debit';
+    if (reservedDiff > 0) return 'reserve';
+    if (reservedDiff < 0) return 'release';
+    return 'credit';
+  };
+
+  const getTransactionIcon = (type: 'credit' | 'debit' | 'reserve' | 'release') => {
+    switch (type) {
+      case 'credit':
+        return { Icon: ArrowUpRight, color: 'text-lime-300', bg: 'bg-lime-300/20' };
+      case 'debit':
+        return { Icon: ArrowDownRight, color: 'text-red-400', bg: 'bg-red-400/20' };
+      case 'reserve':
+        return { Icon: Lock, color: 'text-amber-300', bg: 'bg-amber-300/20' };
+      case 'release':
+        return { Icon: TrendingUp, color: 'text-sky-300', bg: 'bg-sky-300/20' };
+    }
   };
 
   if (!isOpen) return null;
@@ -323,7 +423,7 @@ export default function CreditsModal({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden"
+          className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[73vh] overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-white/10">
@@ -384,7 +484,7 @@ export default function CreditsModal({
           </div>
 
           {/* Content */}
-          <div className={`p-6 ${activeView === 'purchase' ? '' : 'overflow-y-auto max-h-[calc(85vh-240px)]'}`}>
+          <div className="p-6 overflow-y-auto h-[calc(85vh-240px)]">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 text-lime-300 animate-spin" />
@@ -484,18 +584,105 @@ export default function CreditsModal({
                     transition={{ duration: 0.2 }}
                     className="space-y-4"
                   >
-                    {/* Coming Soon Placeholder */}
-                    <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-lime-300/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <History className="w-10 h-10 text-lime-300" />
+                    {isLoadingTransactions ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 text-lime-300 animate-spin" />
                       </div>
-                      <h3 className="text-xl font-semibold text-white mb-2">
-                        Transaction History
-                      </h3>
-                      <p className="text-[#bdbdbd] max-w-md mx-auto">
-                        Your credit purchase and reserved history will appear here
-                      </p>
-                    </div>
+                    ) : transactions.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="w-20 h-20 bg-lime-300/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <History className="w-10 h-10 text-lime-300" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-white mb-2">
+                          No Transactions Yet
+                        </h3>
+                        <p className="text-[#bdbdbd] max-w-md mx-auto mb-6">
+                          Your credit transaction history will appear here once you make your first purchase or use credits
+                        </p>
+                        <button
+                          onClick={() => setActiveView('purchase')}
+                          className="px-6 py-3 bg-lime-300 text-black rounded-full font-semibold hover:bg-lime-400 transition-all duration-300 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)]"
+                        >
+                          Buy Your First Credits
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {transactions.map((transaction, index) => {
+                          const type = getTransactionType(transaction);
+                          const { Icon, color, bg } = getTransactionIcon(type);
+                          const availableDiff = transaction.new_available - transaction.old_available;
+                          const reservedDiff = transaction.new_reserved - transaction.old_reserved;
+
+                          return (
+                            <motion.div
+                              key={transaction.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.05 }}
+                              className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors"
+                            >
+                              <div className="flex items-start gap-4">
+                                {/* Icon */}
+                                <div className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center flex-shrink-0`}>
+                                  <Icon className={`w-5 h-5 ${color}`} />
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4 mb-2">
+                                    <div>
+                                      <p className="text-sm font-semibold text-white mb-0.5">
+                                        {transaction.action}
+                                      </p>
+                                      <div className="flex items-center gap-1.5 text-xs text-[#bdbdbd]">
+                                        <Calendar className="w-3 h-3" />
+                                        {formatDate(transaction.created_at)}
+                                      </div>
+                                    </div>
+
+                                    {/* Change Amount */}
+                                    <div className="text-right flex-shrink-0">
+                                      {availableDiff !== 0 && (
+                                        <div className={`text-sm font-semibold ${
+                                          availableDiff > 0 ? 'text-lime-300' : 'text-red-400'
+                                        }`}>
+                                          {availableDiff > 0 ? '+' : ''}{availableDiff.toLocaleString()}
+                                        </div>
+                                      )}
+                                      {reservedDiff !== 0 && (
+                                        <div className={`text-xs font-medium ${
+                                          reservedDiff > 0 ? 'text-amber-300' : 'text-sky-300'
+                                        }`}>
+                                          {reservedDiff > 0 ? 'Reserved' : 'Released'} {Math.abs(reservedDiff).toLocaleString()}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Balance Details */}
+                                  <div className="flex items-center gap-4 text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[#bdbdbd]">Available:</span>
+                                      <span className="text-white font-medium">
+                                        {transaction.old_available.toLocaleString()} → {transaction.new_available.toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div className="w-px h-3 bg-white/10" />
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[#bdbdbd]">Reserved:</span>
+                                      <span className="text-white font-medium">
+                                        {transaction.old_reserved.toLocaleString()} → {transaction.new_reserved.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </motion.div>
                 )}
 
