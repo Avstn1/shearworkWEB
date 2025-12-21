@@ -97,54 +97,7 @@ export function MessageSchedule({
 
   return (
     <div className="space-y-4">
-      {/* Campaign Type Selection */}
-      <div>
-        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          <Zap className="w-3 h-3 inline mr-1" />
-          Algorithm Type
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          {CAMPAIGN_TYPES.map((type) => (
-            <div key={type.value} className="relative group">
-              <button
-                type="button"
-                onClick={() => handlepurposeChange(type.value)}
 
-                disabled={!msg.isEditing}
-                className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
-                  msg.purpose === type.value
-                    ? 'bg-sky-300/20 text-sky-300 border-2 border-sky-300/50 shadow-[0_0_12px_rgba(125,211,252,0.3)]'
-                    : 'bg-white/5 text-[#bdbdbd] border-2 border-white/10 hover:border-white/20'
-                } ${!msg.isEditing ? 'cursor-not-allowed opacity-70' : ''}`}
-              >
-                {type.label}
-                <div className="relative">
-                  <Info className="w-3 h-3" />
-                  {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-72">
-                    <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                      <p className="whitespace-normal break-words">{type.description}</p>
-                      {type.value === 'mass' && (
-                        <div className="mt-1 text-amber-300 font-semibold">
-                          Max: 1500 clients
-                        </div>
-                      )}
-                      {type.value !== 'mass' && (
-                        <div className="mt-1 text-amber-300 font-semibold">
-                          Max: 1000 clients
-                        </div>
-                      )}
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                        <div className="border-4 border-transparent border-t-[#0a0a0a]" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Client Limit Selection */}
       <div>

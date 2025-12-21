@@ -21,23 +21,100 @@ export interface ScoredClient extends AcuityClient {
   days_overdue: number;
 }
 
+export interface CampaignResult {
+  clients: ScoredClient[];
+  totalAvailableClients: number;
+}
+
 /**
  * Selects clients for holiday mass campaigns.
- * Targets clients who haven't visited in 2+ weeks but less than 8 months.
- * Purpose: Re-engage clients during holiday periods when they have more free time.
+ * First uses strict criteria, then fills remaining slots with lenient criteria.
  */
 export async function selectClientsForSMS_Campaign(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
-): Promise<ScoredClient[]> {
+): Promise<CampaignResult> {
   const today = new Date();
+  
+  console.log(`\n🎯 === STARTING SMS CAMPAIGN SELECTION (Limit: ${limit}) ===\n`);
+  
+  // PHASE 1: Get clients with STRICT criteria (original algorithm)
+  console.log('📋 PHASE 1: Running strict algorithm...');
+  const strictClients = await getStrictClients(supabase, userId, today);
+  
+  // Boost strict clients' scores by 500 to ensure they're prioritized
+  const boostedStrictClients = strictClients.map(client => ({
+    ...client,
+    score: client.score + 500
+  }));
+  
+  console.log(`✅ Phase 1 Complete: ${boostedStrictClients.length} clients after +500 score boost`);
+  
+  // If we have enough, return them
+  if (boostedStrictClients.length >= limit) {
+    const selected = boostedStrictClients.slice(0, limit);
+    console.log(`\n🎉 FINAL SELECTION: ${selected.length} clients (strict only)`);
+    console.log(`   └─ All from strict algorithm\n`);
+    return {
+      clients: selected,
+      totalAvailableClients: boostedStrictClients.length
+    };
+  }
+  
+  // PHASE 2: Need more clients - use LENIENT criteria
+  console.log(`\n📋 PHASE 2: Need ${limit - boostedStrictClients.length} more clients, running lenient algorithm...`);
+  const lenientClients = await getLenientClients(supabase, userId, today);
+  
+  // Remove duplicates - exclude anyone already in strict list
+  const strictPhones = new Set(boostedStrictClients.map(c => c.phone_normalized));
+  const beforeDedup = lenientClients.length;
+  const uniqueLenientClients = lenientClients.filter(
+    client => !strictPhones.has(client.phone_normalized)
+  );
+  
+  console.log(`   ├─ Lenient clients before deduplication: ${beforeDedup}`);
+  console.log(`   └─ After removing duplicates with strict list: ${uniqueLenientClients.length}`);
+  
+  // Combine both lists (strict clients already have +500 boost, so they'll be first when sorted)
+  const allClients = [...boostedStrictClients, ...uniqueLenientClients];
+  console.log(`\n🔀 Combined total: ${allClients.length} clients (${boostedStrictClients.length} strict + ${uniqueLenientClients.length} lenient)`);
+  
+  // Sort by score (highest first)
+  allClients.sort((a, b) => b.score - a.score);
+  console.log(`   └─ Sorted by score (highest first)`);
+  
+  // Take top N
+  const selectedClients = allClients.slice(0, limit);
+  
+  const strictSelected = selectedClients.filter(c => c.score >= 500).length;
+  const lenientSelected = selectedClients.length - strictSelected;
+  
+  console.log(`\n🎉 FINAL SELECTION: ${selectedClients.length} clients`);
+  console.log(`   ├─ From strict algorithm: ${strictSelected}`);
+  console.log(`   └─ From lenient algorithm: ${lenientSelected}\n`);
+  
+  return {
+    clients: selectedClients,
+    totalAvailableClients: allClients.length
+  };
+}
+
+/**
+ * Get clients using STRICT criteria (original algorithm)
+ */
+async function getStrictClients(
+  supabase: SupabaseClient,
+  userId: string,
+  today: Date
+): Promise<ScoredClient[]> {
   const twoWeeksAgo = new Date(today);
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
   const eightMonthsAgo = new Date(today);
   eightMonthsAgo.setMonth(eightMonthsAgo.getMonth() - 8);
   
-  // Fetch eligible clients who haven't visited in 2 weeks to 8 months
+  console.log(`   ├─ Fetching clients with last visit between 14 days and 8 months ago...`);
+  
   const { data: clients, error } = await supabase
     .from('acuity_clients')
     .select('*')
@@ -49,40 +126,280 @@ export async function selectClientsForSMS_Campaign(
     .gt('total_appointments', 0)
     .order('last_appt', { ascending: false });
 
-  if (error) {
-    throw new Error(`Failed to fetch clients: ${error.message}`);
-  }
-
-  if (!clients || clients.length === 0) {
+  if (error || !clients || clients.length === 0) {
+    console.log(`   └─ ⚠️ No clients found in database query`);
     return [];
   }
 
-  // Score and filter clients
-  const allScoredClients: ScoredClient[] = clients
-    .map((client) => scoreClient(client, today))
-    .filter((client) => {
-      if (client.score <= 0) return false;
+  console.log(`   ├─ Initial database query: ${clients.length} clients`);
 
-      const daysSinceLastVisit = client.days_since_last_visit;
+  // Score with STRICT algorithm
+  const scoredClients = clients.map((client) => scoreClientStrict(client, today));
+  console.log(`   ├─ After scoring: ${scoredClients.length} clients`);
+  
+  const afterScoreFilter = scoredClients.filter((client) => client.score > 0);
+  console.log(`   ├─ After filtering score > 0: ${afterScoreFilter.length} clients (removed ${scoredClients.length - afterScoreFilter.length})`);
 
-      // Ensure within 2 weeks to 8 months window
-      return daysSinceLastVisit >= 14 && daysSinceLastVisit <= 240;
-    });
-
-  // Remove duplicates based on phone_normalized (keep the one with highest score)
-  const uniqueClients = deduplicateByPhone(allScoredClients);
-
-  // Sort by score (highest first)
+  // Remove duplicates
+  const uniqueClients = deduplicateByPhone(afterScoreFilter);
+  console.log(`   ├─ After deduplication by phone: ${uniqueClients.length} clients (removed ${afterScoreFilter.length - uniqueClients.length} duplicates)`);
+  
+  // Sort by score
   uniqueClients.sort((a, b) => b.score - a.score);
+  console.log(`   └─ Final strict clients: ${uniqueClients.length}`);
+  
+  return uniqueClients;
+}
 
-  console.log(`🎄 Holiday Campaign - Available clients: ${uniqueClients.length}`);
+/**
+ * Get clients using LENIENT criteria (for filling gaps)
+ */
+async function getLenientClients(
+  supabase: SupabaseClient,
+  userId: string,
+  today: Date
+): Promise<ScoredClient[]> {
+  // Much wider time window
+  const oneWeekAgo = new Date(today);
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const twoYearsAgo = new Date(today);
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+  
+  console.log(`   ├─ Fetching clients with last visit between 7 days and 2 years ago...`);
+  
+  const { data: clients, error } = await supabase
+    .from('acuity_clients')
+    .select('*')
+    .eq('user_id', userId)
+    .not('phone_normalized', 'is', null)
+    .not('last_appt', 'is', null)
+    .lt('last_appt', oneWeekAgo.toISOString())
+    .gt('last_appt', twoYearsAgo.toISOString())
+    .gt('total_appointments', 0)
+    .order('last_appt', { ascending: false });
 
-  // For mass campaigns, no complex distribution logic - just take top scoring clients
-  const selectedClients = uniqueClients.slice(0, limit);
+  if (error || !clients || clients.length === 0) {
+    console.log(`   └─ ⚠️ No clients found in database query`);
+    return [];
+  }
 
-  console.log(`✅ Selected ${selectedClients.length} clients for holiday campaign`);
+  console.log(`   ├─ Initial database query: ${clients.length} clients`);
 
-  return selectedClients;
+  // Score with LENIENT algorithm
+  const scoredClients = clients.map((client) => scoreClientLenient(client, today));
+  console.log(`   ├─ After scoring: ${scoredClients.length} clients`);
+  
+  const afterScoreFilter = scoredClients.filter((client) => client.score > 0);
+  console.log(`   ├─ After filtering score > 0: ${afterScoreFilter.length} clients (removed ${scoredClients.length - afterScoreFilter.length})`);
+
+  // Remove duplicates
+  const uniqueClients = deduplicateByPhone(afterScoreFilter);
+  console.log(`   ├─ After deduplication by phone: ${uniqueClients.length} clients (removed ${afterScoreFilter.length - uniqueClients.length} duplicates)`);
+  
+  // Sort by score
+  uniqueClients.sort((a, b) => b.score - a.score);
+  console.log(`   └─ Final lenient clients: ${uniqueClients.length}`);
+  
+  return uniqueClients;
+}
+
+/**
+ * STRICT scoring (original algorithm)
+ */
+function scoreClientStrict(client: AcuityClient, today: Date): ScoredClient {
+  let score = 0;
+  
+  const lastApptDate = client.last_appt ? new Date(client.last_appt) : null;
+  const lastSmsSentDate = client.date_last_sms_sent ? new Date(client.date_last_sms_sent) : null;
+  
+  if (!lastApptDate) {
+    return { ...client, score: 0, days_since_last_visit: 0, expected_visit_interval_days: 0, days_overdue: 0 };
+  }
+
+  const daysSinceLastVisit = Math.floor((today.getTime() - lastApptDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysSinceLastSms = lastSmsSentDate 
+    ? Math.floor((today.getTime() - lastSmsSentDate.getTime()) / (1000 * 60 * 60 * 24))
+    : Infinity;
+
+  if (daysSinceLastSms < 7) {
+    return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
+  }
+
+  const expectedVisitIntervalDays = client.avg_weekly_visits 
+    ? Math.round(7 / client.avg_weekly_visits)
+    : 0;
+
+  const daysOverdue = daysSinceLastVisit - expectedVisitIntervalDays;
+
+  // NEW CLIENTS
+  if (client.visiting_type === 'new' || client.total_appointments === 1) {
+    if (daysSinceLastVisit < 21) {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
+    }
+    
+    const daysAfter21 = daysSinceLastVisit - 21;
+    const newClientProximityBonus = Math.max(0, 200 - (daysAfter21 * 2));
+    score = 90 + newClientProximityBonus;
+    
+    if (daysSinceLastVisit > 60) {
+      const daysAfter60 = daysSinceLastVisit - 60;
+      score -= (daysAfter60 * 3);
+    }
+    
+    return {
+      ...client,
+      score: Math.max(0, score),
+      days_since_last_visit: daysSinceLastVisit,
+      expected_visit_interval_days: expectedVisitIntervalDays,
+      days_overdue: daysOverdue,
+    };
+  }
+
+  const optimalOverdue = 10;
+  const distanceFromOptimal = Math.abs(daysOverdue - optimalOverdue);
+  const proximityBonus = Math.max(0, 150 - (distanceFromOptimal * 7.5));
+
+  // CONSISTENT: Must be between 0 and 30 days overdue (not too late, not early)
+  if (client.visiting_type === 'consistent') {
+    if (daysOverdue >= 0 && daysOverdue <= 30) {
+      score = 250 + (daysOverdue * 4) + proximityBonus;
+      if (daysOverdue > 10) {
+        const daysAfter10 = daysOverdue - 10;
+        score -= (daysAfter10 * 5);
+      }
+    } else {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
+    }
+  }
+  
+  // SEMI-CONSISTENT: Must be between -1 and 20 days overdue
+  else if (client.visiting_type === 'semi-consistent') {
+    if (daysOverdue >= -1 && daysOverdue <= 20) {
+      score = 220 + ((daysOverdue + 1) * 3.5) + proximityBonus;
+      if (daysOverdue > 15) {
+        const daysAfter15 = daysOverdue - 15;
+        score -= (daysAfter15 * 3.5);
+      }
+    } else {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
+    }
+  }
+  
+  // EASY-GOING: Must be between 5 and 60 days overdue
+  else if (client.visiting_type === 'easy-going') {
+    if (daysOverdue >= 5 && daysOverdue <= 60) {
+      score = 100 + ((daysOverdue - 5) * 1.5) + proximityBonus;
+      if (daysOverdue > 20) {
+        const daysAfter20 = daysOverdue - 20;
+        score -= (daysAfter20 * 2.5);
+      }
+    } else {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
+    }
+  }
+  
+  // RARE: Must be between 10 and 90 days overdue
+  else if (client.visiting_type === 'rare') {
+    if (daysOverdue >= 10 && daysOverdue <= 90) {
+      score = 80 + ((daysOverdue - 10) * 1) + proximityBonus;
+      if (daysOverdue > 25) {
+        const daysAfter25 = daysOverdue - 25;
+        score -= (daysAfter25 * 2.5);
+      }
+    } else {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
+    }
+  }
+  
+  // NULL: Treat like easy-going (5-60 days overdue)
+  else {
+    if (daysOverdue >= 5 && daysOverdue <= 60) {
+      score = 90 + ((daysOverdue - 5) * 1.5) + proximityBonus;
+      if (daysOverdue > 20) {
+        const daysAfter20 = daysOverdue - 20;
+        score -= (daysAfter20 * 2.5);
+      }
+    } else {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
+    }
+  }
+
+  if (daysOverdue <= 30) {
+    if (daysSinceLastVisit > 365) {
+      score += 20;
+    }
+    if (daysSinceLastVisit > 540) {
+      score += 30;
+    }
+  }
+
+  return {
+    ...client,
+    score: Math.max(0, score),
+    days_since_last_visit: daysSinceLastVisit,
+    expected_visit_interval_days: expectedVisitIntervalDays,
+    days_overdue: daysOverdue,
+  };
+}
+
+/**
+ * LENIENT scoring (for filling gaps - prevents prioritizing very old clients)
+ */
+function scoreClientLenient(client: AcuityClient, today: Date): ScoredClient {
+  let score = 0;
+  
+  const lastApptDate = client.last_appt ? new Date(client.last_appt) : null;
+  const lastSmsSentDate = client.date_last_sms_sent ? new Date(client.date_last_sms_sent) : null;
+  
+  if (!lastApptDate) {
+    return { ...client, score: 0, days_since_last_visit: 0, expected_visit_interval_days: 0, days_overdue: 0 };
+  }
+
+  const daysSinceLastVisit = Math.floor((today.getTime() - lastApptDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysSinceLastSms = lastSmsSentDate 
+    ? Math.floor((today.getTime() - lastSmsSentDate.getTime()) / (1000 * 60 * 60 * 24))
+    : Infinity;
+
+  // ALWAYS require 15 days since last SMS for lenient
+  if (daysSinceLastSms < 15) {
+    return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
+  }
+
+  const expectedVisitIntervalDays = client.avg_weekly_visits 
+    ? Math.round(7 / client.avg_weekly_visits)
+    : 0;
+
+  const daysOverdue = daysSinceLastVisit - expectedVisitIntervalDays;
+
+  // LENIENT: Allow slightly older clients, but still cap it
+  // Maximum 120 days overdue for lenient (4 months past their expected visit)
+  if (daysOverdue > 120) {
+    return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
+  }
+
+  // Scoring that DOESN'T increase infinitely with days overdue
+  let baseScore = 200;
+  
+  // Penalty for being TOO overdue (clients who are likely gone)
+  if (daysOverdue > 60) {
+    const excessDays = daysOverdue - 60;
+    baseScore -= (excessDays * 3); // Lose 3 points per day after 60 days overdue
+  }
+  
+  // Small bonus for being near optimal
+  const optimalOverdue = 15;
+  const distanceFromOptimal = Math.abs(daysOverdue - optimalOverdue);
+  const proximityBonus = Math.max(0, 50 - (distanceFromOptimal * 2));
+  
+  score = baseScore + proximityBonus;
+
+  return {
+    ...client,
+    score: Math.max(0, score),
+    days_since_last_visit: daysSinceLastVisit,
+    expected_visit_interval_days: expectedVisitIntervalDays,
+    days_overdue: daysOverdue,
+  };
 }
 
 /**
@@ -105,175 +422,6 @@ function deduplicateByPhone(clients: ScoredClient[]): ScoredClient[] {
   }
 
   return Array.from(phoneMap.values());
-}
-
-function scoreClient(client: AcuityClient, today: Date): ScoredClient {
-  let score = 0;
-  
-  const lastApptDate = client.last_appt ? new Date(client.last_appt) : null;
-  const lastSmsSentDate = client.date_last_sms_sent ? new Date(client.date_last_sms_sent) : null;
-  
-  if (!lastApptDate) {
-    return { ...client, score: 0, days_since_last_visit: 0, expected_visit_interval_days: 0, days_overdue: 0 };
-  }
-
-  const daysSinceLastVisit = Math.floor((today.getTime() - lastApptDate.getTime()) / (1000 * 60 * 60 * 24));
-  const daysSinceLastSms = lastSmsSentDate 
-    ? Math.floor((today.getTime() - lastSmsSentDate.getTime()) / (1000 * 60 * 60 * 24))
-    : Infinity;
-
-  // More lenient - don't message if SMS sent in last 7 days (vs 14 days in regular algorithm)
-  if (daysSinceLastSms < 7) {
-    return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
-  }
-
-  const expectedVisitIntervalDays = client.avg_weekly_visits 
-    ? Math.round(7 / client.avg_weekly_visits)
-    : 0;
-
-  const daysOverdue = daysSinceLastVisit - expectedVisitIntervalDays;
-
-  // NEW CLIENTS: Special handling
-  if (client.visiting_type === 'new' || client.total_appointments === 1) {
-    // Don't message if it's been less than 21 days since last visit
-    if (daysSinceLastVisit < 21) {
-      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
-    }
-    
-    // The closer to 21 days, the higher the score
-    // At 21 days: highest score
-    // Score decreases as days increase beyond 21
-    const daysAfter21 = daysSinceLastVisit - 21;
-    const newClientProximityBonus = Math.max(0, 200 - (daysAfter21 * 2));
-    
-    score = 90 + newClientProximityBonus;
-    
-    // After 60 days total (39 days after the 21-day mark), start losing score
-    if (daysSinceLastVisit > 60) {
-      const daysAfter60 = daysSinceLastVisit - 60;
-      score -= (daysAfter60 * 3); // Lose 3 points per day after 60
-    }
-    
-    return {
-      ...client,
-      score: Math.max(0, score),
-      days_since_last_visit: daysSinceLastVisit,
-      expected_visit_interval_days: expectedVisitIntervalDays,
-      days_overdue: daysOverdue,
-    };
-  }
-
-  // EXISTING CLIENTS: Proximity to 10 days overdue
-  // Calculate proximity bonus: The closer to 10 days overdue, the higher the bonus
-  const optimalOverdue = 10;
-  const distanceFromOptimal = Math.abs(daysOverdue - optimalOverdue);
-  
-  // Proximity bonus decreases as you move away from 10
-  // At 10 days overdue: +150 bonus (increased from 100)
-  // At 0 or 20 days overdue: +75 bonus
-  // At -10 or 30 days overdue: +0 bonus
-  const proximityBonus = Math.max(0, 150 - (distanceFromOptimal * 7.5));
-
-  // STRICTER OVERDUE REQUIREMENTS FOR HOLIDAY CAMPAIGNS
-  
-  // CONSISTENT: Never message if negative overdue (they're early)
-  // HIGHEST PRIORITY - Boost base score significantly
-  if (client.visiting_type === 'consistent') {
-    if (daysOverdue >= 0) {
-      score = 250 + (daysOverdue * 4) + proximityBonus; // Increased from 150 base, 2x multiplier
-      
-      // Start penalizing at 10 days overdue with HIGH penalty curve
-      if (daysOverdue > 10) {
-        const daysAfter10 = daysOverdue - 10;
-        score -= (daysAfter10 * 5); // High penalty: -5 points per day
-      }
-    } else {
-      // Negative overdue = don't message
-      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
-    }
-  }
-  
-  // SEMI-CONSISTENT: Never message if less than -1 day overdue
-  // HIGH PRIORITY - Boost base score
-  else if (client.visiting_type === 'semi-consistent') {
-    if (daysOverdue >= -1) {
-      score = 220 + ((daysOverdue + 1) * 3.5) + proximityBonus; // Increased from 160 base, higher multiplier
-      
-      // Start penalizing at 15 days overdue with MEDIUM-HIGH penalty curve
-      if (daysOverdue > 15) {
-        const daysAfter15 = daysOverdue - 15;
-        score -= (daysAfter15 * 3.5); // Medium-high penalty: -3.5 points per day
-      }
-    } else {
-      // Less than -1 days overdue = don't message
-      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
-    }
-  }
-  
-  // EASY-GOING: Never message if less than 5 days overdue
-  else if (client.visiting_type === 'easy-going') {
-    if (daysOverdue >= 5) {
-      score = 100 + ((daysOverdue - 5) * 1.5) + proximityBonus;
-      
-      // Start penalizing at 20 days overdue with MEDIUM penalty curve
-      if (daysOverdue > 20) {
-        const daysAfter20 = daysOverdue - 20;
-        score -= (daysAfter20 * 2.5); // Medium penalty: -2.5 points per day
-      }
-    } else {
-      // Less than 5 days overdue = don't message
-      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
-    }
-  }
-  
-  // RARE: Never message if less than 10 days overdue
-  else if (client.visiting_type === 'rare') {
-    if (daysOverdue >= 10) {
-      score = 80 + ((daysOverdue - 10) * 1) + proximityBonus;
-      
-      // Start penalizing at 25 days overdue with MEDIUM penalty curve (same as easy-going)
-      if (daysOverdue > 25) {
-        const daysAfter25 = daysOverdue - 25;
-        score -= (daysAfter25 * 2.5); // Medium penalty: -2.5 points per day
-      }
-    } else {
-      // Less than 10 days overdue = don't message
-      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
-    }
-  }
-  
-  // NULL visiting_type: Treat like easy-going (require 5 days overdue)
-  else {
-    if (daysOverdue >= 5) {
-      score = 90 + ((daysOverdue - 5) * 1.5) + proximityBonus;
-      
-      // Start penalizing at 20 days overdue (same as easy-going)
-      if (daysOverdue > 20) {
-        const daysAfter20 = daysOverdue - 20;
-        score -= (daysAfter20 * 2.5); // Medium penalty: -2.5 points per day
-      }
-    } else {
-      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
-    }
-  }
-
-  // Bonus for longer absence (they really need re-engagement) - only for clients not heavily penalized
-  if (daysOverdue <= 30) {
-    if (daysSinceLastVisit > 365) {
-      score += 20; // Been away over a year
-    }
-    if (daysSinceLastVisit > 540) {
-      score += 30; // Been away over 18 months
-    }
-  }
-
-  return {
-    ...client,
-    score: Math.max(0, score), // Ensure score never goes negative
-    days_since_last_visit: daysSinceLastVisit,
-    expected_visit_interval_days: expectedVisitIntervalDays,
-    days_overdue: daysOverdue,
-  };
 }
 
 export async function markClientsAsMessaged(

@@ -56,6 +56,7 @@ export default function SMSCampaigns() {
   const [availableCredits, setAvailableCredits] = useState<number>(0); 
 
   const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass'>('campaign');
+  const [maxClients, setMaxClients] = useState<number>(0);
 
   // Load existing messages on mount
   useEffect(() => {
@@ -191,6 +192,7 @@ export default function SMSCampaigns() {
           );
           
           console.log(sortedClients.length);
+          setMaxClients(data.maxClient || 0);
           setPreviewCounts(prev => ({ ...prev, [messageId]: sortedClients.length }));
           setPreviewClients(sortedClients);
           setPreviewStats(data.stats);
@@ -642,17 +644,6 @@ export default function SMSCampaigns() {
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
-                {/* <div>
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-sky-300" />
-                    Clients Selected for Next Campaign
-                  </h3>
-                  {previewStats && (
-                    <p className="text-sm text-[#bdbdbd] mt-1">
-                      {previewStats.total_selected} clients will receive your next SMS
-                    </p>
-                  )}
-                </div> */}
                 <div>
                   <h3 className="text-xl font-bold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-sky-300" />
@@ -660,7 +651,7 @@ export default function SMSCampaigns() {
                   </h3>
                   {previewStats && (
                     <p className="text-sm text-[#bdbdbd] mt-1">
-                      {previewStats.total_selected} clients will receive this message
+                      {previewStats.total_selected} clients will receive this message. Your maximum clients based on the algorithm is {maxClients}. 
                     </p>
                   )}
                 </div>
