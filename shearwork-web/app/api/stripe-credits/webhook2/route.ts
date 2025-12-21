@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent
 
-      const supabaseUserId = session.metadata?.supabase_user_id
-      const creditPackage = session.metadata?.credit_package
+      const supabaseUserId = paymentIntent.metadata?.supabase_user_id
+      const creditPackage = paymentIntent.metadata?.credit_package
 
       if (!supabaseUserId || !creditPackage) {
         console.error('Missing required metadata:', { supabaseUserId, creditPackage })
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
           user_id: supabaseUserId,
           header: 'Credits purchased',
           message: `${creditsToAdd} credits added to your account`,
-          reference: session.payment_intent as string,
+          reference: paymentIntent.id,
           reference_type: 'credit_purchase',
         })
 
