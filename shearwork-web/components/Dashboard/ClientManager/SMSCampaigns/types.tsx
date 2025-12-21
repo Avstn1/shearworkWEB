@@ -14,6 +14,7 @@ export interface SMSMessage {
   validationStatus?: 'ACCEPTED' | 'DENIED' | 'DRAFT' | null;
   validationReason?: string;
   isEditing?: boolean;
+  purpose: 'campaign' | 'mass' | 'marketing';
 }
 
 export const HOURS_12 = Array.from({ length: 12 }, (_, i) => ({
@@ -38,7 +39,20 @@ export const CLIENT_LIMITS = [
   { value: 750, label: '750 clients' },
   { value: 1000, label: '1,000 clients' },
   { value: -1, label: 'Custom' },
-  { value: -2, label: 'Max (use all credits)' }, // NEW
+  { value: -2, label: 'Max (use all credits)' },
+];
+
+export const CAMPAIGN_TYPES = [
+  { 
+    value: 'campaign' as const, 
+    label: 'Campaign',
+    description: 'Uses an algorithm that carefully selects clients based on who has the most need for a message. Good for mass call-to-action campaigns.'
+  },
+  { 
+    value: 'mass' as const, 
+    label: 'Mass',
+    description: 'Selects your clients sorted by most recent visit - the more recent their visit, the more likely they\'ll be included. Good for absence messages'
+  },
 ];
 
 export interface PhoneNumber {

@@ -53,7 +53,9 @@ export default function SMSCampaigns() {
   const [previewCounts, setPreviewCounts] = useState<Record<string, number>>({});
 
   const [activePreviewMessageId, setActivePreviewMessageId] = useState<string | null>(null);
-  const [availableCredits, setAvailableCredits] = useState<number>(0);
+  const [availableCredits, setAvailableCredits] = useState<number>(0); 
+
+  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass'>('campaign');
 
   // Load existing messages on mount
   useEffect(() => {
@@ -180,7 +182,7 @@ export default function SMSCampaigns() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const userId = user?.id || '';
-        const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=campaign`);
+        const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}`);
         
         if (!response.ok) {
           throw new Error('Failed to load preview');
@@ -261,6 +263,7 @@ export default function SMSCampaigns() {
         validationStatus: 'DRAFT',
         validationReason: undefined,
         isEditing: true,
+        purpose: algorithmType,
       };
 
       setMessages([...messages, newMessage]);
@@ -503,8 +506,7 @@ export default function SMSCampaigns() {
         scheduledFor, // ISO timestamp
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
         isValidated: msg.isValidated,
-        purpose: 'campaign',
-        // Only pass preview count for activation
+        purpose: algorithmType,
         previewCount: mode === 'activate' ? previewCounts[msgId] : undefined,
       };
 
@@ -789,6 +791,7 @@ export default function SMSCampaigns() {
           <div className="space-y-4">
             {messages.map((msg, index) => (
               <MessageCard
+                setAlgorithmType={setAlgorithmType}
                 availableCredits={availableCredits}
                 key={msg.id}
                 message={msg}

@@ -40,7 +40,7 @@ export async function selectClientsForSMS_Campaign(
   
   // Fetch eligible clients who haven't visited in 2 weeks to 8 months
   let query = supabase
-    .from('acuity_clients_testing')
+    .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
