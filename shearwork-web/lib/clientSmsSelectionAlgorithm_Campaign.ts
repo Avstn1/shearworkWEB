@@ -30,7 +30,6 @@ export async function selectClientsForSMS_Campaign(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
-  visitingType?: string
 ): Promise<ScoredClient[]> {
   const today = new Date();
   const twoWeeksAgo = new Date(today);
@@ -39,7 +38,7 @@ export async function selectClientsForSMS_Campaign(
   eightMonthsAgo.setMonth(eightMonthsAgo.getMonth() - 8);
   
   // Fetch eligible clients who haven't visited in 2 weeks to 8 months
-  let query = supabase
+  const { data: clients, error } = await supabase
     .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
@@ -49,13 +48,6 @@ export async function selectClientsForSMS_Campaign(
     .gt('last_appt', eightMonthsAgo.toISOString())
     .gt('total_appointments', 0)
     .order('last_appt', { ascending: false });
-
-  // Conditionally add visiting_type filter if provided
-  if (visitingType) {
-    query = query.eq('visiting_type', visitingType);
-  }
-
-  const { data: clients, error } = await query;
 
   if (error) {
     throw new Error(`Failed to fetch clients: ${error.message}`);
@@ -67,7 +59,7 @@ export async function selectClientsForSMS_Campaign(
 
   // Score and filter clients
   const allScoredClients: ScoredClient[] = clients
-    .map((client) => scoreClientForHoliday(client, today))
+    .map((client) => scoreClient(client, today))
     .filter((client) => {
       if (client.score <= 0) return false;
 
@@ -115,7 +107,7 @@ function deduplicateByPhone(clients: ScoredClient[]): ScoredClient[] {
   return Array.from(phoneMap.values());
 }
 
-function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient {
+function scoreClient(client: AcuityClient, today: Date): ScoredClient {
   let score = 0;
   
   const lastApptDate = client.last_appt ? new Date(client.last_appt) : null;
@@ -141,55 +133,143 @@ function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient 
 
   const daysOverdue = daysSinceLastVisit - expectedVisitIntervalDays;
 
-  // LENIENT OVERDUE REQUIREMENTS FOR HOLIDAY CAMPAIGNS
-  // Allow negative values (meaning they're not technically overdue yet)
+  // NEW CLIENTS: Special handling
+  if (client.visiting_type === 'new' || client.total_appointments === 1) {
+    // Don't message if it's been less than 21 days since last visit
+    if (daysSinceLastVisit < 21) {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: 0, days_overdue: 0 };
+    }
+    
+    // The closer to 21 days, the higher the score
+    // At 21 days: highest score
+    // Score decreases as days increase beyond 21
+    const daysAfter21 = daysSinceLastVisit - 21;
+    const newClientProximityBonus = Math.max(0, 200 - (daysAfter21 * 2));
+    
+    score = 90 + newClientProximityBonus;
+    
+    // After 60 days total (39 days after the 21-day mark), start losing score
+    if (daysSinceLastVisit > 60) {
+      const daysAfter60 = daysSinceLastVisit - 60;
+      score -= (daysAfter60 * 3); // Lose 3 points per day after 60
+    }
+    
+    return {
+      ...client,
+      score: Math.max(0, score),
+      days_since_last_visit: daysSinceLastVisit,
+      expected_visit_interval_days: expectedVisitIntervalDays,
+      days_overdue: daysOverdue,
+    };
+  }
+
+  // EXISTING CLIENTS: Proximity to 10 days overdue
+  // Calculate proximity bonus: The closer to 10 days overdue, the higher the bonus
+  const optimalOverdue = 10;
+  const distanceFromOptimal = Math.abs(daysOverdue - optimalOverdue);
   
-  // CONSISTENT: Must be at exactly expected interval (0 days overdue or more)
+  // Proximity bonus decreases as you move away from 10
+  // At 10 days overdue: +150 bonus (increased from 100)
+  // At 0 or 20 days overdue: +75 bonus
+  // At -10 or 30 days overdue: +0 bonus
+  const proximityBonus = Math.max(0, 150 - (distanceFromOptimal * 7.5));
+
+  // STRICTER OVERDUE REQUIREMENTS FOR HOLIDAY CAMPAIGNS
+  
+  // CONSISTENT: Never message if negative overdue (they're early)
+  // HIGHEST PRIORITY - Boost base score significantly
   if (client.visiting_type === 'consistent') {
     if (daysOverdue >= 0) {
-      score = 150 + (daysOverdue * 2);
+      score = 250 + (daysOverdue * 4) + proximityBonus; // Increased from 150 base, 2x multiplier
+      
+      // Start penalizing at 10 days overdue with HIGH penalty curve
+      if (daysOverdue > 10) {
+        const daysAfter10 = daysOverdue - 10;
+        score -= (daysAfter10 * 5); // High penalty: -5 points per day
+      }
+    } else {
+      // Negative overdue = don't message
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
     }
   }
   
-  // SEMI-CONSISTENT: Can be up to 3 days early (-3 days overdue)
+  // SEMI-CONSISTENT: Never message if less than -1 day overdue
+  // HIGH PRIORITY - Boost base score
   else if (client.visiting_type === 'semi-consistent') {
-    if (daysOverdue >= -3) {
-      score = 160 + ((daysOverdue + 3) * 2);
+    if (daysOverdue >= -1) {
+      score = 220 + ((daysOverdue + 1) * 3.5) + proximityBonus; // Increased from 160 base, higher multiplier
+      
+      // Start penalizing at 15 days overdue with MEDIUM-HIGH penalty curve
+      if (daysOverdue > 15) {
+        const daysAfter15 = daysOverdue - 15;
+        score -= (daysAfter15 * 3.5); // Medium-high penalty: -3.5 points per day
+      }
+    } else {
+      // Less than -1 days overdue = don't message
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
     }
   }
   
-  // EASY-GOING: Can be up to 10 days early (-10 days overdue)
+  // EASY-GOING: Never message if less than 5 days overdue
   else if (client.visiting_type === 'easy-going') {
-    if (daysOverdue >= -10) {
-      score = 100 + ((daysOverdue + 10) * 1.5);
+    if (daysOverdue >= 5) {
+      score = 100 + ((daysOverdue - 5) * 1.5) + proximityBonus;
+      
+      // Start penalizing at 20 days overdue with MEDIUM penalty curve
+      if (daysOverdue > 20) {
+        const daysAfter20 = daysOverdue - 20;
+        score -= (daysAfter20 * 2.5); // Medium penalty: -2.5 points per day
+      }
+    } else {
+      // Less than 5 days overdue = don't message
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
     }
   }
   
-  // RARE: Can be up to 20 days early (-20 days overdue)
+  // RARE: Never message if less than 10 days overdue
   else if (client.visiting_type === 'rare') {
-    if (daysOverdue >= -20) {
-      score = 80 + ((daysOverdue + 20) * 1);
+    if (daysOverdue >= 10) {
+      score = 80 + ((daysOverdue - 10) * 1) + proximityBonus;
+      
+      // Start penalizing at 25 days overdue with MEDIUM penalty curve (same as easy-going)
+      if (daysOverdue > 25) {
+        const daysAfter25 = daysOverdue - 25;
+        score -= (daysAfter25 * 2.5); // Medium penalty: -2.5 points per day
+      }
+    } else {
+      // Less than 10 days overdue = don't message
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
     }
   }
   
-  // NEW or NULL: Treat like easy-going
+  // NULL visiting_type: Treat like easy-going (require 5 days overdue)
   else {
-    if (daysOverdue >= -10) {
-      score = 90 + ((daysOverdue + 10) * 1.5);
+    if (daysOverdue >= 5) {
+      score = 90 + ((daysOverdue - 5) * 1.5) + proximityBonus;
+      
+      // Start penalizing at 20 days overdue (same as easy-going)
+      if (daysOverdue > 20) {
+        const daysAfter20 = daysOverdue - 20;
+        score -= (daysAfter20 * 2.5); // Medium penalty: -2.5 points per day
+      }
+    } else {
+      return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
     }
   }
 
-  // Bonus for longer absence (they really need re-engagement)
-  if (daysSinceLastVisit > 365) {
-    score += 20; // Been away over a year
-  }
-  if (daysSinceLastVisit > 540) {
-    score += 30; // Been away over 18 months
+  // Bonus for longer absence (they really need re-engagement) - only for clients not heavily penalized
+  if (daysOverdue <= 30) {
+    if (daysSinceLastVisit > 365) {
+      score += 20; // Been away over a year
+    }
+    if (daysSinceLastVisit > 540) {
+      score += 30; // Been away over 18 months
+    }
   }
 
   return {
     ...client,
-    score,
+    score: Math.max(0, score), // Ensure score never goes negative
     days_since_last_visit: daysSinceLastVisit,
     expected_visit_interval_days: expectedVisitIntervalDays,
     days_overdue: daysOverdue,

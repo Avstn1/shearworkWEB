@@ -39,14 +39,14 @@ export const CLIENT_LIMITS = [
   { value: 750, label: '750 clients' },
   { value: 1000, label: '1,000 clients' },
   { value: -1, label: 'Custom' },
-  { value: -2, label: 'Max (use all credits)' },
+  { value: -2, label: 'Max (All available credits)' },
 ];
 
 export const CAMPAIGN_TYPES = [
   { 
     value: 'campaign' as const, 
     label: 'Campaign',
-    description: 'Uses an algorithm that carefully selects clients based on who has the most need for a message. Good for mass call-to-action campaigns.'
+    description: 'Uses an algorithm that carefully selects clients who has the most need for a message. Good for call-to-action campaigns.'
   },
   { 
     value: 'mass' as const, 

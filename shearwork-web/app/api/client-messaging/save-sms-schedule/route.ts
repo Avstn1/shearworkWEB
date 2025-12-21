@@ -390,13 +390,13 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
-    const purpose = searchParams.get('purpose')
+    const purposes = searchParams.getAll('purpose');
     
     const { data: messages, error } = await supabase
       .from('sms_scheduled_messages')
       .select('*')
       .eq('user_id', user.id)
-      .eq('purpose', purpose)
+      .in('purpose', purposes)
       .order('created_at', { ascending: true })
 
     if (error) throw error
