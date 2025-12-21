@@ -94,7 +94,7 @@ export default function SMSCampaigns() {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=campaign', {
+      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=campaign&purpose=mass', {
         method: 'GET',
       });
 
@@ -102,12 +102,8 @@ export default function SMSCampaigns() {
 
       const data = await response.json();
       
-      console.log('📥 Loaded messages from API:', data);
-      
       if (data.success && data.messages) {
         const loadedMessages = data.messages.map((dbMsg: any) => {
-          console.log('🔄 Processing loaded message:', dbMsg);
-          
           // Parse the ISO timestamp directly
           const scheduleDateTime = new Date(dbMsg.cron);
           const scheduleDate = scheduleDateTime.toISOString().split('T')[0];
@@ -133,15 +129,6 @@ export default function SMSCampaigns() {
             hour12 = hour24 - 12;
             period = 'PM';
           }
-          
-          console.log('📅 Parsed schedule:', {
-            iso: dbMsg.cron,
-            scheduleDate,
-            hour12,
-            minute,
-            period,
-            localDisplay: scheduleDateTime.toLocaleString()
-          });
 
           const isValidated = dbMsg.status !== 'DENIED';
 
@@ -162,7 +149,6 @@ export default function SMSCampaigns() {
             isEditing: false,
           };
           
-          console.log('✅ Loaded message:', message);
           return message;
         });
 

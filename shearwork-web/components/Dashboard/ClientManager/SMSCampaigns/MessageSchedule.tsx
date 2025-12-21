@@ -108,7 +108,7 @@ export function MessageSchedule({
             <div key={type.value} className="relative group">
               <button
                 type="button"
-                onClick={() => handlepurposeChange(type.value === 'mass' ? 'campaign' : type.value)}
+                onClick={() => handlepurposeChange(type.value)}
 
                 disabled={!msg.isEditing}
                 className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
@@ -126,7 +126,12 @@ export function MessageSchedule({
                       <p className="whitespace-normal break-words">{type.description}</p>
                       {type.value === 'mass' && (
                         <div className="mt-1 text-amber-300 font-semibold">
-                          Max: 1,500 clients
+                          Max: 1500 clients
+                        </div>
+                      )}
+                      {type.value !== 'mass' && (
+                        <div className="mt-1 text-amber-300 font-semibold">
+                          Max: 1000 clients
                         </div>
                       )}
                       <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
@@ -164,7 +169,7 @@ export function MessageSchedule({
               if (limit.value === -2 && maxLimit <= 1000) return null;
               
               // Show actual limit for max option
-              if (limit.value === -2) {
+              if (limit.value === -1) {
                 return (
                   <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
                     Max (1,500 clients)
@@ -182,7 +187,7 @@ export function MessageSchedule({
               }
               
               // Show custom last
-              if (limit.value === -1) {
+              if (limit.value === -2) {
                 return (
                   <option key={limit.value} value={limit.value} className="bg-[#1a1a1a]">
                     {limit.label}

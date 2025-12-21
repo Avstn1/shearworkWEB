@@ -9,7 +9,7 @@ export async function selectClientsForSMS_Mass(
   visitingType?: string
 ): Promise<ScoredClient[]> {
   let query = supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)

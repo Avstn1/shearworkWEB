@@ -276,7 +276,7 @@ export default function SMSManager() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || '';
-      const response = await fetch(`/api/client-messaging/preview-recipients?limit=25&userId=${userId}&algorithm=overdue`);
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=50&userId=${userId}&algorithm=overdue`);
       
       if (!response.ok) {
         throw new Error('Failed to load preview');

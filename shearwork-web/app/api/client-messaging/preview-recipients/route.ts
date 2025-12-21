@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     if (!userId) throw new Error('userId is required');
 
     const visitingType = searchParams.get('visitingType')
-    const limit = parseInt(searchParams.get('limit') || '25')
+    const limit = parseInt(searchParams.get('limit') || '50')
 
     // Select clients using the algorithm
     const algorithm = searchParams.get('algorithm')
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       selectedClients = selectedClients.slice(0, massLimit);
     } else {
       // Default campaign algorithm
-      selectedClients = await selectClientsForSMS_Campaign(supabase, userId, limit, visitingType || undefined)
+      selectedClients = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined)
     } 
 
     if (selectedClients.length === 0) {
