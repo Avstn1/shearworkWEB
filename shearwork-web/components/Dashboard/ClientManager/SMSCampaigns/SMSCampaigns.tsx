@@ -72,6 +72,15 @@ export default function SMSCampaigns() {
     });
   }, [messages.length]);
 
+  useEffect(() => {
+    // Only reload if there are scheduled messages
+    if (messages.length > 0) {
+      messages.forEach(message => {
+        loadMessagePreview(message.id, message.clientLimit);
+      });
+    }
+  }, [algorithmType]);
+
   const fetchCredits = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -181,6 +190,8 @@ export default function SMSCampaigns() {
             b.score - a.score
           );
           
+          console.log(sortedClients.length);
+          setPreviewCounts(prev => ({ ...prev, [messageId]: sortedClients.length }));
           setPreviewClients(sortedClients);
           setPreviewStats(data.stats);
           setShowPreview(true);
@@ -199,9 +210,7 @@ export default function SMSCampaigns() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || '';
-      const response = await fetch(
-        `/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=campaign`
-      );
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}`);
       
       if (!response.ok) {
         throw new Error('Failed to load preview');
@@ -210,10 +219,7 @@ export default function SMSCampaigns() {
       const data = await response.json();
       
       if (data.success && data.stats) {
-        setPreviewCounts(prev => ({
-          ...prev,
-          [messageId]: data.stats.total_selected
-        }));
+        setPreviewCounts(prev => ({ ...prev, [messageId]: data.clients.length }));
       }
     } catch (error) {
       console.error('Failed to load message preview:', error);
