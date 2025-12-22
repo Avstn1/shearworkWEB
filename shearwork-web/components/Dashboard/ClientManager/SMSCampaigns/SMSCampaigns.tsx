@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Coins } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Users, X, Coins, Send, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
@@ -60,10 +60,15 @@ export default function SMSCampaigns() {
 
   const [profile, setProfile] = useState<any>(null);
 
+  const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
+  const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
+  const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
+
   // Load existing messages on mount
   useEffect(() => {
     loadMessages();
     fetchCredits();
+    fetchTestMessageCount();
   }, []);
 
   // Load preview counts for all messages
@@ -83,6 +88,34 @@ export default function SMSCampaigns() {
       });
     }
   }, [algorithmType]);
+
+  const fetchTestMessageCount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get start of today in user's timezone
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('sms_sent')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('purpose', 'test_message')
+        .eq('is_sent', true)
+        .gte('created_at', today.toISOString());
+
+      if (error) {
+        console.error('Failed to fetch test message count:', error);
+        return;
+      }
+
+      setTestMessagesUsed(data?.length || 0);
+    } catch (error) {
+      console.error('Failed to fetch test message count:', error);
+    }
+  };
 
   const fetchCredits = async () => {
     try {
@@ -555,6 +588,30 @@ export default function SMSCampaigns() {
     }
   };
 
+  const handleTestMessageSend = async (msgId: string) => {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    try {
+      const response = await fetch(`/api/client-messaging/qstash-sms-send?messageId=${msg.id}&action=test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send test message');
+      }
+
+      toast.success('Test message sent successfully to your phone!');
+      fetchTestMessageCount(); // Refresh test count
+    } catch (error: any) {
+      console.error('Test message error:', error);
+      toast.error(error.message || 'Failed to send test message');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -568,7 +625,7 @@ export default function SMSCampaigns() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+    {/* Header */}
       <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -579,29 +636,55 @@ export default function SMSCampaigns() {
             <p className="text-[#bdbdbd] text-sm">
               Schedule up to 3 automated marketing messages to keep your clients engaged
             </p>
-            {/* NEW: Credits display */}
-            <div className="mt-3 flex items-center gap-2">
+            
+            {/* Credits and Test Messages Display */}
+            <div className="mt-3 flex items-center gap-3">
               <div className="px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center gap-2">
                 <Coins className="w-4 h-4 text-lime-300" />
                 <span className="text-sm font-semibold text-lime-300">
                   {availableCredits.toLocaleString()} credits available
                 </span>
               </div>
-              <span className="text-xs text-[#bdbdbd]">
-                1 credit = 1 SMS message
-              </span>
+              
+              <div className={`px-3 py-1.5 rounded-full flex items-center gap-2 ${
+                testMessagesUsed >= 10 
+                  ? 'bg-rose-300/10 border border-rose-300/20'
+                  : 'bg-sky-300/10 border border-sky-300/20'
+              }`}>
+                <Send className={`w-4 h-4 ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`} />
+                <span className={`text-sm font-semibold ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`}>
+                  {10 - testMessagesUsed} free tests left today
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-2 flex items-center gap-2 text-xs text-[#bdbdbd]">
+              <span>1 credit = 1 SMS message</span>
+              <span>•</span>
+              <span>Free tests reset daily at 12 AM</span>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
             {messages.length < 3 && (
-              <button
-                onClick={addMessage}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
-              >
-                <Plus className="w-4 h-4" />
-                Create Message
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={addMessage}
+                  className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Message
+                </button>
+                {/* Tooltip */}
+                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none">
+                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl whitespace-nowrap">
+                    Create a new scheduled SMS campaign
+                    <div className="absolute top-full right-4 -mt-1">
+                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -625,6 +708,100 @@ export default function SMSCampaigns() {
           </span>
         </div>
       </div>
+
+      {/* Test Confirmation Modal */}
+      <AnimatePresence>
+        {showTestConfirmModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setShowTestConfirmModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  testMessagesUsed >= 10
+                    ? 'bg-amber-300/20 text-amber-300'
+                    : 'bg-sky-300/20 text-sky-300'
+                }`}>
+                  <Send className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    {testMessagesUsed >= 10 ? 'Send Paid Test Message' : 'Send Free Test Message'}
+                  </h3>
+                  <p className="text-sm text-[#bdbdbd]">
+                    {testMessagesUsed >= 10 ? (
+                      <>
+                        You've used all your free test messages today. This test will cost{' '}
+                        <span className="text-amber-300 font-semibold">1 credit</span>.
+                      </>
+                    ) : (
+                      <>
+                        You have{' '}
+                        <span className="text-sky-300 font-semibold">{10 - testMessagesUsed} free tests</span>{' '}
+                        remaining today. After that, tests cost 1 credit each.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {testMessagesUsed >= 10 && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
+                  <div className="flex items-center gap-2 text-sm text-amber-300">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <p>
+                      Available credits: <span className="font-semibold">{availableCredits}</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-6">
+                <p className="text-sm text-white mb-2">
+                  <span className="font-semibold">Test message will be sent to:</span>
+                </p>
+                <p className="text-sm text-sky-300">{profile?.phone || 'Your registered phone number'}</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowTestConfirmModal(false);
+                    setPendingTestMessageId(null);
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (pendingTestMessageId) {
+                      setShowTestConfirmModal(false);
+                      // Actually send the test message
+                      await handleTestMessageSend(pendingTestMessageId);
+                      setPendingTestMessageId(null);
+                    }
+                  }}
+                  disabled={testMessagesUsed >= 10 && availableCredits < 1}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {testMessagesUsed >= 10 ? 'Send (1 Credit)' : 'Send Test'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Client Preview Modal */}
       <AnimatePresence>
@@ -830,6 +1007,7 @@ export default function SMSCampaigns() {
           <div className="space-y-4">
             {messages.map((msg, index) => (
               <MessageCard
+                testMessagesUsed={testMessagesUsed}
                 profile={profile}
                 setAlgorithmType={setAlgorithmType}
                 availableCredits={availableCredits}
@@ -909,6 +1087,11 @@ export default function SMSCampaigns() {
                   setTempTitle('');
                 }}
                 onTempTitleChange={setTempTitle}
+                onRequestTest={(msgId) => { 
+                  setPendingTestMessageId(msgId);
+                  setShowTestConfirmModal(true);
+                }}
+                onTestComplete={() => fetchTestMessageCount()} 
               />
             ))}
           </div>

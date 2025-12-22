@@ -1,26 +1,62 @@
 import { motion } from 'framer-motion';
 import { Shield, AlertCircle, Send, Sparkles } from 'lucide-react';
 import { SMSMessage } from './types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { supabase } from '@/utils/supabaseClient';
 
 interface MessageContentProps {
   profile: any;
   message: SMSMessage;
   validatingId: string | null;
+  testMessagesUsed: number;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onValidate: (msgId: string) => void;
+  onRequestTest: (msgId: string) => void;
 }
 
 export function MessageContent({
   profile,
   message: msg,
   validatingId,
+  testMessagesUsed,
   onUpdate,
   onValidate,
+  onRequestTest, 
 }: MessageContentProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [testsUsedToday, setTestsUsedToday] = useState(0);
+  const DAILY_TEST_LIMIT = 10;
+
+  // Load test count on mount
+  useEffect(() => {
+    loadTestCount();
+  }, []);
+
+  const loadTestCount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get start of today in user's timezone
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { count, error } = await supabase
+        .from('sms_sent')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('purpose', 'test_message')
+        .eq('is_sent', true)
+        .gte('created_at', today.toISOString());
+
+      if (error) throw error;
+      setTestsUsedToday(count || 0);
+    } catch (error) {
+      console.error('Failed to load test count:', error);
+    }
+  };
 
   const handleGenerateTemplate = async () => {
     setIsGenerating(true);
@@ -44,7 +80,6 @@ export function MessageContent({
         throw new Error(data.error || 'Failed to generate template');
       }
 
-      // Update the message with generated template
       onUpdate(msg.id, { message: data.message });
       toast.success('Template generated successfully!');
     } catch (error: any) {
@@ -135,6 +170,23 @@ export function MessageContent({
         </div>
       )}
 
+      {/* Test Limit Info */}
+      {msg.isSaved && msg.isValidated && msg.validationStatus === 'DRAFT' && (
+        <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
+          <p className="text-sm text-sky-300">
+            {testsUsedToday >= DAILY_TEST_LIMIT ? (
+              <>
+                You've used all {DAILY_TEST_LIMIT} free tests today. Additional tests cost 1 credit each.
+              </>
+            ) : (
+              <>
+                Free tests remaining today: <span className="font-semibold">{DAILY_TEST_LIMIT - testsUsedToday}/{DAILY_TEST_LIMIT}</span>
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       {/* Message Textarea */}
       <div>
         <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
@@ -172,83 +224,135 @@ export function MessageContent({
       {/* Action Buttons */}
       {msg.isEditing && (
         <div className="grid grid-cols-3 gap-2">
-          {/* Generate Template Button */}
-          <button
-            onClick={handleGenerateTemplate}
-            disabled={isGenerating}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl font-semibold hover:bg-purple-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                >
+          {/* Generate Template Button with tooltip */}
+          <div className="relative group">
+            <button
+              onClick={handleGenerateTemplate}
+              disabled={isGenerating}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl font-semibold hover:bg-purple-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGenerating ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <Sparkles className="w-5 h-5" />
+                  </motion.div>
+                  <span className="hidden sm:inline">Generating...</span>
+                </>
+              ) : (
+                <>
                   <Sparkles className="w-5 h-5" />
-                </motion.div>
-                <span className="hidden sm:inline">Generating...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                <span className="hidden sm:inline">Generate</span>
-              </>
-            )}
-          </button>
+                  <span className="hidden sm:inline">Generate</span>
+                </>
+              )}
+            </button>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+              <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                AI-generate a message template
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                  <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {/* Validate Button */}
-          <button
-            onClick={() => onValidate(msg.id)}
-            disabled={msg.message.length < 100 || validatingId === msg.id}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {validatingId === msg.id ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                >
+          {/* Validate Button with tooltip */}
+          <div className="relative group">
+            <button
+              onClick={() => onValidate(msg.id)}
+              disabled={msg.message.length < 100 || validatingId === msg.id}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {validatingId === msg.id ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <Shield className="w-5 h-5" />
+                  </motion.div>
+                  <span className="hidden sm:inline">Validating...</span>
+                </>
+              ) : (
+                <>
                   <Shield className="w-5 h-5" />
-                </motion.div>
-                <span className="hidden sm:inline">Validating...</span>
-              </>
-            ) : (
-              <>
-                <Shield className="w-5 h-5" />
-                <span className="hidden sm:inline">Validate</span>
-              </>
-            )}
-          </button>
+                  <span className="hidden sm:inline">Validate</span>
+                </>
+              )}
+            </button>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+              <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                Check message for compliance issues
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                  <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {/* Test Message Button */}
-          <button
-            onClick={handleTestMessage}
-            disabled={
-              !msg.isSaved || 
-              !msg.isValidated ||
-              msg.validationStatus !== 'DRAFT' ||
-              msg.message.length < 100 || 
-              isTesting
-            }
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-xl font-semibold hover:bg-sky-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isTesting ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                >
+          {/* Test Message Button with tooltip */}
+          <div className="relative group">
+            <button
+              onClick={() => {
+                // Validation checks
+                if (!msg.isSaved) {
+                  toast.error('Please save the message as a draft before testing');
+                  return;
+                }
+                if (!msg.isValidated) {
+                  toast.error('Message must be validated before testing');
+                  return;
+                }
+                if (msg.validationStatus !== 'DRAFT') {
+                  toast.error('Only draft messages can be tested');
+                  return;
+                }
+                if (!msg.message.trim()) {
+                  toast.error('Please enter a message first');
+                  return;
+                }
+                if (msg.message.length < 100) {
+                  toast.error('Message must be at least 100 characters');
+                  return;
+                }
+
+                // All checks passed, show confirmation modal
+                onRequestTest(msg.id);
+              }}
+              disabled={isTesting}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-xl font-semibold hover:bg-sky-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isTesting ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <Send className="w-5 h-5" />
+                  </motion.div>
+                  <span className="hidden sm:inline">Sending...</span>
+                </>
+              ) : (
+                <>
                   <Send className="w-5 h-5" />
-                </motion.div>
-                <span className="hidden sm:inline">Sending...</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                <span className="hidden sm:inline">Test</span>
-              </>
-            )}
-          </button>
+                  <span className="hidden sm:inline">Test</span>
+                </>
+              )}
+            </button>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+              <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                {testMessagesUsed >= 10 
+                  ? 'Send test to your phone (1 credit)' 
+                  : `Send test to your phone (${10 - testMessagesUsed} free left)`
+                }
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                  <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

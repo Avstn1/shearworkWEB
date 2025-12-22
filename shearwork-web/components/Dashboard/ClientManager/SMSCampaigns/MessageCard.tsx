@@ -42,14 +42,17 @@ interface MessageCardProps {
   editingTitleId: string | null;
   tempTitle: string;
   previewCount?: number;
-  loadingPreview: boolean; // NEW
-  onLoadPreview: (limit: number) => void; // NEW
+  loadingPreview: boolean;
+  testMessagesUsed: number; 
+  onLoadPreview: (limit: number) => void;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onRemove: (id: string) => void;
   onEnableEdit: (id: string) => void;
   onCancelEdit: (id: string) => void;
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
   onValidate: (msgId: string) => void;
+  onRequestTest: (msgId: string) => void; // Add this
+  onTestComplete: () => void; // Add this
   onStartEditingTitle: (id: string, currentTitle: string) => void;
   onSaveTitle: (id: string) => void;
   onCancelEditTitle: () => void;
@@ -63,13 +66,16 @@ export function MessageCard({
   message: msg,
   index,
   isSaving,
+  testMessagesUsed,
   savingMode,
   validatingId,
   editingTitleId,
   tempTitle,
   previewCount,
-  loadingPreview, // NEW
-  onLoadPreview, // NEW
+  loadingPreview,
+  onRequestTest,
+  onTestComplete,
+  onLoadPreview,
   onUpdate,
   onRemove,
   onEnableEdit,
@@ -171,92 +177,68 @@ export function MessageCard({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Preview Button */}
-            <button
-              onClick={() => onLoadPreview(msg.clientLimit)}
-              disabled={loadingPreview}
-              className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Preview Recipients"
-            >
-              {loadingPreview ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Users className="w-3 h-3" />
-              )}
-              Preview
-            </button>
-
-            {/* Edit Button (only show if not editing and message is saved) */}
-            {!msg.isEditing && msg.isSaved && (
+            {/* Preview Button with tooltip */}
+            <div className="relative group">
               <button
-                onClick={() => onEnableEdit(msg.id)}
-                className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-300 flex items-center gap-1"
+                onClick={() => onLoadPreview(msg.clientLimit)}
+                disabled={loadingPreview}
+                className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Edit className="w-3 h-3" />
-                Edit
+                {loadingPreview ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Users className="w-3 h-3" />
+                )}
+                Preview
               </button>
-            )}
-
-            {/* Validation Status Badge */}
-            {msg.isValidated && msg.validationStatus === 'ACCEPTED' && (
-              <div className="px-3 py-1 rounded-full text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
-                Approved
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+                <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  View which clients will receive this message
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                    <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                  </div>
+                </div>
               </div>
-            )}
-            {msg.isValidated && msg.validationStatus === 'DENIED' && (
-              <div className="px-3 py-1 rounded-full text-xs font-semibold bg-rose-300/20 text-rose-300 border border-rose-300/30 flex items-center gap-1">
-                <XCircle className="w-3 h-3" />
-                Denied
-              </div>
-            )}
+            </div>
 
-            {/* Status Badge */}
-            {msg.isSaved ? (
-              msg.validationStatus === 'ACCEPTED' ? (
+            {/* Edit Button with tooltip */}
+            {!msg.isEditing && msg.isSaved && (
+              <div className="relative group">
                 <button
-                  onClick={() =>
-                    onUpdate(msg.id, { enabled: !msg.enabled })
-                  }
-                  disabled={!msg.isEditing}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
-                    msg.enabled
-                      ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
-                      : 'bg-white/5 text-[#bdbdbd] border border-white/10'
-                  } ${!msg.isEditing ? 'cursor-not-allowed opacity-70' : ''}`}
+                  onClick={() => onEnableEdit(msg.id)}
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-300 flex items-center gap-1"
                 >
-                  {msg.enabled ? 'Active' : 'Paused'}
+                  <Edit className="w-3 h-3" />
+                  Edit
                 </button>
-              ) : (
-                <>
-                  <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30">
-                    Draft
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                    {msg.validationStatus === 'ACCEPTED' ? 'Edit message (will refund reserved credits)' : 'Edit this message'}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                    </div>
                   </div>
-                  <div className="px-3 py-1 rounded-full text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    Saved
-                  </div>
-                </>
-              )
-            ) : (
-              <>
-                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30">
-                  Draft
                 </div>
-                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-rose-300/20 text-rose-300 border border-rose-300/30 flex items-center gap-1">
-                  <XCircle className="w-3 h-3" />
-                  Not Saved
-                </div>
-              </>
+              </div>
             )}
 
-            {/* Delete Button */}
-            <button
-              onClick={() => onRemove(msg.id)}
-              className="p-2 rounded-full bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-300"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {/* Delete Button with tooltip */}
+            <div className="relative group">
+              <button
+                onClick={() => onRemove(msg.id)}
+                className="p-2 rounded-full bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-300"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+                <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  Delete this message permanently
+                  <div className="absolute top-full right-4 -mt-1">
+                    <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -267,8 +249,10 @@ export function MessageCard({
             profile={profile}
             message={msg}
             validatingId={validatingId}
+            testMessagesUsed={testMessagesUsed} 
             onUpdate={onUpdate}
             onValidate={onValidate}
+            onRequestTest={onRequestTest} 
           />
 
           {/* RIGHT: Schedule Settings (50%) */}

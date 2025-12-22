@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const url = new URL(req.url);
   const messageId = url.searchParams.get('messageId');
   const user_id = url.searchParams.get('user_id');
-  const purpose = url.searchParams.get('purpose');
+  const purpose = url.searchParams.get('purpose') as 'test_message' | 'campaign' | 'mass' | null;
 
   // 🔑 Normalize phone to match phone_normalized in DB
   const phoneNormalized = normalizePhone(to)
@@ -58,14 +58,16 @@ export async function POST(req: NextRequest) {
 
   // 🔴 STOP / Unsubscribed
   if (messageStatus === 'undelivered' && errorCode === 21610) {
-    // Update client subscription status
-    await supabase
-      .from('acuity_clients')
-      .update({
-        sms_subscribed: false,
-        updated_at: new Date().toISOString()
-      })
-      .eq('phone_normalized', phoneNormalized)
+    // Update client subscription status (only for non-test messages)
+    if (purpose !== 'test_message') {
+      await supabase
+        .from('acuity_clients')
+        .update({
+          sms_subscribed: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('phone_normalized', phoneNormalized)
+    }
 
     // Insert into sms_sent to track the failed delivery
     await supabase
@@ -81,15 +83,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // ✅ Delivered → update last SMS sent timestamp AND reduce reserved credits
+  // ✅ Delivered → update last SMS sent timestamp AND handle credits
   if (messageStatus === 'delivered') {
-    await supabase
-      .from('acuity_clients')
-      .update({
-        date_last_sms_sent: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('phone_normalized', phoneNormalized)
+    // Only update client record for non-test messages
+    if (purpose !== 'test_message') {
+      await supabase
+        .from('acuity_clients')
+        .update({
+          date_last_sms_sent: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('phone_normalized', phoneNormalized)
+    }
 
     // Insert successful delivery record
     await supabase
@@ -102,13 +107,17 @@ export async function POST(req: NextRequest) {
         reason: null
       })
 
-    // NEW: Deduct 1 from reserved credits (successful delivery)
-    await handleCreditDeduction(phoneNormalized, 'success')
+    // Handle credit deduction based on message purpose
+    if (purpose === 'test_message' && user_id) {
+      await handleTestMessageCredit(user_id, 'success')
+    } else if (phoneNormalized) {
+      await handleCreditDeduction(phoneNormalized, 'success')
+    }
 
     return NextResponse.json({ ok: true })
   }
 
-  // 🔴 Failed delivery → refund to available credits
+  // 🔴 Failed delivery → refund credits
   if (messageStatus === 'failed' || messageStatus === 'undelivered') {
     const failureReason = errorCode 
       ? TWILIO_ERROR_CODES[errorCode] || `Unknown error (code: ${errorCode})`
@@ -124,14 +133,81 @@ export async function POST(req: NextRequest) {
         reason: failureReason
       })
 
-    // NEW: Move 1 credit from reserved back to available
-    await handleCreditDeduction(phoneNormalized, 'failed')
+    // Handle credit refund based on message purpose
+    if (purpose === 'test_message' && user_id) {
+      await handleTestMessageCredit(user_id, 'failed')
+    } else if (phoneNormalized) {
+      await handleCreditDeduction(phoneNormalized, 'failed')
+    }
 
     return NextResponse.json({ ok: true })
   }
 
   // Ignore everything else
   return NextResponse.json({ ok: true })
+}
+
+async function handleTestMessageCredit(
+  userId: string,
+  status: 'success' | 'failed'
+) {
+  try {
+    // Check if this is over the 10th test message today
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const { data: testMessages } = await supabase
+      .from('sms_sent')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('purpose', 'test_message')
+      .eq('is_sent', true)
+      .gte('created_at', today.toISOString())
+
+    const testCount = testMessages?.length || 0
+
+    // If this is the 11th+ test message, handle credit deduction
+    if (testCount > 10) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('available_credits')
+        .eq('user_id', userId)
+        .single()
+
+      if (!profile) {
+        console.log(`⚠️ No profile found for user ${userId}`)
+        return
+      }
+
+      if (status === 'success') {
+        // Deduct 1 from available credits (not reserved)
+        await supabase
+          .from('profiles')
+          .update({
+            available_credits: Math.max(0, (profile.available_credits || 0) - 1),
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+
+        console.log(`✅ Deducted 1 available credit for paid test message (user: ${userId})`)
+      } else {
+        // Refund: add back to available credits
+        await supabase
+          .from('profiles')
+          .update({
+            available_credits: (profile.available_credits || 0) + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+
+        console.log(`🔄 Refunded 1 credit for failed paid test message (user: ${userId})`)
+      }
+    } else {
+      console.log(`✅ Free test message delivered (${testCount}/10 today, user: ${userId})`)
+    }
+  } catch (error) {
+    console.error('❌ Test message credit handling error:', error)
+  }
 }
 
 async function handleCreditDeduction(
