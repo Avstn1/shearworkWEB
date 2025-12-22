@@ -56,6 +56,12 @@ export async function POST(req: NextRequest) {
   const phoneNormalized = normalizePhone(to)
   if (!phoneNormalized) return NextResponse.json({ ok: true })
 
+  // Get client_id if this is not a test message
+  let client_id: string | null = null;
+  if (purpose !== 'test_message') {
+    client_id = await getClientId(phoneNormalized);
+  }
+
   // 🔴 STOP / Unsubscribed
   if (messageStatus === 'undelivered' && errorCode === 21610) {
     // Update client subscription status (only for non-test messages)
@@ -77,7 +83,9 @@ export async function POST(req: NextRequest) {
         user_id: user_id,
         is_sent: false,
         purpose: purpose,
-        reason: TWILIO_ERROR_CODES[21610]
+        reason: TWILIO_ERROR_CODES[21610],
+        phone_normalized: phoneNormalized,
+        client_id: client_id
       })
 
     return NextResponse.json({ ok: true })
@@ -104,7 +112,9 @@ export async function POST(req: NextRequest) {
         user_id: user_id,
         is_sent: true,
         purpose: purpose,
-        reason: null
+        reason: null,
+        phone_normalized: phoneNormalized,
+        client_id: client_id
       })
 
     // Handle credit deduction based on message purpose
@@ -130,7 +140,9 @@ export async function POST(req: NextRequest) {
         user_id: user_id,
         is_sent: false,
         purpose: purpose,
-        reason: failureReason
+        reason: failureReason,
+        phone_normalized: phoneNormalized,
+        client_id: client_id
       })
 
     // Handle credit refund based on message purpose
@@ -145,6 +157,21 @@ export async function POST(req: NextRequest) {
 
   // Ignore everything else
   return NextResponse.json({ ok: true })
+}
+
+async function getClientId(phoneNormalized: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('acuity_clients')
+      .select('client_id')
+      .eq('phone_normalized', phoneNormalized)
+      .single()
+    
+    return data?.client_id || null
+  } catch (error) {
+    console.error('Error fetching client_id:', error)
+    return null
+  }
 }
 
 async function handleTestMessageCredit(
