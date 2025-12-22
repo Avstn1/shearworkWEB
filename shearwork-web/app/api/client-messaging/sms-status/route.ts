@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     // Only update client record for non-test messages
     if (purpose !== 'test_message') {
       await supabase
-        .from('acuity_clients')
+        .from('acuity_clients_testing')
         .update({
           date_last_sms_sent: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
 async function getClientId(phoneNormalized: string): Promise<string | null> {
   try {
     const { data } = await supabase
-      .from('acuity_clients')
+      .from('acuity_clients_testing')
       .select('client_id')
       .eq('phone_normalized', phoneNormalized)
       .single()
@@ -244,7 +244,7 @@ async function handleCreditDeduction(
   try {
     // Get user_id from client phone
     const { data: client } = await supabase
-      .from('acuity_clients')
+      .from('acuity_clients_testing')
       .select('user_id')
       .eq('phone_normalized', phoneNormalized)
       .single()
