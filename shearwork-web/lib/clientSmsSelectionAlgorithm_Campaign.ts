@@ -37,10 +37,7 @@ export async function selectClientsForSMS_Campaign(
 ): Promise<CampaignResult> {
   const today = new Date();
   
-  console.log(`\n🎯 === STARTING SMS CAMPAIGN SELECTION (Limit: ${limit}) ===\n`);
-  
   // PHASE 1: Get clients with STRICT criteria (original algorithm)
-  console.log('📋 PHASE 1: Running strict algorithm...');
   const strictClients = await getStrictClients(supabase, userId, today);
   
   // Boost strict clients' scores by 500 to ensure they're prioritized
@@ -48,8 +45,6 @@ export async function selectClientsForSMS_Campaign(
     ...client,
     score: client.score + 500
   }));
-  
-  console.log(`✅ Phase 1 Complete: ${boostedStrictClients.length} clients after +500 score boost`);
   
   // If we have enough, return them
   if (boostedStrictClients.length >= limit) {
@@ -61,8 +56,6 @@ export async function selectClientsForSMS_Campaign(
       days_overdue: Math.max(0, client.days_overdue)
     }));
     
-    console.log(`\n🎉 FINAL SELECTION: ${finalSelected.length} clients (strict only)`);
-    console.log(`   └─ All from strict algorithm\n`);
     return {
       clients: finalSelected,
       totalAvailableClients: boostedStrictClients.length
@@ -70,7 +63,6 @@ export async function selectClientsForSMS_Campaign(
   }
   
   // PHASE 2: Need more clients - use LENIENT criteria
-  console.log(`\n📋 PHASE 2: Need ${limit - boostedStrictClients.length} more clients, running lenient algorithm...`);
   const lenientClients = await getLenientClients(supabase, userId, today);
   
   // Remove duplicates - exclude anyone already in strict list
@@ -80,16 +72,11 @@ export async function selectClientsForSMS_Campaign(
     client => !strictPhones.has(client.phone_normalized)
   );
   
-  console.log(`   ├─ Lenient clients before deduplication: ${beforeDedup}`);
-  console.log(`   └─ After removing duplicates with strict list: ${uniqueLenientClients.length}`);
-  
   // Combine both lists (strict clients already have +500 boost, so they'll be first when sorted)
   const allClients = [...boostedStrictClients, ...uniqueLenientClients];
-  console.log(`\n🔀 Combined total: ${allClients.length} clients (${boostedStrictClients.length} strict + ${uniqueLenientClients.length} lenient)`);
   
   // Sort by score (highest first)
   allClients.sort((a, b) => b.score - a.score);
-  console.log(`   └─ Sorted by score (highest first)`);
   
   // Take top N
   const selectedClients = allClients.slice(0, limit);
@@ -102,10 +89,6 @@ export async function selectClientsForSMS_Campaign(
   
   const strictSelected = finalSelectedClients.filter(c => c.score >= 500).length;
   const lenientSelected = finalSelectedClients.length - strictSelected;
-  
-  console.log(`\n🎉 FINAL SELECTION: ${finalSelectedClients.length} clients`);
-  console.log(`   ├─ From strict algorithm: ${strictSelected}`);
-  console.log(`   └─ From lenient algorithm: ${lenientSelected}\n`);
   
   return {
     clients: finalSelectedClients,
@@ -126,10 +109,8 @@ async function getStrictClients(
   const eightMonthsAgo = new Date(today);
   eightMonthsAgo.setMonth(eightMonthsAgo.getMonth() - 8);
   
-  console.log(`   ├─ Fetching clients with last visit between 14 days and 8 months ago...`);
-  
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -140,26 +121,18 @@ async function getStrictClients(
     .order('last_appt', { ascending: false });
 
   if (error || !clients || clients.length === 0) {
-    console.log(`   └─ ⚠️ No clients found in database query`);
     return [];
   }
 
-  console.log(`   ├─ Initial database query: ${clients.length} clients`);
-
   // Score with STRICT algorithm
   const scoredClients = clients.map((client) => scoreClientStrict(client, today));
-  console.log(`   ├─ After scoring: ${scoredClients.length} clients`);
-  
   const afterScoreFilter = scoredClients.filter((client) => client.score > 0);
-  console.log(`   ├─ After filtering score > 0: ${afterScoreFilter.length} clients (removed ${scoredClients.length - afterScoreFilter.length})`);
 
   // Remove duplicates
   const uniqueClients = deduplicateByPhone(afterScoreFilter);
-  console.log(`   ├─ After deduplication by phone: ${uniqueClients.length} clients (removed ${afterScoreFilter.length - uniqueClients.length} duplicates)`);
   
   // Sort by score
   uniqueClients.sort((a, b) => b.score - a.score);
-  console.log(`   └─ Final strict clients: ${uniqueClients.length}`);
   
   return uniqueClients;
 }
@@ -178,10 +151,8 @@ async function getLenientClients(
   const twoYearsAgo = new Date(today);
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
   
-  console.log(`   ├─ Fetching clients with last visit between 7 days and 2 years ago...`);
-  
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -192,26 +163,18 @@ async function getLenientClients(
     .order('last_appt', { ascending: false });
 
   if (error || !clients || clients.length === 0) {
-    console.log(`   └─ ⚠️ No clients found in database query`);
     return [];
   }
 
-  console.log(`   ├─ Initial database query: ${clients.length} clients`);
-
   // Score with LENIENT algorithm
   const scoredClients = clients.map((client) => scoreClientLenient(client, today));
-  console.log(`   ├─ After scoring: ${scoredClients.length} clients`);
-  
   const afterScoreFilter = scoredClients.filter((client) => client.score > 0);
-  console.log(`   ├─ After filtering score > 0: ${afterScoreFilter.length} clients (removed ${scoredClients.length - afterScoreFilter.length})`);
 
   // Remove duplicates
   const uniqueClients = deduplicateByPhone(afterScoreFilter);
-  console.log(`   ├─ After deduplication by phone: ${uniqueClients.length} clients (removed ${afterScoreFilter.length - uniqueClients.length} duplicates)`);
   
   // Sort by score
   uniqueClients.sort((a, b) => b.score - a.score);
-  console.log(`   └─ Final lenient clients: ${uniqueClients.length}`);
   
   return uniqueClients;
 }
@@ -442,7 +405,7 @@ export async function markClientsAsMessaged(
   clientIds: string[]
 ): Promise<void> {
   const { error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .update({ date_last_sms_sent: new Date().toISOString() })
     .in('client_id', clientIds);
 
