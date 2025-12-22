@@ -73,11 +73,5 @@ export async function getAuthenticatedUser(request: Request) {
 
   // Fallback to cookies (web)
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    console.log('Authenticated via cookies:', user.id);
-  } else {
-    console.log('No authenticated user found');
-  }
-
   return { user, supabase };
 }
