@@ -5,6 +5,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 
 interface MessageContentProps {
+  profile: any;
   message: SMSMessage;
   validatingId: string | null;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
@@ -12,6 +13,7 @@ interface MessageContentProps {
 }
 
 export function MessageContent({
+  profile,
   message: msg,
   validatingId,
   onUpdate,
@@ -27,7 +29,12 @@ export function MessageContent({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          prompt: 'Generate a professional barbershop marketing SMS message with placeholders for customization'
+          prompt: 'Generate a professional barbershop marketing SMS message with placeholders for customization',
+          profile: {
+            full_name: profile?.full_name || '',
+            email: profile?.email || '',
+            phone: profile?.phone || '',
+          }
         }),
       });
 

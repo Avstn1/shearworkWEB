@@ -8,7 +8,7 @@ const authToken = process.env.TWILIO_AUTH_TOKEN
 const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
 
 async function handler(request: Request) {
-  const { messageId, message, phone_normalized } = await request.json();
+  const { messageId, user_id, purpose, message, phone_normalized } = await request.json();
   
   try {
     // Validate required fields
@@ -30,11 +30,16 @@ async function handler(request: Request) {
     
     const twilio_client = twilio(accountSid, authToken)
 
+    const statusCallbackUrl = new URL(`${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/sms-status`);
+    statusCallbackUrl.searchParams.set('messageId', messageId);
+    statusCallbackUrl.searchParams.set('user_id', user_id);
+    statusCallbackUrl.searchParams.set('purpose', purpose);
+
     const twilioMessage = await twilio_client.messages.create({
       body: `${message}\n\nReply STOP to unsubscribe.`,
       messagingServiceSid: messagingServiceSid,
       to: phone_normalized,
-      statusCallback: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/sms-status`
+      statusCallback: statusCallbackUrl.toString()
     });
 
     console.log('✅ SMS sent:', twilioMessage.sid, 'to', phone_normalized)
