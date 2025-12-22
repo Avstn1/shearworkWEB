@@ -187,8 +187,6 @@ async function handler(request: Request) {
       { concurrency: 15 }
     )
 
-    console.log('✅ SMS send job completed successfully');
-
     return NextResponse.json({
       success: true,
       message: 'SMS send job completed',

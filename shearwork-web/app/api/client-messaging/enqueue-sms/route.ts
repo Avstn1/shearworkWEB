@@ -42,8 +42,6 @@ async function handler(request: Request) {
       statusCallback: statusCallbackUrl.toString()
     });
 
-    console.log('✅ SMS sent:', twilioMessage.sid, 'to', phone_normalized)
-
     return Response.json(
       { success: true, messageSid: twilioMessage.sid },
       { status: 200 }
