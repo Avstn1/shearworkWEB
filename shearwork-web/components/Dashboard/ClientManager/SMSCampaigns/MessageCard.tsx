@@ -31,6 +31,7 @@ interface PreviewStats {
 }
 
 interface MessageCardProps {
+  profile: any; 
   setAlgorithmType: (type: 'campaign' | 'mass') => void;
   availableCredits?: number;
   message: SMSMessage;
@@ -56,6 +57,7 @@ interface MessageCardProps {
 }
 
 export function MessageCard({
+  profile,
   setAlgorithmType,
   availableCredits,
   message: msg,
@@ -262,6 +264,7 @@ export function MessageCard({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* LEFT: Message Content (50%) */}
           <MessageContent
+            profile={profile}
             message={msg}
             validatingId={validatingId}
             onUpdate={onUpdate}

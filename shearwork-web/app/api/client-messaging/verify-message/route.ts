@@ -38,7 +38,9 @@ export async function POST(req: Request) {
     }
 
     const promptTemplate = `Your goal is to verify whether this message is appropriate as a barber's marketing message. Make sure that it is not harmful or out of scope. This message will be sent as an SMS.
-                            Beware of placeholders in square brackets like [barber_name], [shop_name], etc. These error message should be: Please replace the placeholders.
+                            Allow funny or informal tones as we are trying to build a relationship with clients. Only reject if it is harmful or inappropriate.
+                            Otherwise, accept it. One thing to never allow are emojis in the message because they may not render properly on all devices.
+                            Beware of spelling errors of single words that are not links or proper nouns.
 
 Your response format:
 - If ACCEPTED: Reply with "ACCEPTED | Your message has been verified and accepted"
@@ -74,7 +76,7 @@ Message: ${message}`
 
     return NextResponse.json({
       success: true,
-      approved: true,
+      approved: isApproved,
       status,
       reason,
       message: 'Accepted',

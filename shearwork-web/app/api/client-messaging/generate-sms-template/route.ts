@@ -28,21 +28,18 @@ export async function POST(req: Request) {
                           Requirements:
                           1. Message length: EXACTLY 180-220 characters (not words - characters!)
                           2. Use proper formatting with line breaks for readability
-                          3. Include relevant placeholders in square brackets like:
-                            - [barber_name] - The barber's name
-                            - [shop_name] - The barbershop name
-                            - [phone_number] - Contact phone number
-                            - [website] - Website URL
-                            - [discount] - Discount percentage or amount
-                            - [service] - Specific service name
-                          4. Keep the tone professional yet friendly
-                          5. Include a clear call-to-action
-                          6. Make it appropriate for SMS (no emojis unless specifically requested)
+                          4. Allow friendly and funny tones. No need to keep it professional as we're building a relationship with clients.
+                          6. Make it appropriate for SMS (no emojis)
                           7. Use proper spacing and line breaks (\n) for visual clarity but don't overdo it.
+                          8. Allow personal emails and phone numbers.
                           `
 
-    const userPrompt = `Generate an SMS marketing message for a barber based on this request: ${prompt}
-                        Remember: 180-220 characters total, include relevant placeholders in [square brackets], and format with line breaks for readability. 
+    const userPrompt = `Generate an SMS marketing message for a barber based on this request: ${prompt}.
+                        These are the profile details of the barber requesting the message:
+                        Full Name: ${body.profile?.full_name || 'N/A'}
+                        Email: ${body.profile?.email || 'N/A'}
+                        Phone: ${body.profile?.phone || 'N/A'}
+                        Remember: 180-220 characters total, and format with line breaks for readability. 
                         THE LIMIT IS 220 CHARACTERS. DO NOT EXCEED THIS LIMIT.`
 
     // Call OpenAI to generate the template

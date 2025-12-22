@@ -58,6 +58,8 @@ export default function SMSCampaigns() {
   const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass'>('campaign');
   const [maxClients, setMaxClients] = useState<number>(0);
 
+  const [profile, setProfile] = useState<any>(null);
+
   // Load existing messages on mount
   useEffect(() => {
     loadMessages();
@@ -89,12 +91,13 @@ export default function SMSCampaigns() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('available_credits')
+        .select('full_name, email, phone, available_credits')
         .eq('user_id', user.id)
         .single();
 
       if (profile) {
         setAvailableCredits(profile.available_credits || 0);
+        setProfile(profile);
       }
     } catch (error) {
       console.error('Failed to fetch credits:', error);
@@ -827,6 +830,7 @@ export default function SMSCampaigns() {
           <div className="space-y-4">
             {messages.map((msg, index) => (
               <MessageCard
+                profile={profile}
                 setAlgorithmType={setAlgorithmType}
                 availableCredits={availableCredits}
                 key={msg.id}

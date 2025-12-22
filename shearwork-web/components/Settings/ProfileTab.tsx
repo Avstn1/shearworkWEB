@@ -16,6 +16,7 @@ export default function ProfileTab() {
   const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [editedEmail, setEditedEmail] = useState('')
   const [editedPhone, setEditedPhone] = useState('')
+  const [originalPhone, setOriginalPhone] = useState('') // NEW: Track original phone
   const [isSendingEmailCode, setIsSendingEmailCode] = useState(false)
   const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -42,20 +43,70 @@ export default function ProfileTab() {
   }
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value)
-    setEditedPhone(formatted)
-  }
+    const input = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+    
+    if (input.length <= 10) {
+      // Format as (XXX) XXX-XXXX
+      let formatted = input;
+      if (input.length > 6) {
+        formatted = `(${input.slice(0, 3)}) ${input.slice(3, 6)}-${input.slice(6, 10)}`;
+      } else if (input.length > 3) {
+        formatted = `(${input.slice(0, 3)}) ${input.slice(3)}`;
+      } else if (input.length > 0) {
+        formatted = `(${input}`;
+      }
+      
+      setEditedPhone(formatted);
+    }
+  };
 
-  const getRawPhoneNumber = (formatted: string) => {  
-    return formatted.replace(/\D/g, '')
-  }
+  const getRawPhoneNumber = (phone: string) => {
+    const digits = phone.replace(/\D/g, '');
+    // Always return with +1 prefix if we have 10 digits, otherwise return empty string
+    if (digits.length === 10) {
+      return `+1${digits}`;
+    }
+    return ''; // Return empty string instead of raw digits
+  };
 
   // Convert raw phone to E.164 format for Twilio
   const getE164PhoneNumber = (formatted: string) => {
-    const raw = getRawPhoneNumber(formatted)
-    // Assuming North American numbers, prepend +1 if not present
-    return raw.startsWith('1') ? `+${raw}` : `+1${raw}`
+    const digits = formatted.replace(/\D/g, '');
+    
+    // Must have exactly 10 digits for North American numbers
+    if (digits.length !== 10) {
+      return '';
+    }
+    
+    return `+1${digits}`;
   }
+
+  // When opening the modal or initializing editedPhone
+  const initializeEditedPhone = (phone: string) => {
+    if (!phone) return '';
+    
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
+    
+    // Strip leading "1" if it exists and we have 11 digits
+    const phoneDigits = digits.length === 11 && digits.startsWith('1') 
+      ? digits.slice(1) 
+      : digits;
+    
+    // Format as (XXX) XXX-XXXX (only the 10 digits)
+    if (phoneDigits.length === 10) {
+      return `(${phoneDigits.slice(0, 3)}) ${phoneDigits.slice(3, 6)}-${phoneDigits.slice(6, 10)}`;
+    }
+    
+    return phoneDigits;
+  };
+
+  // NEW: Check if phone number has changed
+  const hasPhoneChanged = () => {
+    const currentRaw = getRawPhoneNumber(editedPhone);
+    const originalRaw = getRawPhoneNumber(originalPhone);
+    return currentRaw !== originalRaw;
+  };
 
   useEffect(() => {
     fetchProfile()
@@ -81,7 +132,9 @@ export default function ProfileTab() {
         setProfile(data)
         setCommission(data.commission_rate ? data.commission_rate * 100 : '')
         setEditedEmail(data.email || user.email || '')
-        setEditedPhone(data.phone || '')
+        const formattedPhone = initializeEditedPhone(data.phone || '');
+        setEditedPhone(formattedPhone);
+        setOriginalPhone(formattedPhone); // NEW: Store original phone
       }
     } catch (err) {
       console.error(err)
@@ -445,7 +498,9 @@ export default function ProfileTab() {
           />
           <button
             onClick={() => {
-              setEditedPhone(profile.phone ? formatPhoneNumber(profile.phone) : '')
+              const formattedPhone = initializeEditedPhone(profile.phone || '');
+              setEditedPhone(formattedPhone);
+              setOriginalPhone(formattedPhone); // NEW: Store original when opening modal
               setShowPhoneModal(true)
             }}
             className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-lime-300/20 to-lime-400/20 text-lime-300 border border-lime-300/30 rounded-lg hover:from-lime-300/30 hover:to-lime-400/30 transition-all"
@@ -586,14 +641,24 @@ export default function ProfileTab() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Phone Number
                 </label>
-                <input
-                  type="tel"
-                  value={editedPhone}
-                  onChange={handlePhoneInput}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-300/50"
-                  placeholder="1 (647) 470-0164"
-                  maxLength={16}
-                />
+                <div className="flex items-center gap-2">
+                  {/* Fixed country code */}
+                  <div className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-white font-medium">
+                    +1
+                  </div>
+                  {/* Phone number input */}
+                  <input
+                    type="tel"
+                    value={editedPhone}
+                    onChange={handlePhoneInput}
+                    className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-300/50"
+                    placeholder="(647) 111-2222"
+                    maxLength={14}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Enter your 10-digit phone number
+                </p>
               </div>
 
               {profile.phone && (
@@ -634,7 +699,7 @@ export default function ProfileTab() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleSendPhoneCode}
-                    disabled={isSendingPhoneCode || getRawPhoneNumber(editedPhone).length < 10}
+                    disabled={isSendingPhoneCode || editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
                     className="flex-1 px-3 py-2 text-sm bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-lg font-semibold hover:bg-lime-300/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingPhoneCode ? 'Sending...' : 'Send Code'}

@@ -54,8 +54,8 @@ async function handler(request: Request) {
 
     // Determine status based on action parameter
     const isTest = action === 'test'
-    const isMassTest = action === 'mass_test'
     const targetStatus = isTest ? 'DRAFT' : 'ACCEPTED'
+    let purpose;
 
     // Fetch the scheduled message from database
     const { data: scheduledMessage, error } = await supabase
@@ -83,37 +83,9 @@ async function handler(request: Request) {
     // Fetch recipients based on mode
     let recipients: Recipients[] = []
 
-    if (isMassTest) {
-      // Mass test mode: Use recipients from request body
-      const clientsList = [
-        {"first_name":"Carlo","last_name":"Toledo","phone_normalized":"+13653781438"},
-      ];
-
-      if (!Array.isArray(clientsList) || clientsList.length === 0) {
-        return NextResponse.json(
-          { success: false, error: 'No clients provided in request body' },
-          { status: 400 }
-        )
-      }
-
-      recipients = clientsList
-        .filter((client: any) => client.phone_normalized)
-        .map((client: any) => ({
-          phone_normalized: client.phone_normalized,
-          full_name: `${client.first_name} ${client.last_name}`.trim(),
-        }))
-
-      if (recipients.length === 0) {
-        return NextResponse.json(
-          { success: false, error: 'No valid phone numbers found in clients list' },
-          { status: 400 }
-        )
-      }
-
-      console.log('🧪 Mass test mode: Sending to', recipients.length, 'clients')
-      
-    } else if (isTest) {
+    if (isTest) {
       // Test mode: Send only to the message creator
+      purpose = 'test_message'
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('phone, full_name')
@@ -135,6 +107,8 @@ async function handler(request: Request) {
       
     } else { 
       // Production mode: Determine algorithm based on message purpose
+      purpose = 'client_sms'
+
       const algorithm = scheduledMessage.purpose === 'mass' 
         ? 'mass' 
         : scheduledMessage.purpose === 'campaign' 
@@ -165,6 +139,15 @@ async function handler(request: Request) {
         limit
       });
 
+      const { error: finalClientsToMessageError } = await supabase
+        .from('sms_scheduled_messages')
+        .update({ final_clients_to_message: data.phoneNumbers?.length })
+        .eq('id', scheduledMessage.id);
+
+      if (finalClientsToMessageError) {
+        console.log('Failed to update final_clients_to_message.\n' + error)
+      }
+
       recipients = data.phoneNumbers || [];
 
       if (recipients.length === 0) {
@@ -194,9 +177,11 @@ async function handler(request: Request) {
         queue.enqueueJSON({
           url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/enqueue-sms`,
           body: {
+            user_id: scheduledMessage.user_id,
             messageId: scheduledMessage.id,
             message: scheduledMessage.message,
-            phone_normalized: recipient.phone_normalized
+            phone_normalized: recipient.phone_normalized,
+            purpose: purpose
           }
         }),
       { concurrency: 15 }
