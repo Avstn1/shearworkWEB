@@ -56,6 +56,16 @@ export async function POST(req: NextRequest) {
   const phoneNormalized = normalizePhone(to)
   if (!phoneNormalized) return NextResponse.json({ ok: true })
 
+  console.log('📍 Status callback received:', {
+    messageStatus,
+    to,
+    errorCode,
+    messageId,
+    user_id,
+    purpose,
+    phoneNormalized
+  })
+
   // Get client_id if this is not a test message
   let client_id: string | null = null;
   if (purpose !== 'test_message') {
@@ -104,8 +114,17 @@ export async function POST(req: NextRequest) {
         .eq('phone_normalized', phoneNormalized)
     }
 
+    console.log('📝 About to insert into sms_sent:', {
+      message_id: messageId || null,
+      user_id: user_id,
+      is_sent: true,
+      purpose: purpose,
+      phone_normalized: phoneNormalized,
+      client_id: client_id
+    })
+
     // Insert successful delivery record
-    await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from('sms_sent')
       .insert({
         message_id: messageId || null,
@@ -116,6 +135,8 @@ export async function POST(req: NextRequest) {
         phone_normalized: phoneNormalized,
         client_id: client_id
       })
+
+    console.log('✅ Insert result:', { insertData, insertError })
 
     // Handle credit deduction based on message purpose
     if (purpose === 'test_message' && user_id) {
