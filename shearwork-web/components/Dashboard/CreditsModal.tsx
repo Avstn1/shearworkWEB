@@ -18,6 +18,7 @@ const stripePromise = loadStripe(
 );
 
 type CreditView = 'balance' | 'history' | 'purchase';
+type HistorySubView = 'purchases' | 'transactions';
 
 interface CreditsModalProps {
   isOpen: boolean;
@@ -171,6 +172,7 @@ export default function CreditsModal({
   onClose,
 }: CreditsModalProps) {
   const [activeView, setActiveView] = useState<CreditView>('balance');
+  const [historySubView, setHistorySubView] = useState<HistorySubView>('purchases');
   const [availableCredits, setAvailableCredits] = useState<number>(0);
   const [reservedCredits, setReservedCredits] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -239,7 +241,7 @@ export default function CreditsModal({
       const { data, error } = await supabase
         .from('credit_transactions')
         .select('*')
-        .eq('barber_id', user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -373,6 +375,11 @@ export default function CreditsModal({
         return { Icon: TrendingUp, color: 'text-sky-300', bg: 'bg-sky-300/20' };
     }
   };
+
+  const filteredTransactions = transactions.filter((transaction) => {
+    const isPurchase = transaction.action.startsWith('Credits purchased - ');
+    return historySubView === 'purchases' ? isPurchase : !isPurchase;
+  });
 
   if (!isOpen) return null;
 
@@ -584,31 +591,59 @@ export default function CreditsModal({
                     transition={{ duration: 0.2 }}
                     className="space-y-4"
                   >
+                    {/* Sub-view switcher */}
+                    <div className="flex gap-1 bg-[#0a0a0a] rounded-full p-1">
+                      <button
+                        onClick={() => setHistorySubView('purchases')}
+                        className={`flex-1 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 ${
+                          historySubView === 'purchases'
+                            ? 'bg-lime-300 text-black'
+                            : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+                        }`}
+                      >
+                        Credit Purchases
+                      </button>
+                      <button
+                        onClick={() => setHistorySubView('transactions')}
+                        className={`flex-1 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 ${
+                          historySubView === 'transactions'
+                            ? 'bg-lime-300 text-black'
+                            : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+                        }`}
+                      >
+                        Credit Transactions
+                      </button>
+                    </div>
+
                     {isLoadingTransactions ? (
                       <div className="flex items-center justify-center py-12">
                         <Loader2 className="w-8 h-8 text-lime-300 animate-spin" />
                       </div>
-                    ) : transactions.length === 0 ? (
+                    ) : filteredTransactions.length === 0 ? (
                       <div className="text-center py-12">
                         <div className="w-20 h-20 bg-lime-300/10 rounded-full flex items-center justify-center mx-auto mb-4">
                           <History className="w-10 h-10 text-lime-300" />
                         </div>
                         <h3 className="text-xl font-semibold text-white mb-2">
-                          No Transactions Yet
+                          {historySubView === 'purchases' ? 'No Purchases Yet' : 'No Transactions Yet'}
                         </h3>
                         <p className="text-[#bdbdbd] max-w-md mx-auto mb-6">
-                          Your credit transaction history will appear here once you make your first purchase or use credits
+                          {historySubView === 'purchases' 
+                            ? 'Your credit purchase history will appear here once you make your first purchase'
+                            : 'Your credit usage history will appear here once you start using credits'}
                         </p>
-                        <button
-                          onClick={() => setActiveView('purchase')}
-                          className="px-6 py-3 bg-lime-300 text-black rounded-full font-semibold hover:bg-lime-400 transition-all duration-300 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)]"
-                        >
-                          Buy Your First Credits
-                        </button>
+                        {historySubView === 'purchases' && (
+                          <button
+                            onClick={() => setActiveView('purchase')}
+                            className="px-6 py-3 bg-lime-300 text-black rounded-full font-semibold hover:bg-lime-400 transition-all duration-300 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)]"
+                          >
+                            Buy Your First Credits
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {transactions.map((transaction, index) => {
+                        {filteredTransactions.map((transaction, index) => {
                           const type = getTransactionType(transaction);
                           const { Icon, color, bg } = getTransactionIcon(type);
                           const availableDiff = transaction.new_available - transaction.old_available;
@@ -667,10 +702,7 @@ export default function CreditsModal({
                                       <span className="text-white font-medium">
                                         {transaction.old_available.toLocaleString()} → {transaction.new_available.toLocaleString()}
                                       </span>
-                                    </div>
-                                    <div className="w-px h-3 bg-white/10" />
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[#bdbdbd]">Reserved:</span>
+                                      <span className="text-[#bdbdbd]">| Reserved:</span>
                                       <span className="text-white font-medium">
                                         {transaction.old_reserved.toLocaleString()} → {transaction.new_reserved.toLocaleString()}
                                       </span>
@@ -822,7 +854,7 @@ export default function CreditsModal({
                   Complete Your Purchase
                 </h2>
                 <p className="text-sm text-[#bdbdbd] mt-2 -mb-4">
-                  {selectedPackage && `${getPackageAmount(selectedPackage).toLocaleString()} credits • $${getPrice(selectedPackage).toFixed(2)}`}
+                  {selectedPackage && `${getPackageAmount(selectedPackage).toLocaleString()} credits • ${getPrice(selectedPackage).toFixed(2)}`}
                 </p>
               </div>
 
