@@ -54,10 +54,17 @@ export async function selectClientsForSMS_Campaign(
   // If we have enough, return them
   if (boostedStrictClients.length >= limit) {
     const selected = boostedStrictClients.slice(0, limit);
-    console.log(`\n🎉 FINAL SELECTION: ${selected.length} clients (strict only)`);
+    
+    // FINAL STEP: Convert negative overdue to 0
+    const finalSelected = selected.map(client => ({
+      ...client,
+      days_overdue: Math.max(0, client.days_overdue)
+    }));
+    
+    console.log(`\n🎉 FINAL SELECTION: ${finalSelected.length} clients (strict only)`);
     console.log(`   └─ All from strict algorithm\n`);
     return {
-      clients: selected,
+      clients: finalSelected,
       totalAvailableClients: boostedStrictClients.length
     };
   }
@@ -87,15 +94,21 @@ export async function selectClientsForSMS_Campaign(
   // Take top N
   const selectedClients = allClients.slice(0, limit);
   
-  const strictSelected = selectedClients.filter(c => c.score >= 500).length;
-  const lenientSelected = selectedClients.length - strictSelected;
+  // FINAL STEP: Convert negative overdue to 0
+  const finalSelectedClients = selectedClients.map(client => ({
+    ...client,
+    days_overdue: Math.max(0, client.days_overdue)
+  }));
   
-  console.log(`\n🎉 FINAL SELECTION: ${selectedClients.length} clients`);
+  const strictSelected = finalSelectedClients.filter(c => c.score >= 500).length;
+  const lenientSelected = finalSelectedClients.length - strictSelected;
+  
+  console.log(`\n🎉 FINAL SELECTION: ${finalSelectedClients.length} clients`);
   console.log(`   ├─ From strict algorithm: ${strictSelected}`);
   console.log(`   └─ From lenient algorithm: ${lenientSelected}\n`);
   
   return {
-    clients: selectedClients,
+    clients: finalSelectedClients,
     totalAvailableClients: allClients.length
   };
 }

@@ -187,14 +187,12 @@ export default function SMSCampaigns() {
         const data = await response.json();
         
         if (data.success) {
-          const sortedClients = [...data.clients].sort((a, b) => 
-            b.score - a.score
-          );
+          const clients = data.clients
           
-          console.log(sortedClients.length);
+          console.log(clients.length);
           setMaxClients(data.maxClient || 0);
-          setPreviewCounts(prev => ({ ...prev, [messageId]: sortedClients.length }));
-          setPreviewClients(sortedClients);
+          setPreviewCounts(prev => ({ ...prev, [messageId]: clients.length }));
+          setPreviewClients(clients);
           setPreviewStats(data.stats);
           setShowPreview(true);
         } else {
@@ -642,9 +640,10 @@ export default function SMSCampaigns() {
               onClick={(e) => e.stopPropagation()}
               className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
             >
+
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div>
+                <div className="flex-1">
                   <h3 className="text-xl font-bold text-white flex items-center gap-2">
                     <Users className="w-5 h-5 text-sky-300" />
                     Recipients for {messages.find(m => m.id === activePreviewMessageId)?.title || 'Message'}
@@ -654,47 +653,93 @@ export default function SMSCampaigns() {
                       {previewStats.total_selected} clients will receive this message. Your maximum clients based on the algorithm is {maxClients}. 
                     </p>
                   )}
+                  
+                  {/* Metric Explanations */}
+                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd]">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      <div>
+                        <span className="text-sky-300 font-medium">Score:</span> Higher = client needs message more urgently
+                      </div>
+                      <div>
+                        <span className="text-purple-400 font-medium">Days Since Visit:</span> Days since last appointment
+                      </div>
+                      <div>
+                        <span className="text-orange-400 font-medium">Days Overdue:</span> How late based on their typical pattern
+                      </div>
+                    </div>
+                    
+                    {/* Client Types Legend */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px]">
+                        <span className="font-medium">Consistent:</span> Weekly
+                      </span>
+                      <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px]">
+                        <span className="font-medium">Semi-consistent:</span> Every 2-3 weeks
+                      </span>
+                      <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px]">
+                        <span className="font-medium">Easy-going:</span> Every 1-2 months
+                      </span>
+                      <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px]">
+                        <span className="font-medium">Rare:</span> Every 2+ months
+                      </span>
+                      <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px]">
+                        <span className="font-medium">New:</span> First visit
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <button
                   onClick={() => setShowPreview(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors ml-4"
                 >
                   <X className="w-5 h-5 text-[#bdbdbd]" />
                 </button>
               </div>
 
-              
-
               {/* Stats */}
               {previewStats && (
-                <div className="p-6 border-b border-white/10 bg-white/5">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Total Selected</p>
-                      <p className="text-2xl font-bold text-white">{previewStats.total_selected}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Score</p>
-                      <p className="text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Since Visit</p>
-                      <p className="text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Overdue</p>
-                      <p className="text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Breakdown</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {Object.entries(previewStats.breakdown).map(([type, count]) => (
-                          <span key={type} className="text-xs px-2 py-1 bg-white/10 rounded-full text-white">
-                            {type}: {count}
-                          </span>
-                        ))}
+                <div className="px-6 py-4 border-b border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex gap-6">
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">Total Selected</p>
+                        <p className="text-xl font-bold text-white">{previewStats.total_selected}</p>
                       </div>
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Score</p>
+                        <p className="text-xl font-bold text-sky-300">{previewStats.avg_score}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Days Since Visit</p>
+                        <p className="text-xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Days Overdue</p>
+                        <p className="text-xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {['consistent', 'semi-consistent', 'easy-going', 'rare', 'new'].map((type) => {
+                        const count = previewStats.breakdown[type] || 0;
+                        if (count === 0) return null;
+                        
+                        return (
+                          <span 
+                            key={type} 
+                            className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                              type === 'consistent' ? 'bg-green-500/20 text-green-400' :
+                              type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
+                              type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
+                              type === 'rare' ? 'bg-red-500/20 text-red-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -703,40 +748,48 @@ export default function SMSCampaigns() {
               {/* Clients List */}
               <div className="overflow-y-auto max-h-[50vh] p-6">
                 <div className="space-y-2">
-                  {previewClients.map((client) => (
-                    <div
-                      key={client.client_id}
-                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-semibold text-white">
-                            {client.first_name} {client.last_name}
-                          </h4>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                            client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                            client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                            client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
-                            {client.visiting_type}
-                          </span>
+                  {previewClients.map((client) => {
+                    const normalVisitInterval = client.avg_weekly_visits 
+                      ? Math.round(7 / client.avg_weekly_visits)
+                      : null;
+                    
+                    return (
+                      <div
+                        key={client.client_id}
+                        className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-semibold text-white">
+                              {client.first_name} {client.last_name}
+                            </h4>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
+                              client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
+                              client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
+                              client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {client.visiting_type}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
+                            <span>{client.phone_normalized}</span>
+                            <span>•</span>
+                            <span>{client.days_since_last_visit} days since last visit</span>
+                            <span>•</span>
+                            <span className="text-orange-400">{client.days_overdue} days overdue</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                          <span>{client.phone_normalized}</span>
-                          <span>•</span>
-                          <span>{client.days_since_last_visit} days since last visit</span>
-                          <span>•</span>
-                          <span className="text-orange-400">{client.days_overdue} days overdue</span>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
+                          {normalVisitInterval && (
+                            <p className="text-xs text-[#bdbdbd]">Goes every ~{normalVisitInterval} days</p>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                        <p className="text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>

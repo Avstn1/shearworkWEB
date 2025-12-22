@@ -37,10 +37,12 @@ export async function GET(request: Request) {
     let selectedClients;
     let result;
 
+    console.log('Selecting clients with algorithm:', algorithm);
+
     if (algorithm === 'overdue') {
       selectedClients = await selectClientsForSMS_Overdue(supabase, userId, limit, visitingType || undefined)
     } else if (algorithm === 'mass') {
-       result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined);
+       result = await selectClientsForSMS_Mass(supabase, userId, limit || undefined);
       selectedClients = result.clients;
     } else {
       result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined);

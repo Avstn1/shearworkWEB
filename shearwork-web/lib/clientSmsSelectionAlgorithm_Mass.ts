@@ -2,20 +2,29 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { AcuityClient, ScoredClient } from './clientSmsSelectionAlgorithm_Overdue'
 
+export interface CampaignResult {
+  clients: ScoredClient[];
+  totalAvailableClients: number;
+}
+
 export async function selectClientsForSMS_Mass(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
   visitingType?: string
-): Promise<ScoredClient[]> {
+): Promise<CampaignResult> {
+  // Calculate 1.5 years ago (18 months)
+  const oneAndHalfYearsAgo = new Date()
+  oneAndHalfYearsAgo.setMonth(oneAndHalfYearsAgo.getMonth() - 18)
+
   let query = supabase
-    .from('acuity_clients_testing')
+    .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
+    .gt('last_appt', oneAndHalfYearsAgo.toISOString())
     .gt('total_appointments', 0)
-    .order('last_appt', { ascending: false }) // MOST RECENT FIRST
     .limit(limit)
 
   // Optional visiting_type filter
@@ -30,7 +39,7 @@ export async function selectClientsForSMS_Mass(
   }
 
   if (!clients || clients.length === 0) {
-    return []
+    return { clients: [], totalAvailableClients: 0 }
   }
 
   // Map each client to include score and days_since_last_visit
@@ -39,7 +48,18 @@ export async function selectClientsForSMS_Mass(
     scoreClientForHoliday(client, today)
   )
 
-  return scoredClients
+  // FINAL STEP: Sort alphabetically by full name (first + last, case-insensitive)
+  scoredClients.sort((a, b) => {
+    const aFullName = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase()
+    const bFullName = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase()
+    
+    return aFullName.localeCompare(bFullName)
+  })
+
+  return {
+    clients: scoredClients,
+    totalAvailableClients: scoredClients.length
+  }
 }
 
 function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient {
