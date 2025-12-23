@@ -6,6 +6,16 @@ import { MessageSchedule } from './MessageSchedule';
 import { supabase } from '@/utils/supabaseClient';
 import { useState } from 'react';
 
+interface Recipient {
+  phone_normalized: string;
+  is_sent: boolean;
+  reason: string | null;
+  created_at: string;
+  client_id: string | null;
+  first_name: string | null;
+  last_name: string | null;
+}
+
 interface CampaignProgress {
   success: number;
   fail: number;
@@ -75,6 +85,37 @@ export function MessageCard({
   onCancelEditTitle,
   onTempTitleChange,
 }: MessageCardProps) {
+  
+  const [showRecipientsModal, setShowRecipientsModal] = useState(false);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [recipientsStats, setRecipientsStats] = useState<{ total: number; successful: number; failed: number } | null>(null);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
+
+  const fetchRecipients = async () => {
+    setLoadingRecipients(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch(`/api/client-messaging/get-campaign-recipients?messageId=${msg.id}&userId=${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch recipients');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setRecipients(data.recipients || []);
+        setRecipientsStats(data.stats || null);
+        setShowRecipientsModal(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch recipients:', error);
+    } finally {
+      setLoadingRecipients(false);
+    }
+  };
   
   const getSchedulePreview = (msg: SMSMessage) => {
     const minute = msg.minute ?? 0;
@@ -374,14 +415,161 @@ export function MessageCard({
             </p>
             {campaignProgress?.is_finished && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <p className="text-xs text-[#bdbdbd]">
-                  This campaign has finished. You can delete this message or create a new one.
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-[#bdbdbd]">
+                    This campaign has finished. You can delete this message or create a new one.
+                  </p>
+                  <button
+                    onClick={fetchRecipients}
+                    disabled={loadingRecipients}
+                    className="flex items-center gap-2 px-4 py-2 bg-sky-300/10 border border-sky-300/20 text-sky-300 rounded-lg hover:bg-sky-300/20 transition-all duration-300 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingRecipients ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Users className="w-4 h-4" />
+                    )}
+                    Who was it sent to?
+                  </button>
+                </div>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Recipients Modal */}
+      <AnimatePresence>
+        {showRecipientsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+            onClick={() => setShowRecipientsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Users className="w-4 h-4 text-sky-300" />
+                    Campaign Recipients - {msg.title}
+                  </h3>
+                  {recipientsStats && (
+                    <p className="text-xs text-[#bdbdbd] mt-0.5">
+                      {recipientsStats.total} total • {recipientsStats.successful} successful • {recipientsStats.failed} failed
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowRecipientsModal(false)}
+                  className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4 text-[#bdbdbd]" />
+                </button>
+              </div>
+
+              {/* Stats Bar */}
+              {recipientsStats && (
+                <div className="px-4 py-2.5 border-b border-white/10 bg-white/5 flex gap-4 text-xs">
+                  <div>
+                    <p className="text-[#bdbdbd] mb-0.5">Total</p>
+                    <p className="text-base font-bold text-white">{recipientsStats.total}</p>
+                  </div>
+                  <div>
+                    <p className="text-[#bdbdbd] mb-0.5">Successful</p>
+                    <p className="text-base font-bold text-lime-300">{recipientsStats.successful}</p>
+                  </div>
+                  {recipientsStats.failed > 0 && (
+                    <div>
+                      <p className="text-[#bdbdbd] mb-0.5">Failed</p>
+                      <p className="text-base font-bold text-rose-300">{recipientsStats.failed}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recipients List */}
+              <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-4">
+                {recipients.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-10 h-10 text-[#bdbdbd] mx-auto mb-2 opacity-50" />
+                    <p className="text-sm text-[#bdbdbd]">No recipients found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {recipients.map((recipient, index) => (
+                      <div
+                        key={index}
+                        className={`p-2.5 rounded-lg border transition-colors ${
+                          recipient.is_sent
+                            ? 'bg-lime-300/5 border-lime-300/20 hover:bg-lime-300/10'
+                            : 'bg-rose-300/5 border-rose-300/20 hover:bg-rose-300/10'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {recipient.first_name && recipient.last_name ? (
+                                <h4 className="font-semibold text-white text-sm truncate">
+                                  {recipient.first_name} {recipient.last_name}
+                                </h4>
+                              ) : (
+                                <h4 className="font-semibold text-[#bdbdbd] text-sm">Unknown Client</h4>
+                              )}
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
+                                recipient.is_sent
+                                  ? 'bg-lime-300/20 text-lime-300'
+                                  : 'bg-rose-300/20 text-rose-300'
+                              }`}>
+                                {recipient.is_sent ? 'Sent' : 'Failed'}
+                              </span>
+                              {/* Failure Reason - Inline with tag */}
+                              {!recipient.is_sent && recipient.reason && (
+                                <span className="flex items-center gap-1 text-[10px] text-rose-300">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">{recipient.reason}</span>
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[#bdbdbd] mt-0.5">
+                              {recipient.phone_normalized}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {recipient.is_sent ? (
+                              <CheckCircle className="w-4 h-4 text-lime-300" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-rose-300" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-white/10 px-4 py-3 bg-white/5">
+                <button
+                  onClick={() => setShowRecipientsModal(false)}
+                  className="w-full px-4 py-2 rounded-lg font-semibold text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Preview Banner */}
       {!isLocked && (
