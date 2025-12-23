@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     if (purpose !== 'test_message') {
       await supabase
         // acuity_clients change for testing
-        .from('acuity_clients')
+        .from('acuity_clients_testing')
         .update({
           date_last_sms_sent: new Date().toISOString(),
           updated_at: new Date().toISOString()
