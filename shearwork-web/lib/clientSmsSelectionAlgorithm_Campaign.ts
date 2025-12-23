@@ -153,7 +153,7 @@ async function getLenientClients(
   const twoYearsAgo = new Date(today);
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
   
-  // acuity_clients change for testing
+  // acuity_clients change for testingz
   const { data: clients, error } = await supabase
     .from('acuity_clients_testing')
     .select('*')
