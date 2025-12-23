@@ -142,7 +142,7 @@ export function MessageContent({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col h-full">
       {/* Validation Reason Alert */}
       {msg.isValidated && msg.validationStatus === 'DENIED' && msg.validationReason && (
         <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-2">
@@ -151,7 +151,41 @@ export function MessageContent({
         </div>
       )}
 
-      {/* Test Requirements Info */}
+      {/* Message Textarea */}
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
+          Message Content (SMS limits: 100-240 characters)
+        </label>
+        <div className="relative">
+          <textarea
+            value={msg.message}
+            onChange={(e) =>
+              onUpdate(msg.id, { message: e.target.value })
+            }
+            placeholder="Type your marketing message here or generate a template..."
+            rows={11}
+            disabled={!msg.isEditing}
+            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 pb-15 -mb-3 py-3 pr-20 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 ${
+              !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
+            }`}
+            style={{ scrollbarWidth: 'thin' }}
+            maxLength={240}
+          />
+          <span
+            className={`absolute top-3 right-3 text-xs font-medium ${
+              msg.message.length < 100
+                ? 'text-amber-400'
+                : msg.message.length > 240
+                ? 'text-rose-400'
+                : 'text-lime-300'
+            }`}
+          >
+            {msg.message.length}/240
+          </span>
+        </div>
+      </div>
+
+            {/* Test Requirements Info */}
       {!msg.isSaved && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
@@ -187,44 +221,10 @@ export function MessageContent({
         </div>
       )}
 
-      {/* Message Textarea */}
-      <div>
-        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          Message Content (SMS limits: 100-240 characters)
-        </label>
-        <div className="relative">
-          <textarea
-            value={msg.message}
-            onChange={(e) =>
-              onUpdate(msg.id, { message: e.target.value })
-            }
-            placeholder="Type your marketing message here or generate a template..."
-            rows={8}
-            disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 pr-20 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 ${
-              !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
-            }`}
-            style={{ scrollbarWidth: 'thin' }}
-            maxLength={240}
-          />
-          <span
-            className={`absolute top-3 right-3 text-xs font-medium ${
-              msg.message.length < 100
-                ? 'text-amber-400'
-                : msg.message.length > 240
-                ? 'text-rose-400'
-                : 'text-lime-300'
-            }`}
-          >
-            {msg.message.length}/240
-          </span>
-        </div>
-      </div>
-
       {/* Action Buttons */}
       {msg.isEditing && (
         <div className="grid grid-cols-3 gap-2">
-          {/* Generate Template Button with tooltip */}
+          {/* Generate Template Button */}
           <div className="relative group">
             <button
               onClick={handleGenerateTemplate}
@@ -258,7 +258,7 @@ export function MessageContent({
             </div>
           </div>
 
-          {/* Validate Button with tooltip */}
+          {/* Validate Button */}
           <div className="relative group">
             <button
               onClick={() => onValidate(msg.id)}
@@ -292,11 +292,10 @@ export function MessageContent({
             </div>
           </div>
 
-          {/* Test Message Button with tooltip */}
+          {/* Test Message Button */}
           <div className="relative group">
             <button
               onClick={() => {
-                // Validation checks
                 if (!msg.isSaved) {
                   toast.error('Please save the message as a draft before testing');
                   return;
@@ -317,8 +316,6 @@ export function MessageContent({
                   toast.error('Message must be at least 100 characters');
                   return;
                 }
-
-                // All checks passed, show confirmation modal
                 onRequestTest(msg.id);
               }}
               disabled={isTesting}
