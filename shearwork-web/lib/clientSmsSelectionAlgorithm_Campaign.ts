@@ -111,7 +111,7 @@ async function getStrictClients(
   
   // acuity_clients change for testing
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -154,7 +154,7 @@ async function getLenientClients(
   
   // acuity_clients change for testing
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -408,7 +408,7 @@ export async function markClientsAsMessaged(
 ): Promise<void> {
   // acuity_clients change for testing
   const { error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .update({ date_last_sms_sent: new Date().toISOString() })
     .in('client_id', clientIds);
 
