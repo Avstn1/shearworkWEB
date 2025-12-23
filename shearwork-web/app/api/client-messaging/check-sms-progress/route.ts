@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { Client } from '@upstash/qstash';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const qstashClient = new Client({ token: process.env.QSTASH_TOKEN! });
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Step 2: Get the scheduled message to check final_clients_to_message
     const { data: scheduledMessage, error: scheduledMessageError } = await supabase
       .from('sms_scheduled_messages')
-      .select('final_clients_to_message, progress_update_qstash_cron_id')
+      .select('final_clients_to_message')
       .eq('id', message_id)
       .single();
 
@@ -118,23 +120,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 7: Create notification if all messages have been sent
+    // Step 7: Handle completion or reschedule
     if (allSent) {
-      // Delete QStash cron job since we're done
-      if (scheduledMessage.progress_update_qstash_cron_id) {
-        console.log('🗑️ Deleting QStash progress tracking cron job');
-        try {
-          const { Client } = await import('@upstash/qstash');
-          const qstashClient = new Client({ token: process.env.QSTASH_TOKEN! });
-          
-          await qstashClient.schedules.delete(scheduledMessage.progress_update_qstash_cron_id);
-          console.log('✅ Deleted schedule:', scheduledMessage.progress_update_qstash_cron_id);
-        } catch (deleteError) {
-          console.error('❌ Failed to delete QStash schedule:', deleteError);
-          // Don't fail the request if deletion fails
-        }
-      }
-
+      // All messages sent - create notification
+      console.log('✅ All messages sent, creating completion notification');
+      
       const { error: notificationError } = await supabase
         .from('notifications')
         .insert({
@@ -148,6 +138,20 @@ export async function POST(request: NextRequest) {
       if (notificationError) {
         console.error('Error creating notification:', notificationError);
         // Don't fail the entire request if notification fails
+      }
+    } else {
+      // Not all messages sent yet - reschedule another check in 3 seconds
+      console.log(`📊 Progress: ${totalCount}/${scheduledMessage.final_clients_to_message} - Rescheduling check in 3 seconds`);
+      
+      try {
+        await qstashClient.publishJSON({
+          url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/check-sms-progress`,
+          body: { message_id },
+          delay: 3, // Check again in 3 seconds
+        });
+      } catch (rescheduleError) {
+        console.error('Failed to reschedule progress check:', rescheduleError);
+        // Don't fail the entire request if rescheduling fails
       }
     }
 
