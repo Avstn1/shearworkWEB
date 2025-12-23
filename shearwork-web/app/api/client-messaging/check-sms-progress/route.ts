@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if all messages have been sent
-    const allSent = totalCount === scheduledMessage.final_clients_to_message;
+    const allSent = totalCount >= scheduledMessage.final_clients_to_message;
 
     // Step 3: Update sms_scheduled_messages with success and fail counts
     const { error: updateMessageError } = await supabase
