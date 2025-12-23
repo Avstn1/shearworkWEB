@@ -64,6 +64,17 @@ export default function SMSCampaigns() {
   const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
 
+  // Progress tracking state
+  const [campaignProgress, setCampaignProgress] = useState<Record<string, {
+    success: number;
+    fail: number;
+    total: number;
+    expected: number;
+    percentage: number;
+    is_finished: boolean;
+    is_active: boolean;
+  }>>({});
+
   // Load existing messages on mount
   useEffect(() => {
     loadMessages();
@@ -88,6 +99,46 @@ export default function SMSCampaigns() {
       });
     }
   }, [algorithmType]);
+
+  // Poll for campaign progress every 3 seconds if there are active campaigns
+  useEffect(() => {
+    const hasActiveCampaigns = messages.some(msg => {
+      const progress = campaignProgress[msg.id];
+      return progress?.is_active || (msg.validationStatus === 'ACCEPTED' && !progress?.is_finished);
+    });
+
+    if (!hasActiveCampaigns) return;
+
+    const pollProgress = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const messageIds = messages.map(m => m.id).join(',');
+        const response = await fetch(`/api/client-messaging/get-campaign-progress?userId=${user.id}&messageIds=${messageIds}`);
+        
+        if (!response.ok) return;
+
+        const data = await response.json();
+        
+        if (data.success && data.progress) {
+          const progressMap: typeof campaignProgress = {};
+          data.progress.forEach((p: any) => {
+            progressMap[p.id] = p;
+          });
+          setCampaignProgress(progressMap);
+        }
+      } catch (error) {
+        console.error('Failed to fetch campaign progress:', error);
+      }
+    };
+
+    // Poll immediately, then every 3 seconds
+    pollProgress();
+    const interval = setInterval(pollProgress, 3000);
+
+    return () => clearInterval(interval);
+  }, [messages, campaignProgress]);
 
   const fetchTestMessageCount = async () => {
     try {
@@ -1117,6 +1168,7 @@ export default function SMSCampaigns() {
                 tempTitle={tempTitle}
                 previewCount={previewCounts[msg.id] || 0}
                 loadingPreview={loadingPreview}
+                campaignProgress={campaignProgress[msg.id]}
                 onLoadPreview={(limit) => loadClientPreview(msg.id, limit)} 
                 onUpdate={updateMessage}
                 onRemove={removeMessage}

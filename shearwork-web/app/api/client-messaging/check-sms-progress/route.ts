@@ -65,12 +65,19 @@ export async function POST(request: NextRequest) {
     const allSent = totalCount >= scheduledMessage.final_clients_to_message;
 
     // Step 3: Update sms_scheduled_messages with success and fail counts
+    const updateData: any = {
+      success: successCount,
+      fail: failCount,
+    };
+
+    // Mark as finished if all messages sent
+    if (allSent) {
+      updateData.is_finished = true;
+    }
+
     const { error: updateMessageError } = await supabase
       .from('sms_scheduled_messages')
-      .update({
-        success: successCount,
-        fail: failCount,
-      })
+      .update(updateData)
       .eq('id', message_id);
 
     if (updateMessageError) {
