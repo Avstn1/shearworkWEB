@@ -41,6 +41,7 @@ export async function selectClientsForSMS_Overdue(
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
+    .neq('sms_subscribed', false)
     .gt('total_appointments', 1)
     .order('last_appt', { ascending: false });
 

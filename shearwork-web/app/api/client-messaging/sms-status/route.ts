@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
 
   // Get client_id if this is not a test message
   let client_id: string | null = null;
+
   if (purpose !== 'test_message') {
     client_id = await getClientId(phoneNormalized);
   }
@@ -167,7 +168,7 @@ async function getClientId(phoneNormalized: string): Promise<string | null> {
   try {
     const { data } = await supabase
       // acuity_clients change for testing
-      .from('acuity_clients')
+      .from('acuity_clients_testing')
       .select('client_id')
       .eq('phone_normalized', phoneNormalized)
       .single()

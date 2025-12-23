@@ -146,6 +146,32 @@ export async function POST(request: NextRequest) {
         console.error('Error creating notification:', notificationError);
         // Don't fail the entire request if notification fails
       }
+
+      // Log credit transaction for campaign completion
+      const { data: campaignTitle } = await supabase
+        .from('sms_scheduled_messages')
+        .select('title')
+        .eq('id', message_id)
+        .single();
+
+      const oldReserved = newReservedCredits + successCount;
+
+      const { error: transactionError } = await supabase
+        .from('credit_transactions')
+        .insert({
+          user_id: userId,
+          action: `Campaign finished - ${campaignTitle?.title || 'Untitled'}`,
+          old_available: profile.available_credits,
+          new_available: newAvailableCredits,
+          old_reserved: oldReserved,
+          new_reserved: newReservedCredits,
+          reference_id: message_id,
+          created_at: new Date().toISOString()
+        });
+
+      if (transactionError) {
+        console.error('Error creating credit transaction:', transactionError);
+      }
     } else {
       // Not all messages sent yet - reschedule another check in 3 seconds
       console.log(`📊 Progress: ${totalCount}/${scheduledMessage.final_clients_to_message} - Rescheduling check in 3 seconds`);
