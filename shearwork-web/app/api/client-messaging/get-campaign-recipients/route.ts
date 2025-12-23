@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     if (clientIds.length > 0) {
       const { data: clients, error: clientsError } = await supabase
-        .from('acuity_clients')
+        .from('acuity_clients_testing')
         .select('client_id, first_name, last_name')
         .in('client_id', clientIds);
 
