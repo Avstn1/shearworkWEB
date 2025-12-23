@@ -4,6 +4,7 @@ import { SMSMessage, HOURS_12, MINUTES, PERIODS, CLIENT_LIMITS, CAMPAIGN_TYPES }
 import { useState } from 'react';
 
 interface MessageScheduleProps {
+  maxClients: number;
   message: SMSMessage;
   isSaving: boolean;
   savingMode: 'draft' | 'activate' | null;
@@ -17,6 +18,7 @@ interface MessageScheduleProps {
 
 // Right side of the MessageCard
 export function MessageSchedule({
+  maxClients,
   setAlgorithmType,
   message: msg,
   isSaving,
@@ -27,6 +29,8 @@ export function MessageSchedule({
   previewCount = 0,
   availableCredits = 0, 
 }: MessageScheduleProps) {
+
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   const [customLimit, setCustomLimit] = useState<string>(
     msg.clientLimit > 1000 ? msg.clientLimit.toString() : ''
@@ -46,7 +50,7 @@ export function MessageSchedule({
 
   // Get max limit based on campaign type
   const getMaxLimit = () => {
-    return availableCredits;
+    return Math.min(availableCredits, maxClients);
   };
 
   const handleLimitChange = (value: number) => {
@@ -141,10 +145,19 @@ export function MessageSchedule({
 
       {/* Client Limit Selection */}
       <div>
-        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          <Users className="w-3 h-3 inline mr-1" />
-          Maximum Number of Clients to Message
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-[#bdbdbd]">
+            <Users className="w-3 h-3 inline mr-1" />
+            Maximum Number of Clients to Message
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowLimitModal(true)}
+            className="text-[#bdbdbd] hover:text-white transition-colors"
+          >
+            <Info className="w-4 h-4" />
+          </button>
+        </div>
         <select
           value={showCustomInput ? -1 : msg.clientLimit === getMaxLimit() && getMaxLimit() > 1000 ? -2 : msg.clientLimit}
           onChange={(e) => handleLimitChange(parseInt(e.target.value))}
@@ -155,10 +168,10 @@ export function MessageSchedule({
         >
           {/* Dynamic predefined limits */}
           {[100, 250, 500, 750, 1000].map((limit) => {
-            const maxLimit = getMaxLimit();
+            const effectiveMax = Math.min(getMaxLimit(), maxClients);
             
-            // Only show limits that are less than max limit
-            if (limit >= maxLimit) return null;
+            // Only show limits that are less than effective max
+            if (limit >= effectiveMax) return null;
             
             return (
               <option key={limit} value={limit} className="bg-[#1a1a1a]">
@@ -166,12 +179,12 @@ export function MessageSchedule({
               </option>
             );
           })}
-          
-          {/* Max option - always show with credits count */}
+
+          {/* Max option - show credits or max clients, whichever is lower */}
           <option value={-2} className="bg-[#1a1a1a]">
-            Max ({getMaxLimit().toLocaleString()} clients)
+            Max ({Math.min(getMaxLimit(), maxClients).toLocaleString()} {Math.min(getMaxLimit(), maxClients) === maxClients ? 'clients' : 'credits'})
           </option>
-          
+
           {/* Custom option - always show last */}
           <option value={-1} className="bg-[#1a1a1a]">
             Custom
@@ -185,7 +198,7 @@ export function MessageSchedule({
               <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
               <input
                 type="number"
-                min="100"
+                min="1"
                 max={getMaxLimit()}
                 value={customLimit}
                 onChange={(e) => handleCustomLimitChange(e.target.value)}
@@ -317,10 +330,10 @@ export function MessageSchedule({
       </div>
 
       {/* Action Buttons */}
-      {msg.isEditing ? (
-        <div className="space-y-2">
+      {msg.isEditing && (
+        <div className="mt-auto">
           {/* Two Choice Buttons */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 mb-2">
             {/* Save as Draft */}
             <button
               onClick={() => onSave(msg.id, 'draft')}
@@ -394,7 +407,72 @@ export function MessageSchedule({
             </button>
           )}
         </div>
-      ) : null}
+      )}
+
+      {/* Client Limit Info Modal */}
+      {showLimitModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 rounded-2xl overflow-hidden"
+          onClick={() => setShowLimitModal(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#1a1a1a] border border-white/20 rounded-2xl max-w-lg w-full p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-sky-300" />
+                Client Limit Explained
+              </h3>
+              <button
+                onClick={() => setShowLimitModal(false)}
+                className="text-[#bdbdbd] hover:text-white transition-colors"
+              >
+                <span className="text-2xl">×</span>
+              </button>
+            </div>
+            
+            <div className="space-y-4 text-sm text-[#bdbdbd]">
+              <p>
+                You might see that your client list is less than what you&apos;re expecting, and that&apos;s normal.
+              </p>
+              
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+              <h4 className="font-semibold text-white mb-2">Here&apos;s how It Works:</h4>
+              <ul className="space-y-2">
+                <li className="flex gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>For all lists, anyone with no numbers are automatically disqualified.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>For campaign lists, anyone who has not visited for more than 8 months are disqualified.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-white mt-1">•</span>
+                  <span>For mass messages, the cut-off is at 1 year and 6 months of not visiting.</span>
+                </li>
+              </ul>
+            </div>
+                          
+              <div className="bg-amber-300/10 border border-amber-300/20 rounded-lg p-4">
+                <h4 className="font-semibold text-amber-300 mb-2">Important Notes:</h4>
+                <p className="text-amber-200/80">
+                  There are numerous processes that decide which clients are included, but rest assured that you are getting the right people to message.
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setShowLimitModal(false)}
+              className="w-full mt-6 px-6 py-3 rounded-xl font-bold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all"
+            >
+              Got it!
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

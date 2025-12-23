@@ -5,6 +5,7 @@ import { MessageContent } from './MessageContent';
 import { MessageSchedule } from './MessageSchedule';
 import { supabase } from '@/utils/supabaseClient';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 interface Recipient {
   phone_normalized: string;
@@ -27,6 +28,7 @@ interface CampaignProgress {
 }
 
 interface MessageCardProps {
+  maxClients: number;
   profile: any; 
   setAlgorithmType: (type: 'campaign' | 'mass') => void;
   availableCredits?: number;
@@ -57,6 +59,7 @@ interface MessageCardProps {
 }
 
 export function MessageCard({
+  maxClients,
   profile,
   setAlgorithmType,
   availableCredits,
@@ -72,7 +75,6 @@ export function MessageCard({
   loadingPreview,
   campaignProgress,
   onRequestTest,
-  onTestComplete,
   onLoadPreview,
   onUpdate,
   onRemove,
@@ -90,6 +92,7 @@ export function MessageCard({
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [recipientsStats, setRecipientsStats] = useState<{ total: number; successful: number; failed: number } | null>(null);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   const fetchRecipients = async () => {
     setLoadingRecipients(true);
@@ -114,6 +117,49 @@ export function MessageCard({
       console.error('Failed to fetch recipients:', error);
     } finally {
       setLoadingRecipients(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    setShowDeactivateModal(false);
+    
+    try {
+      // First refund credits via onEnableEdit
+      await onEnableEdit(msg.id);
+      
+      // Then save the DRAFT status to database
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch('/api/client-messaging/save-sms-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{
+            id: msg.id,
+            title: msg.title,
+            message: msg.message,
+            scheduleDate: msg.scheduleDate,
+            clientLimit: msg.clientLimit,
+            hour: msg.hour,
+            minute: msg.minute,
+            period: msg.period,
+            scheduledFor: new Date(msg.scheduleDate + 'T00:00:00').toISOString(),
+            validationStatus: 'DRAFT',
+            isValidated: msg.isValidated,
+            purpose: msg.purpose || 'campaign',
+          }]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save draft status');
+      }
+
+      toast.success('Campaign deactivated and set to draft');
+    } catch (error) {
+      console.error('Failed to deactivate:', error);
+      toast.error('Failed to deactivate campaign');
     }
   };
   
@@ -148,7 +194,7 @@ export function MessageCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
-      className={`bg-white/5 backdrop-blur-lg border rounded-2xl shadow-xl overflow-hidden ${
+      className={`bg-white/5 backdrop-blur-lg border rounded-2xl shadow-xl overflow-visible ${
         isLocked ? 'border-amber-300/30' : 'border-white/10'
       }`}
     >
@@ -234,11 +280,12 @@ export function MessageCard({
               )}
               <p className="text-xs text-[#bdbdbd] flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {getSchedulePreview(msg)}
+                {getSchedulePreview(msg)}{msg.validationStatus !== 'ACCEPTED' ? ' | Inactive' : ''}
               </p>
             </div>
           </div>
-
+          
+          {/* Status Cards */}
           <div className="flex items-center gap-2">
             {/* Preview Button with tooltip */}
             {!isLocked && (
@@ -253,21 +300,13 @@ export function MessageCard({
                   ) : (
                     <Users className="w-3 h-3" />
                   )}
-                  Preview
+                  Who will recieve this message?
                 </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                    View which clients will receive this message
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
             {/* Edit Button with tooltip */}
-            {canEdit && (
+            {canEdit && msg.validationStatus !== 'ACCEPTED' && (
               <div className="relative group">
                 <button
                   onClick={() => onEnableEdit(msg.id)}
@@ -278,7 +317,7 @@ export function MessageCard({
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
                   <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                    {msg.validationStatus === 'ACCEPTED' ? 'Edit message (will refund reserved credits)' : 'Edit this message'}
+                    Edit this message
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                       <div className="border-4 border-transparent border-t-[#0a0a0a]" />
                     </div>
@@ -286,6 +325,47 @@ export function MessageCard({
                 </div>
               </div>
             )}
+
+            {/* Active/Draft Toggle - Only show if saved and not locked */}
+            {msg.isSaved && !isLocked && (
+              <button
+                onClick={() => {
+                  if (msg.validationStatus === 'ACCEPTED') {
+                    setShowDeactivateModal(true);
+                  } else {
+                    toast.error('Please use the Activate button to schedule this message');
+                  }
+                }}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                  msg.validationStatus === 'ACCEPTED'
+                    ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30'
+                    : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                }`}
+              >
+                {msg.validationStatus === 'ACCEPTED' ? 'Active - Click to toggle' : 'Inactive'}
+              </button>
+            )}
+
+            <div className="flex items-center gap-2">
+              {/* Saved/Draft Badge */}
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                msg.isSaved 
+                  ? 'bg-lime-300/10 text-lime-300 border border-lime-300/20'
+                  : 'bg-amber-300/10 text-amber-300 border border-amber-300/20'
+              }`}>
+                {msg.isSaved ? 'Saved' : 'Draft'}
+              </span>
+
+              {/* Verified Badge */}
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                msg.isValidated
+                  ? 'bg-sky-300/10 text-sky-300 border border-sky-300/20'
+                  : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+              }`}>
+                {msg.isValidated ? 'Verified' : 'Unverified'}
+              </span>
+
+            </div>
 
             {/* Locked indicator */}
             {isLocked && !campaignProgress?.is_finished && (
@@ -393,6 +473,7 @@ export function MessageCard({
 
             {/* RIGHT: Schedule Settings (50%) */}
             <MessageSchedule
+              maxClients={maxClients}
               setAlgorithmType={setAlgorithmType}
               availableCredits={availableCredits}
               message={msg}
@@ -571,8 +652,72 @@ export function MessageCard({
         )}
       </AnimatePresence>
 
-      {/* Preview Banner */}
-      {!isLocked && (
+      {/* Deactivate Confirmation Modal */}
+      <AnimatePresence>
+        {showDeactivateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setShowDeactivateModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Deactivate Campaign?
+                  </h3>
+                  <p className="text-sm text-[#bdbdbd]">
+                    This will set your campaign to draft and refund{' '}
+                    <span className="text-lime-300 font-semibold">{previewCount || 0} credits</span>{' '}
+                    back to your available balance.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-6">
+                <div className="flex items-start gap-2 text-sm text-amber-300">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold mb-1">You'll need to reactivate</p>
+                    <p className="text-amber-200/80">
+                      Once deactivated, you'll need to verify and activate this message again before it can be sent.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeactivateModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeactivate}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
+                >
+                  Deactivate & Refund
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preview Banner - Only show if ACTIVE */}
+      {msg.validationStatus === 'ACCEPTED' && !isLocked && (
         <div className="bg-sky-300/10 border-t border-sky-300/20 px-6 py-3">
           <p className="text-xs text-sky-300 flex items-center gap-2">
             <Send className="w-3 h-3" />

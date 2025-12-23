@@ -184,6 +184,8 @@ async function handler(request: Request) {
 
     console.log('📤 Enqueueing', recipients.length, 'SMS messages');
 
+    console.log(`MessageId: ${scheduledMessage.id}`)
+
     await pMap(
       recipients,
       recipient =>

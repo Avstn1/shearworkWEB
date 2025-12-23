@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
   const user_id = url.searchParams.get('user_id');
   const purpose = url.searchParams.get('purpose') as 'test_message' | 'campaign' | 'mass' | null;
 
+  console.log(`MessageId: ${messageId}`)
+
   // 🔑 Normalize phone to match phone_normalized in DB
   const phoneNormalized = normalizePhone(to)
   if (!phoneNormalized) return NextResponse.json({ ok: true })
@@ -96,6 +98,7 @@ export async function POST(req: NextRequest) {
     // Only update client record for non-test messages
     if (purpose !== 'test_message') {
       await supabase
+        // acuity_clients change for testing
         .from('acuity_clients')
         .update({
           date_last_sms_sent: new Date().toISOString(),
@@ -163,6 +166,7 @@ export async function POST(req: NextRequest) {
 async function getClientId(phoneNormalized: string): Promise<string | null> {
   try {
     const { data } = await supabase
+      // acuity_clients change for testing
       .from('acuity_clients')
       .select('client_id')
       .eq('phone_normalized', phoneNormalized)
@@ -232,61 +236,6 @@ async function handleTestMessageCredit(
     console.error('❌ Test message credit handling error:', error)
   }
 }
-
-// async function handleCreditDeduction(
-//   phoneNormalized: string,
-//   status: 'success' | 'failed'
-// ) {
-//   try {
-//     // Get user_id from client phone
-//     const { data: client } = await supabase
-//       .from('acuity_clients')
-//       .select('user_id')
-//       .eq('phone_normalized', phoneNormalized)
-//       .single()
-
-//     if (!client?.user_id) {
-//       console.log(`⚠️ No user found for phone ${phoneNormalized}`)
-//       return
-//     }
-
-//     // Get current credits
-//     const { data: profile } = await supabase
-//       .from('profiles')
-//       .select('available_credits, reserved_credits')
-//       .eq('user_id', client.user_id)
-//       .single()
-
-//     if (!profile) {
-//       console.log(`⚠️ No profile found for user ${client.user_id}`)
-//       return
-//     }
-
-//     if (status === 'success') {
-//       // Just deduct 1 from reserved (credit is consumed)
-//       await supabase
-//         .from('profiles')
-//         .update({
-//           reserved_credits: Math.max(0, (profile.reserved_credits || 0) - 1),
-//           updated_at: new Date().toISOString()
-//         })
-//         .eq('user_id', client.user_id)
-
-//     } else {
-//       // Refund: deduct from reserved, add back to available
-//       await supabase
-//         .from('profiles')
-//         .update({
-//           reserved_credits: Math.max(0, (profile.reserved_credits || 0) - 1),
-//           available_credits: (profile.available_credits || 0) + 1,
-//           updated_at: new Date().toISOString()
-//         })
-//         .eq('user_id', client.user_id)
-//     }
-//   } catch (error) {
-//     console.error('❌ Credit deduction error:', error)
-//   }
-// }
 
 function normalizePhone(phone: string): string | null {
   // Keep digits only

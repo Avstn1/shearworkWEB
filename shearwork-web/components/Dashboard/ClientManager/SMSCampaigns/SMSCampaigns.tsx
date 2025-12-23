@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Coins, Send, AlertCircle } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Users, X, Coins, Send, AlertCircle, Info, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage, PhoneNumber } from './types';
 import { supabase } from '@/utils/supabaseClient'
+
+import HowCampaignsWorkModal from './HowCampaignsWorkModal';
+import CampaignHistoryModal from './CampaignHistoryModal';
 
 interface PreviewClient {
   client_id: string;
@@ -49,9 +52,11 @@ export default function SMSCampaigns() {
   const [previewClients, setPreviewClients] = useState<PreviewClient[]>([]);
   const [previewStats, setPreviewStats] = useState<PreviewStats | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [phoneNumbersByType, setPhoneNumbersByType] = useState<Record<string, PhoneNumber[]>>({});
   const [previewCounts, setPreviewCounts] = useState<Record<string, number>>({});
 
+  const [showHowCampaignsWorkModal, setShowHowCampaignsWorkModal] = useState(false);
+  const [showCampaignHistoryModal, setShowCampaignHistoryModal] = useState(false);
+  
   const [activePreviewMessageId, setActivePreviewMessageId] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState<number>(0); 
 
@@ -778,14 +783,53 @@ export default function SMSCampaigns() {
           <div>
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
               <MessageSquare className="w-6 h-6 text-sky-300" />
-              SMS Marketing Manager
+              SMS Campaign Manager
             </h2>
             <p className="text-[#bdbdbd] text-sm">
               Schedule up to 3 automated marketing messages to keep your clients engaged
             </p>
+
+            <button
+              onClick={() => setShowCampaignHistoryModal(true)}
+              className="inline-flex items-center gap-2 px-4 mr-2 py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
+            >
+              <Clock className="w-4 h-4" />
+              Campaign History
+            </button>
+
+            <button
+              onClick={() => setShowHowCampaignsWorkModal(true)}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
+            >
+              <Info className="w-4 h-4" />
+              How does this work?
+            </button>
+          </div>
+          
+          <div className="flex flex-col items-end gap-3">
+            {/* Create Message Button */}
+            {messages.length < 3 && (
+              <div className="relative group">
+                <button
+                  onClick={addMessage}
+                  className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Message
+                </button>
+                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none">
+                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl whitespace-nowrap">
+                    Create a new scheduled SMS campaign
+                    <div className="absolute top-full right-4 -mt-1">
+                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Credits and Test Messages Display */}
-            <div className="mt-3 flex items-center gap-3">
+            <div className="flex flex-col gap-2">
               <div className="px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center gap-2">
                 <Coins className="w-4 h-4 text-lime-300" />
                 <span className="text-sm font-semibold text-lime-300">
@@ -804,35 +848,6 @@ export default function SMSCampaigns() {
                 </span>
               </div>
             </div>
-            
-            <div className="mt-2 flex items-center gap-2 text-xs text-[#bdbdbd]">
-              <span>1 credit = 1 SMS message</span>
-              <span>•</span>
-              <span>Free tests reset daily at 12 AM</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {messages.length < 3 && (
-              <div className="relative group">
-                <button
-                  onClick={addMessage}
-                  className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Message
-                </button>
-                {/* Tooltip */}
-                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl whitespace-nowrap">
-                    Create a new scheduled SMS campaign
-                    <div className="absolute top-full right-4 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -855,6 +870,18 @@ export default function SMSCampaigns() {
           </span>
         </div>
       </div>
+
+      {/* How It Works Modal */}
+      <HowCampaignsWorkModal 
+        isOpen={showHowCampaignsWorkModal}
+        onClose={() => setShowHowCampaignsWorkModal(false)}
+      />
+
+      <CampaignHistoryModal 
+        isOpen={showCampaignHistoryModal}
+        onClose={() => setShowCampaignHistoryModal(false)}
+      />
+
 
       {/* Test Confirmation Modal */}
       <AnimatePresence>
@@ -1154,6 +1181,7 @@ export default function SMSCampaigns() {
           <div className="space-y-4">
             {messages.map((msg, index) => (
               <MessageCard
+                maxClients={maxClients}
                 testMessagesUsed={testMessagesUsed}
                 profile={profile}
                 setAlgorithmType={setAlgorithmType}

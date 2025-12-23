@@ -109,6 +109,7 @@ async function getStrictClients(
   const eightMonthsAgo = new Date(today);
   eightMonthsAgo.setMonth(eightMonthsAgo.getMonth() - 8);
   
+  // acuity_clients change for testing
   const { data: clients, error } = await supabase
     .from('acuity_clients')
     .select('*')
@@ -151,6 +152,7 @@ async function getLenientClients(
   const twoYearsAgo = new Date(today);
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
   
+  // acuity_clients change for testing
   const { data: clients, error } = await supabase
     .from('acuity_clients')
     .select('*')
@@ -404,6 +406,7 @@ export async function markClientsAsMessaged(
   supabase: SupabaseClient,
   clientIds: string[]
 ): Promise<void> {
+  // acuity_clients change for testing
   const { error } = await supabase
     .from('acuity_clients')
     .update({ date_last_sms_sent: new Date().toISOString() })
