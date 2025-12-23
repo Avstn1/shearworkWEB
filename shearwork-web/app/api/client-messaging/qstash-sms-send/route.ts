@@ -148,6 +148,34 @@ async function handler(request: Request) {
         console.log('Failed to update final_clients_to_message.\n' + error)
       }
 
+      // CREATE QSTASH CRON JOB FOR PROGRESS TRACKING
+      console.log('⏰ Creating QStash cron job for progress tracking');
+      try {
+        const scheduleResponse = await qstashClient.schedules.create({
+          destination: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/check-sms-progress`,
+          cron: "*/3 * * * * *", // Every 5 seconds
+          body: JSON.stringify({ message_id: scheduledMessage.id }),
+          retries: 0,
+        });
+
+        console.log('✅ Created progress tracking cron job:', scheduleResponse.scheduleId);
+
+        // Store the schedule ID in the database
+        const { error: scheduleUpdateError } = await supabase
+          .from('sms_scheduled_messages')
+          .update({ 
+            progress_update_qstash_cron_id: scheduleResponse.scheduleId 
+          })
+          .eq('id', scheduledMessage.id);
+
+        if (scheduleUpdateError) {
+          console.error('❌ Failed to store schedule ID:', scheduleUpdateError);
+        }
+      } catch (cronError: any) {
+        console.error('❌ Failed to create progress tracking cron job:', cronError);
+        // Don't fail the entire request if cron creation fails
+      }
+
       recipients = data.phoneNumbers || [];
 
       if (recipients.length === 0) {

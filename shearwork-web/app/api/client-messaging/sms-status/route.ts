@@ -56,16 +56,6 @@ export async function POST(req: NextRequest) {
   const phoneNormalized = normalizePhone(to)
   if (!phoneNormalized) return NextResponse.json({ ok: true })
 
-  console.log('📍 Status callback received:', {
-    messageStatus,
-    to,
-    errorCode,
-    messageId,
-    user_id,
-    purpose,
-    phoneNormalized
-  })
-
   // Get client_id if this is not a test message
   let client_id: string | null = null;
   if (purpose !== 'test_message') {
@@ -114,15 +104,6 @@ export async function POST(req: NextRequest) {
         .eq('phone_normalized', phoneNormalized)
     }
 
-    console.log('📝 About to insert into sms_sent:', {
-      message_id: messageId || null,
-      user_id: user_id,
-      is_sent: true,
-      purpose: purpose,
-      phone_normalized: phoneNormalized,
-      client_id: client_id
-    })
-
     // Insert successful delivery record
     const { data: insertData, error: insertError } = await supabase
       .from('sms_sent')
@@ -136,14 +117,12 @@ export async function POST(req: NextRequest) {
         client_id: client_id
       })
 
-    console.log('✅ Insert result:', { insertData, insertError })
-
     // Handle credit deduction based on message purpose
-    if (purpose === 'test_message' && user_id) {
-      await handleTestMessageCredit(user_id, 'success')
-    } else if (phoneNormalized) {
-      await handleCreditDeduction(phoneNormalized, 'success')
-    }
+    // if (purpose === 'test_message' && user_id) {
+    //   await handleTestMessageCredit(user_id, 'success')
+    // } else if (phoneNormalized) {
+    //   await handleCreditDeduction(phoneNormalized, 'success')
+    // }
 
     return NextResponse.json({ ok: true })
   }
@@ -169,9 +148,10 @@ export async function POST(req: NextRequest) {
     // Handle credit refund based on message purpose
     if (purpose === 'test_message' && user_id) {
       await handleTestMessageCredit(user_id, 'failed')
-    } else if (phoneNormalized) {
-      await handleCreditDeduction(phoneNormalized, 'failed')
-    }
+    } 
+    // else if (phoneNormalized) {
+    //   await handleCreditDeduction(phoneNormalized, 'failed')
+    // }
 
     return NextResponse.json({ ok: true })
   }
@@ -237,7 +217,6 @@ async function handleTestMessageCredit(
           })
           .eq('user_id', userId)
 
-        console.log(`✅ Deducted 1 available credit for paid test message (user: ${userId})`)
       } else {
         // Refund: add back to available credits
         await supabase
@@ -247,74 +226,67 @@ async function handleTestMessageCredit(
             updated_at: new Date().toISOString()
           })
           .eq('user_id', userId)
-
-        console.log(`🔄 Refunded 1 credit for failed paid test message (user: ${userId})`)
       }
-    } else {
-      console.log(`✅ Free test message delivered (${testCount}/10 today, user: ${userId})`)
     }
   } catch (error) {
     console.error('❌ Test message credit handling error:', error)
   }
 }
 
-async function handleCreditDeduction(
-  phoneNormalized: string,
-  status: 'success' | 'failed'
-) {
-  try {
-    // Get user_id from client phone
-    const { data: client } = await supabase
-      .from('acuity_clients_testing')
-      .select('user_id')
-      .eq('phone_normalized', phoneNormalized)
-      .single()
+// async function handleCreditDeduction(
+//   phoneNormalized: string,
+//   status: 'success' | 'failed'
+// ) {
+//   try {
+//     // Get user_id from client phone
+//     const { data: client } = await supabase
+//       .from('acuity_clients_testing')
+//       .select('user_id')
+//       .eq('phone_normalized', phoneNormalized)
+//       .single()
 
-    if (!client?.user_id) {
-      console.log(`⚠️ No user found for phone ${phoneNormalized}`)
-      return
-    }
+//     if (!client?.user_id) {
+//       console.log(`⚠️ No user found for phone ${phoneNormalized}`)
+//       return
+//     }
 
-    // Get current credits
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('available_credits, reserved_credits')
-      .eq('user_id', client.user_id)
-      .single()
+//     // Get current credits
+//     const { data: profile } = await supabase
+//       .from('profiles')
+//       .select('available_credits, reserved_credits')
+//       .eq('user_id', client.user_id)
+//       .single()
 
-    if (!profile) {
-      console.log(`⚠️ No profile found for user ${client.user_id}`)
-      return
-    }
+//     if (!profile) {
+//       console.log(`⚠️ No profile found for user ${client.user_id}`)
+//       return
+//     }
 
-    if (status === 'success') {
-      // Just deduct 1 from reserved (credit is consumed)
-      await supabase
-        .from('profiles')
-        .update({
-          reserved_credits: Math.max(0, (profile.reserved_credits || 0) - 1),
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', client.user_id)
+//     if (status === 'success') {
+//       // Just deduct 1 from reserved (credit is consumed)
+//       await supabase
+//         .from('profiles')
+//         .update({
+//           reserved_credits: Math.max(0, (profile.reserved_credits || 0) - 1),
+//           updated_at: new Date().toISOString()
+//         })
+//         .eq('user_id', client.user_id)
 
-      console.log(`✅ Deducted 1 reserved credit for successful delivery to ${phoneNormalized}`)
-    } else {
-      // Refund: deduct from reserved, add back to available
-      await supabase
-        .from('profiles')
-        .update({
-          reserved_credits: Math.max(0, (profile.reserved_credits || 0) - 1),
-          available_credits: (profile.available_credits || 0) + 1,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', client.user_id)
-
-      console.log(`🔄 Refunded 1 credit for failed delivery to ${phoneNormalized}`)
-    }
-  } catch (error) {
-    console.error('❌ Credit deduction error:', error)
-  }
-}
+//     } else {
+//       // Refund: deduct from reserved, add back to available
+//       await supabase
+//         .from('profiles')
+//         .update({
+//           reserved_credits: Math.max(0, (profile.reserved_credits || 0) - 1),
+//           available_credits: (profile.available_credits || 0) + 1,
+//           updated_at: new Date().toISOString()
+//         })
+//         .eq('user_id', client.user_id)
+//     }
+//   } catch (error) {
+//     console.error('❌ Credit deduction error:', error)
+//   }
+// }
 
 function normalizePhone(phone: string): string | null {
   // Keep digits only
