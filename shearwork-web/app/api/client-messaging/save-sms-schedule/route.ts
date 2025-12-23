@@ -391,13 +391,20 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const purposes = searchParams.getAll('purpose');
+    const excludeDeleted = searchParams.get('excludeDeleted') === 'true';
     
-    const { data: messages, error } = await supabase
+    let query = supabase
       .from('sms_scheduled_messages')
       .select('*')
       .eq('user_id', user.id)
-      .in('purpose', purposes)
-      .order('created_at', { ascending: true })
+      .in('purpose', purposes);
+
+    // Exclude soft-deleted messages if requested
+    if (excludeDeleted) {
+      query = query.eq('is_deleted', false);
+    }
+
+    const { data: messages, error } = await query.order('created_at', { ascending: true });
 
     if (error) throw error
 
@@ -421,31 +428,56 @@ export async function DELETE(request: Request) {
     const { user, supabase } = await getAuthenticatedUser(request)
     if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
-    const { id } = await request.json()
+    const { id, softDelete } = await request.json()
 
-    // Get message to check for QStash schedules
+    // Get message to check for QStash schedules and if it's finished
     const { data: message } = await supabase
       .from('sms_scheduled_messages')
-      .select('qstash_schedule_ids')
+      .select('qstash_schedule_ids, is_finished')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
+    if (!message) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
     // Delete QStash schedules if exist
-    if (message?.qstash_schedule_ids && message.qstash_schedule_ids.length > 0) {
+    if (message.qstash_schedule_ids && message.qstash_schedule_ids.length > 0) {
       await deleteMultipleQStashSchedules(message.qstash_schedule_ids)
     }
 
-    // Delete from database
-    const { error } = await supabase
-      .from('sms_scheduled_messages')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id)
+    // Determine whether to soft delete or hard delete
+    const shouldSoftDelete = softDelete || message.is_finished;
 
-    if (error) throw error
+    if (shouldSoftDelete) {
+      // Soft delete - mark as deleted but keep in database
+      const { error } = await supabase
+        .from('sms_scheduled_messages')
+        .update({ 
+          is_deleted: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', user.id)
 
-    return NextResponse.json({ success: true })
+      if (error) throw error
+
+      console.log(`✅ Soft deleted message: ${id}`)
+      return NextResponse.json({ success: true, softDeleted: true })
+    } else {
+      // Hard delete - actually remove from database
+      const { error } = await supabase
+        .from('sms_scheduled_messages')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      console.log(`✅ Hard deleted message: ${id}`)
+      return NextResponse.json({ success: true, softDeleted: false })
+    }
   } catch (err: any) {
     console.error('❌ Delete error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })

@@ -54,11 +54,18 @@ export default function SMSCampaigns() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewCounts, setPreviewCounts] = useState<Record<string, number>>({});
 
+  // How do campaigns work modal
   const [showHowCampaignsWorkModal, setShowHowCampaignsWorkModal] = useState(false);
   const [showCampaignHistoryModal, setShowCampaignHistoryModal] = useState(false);
   
+  // Preview clients modal
   const [activePreviewMessageId, setActivePreviewMessageId] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState<number>(0); 
+
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('hard');
 
   const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass'>('campaign');
   const [maxClients, setMaxClients] = useState<number>(0);
@@ -196,7 +203,7 @@ export default function SMSCampaigns() {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=campaign&purpose=mass', {
+      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=campaign&purpose=mass&excludeDeleted=true', {
         method: 'GET',
       });
 
@@ -355,35 +362,50 @@ export default function SMSCampaigns() {
 
   const removeMessage = async (id: string) => {
     const msg = messages.find((m) => m.id === id);
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${msg?.title || 'this message'}"?\n\nThis action is irreversible and will permanently remove the scheduled message.`
-    );
-    
-    if (!confirmed) {
+    if (!msg) return;
+
+    // Check if campaign is finished
+    const progress = campaignProgress[id];
+    const isFinished = progress?.is_finished;
+
+    // Set delete type and show modal
+    setDeleteType(isFinished ? 'soft' : 'hard');
+    setPendingDeleteMessageId(id);
+    setShowDeleteModal(true);
+  };
+
+const confirmDelete = async () => {
+  if (!pendingDeleteMessageId) return;
+
+  const msg = messages.find((m) => m.id === pendingDeleteMessageId);
+  
+  if (msg?.isSaved) {
+    try {
+      const response = await fetch('/api/client-messaging/save-sms-schedule', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id: pendingDeleteMessageId,
+          softDelete: deleteType === 'soft'
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to delete message');
+      
+      toast.success('Message deleted successfully');
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete message');
+      setShowDeleteModal(false);
+      setPendingDeleteMessageId(null);
       return;
     }
-
-    if (msg?.isSaved) {
-      try {
-        const response = await fetch('/api/client-messaging/save-sms-schedule', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-
-        if (!response.ok) throw new Error('Failed to delete message');
-        
-        toast.success('Message deleted successfully');
-      } catch (error) {
-        console.error('Delete error:', error);
-        toast.error('Failed to delete message');
-        return;
-      }
-    }
-    
-    setMessages(messages.filter((msg) => msg.id !== id));
-  };
+  }
+  
+  setMessages(messages.filter((msg) => msg.id !== pendingDeleteMessageId));
+  setShowDeleteModal(false);
+  setPendingDeleteMessageId(null);
+};
 
   const updateMessage = (id: string, updates: Partial<SMSMessage>) => {
       setMessages(
@@ -461,6 +483,7 @@ export default function SMSCampaigns() {
             new_available: newAvailable,
             old_reserved: oldReserved,
             new_reserved: newReserved,
+            reference_id: msg.id, 
             created_at: new Date().toISOString()
           });
 
@@ -580,6 +603,7 @@ export default function SMSCampaigns() {
                 new_available: newAvailable,
                 old_reserved: oldReserved,
                 new_reserved: newReserved,
+                reference_id: msg.id, 
                 created_at: new Date().toISOString()
               });
           }
@@ -676,6 +700,7 @@ export default function SMSCampaigns() {
                 new_available: newAvailable,
                 old_reserved: oldReserved,
                 new_reserved: newReserved,
+                reference_id: msg.id, 
                 created_at: new Date().toISOString()
               });
           }
@@ -750,6 +775,7 @@ export default function SMSCampaigns() {
                 new_available: newAvailable,
                 old_reserved: oldReserved,
                 new_reserved: newReserved,
+                reference_id: msg.id, 
                 created_at: new Date().toISOString()
               });
           }
@@ -1271,6 +1297,94 @@ export default function SMSCampaigns() {
               />
             ))}
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setPendingDeleteMessageId(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-rose-300/20 text-rose-300 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Delete Message?
+                  </h3>
+                  <p className="text-sm text-[#bdbdbd]">
+                    {deleteType === 'soft' ? (
+                      <>
+                        This completed campaign will be removed from your active messages but will still be visible in{' '}
+                        <span className="text-purple-300 font-semibold">Campaign History</span> for your records.
+                      </>
+                    ) : (
+                      <>
+                        This message will be <span className="text-rose-300 font-semibold">permanently deleted</span>.
+                        You won't be able to see it again or recover any information about it.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {deleteType === 'hard' && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg mb-4">
+                  <div className="flex items-start gap-2 text-sm text-rose-300">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <p>
+                      <span className="font-semibold">This action cannot be undone.</span> All message data will be permanently removed.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {deleteType === 'soft' && (
+                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg mb-4">
+                  <div className="flex items-start gap-2 text-sm text-purple-300">
+                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <p>
+                      You can view this campaign's details and recipients in Campaign History at any time.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setPendingDeleteMessageId(null);
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-rose-300/20 text-rose-300 border border-rose-300/30 hover:bg-rose-300/30 transition-all duration-300"
+                >
+                  {deleteType === 'soft' ? 'Remove from Active' : 'Delete Permanently'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

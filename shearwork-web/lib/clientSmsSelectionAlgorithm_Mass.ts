@@ -23,6 +23,7 @@ export async function selectClientsForSMS_Mass(
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
+    .neq('sms_subscribed', false)
     .gt('last_appt', oneAndHalfYearsAgo.toISOString())
     .gt('total_appointments', 0)
     .limit(limit)

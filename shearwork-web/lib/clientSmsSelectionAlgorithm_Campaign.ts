@@ -116,6 +116,7 @@ async function getStrictClients(
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
+    .neq('sms_subscribed', false)
     .lt('last_appt', twoWeeksAgo.toISOString())
     .gt('last_appt', eightMonthsAgo.toISOString())
     .gt('total_appointments', 0)
@@ -152,13 +153,14 @@ async function getLenientClients(
   const twoYearsAgo = new Date(today);
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
   
-  // acuity_clients change for testing
+  // acuity_clients change for testingz
   const { data: clients, error } = await supabase
     .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
+    .neq('sms_subscribed', false)
     .lt('last_appt', oneWeekAgo.toISOString())
     .gt('last_appt', twoYearsAgo.toISOString())
     .gt('total_appointments', 0)
