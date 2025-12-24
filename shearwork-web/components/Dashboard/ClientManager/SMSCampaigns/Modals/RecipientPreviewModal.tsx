@@ -49,11 +49,14 @@ interface AllClient {
 interface RecipientPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => void;
   messageTitle: string;
   messageId: string | null;
   previewClients: PreviewClient[];
+  deselectedPreviewClients: PreviewClient[];
   previewStats: PreviewStats | null;
   maxClients: number;
+  initialTotalUnselectedClients: number;
 }
 
 type TabType = "client-list" | "deselected";
@@ -61,17 +64,24 @@ type TabType = "client-list" | "deselected";
 export default function RecipientPreviewModal({
   isOpen,
   onClose,
+  onRefresh,
   messageTitle,
   messageId,
   previewClients,
+  deselectedPreviewClients,
   previewStats,
   maxClients,
+  initialTotalUnselectedClients,
 }: RecipientPreviewModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("client-list");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [deselectedClients, setDeselectedClients] = useState<string[]>([]);
   const [selectedClients, setSelectedClients] = useState<any[]>([]);
+
+  const [batchSelectedForAction, setBatchSelectedForAction] = useState<Set<string>>(new Set());
+  const [showBatchConfirmModal, setShowBatchConfirmModal] = useState(false);
+  const [batchActionType, setBatchActionType] = useState<'select' | 'deselect' | null>(null);
 
   // All clients pagination
   const [allClients, setAllClients] = useState<AllClient[]>([]);
@@ -83,6 +93,9 @@ export default function RecipientPreviewModal({
   const [showReselectModal, setShowReselectModal] = useState(false);
   const [showSelectModal, setShowSelectModal] = useState(false);
   const [showUnselectModal, setShowUnselectModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+
+  const [totalUnselectedClients, setTotalUnselectedClients] = useState(initialTotalUnselectedClients);
 
   const [pendingDeselectPhone, setPendingDeselectPhone] = useState<
     string | null
@@ -103,7 +116,9 @@ export default function RecipientPreviewModal({
   const [clientListTotalPages, setClientListTotalPages] = useState(1);
   const CLIENT_LIST_PER_PAGE = 100;
 
-  const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
+  // const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
+
+  const [otherClientsPage, setOtherClientsPage] = useState(1);
 
   // Debounce search input
   useEffect(() => {
@@ -187,6 +202,126 @@ export default function RecipientPreviewModal({
     }
   }, [activeTab, previewClients, deselectedClients, selectedClients, debouncedSearch, CLIENT_LIST_PER_PAGE]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setBatchSelectedForAction(new Set());
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setBatchSelectedForAction(new Set());
+  }, [activeTab]);
+
+  useEffect(() => {
+    loadAllClients(otherClientsPage);
+  }, [otherClientsPage]);
+
+  useEffect(() => {
+    setTotalUnselectedClients(initialTotalUnselectedClients);
+  }, [initialTotalUnselectedClients]);
+
+  const toggleBatchSelection = (phone: string) => {
+    const newSet = new Set(batchSelectedForAction);
+    if (newSet.has(phone)) {
+      newSet.delete(phone);
+    } else {
+      newSet.add(phone);
+    }
+    setBatchSelectedForAction(newSet);
+  };
+
+  // Handle batch confirm button
+  const handleBatchConfirm = async (actionType: 'select' | 'deselect') => {
+    if (batchSelectedForAction.size === 0) {
+      toast.error('Please select at least one client');
+      return;
+    }
+    
+    if (!(await checkMessageExistsInDatabase())) return;
+    
+    setBatchActionType(actionType);
+    setShowBatchConfirmModal(true);
+  };
+
+  // Confirm batch action
+  const confirmBatchAction = async () => {
+    if (!messageId || batchSelectedForAction.size === 0 || !batchActionType) return;
+
+    try {
+      const { data: { user },} = await supabase.auth.getUser();
+      if (!user) return;
+
+      const phonesToProcess = Array.from(batchSelectedForAction);
+
+      if (batchActionType === 'deselect') {
+        // Add to deselected list
+        const updatedDeselected = [...new Set([...deselectedClients, ...phonesToProcess])];
+        
+        // Remove from selected list
+        const updatedSelected = selectedClients.filter(
+          (c) => !phonesToProcess.includes(c.phone_normalized)
+        );
+
+        const { error } = await supabase
+          .from("sms_scheduled_messages")
+          .update({ 
+            deselected_clients: updatedDeselected,
+            selected_clients: updatedSelected
+          })
+          .eq("id", messageId)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        setDeselectedClients(updatedDeselected);
+        setSelectedClients(updatedSelected);
+        toast.success(`${phonesToProcess.length} client${phonesToProcess.length > 1 ? 's' : ''} deselected`);
+      } else {
+        // Add to selected list
+        const clientsToAdd = allClients
+          .filter(c => phonesToProcess.includes(c.phone_normalized || ''))
+          .map(c => ({
+            client_id: c.client_id,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            phone_normalized: c.phone_normalized,
+          }));
+
+        const updatedSelected = [...selectedClients, ...clientsToAdd];
+
+        const { error } = await supabase
+          .from("sms_scheduled_messages")
+          .update({ selected_clients: updatedSelected })
+          .eq("id", messageId)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        setSelectedClients(updatedSelected);
+        toast.success(`${phonesToProcess.length} client${phonesToProcess.length > 1 ? 's' : ''} selected`);
+      }
+
+      // Clear batch selection and close modal
+      setBatchSelectedForAction(new Set());
+      setShowBatchConfirmModal(false);
+      setBatchActionType(null);
+      
+      // Close and refresh the modal
+      onClose();
+      setTimeout(() => {
+        if (onRefresh) {
+          onRefresh();
+        }
+      }, 100);
+
+    } catch (error) {
+      console.error('Failed to process batch action:', error);
+      toast.error('Failed to update clients');
+      setShowBatchConfirmModal(false);
+      setBatchActionType(null);
+    }
+  };
+
   const loadDeselectedClients = async () => {
     if (!messageId) return;
 
@@ -227,44 +362,35 @@ export default function RecipientPreviewModal({
   // Load all OTHER clients for Deselected Clients tab (NOT in algorithm)
   const loadAllClients = async () => {
     setLoadingAllClients(true);
+
     try {
-      // Get all phone numbers from preview clients (client list) to exclude
-      const excludePhones = previewClients.map((c) => c.phone_normalized);
+      // Use deselected clients returned by the algorithm
+      const clients = deselectedPreviewClients || [];
 
-      const response = await fetch(
-        `/api/client-manager/clients?page=${currentPage}&limit=100&search=${encodeURIComponent(debouncedSearch)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            exclude: excludePhones
-          })
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to load clients");
-
-      const data = await response.json();
-
-      // Clients are already filtered by the API (excludes preview clients)
-      const clients = data.clients || [];
-
-      // Check which ones are manually deselected and put them at top
+      // Put manually deselected ones at the top
       const manuallyDeselected = clients.filter((c: AllClient) =>
-        deselectedClients.includes(c.phone_normalized || "")
+        deselectedClients.includes(c.phone_normalized || '')
       );
+
       const notDeselected = clients.filter((c: AllClient) =>
-        !deselectedClients.includes(c.phone_normalized || "")
+        !deselectedClients.includes(c.phone_normalized || '')
       );
 
       const sortedClients = [...manuallyDeselected, ...notDeselected];
 
-      setTotalUnselectedClients(data.total)
-      setAllClients(sortedClients);
-      setTotalPages(data.totalPages || 1);
+      // Calculate pagination
+      const totalPages = Math.ceil(sortedClients.length / CLIENT_LIST_PER_PAGE);
+      const startIndex = (otherClientsPage - 1) * CLIENT_LIST_PER_PAGE;
+      const endIndex = startIndex + CLIENT_LIST_PER_PAGE;
+      const paginatedClients = sortedClients.slice(startIndex, endIndex);
+
+      setAllClients(paginatedClients);
+      setTotalUnselectedClients(sortedClients.length);
+      setTotalPages(totalPages);
+      setCurrentPage(otherClientsPage); // Make sure you have this state
     } catch (error) {
-      console.error("Failed to load all clients:", error);
-      toast.error("Failed to load clients");
+      console.error('Failed to load all clients:', error);
+      toast.error('Failed to load clients');
     } finally {
       setLoadingAllClients(false);
     }
@@ -339,17 +465,27 @@ export default function RecipientPreviewModal({
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Add to deselected list
       const updatedDeselected = [...deselectedClients, pendingDeselectPhone];
+
+      // ALSO remove from selected list if they're there
+      const updatedSelected = selectedClients.filter(
+        (c) => c.phone_normalized !== pendingDeselectPhone
+      );
 
       const { error } = await supabase
         .from("sms_scheduled_messages")
-        .update({ deselected_clients: updatedDeselected })
+        .update({ 
+          deselected_clients: updatedDeselected,
+          selected_clients: updatedSelected // Update both at once
+        })
         .eq("id", messageId)
         .eq("user_id", user.id);
 
       if (error) throw error;
 
       setDeselectedClients(updatedDeselected);
+      setSelectedClients(updatedSelected); // Update local state too
       toast.success("Client moved to deselected list");
     } catch (error) {
       console.error("Failed to deselect client:", error);
@@ -531,8 +667,59 @@ export default function RecipientPreviewModal({
     setShowUnselectModal(true);
   };
 
+  const handleResetSelections = async () => {
+    if (!messageId) {
+      toast.error("Please save this message as a draft first");
+      return;
+    }
+    
+    setShowResetModal(true);
+  };
+
+  const confirmReset = async () => {
+    if (!messageId) return;
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("sms_scheduled_messages")
+        .update({ 
+          deselected_clients: [],
+          selected_clients: []
+        })
+        .eq("id", messageId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setDeselectedClients([]);
+      setSelectedClients([]);
+      setBatchSelectedForAction(new Set());
+      
+      toast.success("All selections reset");
+      
+      setShowResetModal(false);
+      
+      // Refresh the modal
+      if (onRefresh) {
+        onClose();
+        setTimeout(() => {
+          onRefresh();
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Failed to reset selections:', error);
+      toast.error('Failed to reset selections');
+      setShowResetModal(false);
+    }
+  };
+
   const filteredClients = getFilteredClients();
-  const activeClientCount = previewClients.length - deselectedClients.length;
+  const activeClientCount = previewClients.length;
 
   const isClientSelected = (phone: string | null) => {
     if (!phone) return false;
@@ -556,6 +743,7 @@ export default function RecipientPreviewModal({
             onClick={(e) => e.stopPropagation()}
             className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full min-h-[90vh] max-h-[90vh] overflow-hidden flex flex-col"
           >
+
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
               <div className="flex-1">
@@ -565,24 +753,25 @@ export default function RecipientPreviewModal({
                 </h3>
                 {previewStats && (
                   <p className="text-sm text-[#bdbdbd] mt-1">
-                    {activeClientCount} active clients • {deselectedClients.length} deselected • Max: {maxClients}
+                    {activeClientCount} active clients • {selectedClients.length} manually selected • {totalUnselectedClients} deselected • Max: {maxClients}
                   </p>
                 )}
               </div>
 
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors ml-4"
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-[#bdbdbd]" />
               </button>
+
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-white/10 px-6 flex-shrink-0">
+            <div className="grid grid-cols-2 border-b border-white/10 flex-shrink-0">
               <button
                 onClick={() => setActiveTab("client-list")}
-                className={`px-4 py-3 text-sm font-semibold transition-all relative ${
+                className={`px-4 py-3 text-sm font-semibold transition-all relative flex justify-center items-center ${
                   activeTab === "client-list"
                     ? "text-sky-300"
                     : "text-[#bdbdbd] hover:text-white"
@@ -602,15 +791,15 @@ export default function RecipientPreviewModal({
 
               <button
                 onClick={() => setActiveTab("deselected")}
-                className={`px-4 py-3 text-sm font-semibold transition-all relative ${
+                className={`px-4 py-3 text-sm font-semibold transition-all relative flex justify-center items-center ${
                   activeTab === "deselected"
                     ? "text-sky-300"
                     : "text-[#bdbdbd] hover:text-white"
                 }`}
               >
-                Deselected Clients
+                Other Clients
                 <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
-                  { totalUnselectedClients > 0 ? totalUnselectedClients : '...'}
+                  {totalUnselectedClients > 0 ? totalUnselectedClients : '...'}
                 </span>
                 {activeTab === "deselected" && (
                   <motion.div
@@ -747,54 +936,120 @@ export default function RecipientPreviewModal({
             {/* Clients List */}
             <div className="overflow-y-auto flex-1 relative">
               {/* Sticky Pagination - Client List */}
-              {activeTab === "client-list" && clientListTotalPages > 1 && (
+              {activeTab === "client-list" && (
                 <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-[#bdbdbd]">
-                      Page {clientListPage} of {clientListTotalPages} • {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} on this page
-                    </p>
+                    <div className="flex items-center gap-4">
+                      <p className="text-sm text-[#bdbdbd]">
+                        Page {clientListPage} of {clientListTotalPages} • {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} on this page
+                      </p>
+                    </div>
+
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setClientListPage((p) => Math.max(1, p - 1))}
-                        disabled={clientListPage === 1}
-                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleResetSelections}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        Reset All
                       </button>
-                      <button
-                        onClick={() => setClientListPage((p) => Math.min(clientListTotalPages, p + 1))}
-                        disabled={clientListPage === clientListTotalPages}
-                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                      
+                      {batchSelectedForAction.size > 0 && (
+                        <>
+                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <button
+                            onClick={() => setBatchSelectedForAction(new Set())}
+                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                          >
+                            Clear
+                          </button>
+                          <button
+                            onClick={() => handleBatchConfirm('deselect')}
+                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
+                          >
+                            Deselect {batchSelectedForAction.size}
+                          </button>
+                        </>
+                      )}
+                      
+                      {clientListTotalPages > 1 && (
+                        <>
+                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <button
+                            onClick={() => setClientListPage((p) => Math.max(1, p - 1))}
+                            disabled={clientListPage === 1}
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setClientListPage((p) => Math.min(clientListTotalPages, p + 1))}
+                            disabled={clientListPage === clientListTotalPages}
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Sticky Pagination - Selected Clients */}
-              {activeTab === "deselected" && totalPages > 1 && (
+              {/* Sticky Pagination - Deselected Clients */}
+              {activeTab === "deselected" && (
                 <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-[#bdbdbd]">
-                      Page {currentPage} of {totalPages} • {allClients.length} client{allClients.length !== 1 ? "s" : ""} on this page
-                    </p>
+                    <div className="flex items-center gap-4">
+                      <p className="text-sm text-[#bdbdbd]">
+                        Page {currentPage} of {totalPages} • {allClients.length} client{allClients.length !== 1 ? "s" : ""} on this page
+                      </p>
+                    </div>
+                    
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleResetSelections}
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        Reset All
                       </button>
-                      <button
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                      
+                      {batchSelectedForAction.size > 0 && (
+                        <>
+                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <button
+                            onClick={() => setBatchSelectedForAction(new Set())}
+                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                          >
+                            Clear
+                          </button>
+                          <button
+                            onClick={() => handleBatchConfirm('select')}
+                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all duration-300"
+                          >
+                            Select {batchSelectedForAction.size}
+                          </button>
+                        </>
+                      )}
+                      
+                      {totalPages > 1 && (
+                        <>
+                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <button
+                            onClick={() => setOtherClientsPage((p) => Math.max(1, p - 1))}
+                            disabled={otherClientsPage === 1}
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setOtherClientsPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={otherClientsPage === totalPages}
+                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -824,36 +1079,29 @@ export default function RecipientPreviewModal({
                     {/* Render based on tab */}
                     {activeTab === "client-list" &&
                       filteredClients.map((client: any) => {
+                        const isDeselected = deselectedClients.includes(client.phone_normalized);
+                        const isBatchSelected = batchSelectedForAction.has(client.phone_normalized);
+
                         const normalVisitInterval = client.avg_weekly_visits
                           ? Math.round(7 / client.avg_weekly_visits)
                           : null;
-
-                        const isDeselected = deselectedClients.includes(
-                          client.phone_normalized,
-                        );
 
                         return (
                           <div
                             key={client.client_id}
                             className={`flex items-center gap-4 p-4 border rounded-xl hover:bg-white/10 transition-colors ${
-                              isDeselected
-                                ? "bg-sky-300/10 border-sky-300/30"
+                              isBatchSelected
+                                ? "bg-purple-300/10 border-purple-300/30"
+                                : isDeselected
+                                ? "bg-amber-300/10 border-amber-300/30"
                                 : "bg-white/5 border-white/10"
                             }`}
                           >
                             <input
                               type="checkbox"
-                              checked={!isDeselected}
-                              onChange={() => {
-                                if (!isDeselected) {
-                                  handleMoveToDeselected(
-                                    client.phone_normalized,
-                                    `${client.first_name || ""} ${client.last_name || ""}`.trim() ||
-                                      "Unknown Client",
-                                  );
-                                }
-                              }}
-                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-sky-300 focus:ring-2 focus:ring-sky-300/50 cursor-pointer"
+                              checked={isBatchSelected}
+                              onChange={() => toggleBatchSelection(client.phone_normalized)}
+                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-300 focus:ring-2 focus:ring-purple-300/50 cursor-pointer"
                             />
 
                             <div className="flex-1 min-w-0">
@@ -916,34 +1164,24 @@ export default function RecipientPreviewModal({
                         const isSelected = selectedClients.some(
                           (c) => c.phone_normalized === client.phone_normalized
                         );
+                        const isBatchSelected = batchSelectedForAction.has(client.phone_normalized || '');
 
                         return (
                           <div
                             key={client.client_id}
                             className={`flex items-center gap-4 p-4 border rounded-xl hover:bg-white/10 transition-colors ${
-                              isSelected
+                              isBatchSelected
+                                ? "bg-purple-300/10 border-purple-300/30"
+                                : isSelected
                                 ? "bg-sky-300/10 border-sky-300/30"
                                 : "bg-white/5 border-white/10"
                             }`}
                           >
                             <input
                               type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {
-                                if (isSelected) {
-                                  // Uncheck = Remove from selected list
-                                  const selectedClient = selectedClients.find(
-                                    (c) => c.phone_normalized === client.phone_normalized
-                                  );
-                                  if (selectedClient) {
-                                    handleUnselectRequest(selectedClient);
-                                  }
-                                } else {
-                                  // Check = Add to selected list
-                                  handleSelectRequest(client);
-                                }
-                              }}
-                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-sky-300 focus:ring-2 focus:ring-sky-300/50 cursor-pointer"
+                              checked={isBatchSelected}
+                              onChange={() => toggleBatchSelection(client.phone_normalized || '')}
+                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-300 focus:ring-2 focus:ring-purple-300/50 cursor-pointer"
                             />
 
                             <div className="flex-1 min-w-0">
@@ -1254,6 +1492,142 @@ export default function RecipientPreviewModal({
                       className="flex-1 px-4 py-3 rounded-xl font-bold bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30 transition-all duration-300"
                     >
                       Remove from Deselected
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showBatchConfirmModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+                onClick={() => setShowBatchConfirmModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      batchActionType === 'select' ? 'bg-sky-300/20 text-sky-300' : 'bg-amber-300/20 text-amber-300'
+                    }`}>
+                      <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        {batchActionType === 'select' ? 'Select' : 'Deselect'} {batchSelectedForAction.size} Client{batchSelectedForAction.size > 1 ? 's' : ''}?
+                      </h3>
+                      <p className="text-sm text-[#bdbdbd]">
+                        {batchActionType === 'select' 
+                          ? `${batchSelectedForAction.size} client${batchSelectedForAction.size > 1 ? 's' : ''} will always receive this message regardless of the algorithm.`
+                          : `${batchSelectedForAction.size} client${batchSelectedForAction.size > 1 ? 's' : ''} will not receive this message.`
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-lg mb-4 ${
+                    batchActionType === 'select' ? 'bg-sky-500/10 border border-sky-500/20' : 'bg-amber-500/10 border border-amber-500/20'
+                  }`}>
+                    <div className={`flex items-start gap-2 text-sm ${
+                      batchActionType === 'select' ? 'text-sky-300' : 'text-amber-300'
+                    }`}>
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <p>
+                        {batchActionType === 'select'
+                          ? 'These clients will not appear on the Client List page but they will receive your message.'
+                          : 'These clients will be excluded from all future sends of this campaign.'
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setShowBatchConfirmModal(false);
+                        setBatchActionType(null);
+                      }}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmBatchAction}
+                      className={`flex-1 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+                        batchActionType === 'select'
+                          ? 'bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30'
+                          : 'bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30'
+                      }`}
+                    >
+                      {batchActionType === 'select' ? 'Select Clients' : 'Deselect Clients'}
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Reset Confirmation Modal */}
+          <AnimatePresence>
+            {showResetModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+                onClick={() => setShowResetModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        Reset All Selections?
+                      </h3>
+                      <p className="text-sm text-[#bdbdbd]">
+                        This will reset all your deselected and manually selected clients. The algorithm will return to its default selection.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-sm text-red-400">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <p>
+                        This action cannot be undone. All custom selections will be cleared.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowResetModal(false)}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmReset}
+                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
+                    >
+                      Reset All
                     </button>
                   </div>
                 </motion.div>

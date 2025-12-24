@@ -4,6 +4,7 @@ import { AcuityClient, ScoredClient } from './clientSmsSelectionAlgorithm_Overdu
 
 export interface CampaignResult {
   clients: ScoredClient[];
+  deselectedClients: ScoredClient[];
   totalAvailableClients: number;
 }
 
@@ -24,7 +25,6 @@ export async function selectClientsForSMS_Mass(
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
     .neq('sms_subscribed', false)
-    .gt('last_appt', oneAndHalfYearsAgo.toISOString())
     .gt('total_appointments', 0)
 
   const { data: clients, error: queryError } = await query
@@ -34,17 +34,21 @@ export async function selectClientsForSMS_Mass(
   }
 
   if (!clients) {
-    throw new Error('Clients query returned null');
+    throw new Error('Clients query returned null')
   }
 
-  const totalAvailableClients = clients.length;
+  const totalAvailableClients = clients.length
 
-  if (!clients || clients.length === 0) {
-    return { clients: [], totalAvailableClients: 0 }
+  if (clients.length === 0) {
+    return {
+      clients: [],
+      deselectedClients: [],
+      totalAvailableClients: 0,
+    }
   }
 
   // Fetch selected_clients and deselected_clients if messageId is provided
-  let selectedClients: any[] = []
+  let selectedClients: ScoredClient[] = []
   let deselectedPhones: string[] = []
 
   if (messageId) {
@@ -60,46 +64,61 @@ export async function selectClientsForSMS_Mass(
     }
   }
 
-  // Map each client to include score and days_since_last_visit
+  // Score all clients
   const today = new Date()
   const scoredClients: ScoredClient[] = clients.map(client =>
     scoreClientForHoliday(client, today)
   )
 
-  // Remove deselected clients first
+  // Remove manually deselected phones + ensure phone exists
   const filteredClients = scoredClients.filter(
     client =>
       client.phone_normalized !== null &&
       !deselectedPhones.includes(client.phone_normalized)
-  );
+  )
 
-  // FINAL STEP: Sort alphabetically by full name (first + last, case-insensitive)
+  // Sort alphabetically by full name
   const sortedClients = filteredClients.toSorted((a, b) => {
     const aFullName = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase()
     const bFullName = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase()
-    
     return aFullName.localeCompare(bFullName)
   })
 
-  // Calculate how many algorithm clients we need after accounting for selected clients
+  // Account for pre-selected clients
   const selectedCount = selectedClients.length
   const algorithmLimit = Math.max(0, limit - selectedCount)
 
-  // Take only what we need from algorithm
   const algorithmClients = sortedClients.slice(0, algorithmLimit)
 
-  // Combine selected clients (already scored) with algorithm clients
-  const finalClients = [...selectedClients, ...algorithmClients]
+  const finalClients: ScoredClient[] = [
+    ...selectedClients,
+    ...algorithmClients,
+  ]
+
+  // --- NEW: compute deselected as set difference ---
+
+  const finalPhoneSet = new Set(
+    finalClients
+      .map(c => c.phone_normalized)
+      .filter((p): p is string => !!p)
+  )
+
+  const deselectedClients = scoredClients.filter(
+    c => !c.phone_normalized || !finalPhoneSet.has(c.phone_normalized)
+  )
 
   return {
     clients: finalClients,
-    totalAvailableClients: totalAvailableClients
+    deselectedClients,
+    totalAvailableClients,
   }
 }
 
-function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient {
+function scoreClientForHoliday(
+  client: AcuityClient,
+  today: Date
+): ScoredClient {
   const lastApptDate = client.last_appt ? new Date(client.last_appt) : null
-  const lastSmsSentDate = client.date_last_sms_sent ? new Date(client.date_last_sms_sent) : null
 
   if (!lastApptDate) {
     return {
@@ -115,7 +134,6 @@ function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient 
     (today.getTime() - lastApptDate.getTime()) / (1000 * 60 * 60 * 24)
   )
 
-  // Clamp to 0 minimum
   if (daysSinceLastVisit < 0) daysSinceLastVisit = 0
 
   const MAX_SCORE = 240

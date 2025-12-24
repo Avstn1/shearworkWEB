@@ -53,6 +53,7 @@ export default function SMSCampaigns() {
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false);
   const [previewClients, setPreviewClients] = useState<PreviewClient[]>([]);
+  const [deselectedPreviewClients, setDeselectedPreviewClients] = useState<PreviewClient[]>([]);
   const [previewStats, setPreviewStats] = useState<PreviewStats | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewCounts, setPreviewCounts] = useState<Record<string, number>>({});
@@ -71,13 +72,19 @@ export default function SMSCampaigns() {
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('hard');
 
-  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass'>('campaign');
+  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | ''>('');
   const [maxClients, setMaxClients] = useState<number>(0);
 
   const [profile, setProfile] = useState<any>(null);
 
   const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
+
+  const [previewModalKey, setPreviewModalKey] = useState(0);
+
+  const [previewLimit, setPreviewLimit] = useState(250);
+
+  const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
 
   // Progress tracking state
   const [campaignProgress, setCampaignProgress] = useState<Record<string, {
@@ -259,6 +266,7 @@ export default function SMSCampaigns() {
             validationStatus: dbMsg.status,
             validationReason: undefined,
             isEditing: false,
+            algorithm: dbMsg.purpose,
           };
           
           return message;
@@ -280,26 +288,33 @@ export default function SMSCampaigns() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || '';
-      
-      console.log('🔍 Fetching preview with:', { limit, userId, algorithmType, messageId });
-      
-      const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}&messageId=${messageId}`);
-      
+
+      let response;
+      if (algorithmType === '') {
+        const { data: messageData } = await supabase
+          .from('sms_scheduled_messages')
+          .select('purpose, title')
+          .eq('id', messageId)
+          .single();
+
+        response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${messageData.purpose}&messageId=${messageId}`);
+      } else {
+        response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}&messageId=${messageId}`);
+      }
+
       if (!response.ok) {
         throw new Error('Failed to load preview');
       }
       
       const data = await response.json();
       
-      console.log('✅ API Response:', data);
-      
       if (data.success) {
         const clients = data.clients;
-        
-        console.log('📋 Setting preview clients:', clients.length);
         setMaxClients(data.maxClient || 0);
         setPreviewCounts(prev => ({ ...prev, [messageId]: clients.length }));
         setPreviewClients(clients);
+        setDeselectedPreviewClients(data.deselectedClients || []);
+        setTotalUnselectedClients(data.deselectedClients?.length || 0); 
         setPreviewStats(data.stats);
         setShowPreview(true);
       }
@@ -528,18 +543,6 @@ const confirmDelete = async () => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
 
-    console.log('💾 SAVE ATTEMPT:', {
-      msgId,
-      mode,
-      messageLength: msg.message?.length,
-      isValidated: msg.isValidated,
-      validationStatus: msg.validationStatus,
-      hour: msg.hour,
-      minute: msg.minute,
-      period: msg.period,
-      scheduleDate: msg.scheduleDate
-    });
-
     if (!msg.message.trim()) {
       toast.error('Please fill in message content');
       return;
@@ -597,7 +600,6 @@ const confirmDelete = async () => {
               .eq('user_id', user.id);
 
             setAvailableCredits(newAvailable);
-            console.log(`✅ Refunded ${refundAmount} credits when saving as draft`);
             
             // Log credit transaction
             await supabase
@@ -636,13 +638,6 @@ const confirmDelete = async () => {
       scheduleDateTime.setHours(hour24, msg.minute || 0, 0, 0);
       const scheduledFor = scheduleDateTime.toISOString();
 
-      console.log('📅 SCHEDULE CREATION:', {
-        userSelected: `${msg.scheduleDate} ${msg.hour}:${msg.minute} ${msg.period}`,
-        hour24,
-        scheduledFor,
-        localTime: scheduleDateTime.toString()
-      });
-
       const messageToSave = {
         id: msg.id,
         title: msg.title,
@@ -659,15 +654,11 @@ const confirmDelete = async () => {
         previewCount: mode === 'activate' ? previewCounts[msgId] : undefined,
       };
 
-      console.log('📤 SENDING TO API:', messageToSave);
-
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [messageToSave] }),
       });
-
-      console.log('📥 API RESPONSE STATUS:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -676,7 +667,6 @@ const confirmDelete = async () => {
       }
 
       const data = await response.json();
-      console.log('✅ API SUCCESS RESPONSE:', data);
 
       if (data.success) {
         // Only deduct credits on activation (not when saving as draft)
@@ -794,6 +784,16 @@ const confirmDelete = async () => {
       console.error('Test message error:', error);
       toast.error(error.message || 'Failed to send test message');
     }
+  };
+
+  const handleLoadPreview = async (messageId: string, limit: number) => {
+    setPreviewLimit(limit); // Store the limit
+    await loadClientPreview(messageId, limit);
+  };
+
+  const handleOpenModal = () => {
+    setModalKey(prev => prev + 1); // Force remount
+    setShowPreview(true);
   };
 
   if (isLoading) {
@@ -933,13 +933,31 @@ const confirmDelete = async () => {
       />
 
       <RecipientPreviewModal
+        key={previewModalKey}
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
+        onRefresh={async () => {
+          setShowPreview(false);
+          
+          // Wait for modal to close
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Reload the preview data with the correct limit
+          if (activePreviewMessageId) {
+            await loadClientPreview(activePreviewMessageId, previewLimit);
+          }
+          
+          // Increment key and reopen
+          setPreviewModalKey(prev => prev + 1);
+          setShowPreview(true);
+        }}
         messageTitle={messages.find(m => m.id === activePreviewMessageId)?.title || 'Message'}
         messageId={activePreviewMessageId}
         previewClients={previewClients}
+        deselectedPreviewClients={deselectedPreviewClients}
         previewStats={previewStats}
         maxClients={maxClients}
+        initialTotalUnselectedClients={totalUnselectedClients}
       />
 
       <DeleteMessageConfirmModal
@@ -985,6 +1003,7 @@ const confirmDelete = async () => {
                 maxClients={maxClients}
                 testMessagesUsed={testMessagesUsed}
                 profile={profile}
+                algorithm={msg.algorithm}
                 setAlgorithmType={setAlgorithmType}
                 availableCredits={availableCredits}
                 key={msg.id}

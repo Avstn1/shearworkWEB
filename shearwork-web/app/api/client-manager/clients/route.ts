@@ -238,7 +238,12 @@ async function handleClientRequest(req: Request, method: 'GET' | 'POST') {
     // Strip the '+' prefix from exclude phones to match database format
     const excludeSet = new Set(excludePhones.map(phone => phone.replace(/^\+/, '')));
     
-    clients = clients.filter((c) => !excludeSet.has(c.phone_normalized || ''));
+    clients = clients.filter(
+      (c) =>
+        c.phone_normalized !== null &&          // 🚫 remove no-phone clients
+        c.phone_normalized !== '' &&
+        !excludeSet.has(c.phone_normalized)
+    );
   }
 
   // 4️⃣ Final sort on aggregated (and filtered) data
