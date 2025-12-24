@@ -72,7 +72,7 @@ export default function SMSCampaigns() {
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('hard');
 
-  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | ''>('');
+  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'marketing'>('marketing');
   const [maxClients, setMaxClients] = useState<number>(0);
 
   const [profile, setProfile] = useState<any>(null);
@@ -290,14 +290,14 @@ export default function SMSCampaigns() {
       const userId = user?.id || '';
 
       let response;
-      if (algorithmType === '') {
+      if (algorithmType === 'marketing') {
         const { data: messageData } = await supabase
           .from('sms_scheduled_messages')
           .select('purpose, title')
           .eq('id', messageId)
           .single();
 
-        response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${messageData.purpose}&messageId=${messageId}`);
+        response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${messageData?.purpose}&messageId=${messageId}`);
       } else {
         response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}&messageId=${messageId}`);
       }
@@ -786,16 +786,6 @@ const confirmDelete = async () => {
     }
   };
 
-  const handleLoadPreview = async (messageId: string, limit: number) => {
-    setPreviewLimit(limit); // Store the limit
-    await loadClientPreview(messageId, limit);
-  };
-
-  const handleOpenModal = () => {
-    setModalKey(prev => prev + 1); // Force remount
-    setShowPreview(true);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -1003,7 +993,6 @@ const confirmDelete = async () => {
                 maxClients={maxClients}
                 testMessagesUsed={testMessagesUsed}
                 profile={profile}
-                algorithm={msg.algorithm}
                 setAlgorithmType={setAlgorithmType}
                 availableCredits={availableCredits}
                 key={msg.id}

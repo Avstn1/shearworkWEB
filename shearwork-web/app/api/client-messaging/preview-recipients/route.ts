@@ -102,7 +102,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       clients: selectedClients,
-      deselectedClients: result.deselectedClients,
+      deselectedClients: result?.deselectedClients,
       phoneNumbers,
       stats,
       timestamp: new Date().toISOString(),

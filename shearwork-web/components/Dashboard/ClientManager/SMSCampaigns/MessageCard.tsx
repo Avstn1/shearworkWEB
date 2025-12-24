@@ -30,7 +30,6 @@ interface CampaignProgress {
 interface MessageCardProps {
   maxClients: number;
   profile: any; 
-  algorithm: string;
   setAlgorithmType: (type: 'campaign' | 'mass') => void;
   availableCredits?: number;
   message: SMSMessage;
@@ -62,7 +61,6 @@ interface MessageCardProps {
 export function MessageCard({
   maxClients,
   profile,
-  algorithm,
   setAlgorithmType,
   availableCredits,
   message: msg,
@@ -476,7 +474,6 @@ export function MessageCard({
             {/* RIGHT: Schedule Settings (50%) */}
             <MessageSchedule
               maxClients={maxClients}
-              algorithm={algorithm}
               setAlgorithmType={setAlgorithmType}
               availableCredits={availableCredits}
               message={msg}

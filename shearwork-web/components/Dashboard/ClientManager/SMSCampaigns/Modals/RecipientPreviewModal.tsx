@@ -59,7 +59,7 @@ interface RecipientPreviewModalProps {
   initialTotalUnselectedClients: number;
 }
 
-type TabType = "client-list" | "deselected";
+type TabType = "client-list" | "deselected" | "selected";
 
 export default function RecipientPreviewModal({
   isOpen,
@@ -84,7 +84,7 @@ export default function RecipientPreviewModal({
   const [batchActionType, setBatchActionType] = useState<'select' | 'deselect' | null>(null);
 
   // All clients pagination
-  const [allClients, setAllClients] = useState<AllClient[]>([]);
+  const [allClients, setAllClients] = useState<PreviewClient[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loadingAllClients, setLoadingAllClients] = useState(false);
@@ -213,7 +213,7 @@ export default function RecipientPreviewModal({
   }, [activeTab]);
 
   useEffect(() => {
-    loadAllClients(otherClientsPage);
+    loadAllClients();
   }, [otherClientsPage]);
 
   useEffect(() => {
@@ -368,11 +368,11 @@ export default function RecipientPreviewModal({
       const clients = deselectedPreviewClients || [];
 
       // Put manually deselected ones at the top
-      const manuallyDeselected = clients.filter((c: AllClient) =>
+      const manuallyDeselected = clients.filter((c: any) =>
         deselectedClients.includes(c.phone_normalized || '')
       );
 
-      const notDeselected = clients.filter((c: AllClient) =>
+      const notDeselected = clients.filter((c: any) =>
         !deselectedClients.includes(c.phone_normalized || '')
       );
 
@@ -1197,9 +1197,9 @@ export default function RecipientPreviewModal({
                               </div>
                               <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
                                 <span>
-                                  {client.phone_normalized ||
-                                    client.phone ||
-                                    "No phone"}
+                                  {(client.phone_normalized || 
+                                    ('phone' in client ? client.phone : '') || 
+                                    "No phone") as React.ReactNode}
                                 </span>
                                 {client.last_appt && (
                                   <>

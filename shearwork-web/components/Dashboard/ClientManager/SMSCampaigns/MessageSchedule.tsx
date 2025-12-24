@@ -12,7 +12,6 @@ interface MessageScheduleProps {
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
   onCancelEdit: (id: string) => void;
   setAlgorithmType: (type: 'campaign' | 'mass') => void;
-  algorithm: string;
   previewCount?: number;
   availableCredits?: number; 
 }
@@ -20,7 +19,6 @@ interface MessageScheduleProps {
 // Right side of the MessageCard
 export function MessageSchedule({
   maxClients,
-  algorithm,
   setAlgorithmType,
   message: msg,
   isSaving,
