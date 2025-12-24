@@ -120,7 +120,7 @@ async function handler(request: Request) {
 
       const apiUrl = scheduledMessage.visiting_type 
         ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}&algorithm=${algorithm}`
-        : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}`;
+        : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}&messageId=${messageId}`;
         
       console.log('🔗 API URL:', apiUrl);
       
