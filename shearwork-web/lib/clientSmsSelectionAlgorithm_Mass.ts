@@ -11,13 +11,13 @@ export async function selectClientsForSMS_Mass(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
-  visitingType?: string
+  messageId?: string
 ): Promise<CampaignResult> {
   // Calculate 1.5 years ago (18 months)
   const oneAndHalfYearsAgo = new Date()
   oneAndHalfYearsAgo.setMonth(oneAndHalfYearsAgo.getMonth() - 18)
 
-  let query = supabase
+  const query = supabase
     .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
@@ -27,19 +27,37 @@ export async function selectClientsForSMS_Mass(
     .gt('last_appt', oneAndHalfYearsAgo.toISOString())
     .gt('total_appointments', 0)
 
-  // Optional visiting_type filter
-  if (visitingType) {
-    query = query.eq('visiting_type', visitingType)
+  const { data: clients, error: queryError } = await query
+
+  if (queryError) {
+    throw new Error(`Failed to fetch clients: ${queryError.message}`)
   }
 
-  const { data: clients, error } = await query
-
-  if (error) {
-    throw new Error(`Failed to fetch clients: ${error.message}`)
+  if (!clients) {
+    throw new Error('Clients query returned null');
   }
+
+  const totalAvailableClients = clients.length;
 
   if (!clients || clients.length === 0) {
     return { clients: [], totalAvailableClients: 0 }
+  }
+
+  // Fetch selected_clients and deselected_clients if messageId is provided
+  let selectedClients: any[] = []
+  let deselectedPhones: string[] = []
+
+  if (messageId) {
+    const { data: messageData } = await supabase
+      .from('sms_scheduled_messages')
+      .select('selected_clients, deselected_clients')
+      .eq('id', messageId)
+      .single()
+
+    if (messageData) {
+      selectedClients = messageData.selected_clients || []
+      deselectedPhones = messageData.deselected_clients || []
+    }
   }
 
   // Map each client to include score and days_since_last_visit
@@ -48,19 +66,34 @@ export async function selectClientsForSMS_Mass(
     scoreClientForHoliday(client, today)
   )
 
+  // Remove deselected clients first
+  const filteredClients = scoredClients.filter(
+    client =>
+      client.phone_normalized !== null &&
+      !deselectedPhones.includes(client.phone_normalized)
+  );
+
   // FINAL STEP: Sort alphabetically by full name (first + last, case-insensitive)
-  scoredClients.sort((a, b) => {
+  const sortedClients = filteredClients.toSorted((a, b) => {
     const aFullName = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase()
     const bFullName = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase()
     
     return aFullName.localeCompare(bFullName)
   })
 
-  console.log(`Total available clients: ${scoredClients.length}`)
+  // Calculate how many algorithm clients we need after accounting for selected clients
+  const selectedCount = selectedClients.length
+  const algorithmLimit = Math.max(0, limit - selectedCount)
+
+  // Take only what we need from algorithm
+  const algorithmClients = sortedClients.slice(0, algorithmLimit)
+
+  // Combine selected clients (already scored) with algorithm clients
+  const finalClients = [...selectedClients, ...algorithmClients]
 
   return {
-    clients: scoredClients,
-    totalAvailableClients: scoredClients.length
+    clients: finalClients,
+    totalAvailableClients: totalAvailableClients
   }
 }
 

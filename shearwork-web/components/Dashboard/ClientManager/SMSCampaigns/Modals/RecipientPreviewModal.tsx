@@ -99,6 +99,10 @@ export default function RecipientPreviewModal({
     any | null
   >(null);
 
+  const [clientListPage, setClientListPage] = useState(1);
+  const [clientListTotalPages, setClientListTotalPages] = useState(1);
+  const CLIENT_LIST_PER_PAGE = 100;
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -136,6 +140,51 @@ export default function RecipientPreviewModal({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveTab("client-list");
+      setSearchQuery("");
+      setDebouncedSearch("");
+      setCurrentPage(1);
+      setClientListPage(1); // Add this line
+    }
+  }, [isOpen]);
+
+  // Add this useEffect after your other useEffects
+  useEffect(() => {
+    if (activeTab === "client-list") {
+      const selectedPhones = new Set(
+        selectedClients.map((c) => c.phone_normalized),
+      );
+
+      const filteredPreview = previewClients.filter((client) => {
+        const isDeselected = deselectedClients.includes(client.phone_normalized);
+
+        if (debouncedSearch) {
+          const search = debouncedSearch.toLowerCase();
+          const fullName = `${client.first_name || ""} ${client.last_name || ""}`.toLowerCase();
+          const phone = client.phone_normalized.toLowerCase();
+          const matchesSearch = fullName.includes(search) || phone.includes(search);
+          return !isDeselected && matchesSearch;
+        }
+
+        return !isDeselected;
+      });
+
+      const selectedFromPreview = filteredPreview.filter((c) =>
+        selectedPhones.has(c.phone_normalized),
+      );
+      const notSelected = filteredPreview.filter(
+        (c) => !selectedPhones.has(c.phone_normalized),
+      );
+
+      const allFilteredClients = [...selectedFromPreview, ...notSelected];
+      const totalPages = Math.max(1, Math.ceil(allFilteredClients.length / CLIENT_LIST_PER_PAGE));
+      
+      setClientListTotalPages(totalPages);
+    }
+  }, [activeTab, previewClients, deselectedClients, selectedClients, debouncedSearch, CLIENT_LIST_PER_PAGE]);
+
   const loadDeselectedClients = async () => {
     if (!messageId) return;
 
@@ -144,13 +193,14 @@ export default function RecipientPreviewModal({
         .from("sms_scheduled_messages")
         .select("deselected_clients")
         .eq("id", messageId)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single()
 
       if (error) throw error;
 
       setDeselectedClients(data?.deselected_clients || []);
     } catch (error) {
       console.error("Failed to load deselected clients:", error);
+      // Don't show error to user for new messages
     }
   };
 
@@ -162,7 +212,7 @@ export default function RecipientPreviewModal({
         .from("sms_scheduled_messages")
         .select("selected_clients")
         .eq("id", messageId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -175,20 +225,32 @@ export default function RecipientPreviewModal({
   const loadAllClients = async () => {
     setLoadingAllClients(true);
     try {
+      // Get all phone numbers from preview clients (client list) to exclude
+      const excludePhones = previewClients.map((c) => c.phone_normalized);
+
       const response = await fetch(
         `/api/client-manager/clients?page=${currentPage}&limit=100&search=${encodeURIComponent(debouncedSearch)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            exclude: excludePhones
+          })
+        }
       );
 
       if (!response.ok) throw new Error("Failed to load clients");
 
       const data = await response.json();
 
-      // Sort clients with selected clients at the top
+      // Clients are already filtered by the API
       const clients = data.clients || [];
+
       const selectedPhones = new Set(
         selectedClients.map((c) => c.phone_normalized),
       );
 
+      // Sort with selected clients at the top
       const sortedClients = [
         ...clients.filter((c: AllClient) =>
           selectedPhones.has(c.phone_normalized || ""),
@@ -208,24 +270,59 @@ export default function RecipientPreviewModal({
     }
   };
 
-  const handleDeselectRequest = (phone: string, name: string) => {
+  // Add this helper function near the top of your component, after the state declarations
+  const checkMessageExistsInDatabase = async (): Promise<boolean> => {
+    if (!messageId) {
+      toast.error("Please save this message as a draft first");
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("sms_scheduled_messages")
+        .select("id")
+        .eq("id", messageId)
+        .maybeSingle();
+
+      if (error || !data) {
+        toast.error("Please save this message as a draft first");
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      toast.error("Please save this message as a draft first");
+      return false;
+    }
+  };
+
+  // Then update your handler functions to use it:
+  const handleDeselectRequest = async (phone: string, name: string) => {
+    if (!(await checkMessageExistsInDatabase())) return;
+    
     setPendingDeselectPhone(phone);
     setPendingDeselectName(name);
     setShowDeselectModal(true);
   };
 
-  const handleReselectRequest = (phone: string, name: string) => {
+  const handleReselectRequest = async (phone: string, name: string) => {
+    if (!(await checkMessageExistsInDatabase())) return;
+    
     setPendingReselectPhone(phone);
     setPendingReselectName(name);
     setShowReselectModal(true);
   };
 
-  const handleSelectRequest = (client: AllClient) => {
+  const handleSelectRequest = async (client: AllClient) => {
+    if (!(await checkMessageExistsInDatabase())) return;
+    
     setPendingSelectClient(client);
     setShowSelectModal(true);
   };
 
-  const handleUnselectRequest = (client: any) => {
+  const handleUnselectRequest = async (client: any) => {
+    if (!(await checkMessageExistsInDatabase())) return;
+    
     setPendingUnselectClient(client);
     setShowUnselectModal(true);
   };
@@ -413,7 +510,11 @@ export default function RecipientPreviewModal({
         (c) => !selectedPhones.has(c.phone_normalized),
       );
 
-      return [...selectedFromPreview, ...notSelected];
+      const allFilteredClients = [...selectedFromPreview, ...notSelected];
+      
+      // Return paginated results
+      const start = (clientListPage - 1) * CLIENT_LIST_PER_PAGE;
+      return allFilteredClients.slice(start, start + CLIENT_LIST_PER_PAGE);
     }
 
     // For selected tab, filter all clients
@@ -525,7 +626,7 @@ export default function RecipientPreviewModal({
                     : "text-[#bdbdbd] hover:text-white"
                 }`}
               >
-                Selected Clients
+                Deselected Clients
                 <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
                   {selectedClients.length}
                 </span>
@@ -682,28 +783,51 @@ export default function RecipientPreviewModal({
             </div>
 
             {/* Clients List */}
-            <div className="overflow-y-auto flex-1">
-              <div className="p-6">
-                {/* Pagination for Selected tab */}
-                {activeTab === "selected" && totalPages > 1 && (
-                  <div className="flex items-center justify-between mb-4">
+            <div className="overflow-y-auto flex-1 relative">
+              {/* Sticky Pagination - Client List */}
+              {activeTab === "client-list" && clientListTotalPages > 1 && (
+                <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
+                  <div className="flex items-center justify-between">
                     <p className="text-sm text-[#bdbdbd]">
-                      Page {currentPage} of {totalPages}
+                      Page {clientListPage} of {clientListTotalPages} • {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} on this page
                     </p>
                     <div className="flex gap-2">
                       <button
-                        onClick={() =>
-                          setCurrentPage((p) => Math.max(1, p - 1))
-                        }
+                        onClick={() => setClientListPage((p) => Math.max(1, p - 1))}
+                        disabled={clientListPage === 1}
+                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setClientListPage((p) => Math.min(clientListTotalPages, p + 1))}
+                        disabled={clientListPage === clientListTotalPages}
+                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sticky Pagination - Selected Clients */}
+              {activeTab === "selected" && totalPages > 1 && (
+                <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-[#bdbdbd]">
+                      Page {currentPage} of {totalPages} • {allClients.length} client{allClients.length !== 1 ? "s" : ""} on this page
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
                         className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() =>
-                          setCurrentPage((p) => Math.min(totalPages, p + 1))
-                        }
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
                         className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -711,8 +835,10 @@ export default function RecipientPreviewModal({
                       </button>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
+              <div className="p-6">
                 {loadingAllClients && activeTab === "selected" ? (
                   <div className="text-center py-12">
                     <div className="w-8 h-8 border-2 border-sky-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -1010,7 +1136,7 @@ export default function RecipientPreviewModal({
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         This client will not appear on the Client List page
-                        but they will recieve your message.
+                        but they will receive your message.
                       </p>
                     </div>
                   </div>

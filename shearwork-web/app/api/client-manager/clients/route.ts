@@ -88,6 +88,14 @@ function matchesSearch(c: AggregatedClient, raw: string): boolean {
 }
 
 export async function GET(req: Request) {
+  return handleClientRequest(req, 'GET');
+}
+
+export async function POST(req: Request) {
+  return handleClientRequest(req, 'POST');
+}
+
+async function handleClientRequest(req: Request, method: 'GET' | 'POST') {
   const { user, supabase } = await getAuthenticatedUser(req);
 
   if (!user || !supabase) {
@@ -95,6 +103,24 @@ export async function GET(req: Request) {
   }
 
   const url = new URL(req.url);
+  
+  // Parse request body for POST
+  let excludePhones: string[] = [];
+  if (method === 'POST') {
+    try {
+      const body = await req.json();
+      excludePhones = body.exclude || [];
+    } catch (e) {
+      // If body parsing fails, continue with empty array
+    }
+  } else {
+    // GET: Use query params (for small lists or backward compatibility)
+    const excludeParam = url.searchParams.get('exclude')?.trim() ?? '';
+    excludePhones = excludeParam
+      ? excludeParam.split(',').map(phone => phone.trim()).filter(Boolean)
+      : [];
+  }
+  
   const search = url.searchParams.get('search')?.trim() ?? '';
   const sort: SortField =
     ((url.searchParams.get('sort') as SortField | null) ?? 'last_appt');
@@ -205,6 +231,16 @@ export async function GET(req: Request) {
     clients = clients.filter((c) => matchesSearch(c, search));
   }
 
+  let clientListLength = 0;
+  if (method === 'POST' && excludePhones.length > 0) {
+    clientListLength = clients.length;
+    
+    // Strip the '+' prefix from exclude phones to match database format
+    const excludeSet = new Set(excludePhones.map(phone => phone.replace(/^\+/, '')));
+    
+    clients = clients.filter((c) => !excludeSet.has(c.phone_normalized || ''));
+  }
+
   // 4️⃣ Final sort on aggregated (and filtered) data
   clients.sort((a, b) => {
     let cmp = 0;
@@ -240,12 +276,15 @@ export async function GET(req: Request) {
     return dir === 'asc' ? cmp : -cmp;
   });
 
-  // ✅ 5️⃣ Paginate AFTER search + dedupe + sort
+  // ✅ 5️⃣ Paginate AFTER search + dedupe + sort + exclude
   const total = clients.length;
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const start = (safePage - 1) * limit;
   const paged = clients.slice(start, start + limit);
+
+  console.log(`Total clients ${total}`)
+  console.log(`Total clients length ${clientListLength}`)
 
   return NextResponse.json({
     clients: paged,
@@ -253,5 +292,6 @@ export async function GET(req: Request) {
     limit,
     total,
     totalPages,
+    clientListLength, 
   });
 }

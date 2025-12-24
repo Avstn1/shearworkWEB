@@ -34,16 +34,18 @@ export async function GET(request: Request) {
     // Select clients using the algorithm
     const algorithm = searchParams.get('algorithm')
 
+    const messageId = searchParams.get('messageId')
+
     let selectedClients;
     let result;
 
     if (algorithm === 'overdue') {
       selectedClients = await selectClientsForSMS_Overdue(supabase, userId, limit, visitingType || undefined)
     } else if (algorithm === 'mass') {
-       result = await selectClientsForSMS_Mass(supabase, userId, limit || undefined);
+       result = await selectClientsForSMS_Mass(supabase, userId, limit || undefined, messageId ?? undefined);
       selectedClients = result.clients;
     } else {
-      result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined);
+      result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined, messageId ?? undefined);
       selectedClients = result.clients;
     }
 

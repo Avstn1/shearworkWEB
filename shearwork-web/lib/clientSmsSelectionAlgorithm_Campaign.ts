@@ -34,43 +34,74 @@ export async function selectClientsForSMS_Campaign(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
+  messageId?: string
 ): Promise<CampaignResult> {
   const today = new Date();
+  
+  // Fetch selected_clients and deselected_clients if messageId is provided
+  let selectedClients: any[] = []
+  let deselectedPhones: string[] = []
+
+  if (messageId) {
+    const { data: messageData } = await supabase
+      .from('sms_scheduled_messages')
+      .select('selected_clients, deselected_clients')
+      .eq('id', messageId)
+      .single()
+
+    if (messageData) {
+      selectedClients = messageData.selected_clients || []
+      deselectedPhones = messageData.deselected_clients || []
+    }
+  }
   
   // PHASE 1: Get clients with STRICT criteria (original algorithm)
   const strictClients = await getStrictClients(supabase, userId, today);
   
+  // Remove deselected clients from strict list
+  const filteredStrictClients = strictClients.filter(
+    client => !deselectedPhones.includes(client.phone_normalized || '')
+  );
+  
   // Boost strict clients' scores by 500 to ensure they're prioritized
-  const boostedStrictClients = strictClients.map(client => ({
+  const boostedStrictClients = filteredStrictClients.map(client => ({
     ...client,
     score: client.score + 500
   }));
   
-  // If we have enough, return them
-  if (boostedStrictClients.length >= limit) {
-    const selected = boostedStrictClients.slice(0, limit);
+  // Calculate how many algorithm clients we need after accounting for selected clients
+  const selectedCount = selectedClients.length;
+  const algorithmLimit = Math.max(0, limit - selectedCount);
+  
+  // If we have enough strict clients, return them with selected clients
+  if (boostedStrictClients.length >= algorithmLimit) {
+    const algorithmClients = boostedStrictClients.slice(0, algorithmLimit);
     
     // FINAL STEP: Convert negative overdue to 0
-    const finalSelected = selected.map(client => ({
+    const finalAlgorithmClients = algorithmClients.map(client => ({
       ...client,
       days_overdue: Math.max(0, client.days_overdue)
     }));
 
-    console.log(`Total available clients: ${boostedStrictClients.length}`)
-    
+    const finalClients = [...selectedClients, ...finalAlgorithmClients];
+
     return {
-      clients: finalSelected,
-      totalAvailableClients: boostedStrictClients.length
+      clients: finalClients,
+      totalAvailableClients: boostedStrictClients.length + selectedCount
     };
   }
   
   // PHASE 2: Need more clients - use LENIENT criteria
   const lenientClients = await getLenientClients(supabase, userId, today);
   
+  // Remove deselected clients from lenient list
+  const filteredLenientClients = lenientClients.filter(
+    client => !deselectedPhones.includes(client.phone_normalized || '')
+  );
+  
   // Remove duplicates - exclude anyone already in strict list
   const strictPhones = new Set(boostedStrictClients.map(c => c.phone_normalized));
-  const beforeDedup = lenientClients.length;
-  const uniqueLenientClients = lenientClients.filter(
+  const uniqueLenientClients = filteredLenientClients.filter(
     client => !strictPhones.has(client.phone_normalized)
   );
   
@@ -80,21 +111,21 @@ export async function selectClientsForSMS_Campaign(
   // Sort by score (highest first)
   allClients.sort((a, b) => b.score - a.score);
   
-  // Take top N
-  const selectedClients = allClients.slice(0, limit);
+  // Take top N for algorithm
+  const algorithmClients = allClients.slice(0, algorithmLimit);
   
   // FINAL STEP: Convert negative overdue to 0
-  const finalSelectedClients = selectedClients.map(client => ({
+  const finalAlgorithmClients = algorithmClients.map(client => ({
     ...client,
     days_overdue: Math.max(0, client.days_overdue)
   }));
   
-  const strictSelected = finalSelectedClients.filter(c => c.score >= 500).length;
-  const lenientSelected = finalSelectedClients.length - strictSelected;
+  // Combine selected clients with algorithm clients
+  const finalClients = [...selectedClients, ...finalAlgorithmClients];
   
   return {
-    clients: finalSelectedClients,
-    totalAvailableClients: allClients.length
+    clients: finalClients,
+    totalAvailableClients: allClients.length + selectedCount
   };
 }
 

@@ -37,7 +37,7 @@ export function MessageSchedule({
   );
   
   // Check if it's a predefined limit or special case
-  const isPredefinedLimit = [100, 250, 500, 750, 1000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
+  const isPredefinedLimit = [100, 250, 500, 750, 1000, 1500, 2000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
   const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
 
   // Get minimum date (today)
@@ -53,27 +53,27 @@ export function MessageSchedule({
     return Math.min(availableCredits, maxClients);
   };
 
-const handleLimitChange = (value: number) => {
-  const maxLimit = getMaxLimit();
-  
-  if (value === -1) {
-    // Custom selected
-    setShowCustomInput(true);
-    const newLimit = customLimit && parseInt(customLimit) >= 100 ? parseInt(customLimit) : 100;
-    setCustomLimit(newLimit.toString());
-    onUpdate(msg.id, { clientLimit: Math.min(newLimit, maxLimit) });
-  } else if (value === -2) {
-    // Max selected - use all available credits (or max for mass)
-    setShowCustomInput(false);
-    setCustomLimit('');
-    onUpdate(msg.id, { clientLimit: maxLimit });
-  } else {
-    // Predefined limit selected - just use the value directly
-    setShowCustomInput(false);
-    setCustomLimit('');
-    onUpdate(msg.id, { clientLimit: value }); // Remove Math.min here
-  }
-};
+  const handleLimitChange = (value: number) => {
+    const maxLimit = getMaxLimit();
+    
+    if (value === -1) {
+      // Custom selected
+      setShowCustomInput(true);
+      const newLimit = customLimit && parseInt(customLimit) >= 100 ? parseInt(customLimit) : 100;
+      setCustomLimit(newLimit.toString());
+      onUpdate(msg.id, { clientLimit: Math.min(newLimit, maxLimit) });
+    } else if (value === -2) {
+      // Max selected - use all available credits (or max for mass)
+      setShowCustomInput(false);
+      setCustomLimit('');
+      onUpdate(msg.id, { clientLimit: maxLimit });
+    } else {
+      // Predefined limit selected - just use the value directly
+      setShowCustomInput(false);
+      setCustomLimit('');
+      onUpdate(msg.id, { clientLimit: value }); // Remove Math.min here
+    }
+  };
 
   const handleCustomLimitChange = (value: string) => {
     setCustomLimit(value);
@@ -151,8 +151,15 @@ const handleLimitChange = (value: number) => {
             Maximum Number of Clients to Message.
           </label>
         </div>
+
         <select
-          value={showCustomInput ? -1 : msg.clientLimit === getMaxLimit() && getMaxLimit() > 1000 ? -2 : msg.clientLimit}
+          value={
+            showCustomInput 
+              ? -1 
+              : msg.clientLimit === getMaxLimit() 
+                ? -2 
+                : msg.clientLimit
+          }
           onChange={(e) => handleLimitChange(parseInt(e.target.value))}
           disabled={!msg.isEditing}
           className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
@@ -160,7 +167,7 @@ const handleLimitChange = (value: number) => {
           }`}
         >
           {/* Dynamic predefined limits */}
-          {[100, 250, 500, 750, 1000].map((limit) => {
+          {[100, 250, 500, 750, 1000, 1500, 2000].map((limit) => {
             const effectiveMax = Math.min(getMaxLimit(), maxClients);
             
             // Only show limits that are less than effective max
@@ -203,8 +210,15 @@ const handleLimitChange = (value: number) => {
               />
             </div>
             {previewCount > 0 && (
-              <p className="text-xs text-[#bdbdbd] mt-1">
-                {previewCount} clients will receive this message
+              <p className="text-xs text-[#bdbdbd] mt-2">
+                {previewCount} clients will receive this message.
+                <button
+                  type="button"
+                  onClick={() => setShowLimitModal(true)}
+                  className="ml-1.5 text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
+                >
+                  See why
+                </button>
               </p>
             )}
           </div>

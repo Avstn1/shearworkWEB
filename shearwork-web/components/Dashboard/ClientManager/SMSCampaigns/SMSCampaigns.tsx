@@ -280,7 +280,7 @@ export default function SMSCampaigns() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const userId = user?.id || '';
-        const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}`);
+        const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}&messageId=${messageId}`);
         
         if (!response.ok) {
           throw new Error('Failed to load preview');
