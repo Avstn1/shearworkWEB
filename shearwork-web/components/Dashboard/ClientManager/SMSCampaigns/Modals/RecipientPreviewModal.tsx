@@ -277,9 +277,27 @@ export default function RecipientPreviewModal({
         setSelectedClients(updatedSelected);
         toast.success(`${phonesToProcess.length} client${phonesToProcess.length > 1 ? 's' : ''} deselected`);
       } else {
-        // Add to selected list
+        // When selecting from Other Clients tab
+        const phonesToProcess = Array.from(batchSelectedForAction);
+        
+        // Remove from deselected list
+        const updatedDeselected = deselectedClients.filter(
+          phone => !phonesToProcess.includes(phone)
+        );
+
+        // Only add to selected_clients if they were NOT manually deselected
+        // (if they're in deselectedClients, they were originally in the algorithm)
         const clientsToAdd = allClients
-          .filter(c => phonesToProcess.includes(c.phone_normalized || ''))
+          .filter(c => {
+            const phone = c.phone_normalized || '';
+            const wasManuallyDeselected = deselectedClients.includes(phone);
+            
+            console.log(`Phone ${phone}: wasManuallyDeselected=${wasManuallyDeselected}`);
+            
+            // If they were manually deselected, don't add to selected_clients
+            // If they were never in algorithm, add to selected_clients
+            return phonesToProcess.includes(phone) && !wasManuallyDeselected;
+          })
           .map(c => ({
             client_id: c.client_id,
             first_name: c.first_name,
@@ -287,17 +305,23 @@ export default function RecipientPreviewModal({
             phone_normalized: c.phone_normalized,
           }));
 
+        console.log("Clients to add:", clientsToAdd);
+
         const updatedSelected = [...selectedClients, ...clientsToAdd];
 
         const { error } = await supabase
           .from("sms_scheduled_messages")
-          .update({ selected_clients: updatedSelected })
+          .update({ 
+            selected_clients: updatedSelected,
+            deselected_clients: updatedDeselected
+          })
           .eq("id", messageId)
           .eq("user_id", user.id);
 
         if (error) throw error;
 
         setSelectedClients(updatedSelected);
+        setDeselectedClients(updatedDeselected);
         toast.success(`${phonesToProcess.length} client${phonesToProcess.length > 1 ? 's' : ''} selected`);
       }
 
@@ -497,44 +521,69 @@ export default function RecipientPreviewModal({
     }
   };
 
-  const confirmReselect = async () => {
-    if (!pendingReselectPhone || !messageId) return;
+const confirmReselect = async () => {
+  if (!pendingReselectPhone || !messageId) return;
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
-      const updatedDeselected = deselectedClients.filter(
-        (phone) => phone !== pendingReselectPhone,
-      );
+    console.log("Removing phone:", pendingReselectPhone);
+    console.log("Current deselected:", deselectedClients);
+    console.log("Current selected:", selectedClients);
 
-      const { error } = await supabase
-        .from("sms_scheduled_messages")
-        .update({ deselected_clients: updatedDeselected })
-        .eq("id", messageId)
-        .eq("user_id", user.id);
+    // Remove from deselected list
+    const updatedDeselected = deselectedClients.filter(
+      (phone) => phone !== pendingReselectPhone,
+    );
 
-      if (error) throw error;
+    // ALSO remove from selected list if they're there
+    const updatedSelected = selectedClients.filter(
+      (c) => c.phone_normalized !== pendingReselectPhone
+    );
 
-      setDeselectedClients(updatedDeselected);
-      
-      // Reload the deselected clients tab to update the list
-      if (activeTab === "deselected") {
-        loadAllClients();
-      }
-      
-      toast.success("Client removed from deselected list");
-    } catch (error) {
-      console.error("Failed to reselect client:", error);
-      toast.error("Failed to reselect client");
-    } finally {
-      setShowReselectModal(false);
-      setPendingReselectPhone(null);
-      setPendingReselectName("");
+    console.log("Updated deselected:", updatedDeselected);
+    console.log("Updated selected:", updatedSelected);
+
+    const { error } = await supabase
+      .from("sms_scheduled_messages")
+      .update({ 
+        deselected_clients: updatedDeselected,
+        selected_clients: updatedSelected
+      })
+      .eq("id", messageId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Database error:", error);
+      throw error;
     }
-  };
+
+    console.log("Database updated successfully");
+
+    setDeselectedClients(updatedDeselected);
+    setSelectedClients(updatedSelected);
+    
+    toast.success("Client removed from deselected list");
+    
+    onClose();
+    setTimeout(() => {
+      if (onRefresh) {
+        onRefresh();
+      }
+    }, 100);
+    
+  } catch (error) {
+    console.error("Failed to reselect client:", error);
+    toast.error("Failed to reselect client");
+  } finally {
+    setShowReselectModal(false);
+    setPendingReselectPhone(null);
+    setPendingReselectName("");
+  }
+};
 
   const confirmSelect = async () => {
     if (!pendingSelectClient || !messageId) return;
