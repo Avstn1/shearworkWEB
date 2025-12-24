@@ -300,7 +300,7 @@ export function MessageCard({
                   ) : (
                     <Users className="w-3 h-3" />
                   )}
-                  Who will recieve this message?
+                  Who will receive this message?
                 </button>
               </div>
             )}

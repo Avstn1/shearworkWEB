@@ -34,16 +34,18 @@ export async function GET(request: Request) {
     // Select clients using the algorithm
     const algorithm = searchParams.get('algorithm')
 
+    const messageId = searchParams.get('messageId')
+
     let selectedClients;
     let result;
 
     if (algorithm === 'overdue') {
       selectedClients = await selectClientsForSMS_Overdue(supabase, userId, limit, visitingType || undefined)
     } else if (algorithm === 'mass') {
-       result = await selectClientsForSMS_Mass(supabase, userId, limit || undefined);
+       result = await selectClientsForSMS_Mass(supabase, userId, limit || undefined, messageId ?? undefined);
       selectedClients = result.clients;
     } else {
-      result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined);
+      result = await selectClientsForSMS_Campaign(supabase, userId, limit || undefined, messageId ?? undefined);
       selectedClients = result.clients;
     }
 
@@ -76,17 +78,31 @@ export async function GET(request: Request) {
       return acc
     }, {} as Record<string, number>)
 
+    // Filter out clients that don't have required stats (manually selected clients from Other Clients tab)
+    const clientsWithStats = selectedClients.filter(c => 
+      c.score !== undefined && 
+      c.days_overdue !== undefined && 
+      c.days_since_last_visit !== undefined
+    );
+
     const stats = {
-      total_selected: selectedClients.length,
+      total_selected: selectedClients.length, // Total includes all clients
       breakdown,
-      avg_score: (selectedClients.reduce((sum, c) => sum + c.score, 0) / selectedClients.length).toFixed(2),
-      avg_days_overdue: (selectedClients.reduce((sum, c) => sum + c.days_overdue, 0) / selectedClients.length).toFixed(2),
-      avg_days_since_last_visit: (selectedClients.reduce((sum, c) => sum + c.days_since_last_visit, 0) / selectedClients.length).toFixed(2)
+      avg_score: clientsWithStats.length > 0 
+        ? (clientsWithStats.reduce((sum, c) => sum + c.score, 0) / clientsWithStats.length).toFixed(2)
+        : '0.00',
+      avg_days_overdue: clientsWithStats.length > 0
+        ? (clientsWithStats.reduce((sum, c) => sum + c.days_overdue, 0) / clientsWithStats.length).toFixed(2)
+        : '0.00',
+      avg_days_since_last_visit: clientsWithStats.length > 0
+        ? (clientsWithStats.reduce((sum, c) => sum + c.days_since_last_visit, 0) / clientsWithStats.length).toFixed(2)
+        : '0.00'
     }
 
     return NextResponse.json({
       success: true,
       clients: selectedClients,
+      deselectedClients: result?.deselectedClients,
       phoneNumbers,
       stats,
       timestamp: new Date().toISOString(),

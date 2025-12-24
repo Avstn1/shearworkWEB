@@ -37,7 +37,7 @@ export function MessageSchedule({
   );
   
   // Check if it's a predefined limit or special case
-  const isPredefinedLimit = [100, 250, 500, 750, 1000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
+  const isPredefinedLimit = [100, 250, 500, 750, 1000, 1500, 2000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
   const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
 
   // Get minimum date (today)
@@ -68,10 +68,10 @@ export function MessageSchedule({
       setCustomLimit('');
       onUpdate(msg.id, { clientLimit: maxLimit });
     } else {
-      // Predefined limit selected
+      // Predefined limit selected - just use the value directly
       setShowCustomInput(false);
       setCustomLimit('');
-      onUpdate(msg.id, { clientLimit: Math.min(value, maxLimit) });
+      onUpdate(msg.id, { clientLimit: value }); // Remove Math.min here
     }
   };
 
@@ -148,18 +148,18 @@ export function MessageSchedule({
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-[#bdbdbd]">
             <Users className="w-3 h-3 inline mr-1" />
-            Maximum Number of Clients to Message
+            Maximum Number of Clients to Message.
           </label>
-          <button
-            type="button"
-            onClick={() => setShowLimitModal(true)}
-            className="text-[#bdbdbd] hover:text-white transition-colors"
-          >
-            <Info className="w-4 h-4" />
-          </button>
         </div>
+
         <select
-          value={showCustomInput ? -1 : msg.clientLimit === getMaxLimit() && getMaxLimit() > 1000 ? -2 : msg.clientLimit}
+          value={
+            showCustomInput 
+              ? -1 
+              : msg.clientLimit === getMaxLimit() 
+                ? -2 
+                : msg.clientLimit
+          }
           onChange={(e) => handleLimitChange(parseInt(e.target.value))}
           disabled={!msg.isEditing}
           className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
@@ -167,11 +167,11 @@ export function MessageSchedule({
           }`}
         >
           {/* Dynamic predefined limits */}
-          {[100, 250, 500, 750, 1000].map((limit) => {
+          {[100, 250, 500, 750, 1000, 1500, 2000].map((limit) => {
             const effectiveMax = Math.min(getMaxLimit(), maxClients);
             
             // Only show limits that are less than effective max
-            if (limit >= effectiveMax) return null;
+            if (limit > effectiveMax) return null;
             
             return (
               <option key={limit} value={limit} className="bg-[#1a1a1a]">
@@ -210,8 +210,15 @@ export function MessageSchedule({
               />
             </div>
             {previewCount > 0 && (
-              <p className="text-xs text-[#bdbdbd] mt-1">
-                {previewCount} clients will receive this message
+              <p className="text-xs text-[#bdbdbd] mt-2">
+                {previewCount} clients will receive this message.
+                <button
+                  type="button"
+                  onClick={() => setShowLimitModal(true)}
+                  className="ml-1.5 text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
+                >
+                  See why
+                </button>
               </p>
             )}
           </div>
@@ -219,7 +226,14 @@ export function MessageSchedule({
         
         {!showCustomInput && previewCount > 0 && (
           <p className="text-xs text-[#bdbdbd] mt-2">
-            {previewCount} clients will receive this message
+            {previewCount} clients will receive this message.
+            <button
+              type="button"
+              onClick={() => setShowLimitModal(true)}
+              className="ml-1.5 text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
+            >
+              See why
+            </button>
           </p>
         )}
 
