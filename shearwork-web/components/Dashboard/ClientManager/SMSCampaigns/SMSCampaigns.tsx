@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Coins, Send, AlertCircle, Info, Clock } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Coins, Send, Info, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage, PhoneNumber } from './types';
-import { supabase } from '@/utils/supabaseClient'
+import { supabase } from '@/utils/supabaseClient';
 
-import HowCampaignsWorkModal from './HowCampaignsWorkModal';
-import CampaignHistoryModal from './CampaignHistoryModal';
+import HowCampaignsWorkModal from './Modals/HowCampaignsWorkModal';
+import CampaignHistoryModal from './Modals/CampaignHistoryModal';
+import TestMessageConfirmModal from './Modals/TestMessageConfirmModal';
+import RecipientPreviewModal from './Modals/RecipientPreviewModal';
+import DeleteMessageConfirmModal from './Modals/DeleteMessageConfirmModal';
 
 interface PreviewClient {
   client_id: string;
@@ -54,16 +57,17 @@ export default function SMSCampaigns() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewCounts, setPreviewCounts] = useState<Record<string, number>>({});
 
-  // How do campaigns work modal
+  // Modal states
   const [showHowCampaignsWorkModal, setShowHowCampaignsWorkModal] = useState(false);
   const [showCampaignHistoryModal, setShowCampaignHistoryModal] = useState(false);
+  const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   // Preview clients modal
   const [activePreviewMessageId, setActivePreviewMessageId] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState<number>(0); 
 
   // Delete confirmation modal
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('hard');
 
@@ -73,7 +77,6 @@ export default function SMSCampaigns() {
   const [profile, setProfile] = useState<any>(null);
 
   const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
-  const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
 
   // Progress tracking state
@@ -803,7 +806,7 @@ const confirmDelete = async () => {
 
   return (
     <div className="space-y-6">
-    {/* Header */}
+      {/* Header */}
       <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -897,7 +900,7 @@ const confirmDelete = async () => {
         </div>
       </div>
 
-      {/* How It Works Modal */}
+      {/* Modals */}
       <HowCampaignsWorkModal 
         isOpen={showHowCampaignsWorkModal}
         onClose={() => setShowHowCampaignsWorkModal(false)}
@@ -908,274 +911,43 @@ const confirmDelete = async () => {
         onClose={() => setShowCampaignHistoryModal(false)}
       />
 
+      <TestMessageConfirmModal
+        isOpen={showTestConfirmModal}
+        onClose={() => {
+          setShowTestConfirmModal(false);
+          setPendingTestMessageId(null);
+        }}
+        onConfirm={async () => {
+          if (pendingTestMessageId) {
+            setShowTestConfirmModal(false);
+            await handleTestMessageSend(pendingTestMessageId);
+            setPendingTestMessageId(null);
+          }
+        }}
+        testMessagesUsed={testMessagesUsed}
+        availableCredits={availableCredits}
+        profilePhone={profile?.phone || null}
+      />
 
-      {/* Test Confirmation Modal */}
-      <AnimatePresence>
-        {showTestConfirmModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-            onClick={() => setShowTestConfirmModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  testMessagesUsed >= 10
-                    ? 'bg-amber-300/20 text-amber-300'
-                    : 'bg-sky-300/20 text-sky-300'
-                }`}>
-                  <Send className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    {testMessagesUsed >= 10 ? 'Send Paid Test Message' : 'Send Free Test Message'}
-                  </h3>
-                  <p className="text-sm text-[#bdbdbd]">
-                    {testMessagesUsed >= 10 ? (
-                      <>
-                        You've used all your free test messages today. This test will cost{' '}
-                        <span className="text-amber-300 font-semibold">1 credit</span>.
-                      </>
-                    ) : (
-                      <>
-                        You have{' '}
-                        <span className="text-sky-300 font-semibold">{10 - testMessagesUsed} free tests</span>{' '}
-                        remaining today. After that, tests cost 1 credit each.
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
+      <RecipientPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        messageTitle={messages.find(m => m.id === activePreviewMessageId)?.title || 'Message'}
+        messageId={activePreviewMessageId}
+        previewClients={previewClients}
+        previewStats={previewStats}
+        maxClients={maxClients}
+      />
 
-              {testMessagesUsed >= 10 && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-                  <div className="flex items-center gap-2 text-sm text-amber-300">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <p>
-                      Available credits: <span className="font-semibold">{availableCredits}</span>
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-6">
-                <p className="text-sm text-white mb-2">
-                  <span className="font-semibold">Test message will be sent to:</span>
-                </p>
-                <p className="text-sm text-sky-300">{profile?.phone || 'Your registered phone number'}</p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowTestConfirmModal(false);
-                    setPendingTestMessageId(null);
-                  }}
-                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    if (pendingTestMessageId) {
-                      setShowTestConfirmModal(false);
-                      // Actually send the test message
-                      await handleTestMessageSend(pendingTestMessageId);
-                      setPendingTestMessageId(null);
-                    }
-                  }}
-                  disabled={testMessagesUsed >= 10 && availableCredits < 1}
-                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {testMessagesUsed >= 10 ? 'Send (1 Credit)' : 'Send Test'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Client Preview Modal */}
-      <AnimatePresence>
-        {showPreview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowPreview(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
-            >
-
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-sky-300" />
-                    Recipients for {messages.find(m => m.id === activePreviewMessageId)?.title || 'Message'}
-                  </h3>
-                  {previewStats && (
-                    <p className="text-sm text-[#bdbdbd] mt-1">
-                      {previewStats.total_selected} clients will receive this message. Your maximum clients based on the algorithm is {maxClients}. 
-                    </p>
-                  )}
-                  
-                  {/* Metric Explanations */}
-                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd]">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                      <div>
-                        <span className="text-sky-300 font-medium">Score:</span> Higher = client needs message more urgently
-                      </div>
-                      <div>
-                        <span className="text-purple-400 font-medium">Days Since Visit:</span> Days since last appointment
-                      </div>
-                      <div>
-                        <span className="text-orange-400 font-medium">Days Overdue:</span> How late based on their typical pattern
-                      </div>
-                    </div>
-                    
-                    {/* Client Types Legend */}
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Consistent:</span> Weekly
-                      </span>
-                      <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Semi-consistent:</span> Every 2-3 weeks
-                      </span>
-                      <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Easy-going:</span> Every 1-2 months
-                      </span>
-                      <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Rare:</span> Every 2+ months
-                      </span>
-                      <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">New:</span> First visit
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors ml-4"
-                >
-                  <X className="w-5 h-5 text-[#bdbdbd]" />
-                </button>
-              </div>
-
-              {/* Stats */}
-              {previewStats && (
-                <div className="px-6 py-4 border-b border-white/10 bg-white/5">
-                  <div className="flex items-center justify-between gap-6">
-                    <div className="flex gap-6">
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Total Selected</p>
-                        <p className="text-xl font-bold text-white">{previewStats.total_selected}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Score</p>
-                        <p className="text-xl font-bold text-sky-300">{previewStats.avg_score}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Days Since Visit</p>
-                        <p className="text-xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Days Overdue</p>
-                        <p className="text-xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {['consistent', 'semi-consistent', 'easy-going', 'rare', 'new'].map((type) => {
-                        const count = previewStats.breakdown[type] || 0;
-                        if (count === 0) return null;
-                        
-                        return (
-                          <span 
-                            key={type} 
-                            className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                              type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                              type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                              type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                              type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}
-                          >
-                            {count}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Clients List */}
-              <div className="overflow-y-auto max-h-[50vh] p-6">
-                <div className="space-y-2">
-                  {previewClients.map((client) => {
-                    const normalVisitInterval = client.avg_weekly_visits 
-                      ? Math.round(7 / client.avg_weekly_visits)
-                      : null;
-                    
-                    return (
-                      <div
-                        key={client.client_id}
-                        className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <h4 className="font-semibold text-white">
-                              {client.first_name} {client.last_name}
-                            </h4>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                              client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                              client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                              client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}>
-                              {client.visiting_type}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                            <span>{client.phone_normalized}</span>
-                            <span>•</span>
-                            <span>{client.days_since_last_visit} days since last visit</span>
-                            <span>•</span>
-                            <span className="text-orange-400">{client.days_overdue} days overdue</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                          {normalVisitInterval && (
-                            <p className="text-xs text-[#bdbdbd]">Goes every ~{normalVisitInterval} days</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteMessageConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setPendingDeleteMessageId(null);
+        }}
+        onConfirm={confirmDelete}
+        deleteType={deleteType}
+      />
 
       {/* Messages List */}
       <AnimatePresence mode="popLayout">
@@ -1297,94 +1069,6 @@ const confirmDelete = async () => {
               />
             ))}
           </div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {showDeleteModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-            onClick={() => {
-              setShowDeleteModal(false);
-              setPendingDeleteMessageId(null);
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-rose-300/20 text-rose-300 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Delete Message?
-                  </h3>
-                  <p className="text-sm text-[#bdbdbd]">
-                    {deleteType === 'soft' ? (
-                      <>
-                        This completed campaign will be removed from your active messages but will still be visible in{' '}
-                        <span className="text-purple-300 font-semibold">Campaign History</span> for your records.
-                      </>
-                    ) : (
-                      <>
-                        This message will be <span className="text-rose-300 font-semibold">permanently deleted</span>.
-                        You won't be able to see it again or recover any information about it.
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {deleteType === 'hard' && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg mb-4">
-                  <div className="flex items-start gap-2 text-sm text-rose-300">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <p>
-                      <span className="font-semibold">This action cannot be undone.</span> All message data will be permanently removed.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {deleteType === 'soft' && (
-                <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg mb-4">
-                  <div className="flex items-start gap-2 text-sm text-purple-300">
-                    <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <p>
-                      You can view this campaign's details and recipients in Campaign History at any time.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setPendingDeleteMessageId(null);
-                  }}
-                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-rose-300/20 text-rose-300 border border-rose-300/30 hover:bg-rose-300/30 transition-all duration-300"
-                >
-                  {deleteType === 'soft' ? 'Remove from Active' : 'Delete Permanently'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
         )}
       </AnimatePresence>
     </div>

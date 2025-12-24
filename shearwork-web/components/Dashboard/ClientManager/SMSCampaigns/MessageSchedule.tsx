@@ -148,15 +148,8 @@ export function MessageSchedule({
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-[#bdbdbd]">
             <Users className="w-3 h-3 inline mr-1" />
-            Maximum Number of Clients to Message
+            Maximum Number of Clients to Message.
           </label>
-          <button
-            type="button"
-            onClick={() => setShowLimitModal(true)}
-            className="text-[#bdbdbd] hover:text-white transition-colors"
-          >
-            <Info className="w-4 h-4" />
-          </button>
         </div>
         <select
           value={showCustomInput ? -1 : msg.clientLimit === getMaxLimit() && getMaxLimit() > 1000 ? -2 : msg.clientLimit}
@@ -219,7 +212,14 @@ export function MessageSchedule({
         
         {!showCustomInput && previewCount > 0 && (
           <p className="text-xs text-[#bdbdbd] mt-2">
-            {previewCount} clients will receive this message
+            {previewCount} clients will receive this message.
+            <button
+              type="button"
+              onClick={() => setShowLimitModal(true)}
+              className="ml-1.5 text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
+            >
+              See why
+            </button>
           </p>
         )}
 
