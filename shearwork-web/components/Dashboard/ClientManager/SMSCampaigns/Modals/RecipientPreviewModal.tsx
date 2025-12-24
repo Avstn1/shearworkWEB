@@ -56,7 +56,7 @@ interface RecipientPreviewModalProps {
   maxClients: number;
 }
 
-type TabType = "client-list" | "selected" | "deselected";
+type TabType = "client-list" | "deselected";
 
 export default function RecipientPreviewModal({
   isOpen,
@@ -103,6 +103,8 @@ export default function RecipientPreviewModal({
   const [clientListTotalPages, setClientListTotalPages] = useState(1);
   const CLIENT_LIST_PER_PAGE = 100;
 
+  const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -125,7 +127,7 @@ export default function RecipientPreviewModal({
 
   // Load all clients when on selected tab
   useEffect(() => {
-    if (activeTab === "selected") {
+    if (activeTab === "deselected") {
       loadAllClients();
     }
   }, [activeTab, currentPage, debouncedSearch]);
@@ -222,6 +224,7 @@ export default function RecipientPreviewModal({
     }
   };
 
+  // Load all OTHER clients for Deselected Clients tab (NOT in algorithm)
   const loadAllClients = async () => {
     setLoadingAllClients(true);
     try {
@@ -243,23 +246,20 @@ export default function RecipientPreviewModal({
 
       const data = await response.json();
 
-      // Clients are already filtered by the API
+      // Clients are already filtered by the API (excludes preview clients)
       const clients = data.clients || [];
 
-      const selectedPhones = new Set(
-        selectedClients.map((c) => c.phone_normalized),
+      // Check which ones are manually deselected and put them at top
+      const manuallyDeselected = clients.filter((c: AllClient) =>
+        deselectedClients.includes(c.phone_normalized || "")
+      );
+      const notDeselected = clients.filter((c: AllClient) =>
+        !deselectedClients.includes(c.phone_normalized || "")
       );
 
-      // Sort with selected clients at the top
-      const sortedClients = [
-        ...clients.filter((c: AllClient) =>
-          selectedPhones.has(c.phone_normalized || ""),
-        ),
-        ...clients.filter(
-          (c: AllClient) => !selectedPhones.has(c.phone_normalized || ""),
-        ),
-      ];
+      const sortedClients = [...manuallyDeselected, ...notDeselected];
 
+      setTotalUnselectedClients(data.total)
       setAllClients(sortedClients);
       setTotalPages(data.totalPages || 1);
     } catch (error) {
@@ -305,26 +305,29 @@ export default function RecipientPreviewModal({
     setShowDeselectModal(true);
   };
 
-  const handleReselectRequest = async (phone: string, name: string) => {
+  const handleRemoveFromDeselected = async (client: any) => {
     if (!(await checkMessageExistsInDatabase())) return;
     
-    setPendingReselectPhone(phone);
-    setPendingReselectName(name);
+    setPendingReselectPhone(client.phone_normalized || "");
+    setPendingReselectName(`${client.first_name || ""} ${client.last_name || ""}`.trim() || "Unknown Client");
     setShowReselectModal(true);
   };
 
-  const handleSelectRequest = async (client: AllClient) => {
+  // For Deselected tab - adding a new client to deselected
+  const handleAddToDeselected = async (client: AllClient) => {
     if (!(await checkMessageExistsInDatabase())) return;
     
-    setPendingSelectClient(client);
-    setShowSelectModal(true);
+    setPendingDeselectPhone(client.phone_normalized || "");
+    setPendingDeselectName(`${client.first_name || ""} ${client.last_name || ""}`.trim() || "Unknown Client");
+    setShowDeselectModal(true);
   };
 
-  const handleUnselectRequest = async (client: any) => {
+  const handleMoveToDeselected = async (phone: string, name: string) => {
     if (!(await checkMessageExistsInDatabase())) return;
     
-    setPendingUnselectClient(client);
-    setShowUnselectModal(true);
+    setPendingDeselectPhone(phone);
+    setPendingDeselectName(name);
+    setShowDeselectModal(true);
   };
 
   const confirmDeselect = async () => {
@@ -380,6 +383,12 @@ export default function RecipientPreviewModal({
       if (error) throw error;
 
       setDeselectedClients(updatedDeselected);
+      
+      // Reload the deselected clients tab to update the list
+      if (activeTab === "deselected") {
+        loadAllClients();
+      }
+      
       toast.success("Client removed from deselected list");
     } catch (error) {
       console.error("Failed to reselect client:", error);
@@ -472,16 +481,9 @@ export default function RecipientPreviewModal({
     }
   };
 
-  // Filter clients based on search and deselection
   const getFilteredClients = () => {
-    // Combine selected clients with preview clients for client list
+    // For client list tab
     if (activeTab === "client-list") {
-      // First, get selected clients that match preview client structure
-      const selectedPhones = new Set(
-        selectedClients.map((c) => c.phone_normalized),
-      );
-
-      // Filter preview clients to exclude deselected
       const filteredPreview = previewClients.filter((client) => {
         const isDeselected = deselectedClients.includes(
           client.phone_normalized,
@@ -502,53 +504,35 @@ export default function RecipientPreviewModal({
         return !isDeselected;
       });
 
-      // Put selected clients at the top
-      const selectedFromPreview = filteredPreview.filter((c) =>
-        selectedPhones.has(c.phone_normalized),
-      );
-      const notSelected = filteredPreview.filter(
-        (c) => !selectedPhones.has(c.phone_normalized),
-      );
-
-      const allFilteredClients = [...selectedFromPreview, ...notSelected];
-      
       // Return paginated results
       const start = (clientListPage - 1) * CLIENT_LIST_PER_PAGE;
-      return allFilteredClients.slice(start, start + CLIENT_LIST_PER_PAGE);
+      return filteredPreview.slice(start, start + CLIENT_LIST_PER_PAGE);
     }
 
-    // For selected tab, filter all clients
-    if (activeTab === "selected") {
-      return allClients;
-    }
-
-    // For deselected tab
+    // For deselected tab - show ALL clients from API (they're already not in algorithm)
     if (activeTab === "deselected") {
-      return previewClients.filter((client) => {
-        if (!deselectedClients.includes(client.phone_normalized)) {
-          return false;
-        }
-
-        // Apply search filter
-        if (debouncedSearch) {
-          const search = debouncedSearch.toLowerCase();
-          const fullName =
-            `${client.first_name || ""} ${client.last_name || ""}`.toLowerCase();
-          const phone = client.phone_normalized.toLowerCase();
-
-          return fullName.includes(search) || phone.includes(search);
-        }
-
-        return true;
-      });
+      return allClients; // Remove the filter - just show all clients
     }
 
     return [];
   };
 
+  const handleSelectRequest = async (client: AllClient) => {
+    if (!(await checkMessageExistsInDatabase())) return;
+    
+    setPendingSelectClient(client);
+    setShowSelectModal(true);
+  };
+
+  const handleUnselectRequest = async (client: any) => {
+    if (!(await checkMessageExistsInDatabase())) return;
+    
+    setPendingUnselectClient(client);
+    setShowUnselectModal(true);
+  };
+
   const filteredClients = getFilteredClients();
-  const activeClientCount =
-    previewClients.length - deselectedClients.length + selectedClients.length;
+  const activeClientCount = previewClients.length - deselectedClients.length;
 
   const isClientSelected = (phone: string | null) => {
     if (!phone) return false;
@@ -581,9 +565,7 @@ export default function RecipientPreviewModal({
                 </h3>
                 {previewStats && (
                   <p className="text-sm text-[#bdbdbd] mt-1">
-                    {activeClientCount} active clients •{" "}
-                    {selectedClients.length} manually selected •{" "}
-                    {deselectedClients.length} deselected • Max: {maxClients}
+                    {activeClientCount} active clients • {deselectedClients.length} deselected • Max: {maxClients}
                   </p>
                 )}
               </div>
@@ -619,26 +601,6 @@ export default function RecipientPreviewModal({
               </button>
 
               <button
-                onClick={() => setActiveTab("selected")}
-                className={`px-4 py-3 text-sm font-semibold transition-all relative ${
-                  activeTab === "selected"
-                    ? "text-sky-300"
-                    : "text-[#bdbdbd] hover:text-white"
-                }`}
-              >
-                Deselected Clients
-                <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
-                  {selectedClients.length}
-                </span>
-                {activeTab === "selected" && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-300"
-                  />
-                )}
-              </button>
-
-              <button
                 onClick={() => setActiveTab("deselected")}
                 className={`px-4 py-3 text-sm font-semibold transition-all relative ${
                   activeTab === "deselected"
@@ -648,7 +610,7 @@ export default function RecipientPreviewModal({
               >
                 Deselected Clients
                 <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
-                  {deselectedClients.length}
+                  { totalUnselectedClients > 0 ? totalUnselectedClients : '...'}
                 </span>
                 {activeTab === "deselected" && (
                   <motion.div
@@ -812,7 +774,7 @@ export default function RecipientPreviewModal({
               )}
 
               {/* Sticky Pagination - Selected Clients */}
-              {activeTab === "selected" && totalPages > 1 && (
+              {activeTab === "deselected" && totalPages > 1 && (
                 <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-[#bdbdbd]">
@@ -839,7 +801,7 @@ export default function RecipientPreviewModal({
               )}
 
               <div className="p-6">
-                {loadingAllClients && activeTab === "selected" ? (
+                {loadingAllClients && activeTab === "deselected" ? (
                   <div className="text-center py-12">
                     <div className="w-8 h-8 border-2 border-sky-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-[#bdbdbd]">Loading clients...</p>
@@ -869,15 +831,12 @@ export default function RecipientPreviewModal({
                         const isDeselected = deselectedClients.includes(
                           client.phone_normalized,
                         );
-                        const isSelected = isClientSelected(
-                          client.phone_normalized,
-                        );
 
                         return (
                           <div
                             key={client.client_id}
                             className={`flex items-center gap-4 p-4 border rounded-xl hover:bg-white/10 transition-colors ${
-                              isSelected
+                              isDeselected
                                 ? "bg-sky-300/10 border-sky-300/30"
                                 : "bg-white/5 border-white/10"
                             }`}
@@ -887,7 +846,7 @@ export default function RecipientPreviewModal({
                               checked={!isDeselected}
                               onChange={() => {
                                 if (!isDeselected) {
-                                  handleDeselectRequest(
+                                  handleMoveToDeselected(
                                     client.phone_normalized,
                                     `${client.first_name || ""} ${client.last_name || ""}`.trim() ||
                                       "Unknown Client",
@@ -902,9 +861,9 @@ export default function RecipientPreviewModal({
                                 <h4 className="font-semibold text-white">
                                   {client.first_name} {client.last_name}
                                 </h4>
-                                {isSelected && (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-300/20 text-sky-300 border border-sky-300/30">
-                                    Manually Selected
+                                {isDeselected && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30">
+                                    Deselected
                                   </span>
                                 )}
                                 <span
@@ -951,11 +910,11 @@ export default function RecipientPreviewModal({
                         );
                       })}
 
-                    {/* Selected tab - all clients from API */}
-                    {activeTab === "selected" &&
-                      allClients.map((client) => {
-                        const isSelected = isClientSelected(
-                          client.phone_normalized,
+                    {/* Deselected tab - all clients from API */}
+                    {activeTab === "deselected" &&
+                      filteredClients.map((client) => {
+                        const isSelected = selectedClients.some(
+                          (c) => c.phone_normalized === client.phone_normalized
                         );
 
                         return (
@@ -972,14 +931,15 @@ export default function RecipientPreviewModal({
                               checked={isSelected}
                               onChange={() => {
                                 if (isSelected) {
-                                  handleUnselectRequest(
-                                    selectedClients.find(
-                                      (c) =>
-                                        c.phone_normalized ===
-                                        client.phone_normalized,
-                                    ),
+                                  // Uncheck = Remove from selected list
+                                  const selectedClient = selectedClients.find(
+                                    (c) => c.phone_normalized === client.phone_normalized
                                   );
+                                  if (selectedClient) {
+                                    handleUnselectRequest(selectedClient);
+                                  }
                                 } else {
+                                  // Check = Add to selected list
                                   handleSelectRequest(client);
                                 }
                               }}
@@ -1019,71 +979,6 @@ export default function RecipientPreviewModal({
                             <div className="text-right">
                               <p className="text-xs text-[#bdbdbd]">
                                 {client.total_appointments} visits
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                    {/* Deselected tab */}
-                    {activeTab === "deselected" &&
-                      filteredClients.map((client: any) => {
-                        return (
-                          <div
-                            key={client.client_id}
-                            className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={false}
-                              onChange={() => {
-                                handleReselectRequest(
-                                  client.phone_normalized,
-                                  `${client.first_name || ""} ${client.last_name || ""}`.trim() ||
-                                    "Unknown Client",
-                                );
-                              }}
-                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-sky-300 focus:ring-2 focus:ring-sky-300/50 cursor-pointer"
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3">
-                                <h4 className="font-semibold text-white">
-                                  {client.first_name} {client.last_name}
-                                </h4>
-                                <span
-                                  className={`text-xs px-2 py-1 rounded-full ${
-                                    client.visiting_type === "consistent"
-                                      ? "bg-green-500/20 text-green-400"
-                                      : client.visiting_type ===
-                                          "semi-consistent"
-                                        ? "bg-blue-500/20 text-blue-400"
-                                        : client.visiting_type === "easy-going"
-                                          ? "bg-yellow-500/20 text-yellow-400"
-                                          : client.visiting_type === "rare"
-                                            ? "bg-red-500/20 text-red-400"
-                                            : "bg-gray-500/20 text-gray-400"
-                                  }`}
-                                >
-                                  {client.visiting_type}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                                <span>{client.phone_normalized}</span>
-                                <span>•</span>
-                                <span>
-                                  {client.days_since_last_visit} days since last
-                                  visit
-                                </span>
-                                <span>•</span>
-                                <span className="text-orange-400">
-                                  {client.days_overdue} days overdue
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-semibold text-sky-300">
-                                Score: {client.score}
                               </p>
                             </div>
                           </div>

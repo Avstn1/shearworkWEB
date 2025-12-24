@@ -275,37 +275,40 @@ export default function SMSCampaigns() {
   };
 
   const loadClientPreview = async (messageId: string, limit: number) => {
-      setLoadingPreview(true);
-      setActivePreviewMessageId(messageId);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        const userId = user?.id || '';
-        const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}&messageId=${messageId}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to load preview');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const clients = data.clients
-          
-          console.log(clients.length);
-          setMaxClients(data.maxClient || 0);
-          setPreviewCounts(prev => ({ ...prev, [messageId]: clients.length }));
-          setPreviewClients(clients);
-          setPreviewStats(data.stats);
-          setShowPreview(true);
-        } else {
-          toast.error(data.message || 'Failed to load preview');
-        }
-      } catch (error) {
-        console.error('❌ Failed to load preview:', error);
-        toast.error('Failed to load client preview');
-      } finally {
-        setLoadingPreview(false);
+    setLoadingPreview(true);
+    setActivePreviewMessageId(messageId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || '';
+      
+      console.log('🔍 Fetching preview with:', { limit, userId, algorithmType, messageId });
+      
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}&messageId=${messageId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to load preview');
       }
+      
+      const data = await response.json();
+      
+      console.log('✅ API Response:', data);
+      
+      if (data.success) {
+        const clients = data.clients;
+        
+        console.log('📋 Setting preview clients:', clients.length);
+        setMaxClients(data.maxClient || 0);
+        setPreviewCounts(prev => ({ ...prev, [messageId]: clients.length }));
+        setPreviewClients(clients);
+        setPreviewStats(data.stats);
+        setShowPreview(true);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load preview:', error);
+      toast.error('Failed to load client preview');
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   const loadMessagePreview = async (messageId: string, limit: number) => {
