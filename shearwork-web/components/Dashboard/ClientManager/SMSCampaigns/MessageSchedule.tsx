@@ -53,27 +53,27 @@ export function MessageSchedule({
     return Math.min(availableCredits, maxClients);
   };
 
-  const handleLimitChange = (value: number) => {
-    const maxLimit = getMaxLimit();
-    
-    if (value === -1) {
-      // Custom selected
-      setShowCustomInput(true);
-      const newLimit = customLimit && parseInt(customLimit) >= 100 ? parseInt(customLimit) : 100;
-      setCustomLimit(newLimit.toString());
-      onUpdate(msg.id, { clientLimit: Math.min(newLimit, maxLimit) });
-    } else if (value === -2) {
-      // Max selected - use all available credits (or max for mass)
-      setShowCustomInput(false);
-      setCustomLimit('');
-      onUpdate(msg.id, { clientLimit: maxLimit });
-    } else {
-      // Predefined limit selected
-      setShowCustomInput(false);
-      setCustomLimit('');
-      onUpdate(msg.id, { clientLimit: Math.min(value, maxLimit) });
-    }
-  };
+const handleLimitChange = (value: number) => {
+  const maxLimit = getMaxLimit();
+  
+  if (value === -1) {
+    // Custom selected
+    setShowCustomInput(true);
+    const newLimit = customLimit && parseInt(customLimit) >= 100 ? parseInt(customLimit) : 100;
+    setCustomLimit(newLimit.toString());
+    onUpdate(msg.id, { clientLimit: Math.min(newLimit, maxLimit) });
+  } else if (value === -2) {
+    // Max selected - use all available credits (or max for mass)
+    setShowCustomInput(false);
+    setCustomLimit('');
+    onUpdate(msg.id, { clientLimit: maxLimit });
+  } else {
+    // Predefined limit selected - just use the value directly
+    setShowCustomInput(false);
+    setCustomLimit('');
+    onUpdate(msg.id, { clientLimit: value }); // Remove Math.min here
+  }
+};
 
   const handleCustomLimitChange = (value: string) => {
     setCustomLimit(value);
@@ -164,7 +164,7 @@ export function MessageSchedule({
             const effectiveMax = Math.min(getMaxLimit(), maxClients);
             
             // Only show limits that are less than effective max
-            if (limit >= effectiveMax) return null;
+            if (limit > effectiveMax) return null;
             
             return (
               <option key={limit} value={limit} className="bg-[#1a1a1a]">

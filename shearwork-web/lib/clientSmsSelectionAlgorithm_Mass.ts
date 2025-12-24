@@ -26,7 +26,6 @@ export async function selectClientsForSMS_Mass(
     .neq('sms_subscribed', false)
     .gt('last_appt', oneAndHalfYearsAgo.toISOString())
     .gt('total_appointments', 0)
-    .limit(limit)
 
   // Optional visiting_type filter
   if (visitingType) {
@@ -56,6 +55,8 @@ export async function selectClientsForSMS_Mass(
     
     return aFullName.localeCompare(bFullName)
   })
+
+  console.log(`Total available clients: ${scoredClients.length}`)
 
   return {
     clients: scoredClients,

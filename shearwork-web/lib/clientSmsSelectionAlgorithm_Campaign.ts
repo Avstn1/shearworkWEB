@@ -55,6 +55,8 @@ export async function selectClientsForSMS_Campaign(
       ...client,
       days_overdue: Math.max(0, client.days_overdue)
     }));
+
+    console.log(`Total available clients: ${boostedStrictClients.length}`)
     
     return {
       clients: finalSelected,
