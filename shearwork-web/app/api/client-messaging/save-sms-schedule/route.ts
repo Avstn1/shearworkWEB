@@ -325,6 +325,7 @@ export async function POST(request: Request) {
               qstash_schedule_ids: qstashScheduleIds,
               visiting_type: msg.visitingType,
               message_limit: msg.clientLimit,
+              purpose: msg.purpose
             })
             .eq('id', msg.id)
             .select()
