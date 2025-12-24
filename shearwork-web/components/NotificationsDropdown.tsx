@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { Bell } from 'lucide-react'
+import { Bell, Check, Calendar } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -29,40 +29,34 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { openReport, triggerRefresh } = useApp()  // ADD triggerRefresh
+  const { openReport, triggerRefresh } = useApp()
   const router = useRouter()
 
   const fetchNotifications = async () => {
     if (!userId) return
 
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('timestamp', { ascending: false })
-        .limit(15)
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false })
+      .limit(15)
 
-      if (error) console.error('Failed to fetch notifications:', error)
+    const mapped = (data || []).map((n: any) => ({
+      id: n.id,
+      header: n.header,
+      message: n.message,
+      is_read: n.read === true,
+      created_at: n.timestamp,
+      reference: n.reference,
+      reference_type: n.reference_type,
+    }))
 
-      const mapped = (data || []).map(item => ({
-        id: item.id,
-        header: item.header,
-        message: item.message,
-        is_read: item.read === true,
-        created_at: item.timestamp,
-        reference: item.reference,
-        reference_type: item.reference_type
-      }))
-
-      setNotifications(mapped)
-    } catch (err) {
-      console.error(err)
-    }
+    setNotifications(mapped)
   }
 
   useEffect(() => {
-    if (userId) fetchNotifications()
+    fetchNotifications()
   }, [userId])
 
   useEffect(() => {
@@ -79,21 +73,21 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          const newN = payload.new as any
+          const n = payload.new as any
 
-          const formatted: Notification = {
-            id: newN.id,
-            header: newN.header,
-            message: newN.message,
-            is_read: newN.read === true,
-            created_at: newN.timestamp,
-            reference: newN.reference,
-            reference_type: newN.reference_type
-          }
+          setNotifications((prev) => [
+            {
+              id: n.id,
+              header: n.header,
+              message: n.message,
+              is_read: n.read === true,
+              created_at: n.timestamp,
+              reference: n.reference,
+              reference_type: n.reference_type,
+            },
+            ...prev,
+          ])
 
-          setNotifications((prev) => [formatted, ...prev])
-          
-          // TRIGGER REFRESH when new notification arrives
           triggerRefresh()
         }
       )
@@ -110,36 +104,28 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
         setOpen(false)
       }
     }
+
     if (open) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
   const handleClickNotification = async (n: Notification) => {
-    // Mark as read if unread
     if (!n.is_read) {
       await supabase.from('notifications').update({ read: true }).eq('id', n.id)
-      setNotifications((prev) => 
-        prev.map((notif) => notif.id === n.id ? { ...notif, is_read: true } : notif)
+      setNotifications((prev) =>
+        prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
       )
     }
 
-    // If notification has a reference, open the report
     if (n.reference && n.reference_type) {
-      // Trigger refresh before opening
       triggerRefresh()
-      
       setOpen(false)
-      
-      // Redirect to dashboard first if not already there
+
       if (!window.location.pathname.includes('/dashboard')) {
         router.push('/dashboard')
-        setTimeout(() => {
-          openReport(n.reference!, n.reference_type!)
-        }, 1250)
+        setTimeout(() => openReport(n.reference!, n.reference_type!), 1200)
       } else {
-        setTimeout(() => {
-          openReport(n.reference!, n.reference_type!)
-        }, 300)
+        setTimeout(() => openReport(n.reference!, n.reference_type!), 300)
       }
     }
   }
@@ -153,13 +139,14 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* Bell */}
       <button
-        className="relative p-2 rounded-full hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((v) => !v)}
+        className="relative p-2 rounded-full hover:bg-white/10 transition"
       >
-        <Bell className="w-6 h-6 text-[var(--foreground)]" />
+        <Bell className="w-6 h-6 text-white" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-[var(--highlight)] text-black text-[0.625rem] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse shadow-sm">
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-lime-300 text-black text-[10px] font-bold flex items-center justify-center shadow-[0_0_8px_#c4ff85]">
             {unreadCount}
           </span>
         )}
@@ -172,36 +159,62 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="absolute mt-2 bg-[var(--accent-1)] border border-[var(--accent-2)] rounded-2xl shadow-lg z-50 overflow-hidden backdrop-blur-sm
-            right-0 w-96 max-w-[calc(100vw-1rem)]
-            max-[640px]:fixed max-[640px]:left-[0.5rem] max-[640px]:right-[0.5rem] max-[640px]:w-auto"
+            className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-1rem)]
+              bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
           >
-            <div className="flex justify-between items-center p-4 border-b border-[var(--accent-2)]">
-              <h3 className="font-semibold text-[var(--highlight)] text-sm tracking-wide">Notifications</h3>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <h3 className="text-sm font-semibold text-lime-300">
+                Notifications
+              </h3>
               <button
                 onClick={handleMarkAllRead}
-                className="text-[var(--accent-2)] hover:text-[var(--highlight)] text-xs transition-colors"
+                className="text-xs text-[#bdbdbd] hover:text-lime-300 transition"
               >
                 Mark all read
               </button>
             </div>
 
+            {/* Content */}
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-gray-400 text-sm">No notifications</div>
+              <div className="p-6 text-center text-sm text-[#bdbdbd]">
+                No notifications
+              </div>
             ) : (
-              <div className="max-h-80 overflow-y-auto scrollbar-none">
-                {notifications.map((n) => (
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.map((n, i) => (
                   <motion.div
                     key={n.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
                     onClick={() => handleClickNotification(n)}
-                    className={`px-4 py-3 cursor-pointer transition flex flex-col gap-1 rounded-lg mb-1
-                      ${!n.is_read ? 'bg-[rgba(255,255,255,0.08)] font-semibold' : 'hover:bg-[rgba(255,255,255,0.05)]'}
-                    `}
+                    className={`mx-2 my-1 rounded-xl p-3 cursor-pointer transition
+                      ${
+                        n.is_read
+                          ? 'hover:bg-white/5'
+                          : 'bg-lime-300/10 border border-lime-300/20'
+                      }`}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <span className="text-sm text-white">{n.header}</span>
-                    <span className="text-xs text-gray-400">{n.message}</span>
-                    <span className="text-[0.65rem] text-gray-500">{dayjs(n.created_at).fromNow()}</span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-white">
+                          {n.header}
+                        </p>
+                        <p className="text-xs text-[#bdbdbd] mt-0.5">
+                          {n.message}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[#8a8a8a]">
+                          <Calendar className="w-3 h-3" />
+                          {dayjs(n.created_at).fromNow()}
+                        </div>
+                      </div>
+
+                      {!n.is_read && (
+                        <Check className="w-4 h-4 text-lime-300 mt-0.5" />
+                      )}
+                    </div>
                   </motion.div>
                 ))}
               </div>
@@ -211,4 +224,4 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
       </AnimatePresence>
     </div>
   )
-} 
+}
