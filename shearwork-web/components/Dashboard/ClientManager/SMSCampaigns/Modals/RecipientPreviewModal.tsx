@@ -694,9 +694,18 @@ const confirmReselect = async () => {
       return filteredPreview.slice(start, start + CLIENT_LIST_PER_PAGE);
     }
 
-    // For deselected tab - show ALL clients from API (they're already not in algorithm)
+    // For deselected tab - apply search filter
     if (activeTab === "deselected") {
-      return allClients; // Remove the filter - just show all clients
+      if (debouncedSearch) {
+        const search = debouncedSearch.toLowerCase();
+        return allClients.filter((client) => {
+          const fullName =
+            `${client.first_name || ""} ${client.last_name || ""}`.toLowerCase();
+          const phone = (client.phone_normalized || "").toLowerCase();
+          return fullName.includes(search) || phone.includes(search);
+        });
+      }
+      return allClients;
     }
 
     return [];
@@ -815,7 +824,7 @@ const confirmReselect = async () => {
               </button>
 
             </div>
-
+            
             {/* Tabs */}
             <div className="grid grid-cols-2 border-b border-white/10 flex-shrink-0">
               <button
@@ -859,115 +868,6 @@ const confirmReselect = async () => {
               </button>
             </div>
 
-            {/* Stats - Only show on Client List tab */}
-            {previewStats && activeTab === "client-list" && (
-              <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex-shrink-0">
-                <div className="flex items-center justify-between gap-6">
-                  <div className="flex gap-6">
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-0.5">
-                        Total Selected
-                      </p>
-                      <p className="text-xl font-bold text-white">
-                        {activeClientCount}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Score</p>
-                      <p className="text-xl font-bold text-sky-300">
-                        {previewStats.avg_score}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-0.5">
-                        Avg Days Since Visit
-                      </p>
-                      <p className="text-xl font-bold text-purple-400">
-                        {previewStats.avg_days_since_last_visit}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-0.5">
-                        Avg Days Overdue
-                      </p>
-                      <p className="text-xl font-bold text-orange-400">
-                        {previewStats.avg_days_overdue}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Metric Explanations */}
-                <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd]">
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                    <div>
-                      <span className="text-sky-300 font-medium">Score:</span>{" "}
-                      Higher = client needs message more urgently
-                    </div>
-                    <div>
-                      <span className="text-purple-400 font-medium">
-                        Days Since Visit:
-                      </span>{" "}
-                      Days since last appointment
-                    </div>
-                    <div>
-                      <span className="text-orange-400 font-medium">
-                        Days Overdue:
-                      </span>{" "}
-                      How late based on their typical pattern
-                    </div>
-                  </div>
-
-                  {/* Client Types Legend */}
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    {previewStats.breakdown.consistent > 0 && (
-                      <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Consistent:</span> Weekly
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/20">
-                          {previewStats.breakdown.consistent}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown["semi-consistent"] > 0 && (
-                      <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Semi-consistent:</span>{" "}
-                        Every 2-3 weeks
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20">
-                          {previewStats.breakdown["semi-consistent"]}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown["easy-going"] > 0 && (
-                      <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Easy-going:</span> Every
-                        1-2 months
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-500/20">
-                          {previewStats.breakdown["easy-going"]}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown.rare > 0 && (
-                      <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Rare:</span> Every 2+
-                        months
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20">
-                          {previewStats.breakdown.rare}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown.new > 0 && (
-                      <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">New:</span> First visit
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-500/20">
-                          {previewStats.breakdown.new}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Search Bar */}
             <div className="p-4 border-b border-white/10 flex-shrink-0">
               <div className="relative">
@@ -984,6 +884,115 @@ const confirmReselect = async () => {
 
             {/* Clients List */}
             <div className="overflow-y-auto flex-1 relative">
+              {/* Stats - Only show on Client List tab - INSIDE SCROLLABLE CONTAINER */}
+              {previewStats && activeTab === "client-list" && (
+                <div className="px-6 py-4 border-b border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between gap-6">
+                    <div className="flex gap-6 flex-wrap">
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">
+                          Total Selected
+                        </p>
+                        <p className="text-xl font-bold text-white">
+                          {activeClientCount}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Score</p>
+                        <p className="text-xl font-bold text-sky-300">
+                          {previewStats.avg_score}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">
+                          Avg Days Since Visit
+                        </p>
+                        <p className="text-xl font-bold text-purple-400">
+                          {previewStats.avg_days_since_last_visit}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#bdbdbd] mb-0.5">
+                          Avg Days Overdue
+                        </p>
+                        <p className="text-xl font-bold text-orange-400">
+                          {previewStats.avg_days_overdue}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Metric Explanations */}
+                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd] min-w-max">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                      <div>
+                        <span className="text-sky-300 font-medium">Score:</span>{" "}
+                        Higher = client needs message more urgently
+                      </div>
+                      <div>
+                        <span className="text-purple-400 font-medium">
+                          Days Since Visit:
+                        </span>{" "}
+                        Days since last appointment
+                      </div>
+                      <div>
+                        <span className="text-orange-400 font-medium">
+                          Days Overdue:
+                        </span>{" "}
+                        How late based on their typical pattern
+                      </div>
+                    </div>
+
+                    {/* Client Types Legend */}
+                    <div className="flex flex-wrap gap-3 pt-2">
+                      {previewStats.breakdown.consistent > 0 && (
+                        <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                          <span className="font-medium">Consistent:</span> Weekly
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/20">
+                            {previewStats.breakdown.consistent}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown["semi-consistent"] > 0 && (
+                        <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                          <span className="font-medium">Semi-consistent:</span>{" "}
+                          Every 2-3 weeks
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20">
+                            {previewStats.breakdown["semi-consistent"]}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown["easy-going"] > 0 && (
+                        <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                          <span className="font-medium">Easy-going:</span> Every
+                          1-2 months
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-500/20">
+                            {previewStats.breakdown["easy-going"]}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown.rare > 0 && (
+                        <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                          <span className="font-medium">Rare:</span> Every 2+
+                          months
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20">
+                            {previewStats.breakdown.rare}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown.new > 0 && (
+                        <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                          <span className="font-medium">New:</span> First visit
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-500/20">
+                            {previewStats.breakdown.new}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Sticky Pagination - Client List */}
               {activeTab === "client-list" && (
                 <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
@@ -1004,7 +1013,7 @@ const confirmReselect = async () => {
                       
                       {batchSelectedForAction.size > 0 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <div className="w-px h-8 bg-white/10" />
                           <button
                             onClick={() => setBatchSelectedForAction(new Set())}
                             className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
@@ -1022,7 +1031,7 @@ const confirmReselect = async () => {
                       
                       {clientListTotalPages > 1 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <div className="w-px h-8 bg-white/10" />
                           <button
                             onClick={() => setClientListPage((p) => Math.max(1, p - 1))}
                             disabled={clientListPage === 1}
@@ -1064,7 +1073,7 @@ const confirmReselect = async () => {
                       
                       {batchSelectedForAction.size > 0 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <div className="w-px h-8 bg-white/10" />
                           <button
                             onClick={() => setBatchSelectedForAction(new Set())}
                             className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
@@ -1082,7 +1091,7 @@ const confirmReselect = async () => {
                       
                       {totalPages > 1 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" /> {/* Divider */}
+                          <div className="w-px h-8 bg-white/10" />
                           <button
                             onClick={() => setOtherClientsPage((p) => Math.max(1, p - 1))}
                             disabled={otherClientsPage === 1}
