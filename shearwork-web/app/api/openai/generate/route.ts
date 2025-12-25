@@ -445,7 +445,7 @@ export async function POST(req: Request) {
     const startOfMonth = new Date(normalizedYear, numericMonth - 1, 1)
     const endOfMonth = new Date(normalizedYear, numericMonth, 0)
 
-    let weeklyExpensesData: any[] | undefined
+    let weeklyExpensesData: any
     if (type === 'weekly_comparison') {
       const { data, error } = await supabase
         .from('recurring_expenses')
@@ -456,7 +456,7 @@ export async function POST(req: Request) {
 
       if (error) {
         console.error('Error fetching recurring expenses:', error)
-        weeklyExpensesData = []
+        weeklyExpensesData = undefined
       } else {
         weeklyExpensesData = getWeeklyBreakdown(data, normalizedYear, numericMonth)
       }
