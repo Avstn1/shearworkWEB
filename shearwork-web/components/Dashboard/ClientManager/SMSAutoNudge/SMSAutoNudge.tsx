@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle, Coins, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage, PhoneNumber } from './types';
-import { supabase } from '@/utils/supabaseClient'
+import { supabase } from '@/utils/supabaseClient';
+import TestMessageConfirmModal from './Modals/TestMessageConfirmModal';
 
 interface PreviewClient {
   client_id: string;
@@ -34,7 +35,7 @@ interface PreviewStats {
 }
 
 // Main component
-export default function SMSManager() {
+export default function SMSAutoNudge() {
   // #region UseStates are here
   const [messages, setMessages] = useState<SMSMessage[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -62,12 +63,23 @@ export default function SMSManager() {
   const [scheduleEndDate, setScheduleEndDate] = useState<string>('');
   const [hasSchedule, setHasSchedule] = useState(false);
   const [isDraftingAll, setIsDraftingAll] = useState(false);
+
+  // Credits and test messages
+  const [availableCredits, setAvailableCredits] = useState<number>(0);
+  const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
+  const [profile, setProfile] = useState<any>(null);
+  
+  // Test message modal
+  const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
+  const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
   // #endregion
 
   // Load existing messages on mount
   useEffect(() => {
     loadMessages();
     loadClientPreview();
+    fetchCredits();
+    fetchTestMessageCount();
   }, []);
 
   // Safety check - if messages is still empty after loading, create defaults
@@ -77,10 +89,58 @@ export default function SMSManager() {
     }
   }, [isLoading, messages.length]);
 
+  const fetchCredits = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone, available_credits')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileData) {
+        setAvailableCredits(profileData.available_credits || 0);
+        setProfile(profileData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch credits:', error);
+    }
+  };
+
+  const fetchTestMessageCount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get start of today in user's timezone
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('sms_sent')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('purpose', 'test_message')
+        .eq('is_sent', true)
+        .gte('created_at', today.toISOString());
+
+      if (error) {
+        console.error('Failed to fetch test message count:', error);
+        return;
+      }
+
+      setTestMessagesUsed(data?.length || 0);
+    } catch (error) {
+      console.error('Failed to fetch test message count:', error);
+    }
+  };
+
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=marketing', {
+      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=auto-nudge', {
         method: 'GET',
       });
 
@@ -276,7 +336,7 @@ export default function SMSManager() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || '';
-      const response = await fetch(`/api/client-messaging/preview-recipients?limit=50&userId=${userId}&algorithm=overdue`);
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=50&userId=${userId}&algorithm=auto-nudge`);
       
       if (!response.ok) {
         throw new Error('Failed to load preview');
@@ -451,6 +511,7 @@ export default function SMSManager() {
       toast.error('Please fill in message content');
       return;
     }
+    
     if (msg.message.length < 100) {
       toast.error('Message must be at least 100 characters');
       return;
@@ -463,26 +524,20 @@ export default function SMSManager() {
     setIsSaving(true);
     setSavingMode(mode);
     try {
-      let hour24 = msg.hour;
-      if (msg.period === 'PM' && msg.hour !== 12) hour24 += 12;
-      else if (msg.period === 'AM' && msg.hour === 12) hour24 = 0;
-
-      const local = new Date();
-      local.setHours(hour24, msg.minute, 0, 0);
-      const utcHour = local.getUTCHours();
-      const utcMinute = local.getUTCMinutes();
-
+      // Use the schedule values directly since they come from the schedule modal
+      // The schedule modal sets hour/minute/period correctly
       const messageToSave = {
-        ...msg,
-        visiting_type: msg.visitingType,
-        hour: hour24,
-        minute: msg.minute,
-        utcHour,
-        utcMinute,
+        id: msg.id,
+        title: msg.title,
+        message: msg.message,
+        visitingType: msg.visitingType,
+        frequency: 'monthly',
+        dayOfMonth: scheduleDayOfMonth,
+        hour: scheduleHour,  // ← Use scheduleHour directly (already in 12hr format)
+        minute: scheduleMinute,  // ← Use scheduleMinute directly
+        period: schedulePeriod,  // ← Use schedulePeriod directly
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
-        startDate: scheduleStartDate,
-        endDate: scheduleEndDate || null,
-        purpose: 'marketing'
+        purpose: 'auto-nudge'
       };
 
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
@@ -502,7 +557,13 @@ export default function SMSManager() {
                 isSaved: true, 
                 isEditing: false, 
                 validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
-                enabled: mode === 'activate' // ← ADD THIS LINE
+                enabled: mode === 'activate',
+                // Update the message with the schedule values
+                dayOfMonth: scheduleDayOfMonth,
+                hour: scheduleHour,
+                minute: scheduleMinute,
+                period: schedulePeriod,
+                frequency: 'monthly'
               }
             : m
         ));
@@ -516,6 +577,65 @@ export default function SMSManager() {
     } finally {
       setIsSaving(false);
       setSavingMode(null);
+    }
+  };
+
+  const handleTestMessageSend = async (msgId: string) => {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    try {
+      const response = await fetch(`/api/client-messaging/qstash-sms-send?messageId=${msg.id}&action=test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send test message');
+      }
+
+      // If this is a paid test (over 10 free tests), log transaction
+      if (testMessagesUsed >= 10) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('available_credits, reserved_credits')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (profile) {
+            const oldAvailable = profile.available_credits || 0;
+            const newAvailable = oldAvailable - 1;
+            const oldReserved = profile.reserved_credits || 0;
+            const newReserved = oldReserved;
+            
+            await supabase
+              .from('credit_transactions')
+              .insert({
+                user_id: user.id,
+                action: `Paid test message - ${msg.title}`,
+                old_available: oldAvailable,
+                new_available: newAvailable,
+                old_reserved: oldReserved,
+                new_reserved: newReserved,
+                reference_id: msg.id,
+                created_at: new Date().toISOString()
+              });
+
+            // Update local credits
+            setAvailableCredits(newAvailable);
+          }
+        }
+      }
+
+      toast.success('Test message sent successfully to your phone!');
+      fetchTestMessageCount();
+    } catch (error: any) {
+      console.error('Test message error:', error);
+      toast.error(error.message || 'Failed to send test message');
     }
   };
 
@@ -538,44 +658,67 @@ export default function SMSManager() {
           <div>
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
               <MessageSquare className="w-6 h-6 text-sky-300" />
-              SMS Marketing Manager
+              SMS Auto Nudge
             </h2>
             <p className="text-[#bdbdbd] text-sm">
               Manage automated monthly marketing messages for each client type
             </p>
           </div>
           
-          <div className="flex items-center gap-2">
-            <button
-              onClick={draftAllActivatedMessages}
-              disabled={isDraftingAll || messages.filter(m => m.validationStatus === 'ACCEPTED' && m.enabled).length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full font-semibold text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isDraftingAll ? (
-                <>
+          <div className="flex flex-col items-end gap-3">
+            {/* Credits and Test Messages Display */}
+            <div className="flex flex-col gap-2">
+              <div className="px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center gap-2">
+                <Coins className="w-4 h-4 text-lime-300" />
+                <span className="text-sm font-semibold text-lime-300">
+                  {availableCredits.toLocaleString()} credits available
+                </span>
+              </div>
+              
+              <div className={`px-3 py-1.5 rounded-full flex items-center gap-2 ${
+                testMessagesUsed >= 10 
+                  ? 'bg-rose-300/10 border border-rose-300/20'
+                  : 'bg-sky-300/10 border border-sky-300/20'
+              }`}>
+                <Send className={`w-4 h-4 ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`} />
+                <span className={`text-sm font-semibold ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`}>
+                  {10 - testMessagesUsed} free tests left today
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={draftAllActivatedMessages}
+                disabled={isDraftingAll || messages.filter(m => m.validationStatus === 'ACCEPTED' && m.enabled).length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full font-semibold text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDraftingAll ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Drafting...
+                  </>
+                ) : (
+                  <>Draft All</>
+                )}
+              </button>
+              
+              <button
+                onClick={() => {
+                  loadClientPreview();
+                  setShowPreview(true);
+                }}
+                disabled={loadingPreview}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingPreview ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Drafting...
-                </>
-              ) : (
-                <>Draft All</>
-              )}
-            </button>
-            
-            <button
-              onClick={() => {
-                loadClientPreview();
-                setShowPreview(true);
-              }}
-              disabled={loadingPreview}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingPreview ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Users className="w-4 h-4" />
-              )}
-              Client Preview
-            </button>
+                ) : (
+                  <Users className="w-4 h-4" />
+                )}
+                Client Preview
+              </button>
+            </div>
           </div>
         </div>
         
@@ -615,6 +758,25 @@ export default function SMSManager() {
           </button>
         </div>
       </div>
+
+      {/* Test Message Confirmation Modal */}
+      <TestMessageConfirmModal
+        isOpen={showTestConfirmModal}
+        onClose={() => {
+          setShowTestConfirmModal(false);
+          setPendingTestMessageId(null);
+        }}
+        onConfirm={async () => {
+          if (pendingTestMessageId) {
+            setShowTestConfirmModal(false);
+            await handleTestMessageSend(pendingTestMessageId);
+            setPendingTestMessageId(null);
+          }
+        }}
+        testMessagesUsed={testMessagesUsed}
+        availableCredits={availableCredits}
+        profilePhone={profile?.phone || null}
+      />
 
       {/* Client Preview Modal */}
       <AnimatePresence>
@@ -770,7 +932,7 @@ export default function SMSManager() {
 
               {/* Modal Body */}
               <div className="p-6 space-y-6">
-                {/* Day of Week */}
+                {/* Day of Month */}
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
                     Day of Month *
@@ -825,7 +987,6 @@ export default function SMSManager() {
                       onChange={(e) => setScheduleMinute(parseInt(e.target.value))}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
-                      {/* {[0, 15, 30, 45].map((minute) => ( */}
                       {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
                         <option key={minute} value={minute} className="bg-[#1a1a1a]">
                           {minute.toString().padStart(2, '0')}
@@ -857,7 +1018,7 @@ export default function SMSManager() {
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                   />
                   <p className="text-xs text-[#bdbdbd] mt-1">
-                    When should the campaign start?
+                    When should the SMS nudging start?
                   </p>
                 </div>
 
@@ -931,6 +1092,9 @@ export default function SMSManager() {
               editingTitleId={editingTitleId}
               tempTitle={tempTitle}
               phoneNumbers={phoneNumbersByType[msg.visitingType || 'consistent'] || []}
+              testMessagesUsed={testMessagesUsed}
+              availableCredits={availableCredits}
+              profile={profile}
               onUpdate={updateMessage}
               onEnableEdit={enableEditMode}
               onCancelEdit={cancelEdit}
@@ -978,6 +1142,10 @@ export default function SMSManager() {
                 } finally {
                   setValidatingId(null);
                 }
+              }}
+              onRequestTest={(msgId) => {
+                setPendingTestMessageId(msgId);
+                setShowTestConfirmModal(true);
               }}
               onStartEditingTitle={(id: string, currentTitle: string) => {
                 setEditingTitleId(id);

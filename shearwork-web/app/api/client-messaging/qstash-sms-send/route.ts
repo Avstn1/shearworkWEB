@@ -113,14 +113,14 @@ async function handler(request: Request) {
         ? 'mass' 
         : scheduledMessage.purpose === 'campaign' 
           ? 'campaign' 
-          : 'overdue';
+          : 'auto-nudge';
       const limit = scheduledMessage.message_limit || 100;
 
       console.log(`📊 Fetching recipients with ${algorithm} algorithm, limit: ${limit}`);
 
       const apiUrl = scheduledMessage.visiting_type 
         ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}&algorithm=${algorithm}`
-        : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}`;
+        : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}&messageId=${messageId}`;
         
       console.log('🔗 API URL:', apiUrl);
       
@@ -148,6 +148,19 @@ async function handler(request: Request) {
         console.log('Failed to update final_clients_to_message.\n' + error)
       }
 
+      // START RECURSIVE PROGRESS TRACKING (checks every 3 seconds)
+      console.log('⏰ Starting progress tracking with 3-second intervals');
+      try {
+        await qstashClient.publishJSON({
+          url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/check-sms-progress`,
+          body: { message_id: scheduledMessage.id },
+          delay: 3,
+        });
+        console.log('✅ Started progress tracking');
+      } catch (trackingError: any) {
+        console.error('❌ Failed to start progress tracking:', trackingError);
+      }
+
       recipients = data.phoneNumbers || [];
 
       if (recipients.length === 0) {
@@ -170,6 +183,8 @@ async function handler(request: Request) {
     })    
 
     console.log('📤 Enqueueing', recipients.length, 'SMS messages');
+
+    console.log(`MessageId: ${scheduledMessage.id}`)
 
     await pMap(
       recipients,

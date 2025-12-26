@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Coins, Send, AlertCircle } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Coins, Send, Info, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage, PhoneNumber } from './types';
-import { supabase } from '@/utils/supabaseClient'
+import { supabase } from '@/utils/supabaseClient';
+
+import HowCampaignsWorkModal from './Modals/HowCampaignsWorkModal';
+import CampaignHistoryModal from './Modals/CampaignHistoryModal';
+import TestMessageConfirmModal from './Modals/TestMessageConfirmModal';
+import RecipientPreviewModal from './Modals/RecipientPreviewModal';
+import DeleteMessageConfirmModal from './Modals/DeleteMessageConfirmModal';
 
 interface PreviewClient {
   client_id: string;
@@ -47,22 +53,49 @@ export default function SMSCampaigns() {
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false);
   const [previewClients, setPreviewClients] = useState<PreviewClient[]>([]);
+  const [deselectedPreviewClients, setDeselectedPreviewClients] = useState<PreviewClient[]>([]);
   const [previewStats, setPreviewStats] = useState<PreviewStats | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
-  const [phoneNumbersByType, setPhoneNumbersByType] = useState<Record<string, PhoneNumber[]>>({});
   const [previewCounts, setPreviewCounts] = useState<Record<string, number>>({});
 
+  // Modal states
+  const [showHowCampaignsWorkModal, setShowHowCampaignsWorkModal] = useState(false);
+  const [showCampaignHistoryModal, setShowCampaignHistoryModal] = useState(false);
+  const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Preview clients modal
   const [activePreviewMessageId, setActivePreviewMessageId] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState<number>(0); 
 
-  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass'>('campaign');
+  // Delete confirmation modal
+  const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('hard');
+
+  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'auto-nudge'>('auto-nudge');
   const [maxClients, setMaxClients] = useState<number>(0);
 
   const [profile, setProfile] = useState<any>(null);
 
   const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
-  const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
+
+  const [previewModalKey, setPreviewModalKey] = useState(0);
+
+  const [previewLimit, setPreviewLimit] = useState(250);
+
+  const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
+
+  // Progress tracking state
+  const [campaignProgress, setCampaignProgress] = useState<Record<string, {
+    success: number;
+    fail: number;
+    total: number;
+    expected: number;
+    percentage: number;
+    is_finished: boolean;
+    is_active: boolean;
+  }>>({});
 
   // Load existing messages on mount
   useEffect(() => {
@@ -88,6 +121,46 @@ export default function SMSCampaigns() {
       });
     }
   }, [algorithmType]);
+
+  // Poll for campaign progress every 3 seconds if there are active campaigns
+  useEffect(() => {
+    const hasActiveCampaigns = messages.some(msg => {
+      const progress = campaignProgress[msg.id];
+      return progress?.is_active || (msg.validationStatus === 'ACCEPTED' && !progress?.is_finished);
+    });
+
+    if (!hasActiveCampaigns) return;
+
+    const pollProgress = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const messageIds = messages.map(m => m.id).join(',');
+        const response = await fetch(`/api/client-messaging/get-campaign-progress?userId=${user.id}&messageIds=${messageIds}`);
+        
+        if (!response.ok) return;
+
+        const data = await response.json();
+        
+        if (data.success && data.progress) {
+          const progressMap: typeof campaignProgress = {};
+          data.progress.forEach((p: any) => {
+            progressMap[p.id] = p;
+          });
+          setCampaignProgress(progressMap);
+        }
+      } catch (error) {
+        console.error('Failed to fetch campaign progress:', error);
+      }
+    };
+
+    // Poll immediately, then every 3 seconds
+    pollProgress();
+    const interval = setInterval(pollProgress, 3000);
+
+    return () => clearInterval(interval);
+  }, [messages, campaignProgress]);
 
   const fetchTestMessageCount = async () => {
     try {
@@ -140,7 +213,7 @@ export default function SMSCampaigns() {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=campaign&purpose=mass', {
+      const response = await fetch('/api/client-messaging/save-sms-schedule?purpose=campaign&purpose=mass&excludeDeleted=true', {
         method: 'GET',
       });
 
@@ -193,6 +266,7 @@ export default function SMSCampaigns() {
             validationStatus: dbMsg.status,
             validationReason: undefined,
             isEditing: false,
+            algorithm: dbMsg.purpose,
           };
           
           return message;
@@ -209,37 +283,47 @@ export default function SMSCampaigns() {
   };
 
   const loadClientPreview = async (messageId: string, limit: number) => {
-      setLoadingPreview(true);
-      setActivePreviewMessageId(messageId);
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        const userId = user?.id || '';
-        const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to load preview');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const clients = data.clients
-          
-          console.log(clients.length);
-          setMaxClients(data.maxClient || 0);
-          setPreviewCounts(prev => ({ ...prev, [messageId]: clients.length }));
-          setPreviewClients(clients);
-          setPreviewStats(data.stats);
-          setShowPreview(true);
-        } else {
-          toast.error(data.message || 'Failed to load preview');
-        }
-      } catch (error) {
-        console.error('❌ Failed to load preview:', error);
-        toast.error('Failed to load client preview');
-      } finally {
-        setLoadingPreview(false);
+    setLoadingPreview(true);
+    setActivePreviewMessageId(messageId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || '';
+
+      let response;
+      if (algorithmType === 'auto-nudge') {
+        const { data: messageData } = await supabase
+          .from('sms_scheduled_messages')
+          .select('purpose, title')
+          .eq('id', messageId)
+          .single();
+
+        response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${messageData?.purpose}&messageId=${messageId}`);
+      } else {
+        response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}&messageId=${messageId}`);
       }
+
+      if (!response.ok) {
+        throw new Error('Failed to load preview');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        const clients = data.clients;
+        setMaxClients(data.maxClient || 0);
+        setPreviewCounts(prev => ({ ...prev, [messageId]: clients.length }));
+        setPreviewClients(clients);
+        setDeselectedPreviewClients(data.deselectedClients || []);
+        setTotalUnselectedClients(data.deselectedClients?.length || 0); 
+        setPreviewStats(data.stats);
+        setShowPreview(true);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load preview:', error);
+      toast.error('Failed to load client preview');
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   const loadMessagePreview = async (messageId: string, limit: number) => {
@@ -299,35 +383,50 @@ export default function SMSCampaigns() {
 
   const removeMessage = async (id: string) => {
     const msg = messages.find((m) => m.id === id);
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${msg?.title || 'this message'}"?\n\nThis action is irreversible and will permanently remove the scheduled message.`
-    );
-    
-    if (!confirmed) {
+    if (!msg) return;
+
+    // Check if campaign is finished
+    const progress = campaignProgress[id];
+    const isFinished = progress?.is_finished;
+
+    // Set delete type and show modal
+    setDeleteType(isFinished ? 'soft' : 'hard');
+    setPendingDeleteMessageId(id);
+    setShowDeleteModal(true);
+  };
+
+const confirmDelete = async () => {
+  if (!pendingDeleteMessageId) return;
+
+  const msg = messages.find((m) => m.id === pendingDeleteMessageId);
+  
+  if (msg?.isSaved) {
+    try {
+      const response = await fetch('/api/client-messaging/save-sms-schedule', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id: pendingDeleteMessageId,
+          softDelete: deleteType === 'soft'
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to delete message');
+      
+      toast.success('Message deleted successfully');
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete message');
+      setShowDeleteModal(false);
+      setPendingDeleteMessageId(null);
       return;
     }
-
-    if (msg?.isSaved) {
-      try {
-        const response = await fetch('/api/client-messaging/save-sms-schedule', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id }),
-        });
-
-        if (!response.ok) throw new Error('Failed to delete message');
-        
-        toast.success('Message deleted successfully');
-      } catch (error) {
-        console.error('Delete error:', error);
-        toast.error('Failed to delete message');
-        return;
-      }
-    }
-    
-    setMessages(messages.filter((msg) => msg.id !== id));
-  };
+  }
+  
+  setMessages(messages.filter((msg) => msg.id !== pendingDeleteMessageId));
+  setShowDeleteModal(false);
+  setPendingDeleteMessageId(null);
+};
 
   const updateMessage = (id: string, updates: Partial<SMSMessage>) => {
       setMessages(
@@ -405,6 +504,7 @@ export default function SMSCampaigns() {
             new_available: newAvailable,
             old_reserved: oldReserved,
             new_reserved: newReserved,
+            reference_id: msg.id, 
             created_at: new Date().toISOString()
           });
 
@@ -442,18 +542,6 @@ export default function SMSCampaigns() {
   const handleSave = async (msgId: string, mode: 'draft' | 'activate') => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
-
-    console.log('💾 SAVE ATTEMPT:', {
-      msgId,
-      mode,
-      messageLength: msg.message?.length,
-      isValidated: msg.isValidated,
-      validationStatus: msg.validationStatus,
-      hour: msg.hour,
-      minute: msg.minute,
-      period: msg.period,
-      scheduleDate: msg.scheduleDate
-    });
 
     if (!msg.message.trim()) {
       toast.error('Please fill in message content');
@@ -512,7 +600,6 @@ export default function SMSCampaigns() {
               .eq('user_id', user.id);
 
             setAvailableCredits(newAvailable);
-            console.log(`✅ Refunded ${refundAmount} credits when saving as draft`);
             
             // Log credit transaction
             await supabase
@@ -524,6 +611,7 @@ export default function SMSCampaigns() {
                 new_available: newAvailable,
                 old_reserved: oldReserved,
                 new_reserved: newReserved,
+                reference_id: msg.id, 
                 created_at: new Date().toISOString()
               });
           }
@@ -550,13 +638,6 @@ export default function SMSCampaigns() {
       scheduleDateTime.setHours(hour24, msg.minute || 0, 0, 0);
       const scheduledFor = scheduleDateTime.toISOString();
 
-      console.log('📅 SCHEDULE CREATION:', {
-        userSelected: `${msg.scheduleDate} ${msg.hour}:${msg.minute} ${msg.period}`,
-        hour24,
-        scheduledFor,
-        localTime: scheduleDateTime.toString()
-      });
-
       const messageToSave = {
         id: msg.id,
         title: msg.title,
@@ -573,15 +654,11 @@ export default function SMSCampaigns() {
         previewCount: mode === 'activate' ? previewCounts[msgId] : undefined,
       };
 
-      console.log('📤 SENDING TO API:', messageToSave);
-
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [messageToSave] }),
       });
-
-      console.log('📥 API RESPONSE STATUS:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -590,7 +667,6 @@ export default function SMSCampaigns() {
       }
 
       const data = await response.json();
-      console.log('✅ API SUCCESS RESPONSE:', data);
 
       if (data.success) {
         // Only deduct credits on activation (not when saving as draft)
@@ -620,6 +696,7 @@ export default function SMSCampaigns() {
                 new_available: newAvailable,
                 old_reserved: oldReserved,
                 new_reserved: newReserved,
+                reference_id: msg.id, 
                 created_at: new Date().toISOString()
               });
           }
@@ -694,6 +771,7 @@ export default function SMSCampaigns() {
                 new_available: newAvailable,
                 old_reserved: oldReserved,
                 new_reserved: newReserved,
+                reference_id: msg.id, 
                 created_at: new Date().toISOString()
               });
           }
@@ -721,20 +799,56 @@ export default function SMSCampaigns() {
 
   return (
     <div className="space-y-6">
-    {/* Header */}
+      {/* Header */}
       <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
               <MessageSquare className="w-6 h-6 text-sky-300" />
-              SMS Marketing Manager
+              SMS Campaign Manager
             </h2>
-            <p className="text-[#bdbdbd] text-sm">
-              Schedule up to 3 automated marketing messages to keep your clients engaged
-            </p>
+
+            <button
+              onClick={() => setShowCampaignHistoryModal(true)}
+              className="inline-flex items-center gap-2 px-4 mr-2 py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
+            >
+              <Clock className="w-4 h-4" />
+              Campaign History
+            </button>
+
+            <button
+              onClick={() => setShowHowCampaignsWorkModal(true)}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
+            >
+              <Info className="w-4 h-4" />
+              How does this work?
+            </button>
+          </div>
+          
+          <div className="flex flex-col items-end gap-3">
+            {/* Create Message Button */}
+            {messages.length < 3 && (
+              <div className="relative group">
+                <button
+                  onClick={addMessage}
+                  className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Message
+                </button>
+                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none">
+                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl whitespace-nowrap">
+                    Create a new scheduled SMS campaign
+                    <div className="absolute top-full right-4 -mt-1">
+                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Credits and Test Messages Display */}
-            <div className="mt-3 flex items-center gap-3">
+            <div className="flex flex-col gap-2">
               <div className="px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center gap-2">
                 <Coins className="w-4 h-4 text-lime-300" />
                 <span className="text-sm font-semibold text-lime-300">
@@ -753,40 +867,11 @@ export default function SMSCampaigns() {
                 </span>
               </div>
             </div>
-            
-            <div className="mt-2 flex items-center gap-2 text-xs text-[#bdbdbd]">
-              <span>1 credit = 1 SMS message</span>
-              <span>•</span>
-              <span>Free tests reset daily at 12 AM</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {messages.length < 3 && (
-              <div className="relative group">
-                <button
-                  onClick={addMessage}
-                  className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Message
-                </button>
-                {/* Tooltip */}
-                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl whitespace-nowrap">
-                    Create a new scheduled SMS campaign
-                    <div className="absolute top-full right-4 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Usage indicator */}
-        <div className="flex items-center gap-2 text-xs text-[#bdbdbd]">
+        <div className="flex items-center gap-2 text-xs -mt-8 text-[#bdbdbd]">
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <div
@@ -805,273 +890,72 @@ export default function SMSCampaigns() {
         </div>
       </div>
 
-      {/* Test Confirmation Modal */}
-      <AnimatePresence>
-        {showTestConfirmModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-            onClick={() => setShowTestConfirmModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  testMessagesUsed >= 10
-                    ? 'bg-amber-300/20 text-amber-300'
-                    : 'bg-sky-300/20 text-sky-300'
-                }`}>
-                  <Send className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    {testMessagesUsed >= 10 ? 'Send Paid Test Message' : 'Send Free Test Message'}
-                  </h3>
-                  <p className="text-sm text-[#bdbdbd]">
-                    {testMessagesUsed >= 10 ? (
-                      <>
-                        You've used all your free test messages today. This test will cost{' '}
-                        <span className="text-amber-300 font-semibold">1 credit</span>.
-                      </>
-                    ) : (
-                      <>
-                        You have{' '}
-                        <span className="text-sky-300 font-semibold">{10 - testMessagesUsed} free tests</span>{' '}
-                        remaining today. After that, tests cost 1 credit each.
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
+      {/* Modals */}
+      <HowCampaignsWorkModal 
+        isOpen={showHowCampaignsWorkModal}
+        onClose={() => setShowHowCampaignsWorkModal(false)}
+      />
 
-              {testMessagesUsed >= 10 && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-                  <div className="flex items-center gap-2 text-sm text-amber-300">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <p>
-                      Available credits: <span className="font-semibold">{availableCredits}</span>
-                    </p>
-                  </div>
-                </div>
-              )}
+      <CampaignHistoryModal 
+        isOpen={showCampaignHistoryModal}
+        onClose={() => setShowCampaignHistoryModal(false)}
+      />
 
-              <div className="p-4 bg-white/5 border border-white/10 rounded-lg mb-6">
-                <p className="text-sm text-white mb-2">
-                  <span className="font-semibold">Test message will be sent to:</span>
-                </p>
-                <p className="text-sm text-sky-300">{profile?.phone || 'Your registered phone number'}</p>
-              </div>
+      <TestMessageConfirmModal
+        isOpen={showTestConfirmModal}
+        onClose={() => {
+          setShowTestConfirmModal(false);
+          setPendingTestMessageId(null);
+        }}
+        onConfirm={async () => {
+          if (pendingTestMessageId) {
+            setShowTestConfirmModal(false);
+            await handleTestMessageSend(pendingTestMessageId);
+            setPendingTestMessageId(null);
+          }
+        }}
+        testMessagesUsed={testMessagesUsed}
+        availableCredits={availableCredits}
+        profilePhone={profile?.phone || null}
+      />
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowTestConfirmModal(false);
-                    setPendingTestMessageId(null);
-                  }}
-                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    if (pendingTestMessageId) {
-                      setShowTestConfirmModal(false);
-                      // Actually send the test message
-                      await handleTestMessageSend(pendingTestMessageId);
-                      setPendingTestMessageId(null);
-                    }
-                  }}
-                  disabled={testMessagesUsed >= 10 && availableCredits < 1}
-                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {testMessagesUsed >= 10 ? 'Send (1 Credit)' : 'Send Test'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <RecipientPreviewModal
+        key={previewModalKey}
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        onRefresh={async () => {
+          setShowPreview(false);
+          
+          // Wait for modal to close
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Reload the preview data with the correct limit
+          if (activePreviewMessageId) {
+            await loadClientPreview(activePreviewMessageId, previewLimit);
+          }
+          
+          // Increment key and reopen
+          setPreviewModalKey(prev => prev + 1);
+          setShowPreview(true);
+        }}
+        messageTitle={messages.find(m => m.id === activePreviewMessageId)?.title || 'Message'}
+        messageId={activePreviewMessageId}
+        previewClients={previewClients}
+        deselectedPreviewClients={deselectedPreviewClients}
+        previewStats={previewStats}
+        maxClients={maxClients}
+        initialTotalUnselectedClients={totalUnselectedClients}
+      />
 
-      {/* Client Preview Modal */}
-      <AnimatePresence>
-        {showPreview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowPreview(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
-            >
-
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-sky-300" />
-                    Recipients for {messages.find(m => m.id === activePreviewMessageId)?.title || 'Message'}
-                  </h3>
-                  {previewStats && (
-                    <p className="text-sm text-[#bdbdbd] mt-1">
-                      {previewStats.total_selected} clients will receive this message. Your maximum clients based on the algorithm is {maxClients}. 
-                    </p>
-                  )}
-                  
-                  {/* Metric Explanations */}
-                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd]">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                      <div>
-                        <span className="text-sky-300 font-medium">Score:</span> Higher = client needs message more urgently
-                      </div>
-                      <div>
-                        <span className="text-purple-400 font-medium">Days Since Visit:</span> Days since last appointment
-                      </div>
-                      <div>
-                        <span className="text-orange-400 font-medium">Days Overdue:</span> How late based on their typical pattern
-                      </div>
-                    </div>
-                    
-                    {/* Client Types Legend */}
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Consistent:</span> Weekly
-                      </span>
-                      <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Semi-consistent:</span> Every 2-3 weeks
-                      </span>
-                      <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Easy-going:</span> Every 1-2 months
-                      </span>
-                      <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">Rare:</span> Every 2+ months
-                      </span>
-                      <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px]">
-                        <span className="font-medium">New:</span> First visit
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors ml-4"
-                >
-                  <X className="w-5 h-5 text-[#bdbdbd]" />
-                </button>
-              </div>
-
-              {/* Stats */}
-              {previewStats && (
-                <div className="px-6 py-4 border-b border-white/10 bg-white/5">
-                  <div className="flex items-center justify-between gap-6">
-                    <div className="flex gap-6">
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Total Selected</p>
-                        <p className="text-xl font-bold text-white">{previewStats.total_selected}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Score</p>
-                        <p className="text-xl font-bold text-sky-300">{previewStats.avg_score}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Days Since Visit</p>
-                        <p className="text-xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Days Overdue</p>
-                        <p className="text-xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {['consistent', 'semi-consistent', 'easy-going', 'rare', 'new'].map((type) => {
-                        const count = previewStats.breakdown[type] || 0;
-                        if (count === 0) return null;
-                        
-                        return (
-                          <span 
-                            key={type} 
-                            className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                              type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                              type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                              type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                              type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}
-                          >
-                            {count}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Clients List */}
-              <div className="overflow-y-auto max-h-[50vh] p-6">
-                <div className="space-y-2">
-                  {previewClients.map((client) => {
-                    const normalVisitInterval = client.avg_weekly_visits 
-                      ? Math.round(7 / client.avg_weekly_visits)
-                      : null;
-                    
-                    return (
-                      <div
-                        key={client.client_id}
-                        className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <h4 className="font-semibold text-white">
-                              {client.first_name} {client.last_name}
-                            </h4>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                              client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                              client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                              client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                              'bg-gray-500/20 text-gray-400'
-                            }`}>
-                              {client.visiting_type}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                            <span>{client.phone_normalized}</span>
-                            <span>•</span>
-                            <span>{client.days_since_last_visit} days since last visit</span>
-                            <span>•</span>
-                            <span className="text-orange-400">{client.days_overdue} days overdue</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                          {normalVisitInterval && (
-                            <p className="text-xs text-[#bdbdbd]">Goes every ~{normalVisitInterval} days</p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteMessageConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setPendingDeleteMessageId(null);
+        }}
+        onConfirm={confirmDelete}
+        deleteType={deleteType}
+      />
 
       {/* Messages List */}
       <AnimatePresence mode="popLayout">
@@ -1103,6 +987,7 @@ export default function SMSCampaigns() {
           <div className="space-y-4">
             {messages.map((msg, index) => (
               <MessageCard
+                maxClients={maxClients}
                 testMessagesUsed={testMessagesUsed}
                 profile={profile}
                 setAlgorithmType={setAlgorithmType}
@@ -1117,6 +1002,7 @@ export default function SMSCampaigns() {
                 tempTitle={tempTitle}
                 previewCount={previewCounts[msg.id] || 0}
                 loadingPreview={loadingPreview}
+                campaignProgress={campaignProgress[msg.id]}
                 onLoadPreview={(limit) => loadClientPreview(msg.id, limit)} 
                 onUpdate={updateMessage}
                 onRemove={removeMessage}

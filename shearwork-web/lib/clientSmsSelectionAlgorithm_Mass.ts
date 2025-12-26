@@ -1,9 +1,10 @@
 // lib/sms/recentAppointmentCampaignAlgorithm.ts
 import { SupabaseClient } from '@supabase/supabase-js'
-import { AcuityClient, ScoredClient } from './clientSmsSelectionAlgorithm_Overdue'
+import { AcuityClient, ScoredClient } from './clientSmsSelectionAlgorithm_AutoNudge'
 
 export interface CampaignResult {
   clients: ScoredClient[];
+  deselectedClients: ScoredClient[];
   totalAvailableClients: number;
 }
 
@@ -11,60 +12,113 @@ export async function selectClientsForSMS_Mass(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
-  visitingType?: string
+  messageId?: string
 ): Promise<CampaignResult> {
   // Calculate 1.5 years ago (18 months)
   const oneAndHalfYearsAgo = new Date()
   oneAndHalfYearsAgo.setMonth(oneAndHalfYearsAgo.getMonth() - 18)
 
-  let query = supabase
+  const query = supabase
     .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
-    .gt('last_appt', oneAndHalfYearsAgo.toISOString())
+    .neq('sms_subscribed', false)
     .gt('total_appointments', 0)
-    .limit(limit)
 
-  // Optional visiting_type filter
-  if (visitingType) {
-    query = query.eq('visiting_type', visitingType)
+  const { data: clients, error: queryError } = await query
+
+  if (queryError) {
+    throw new Error(`Failed to fetch clients: ${queryError.message}`)
   }
 
-  const { data: clients, error } = await query
-
-  if (error) {
-    throw new Error(`Failed to fetch clients: ${error.message}`)
+  if (!clients) {
+    throw new Error('Clients query returned null')
   }
 
-  if (!clients || clients.length === 0) {
-    return { clients: [], totalAvailableClients: 0 }
+  const totalAvailableClients = clients.length
+
+  if (clients.length === 0) {
+    return {
+      clients: [],
+      deselectedClients: [],
+      totalAvailableClients: 0,
+    }
   }
 
-  // Map each client to include score and days_since_last_visit
+  // Fetch selected_clients and deselected_clients if messageId is provided
+  let selectedClients: ScoredClient[] = []
+  let deselectedPhones: string[] = []
+
+  if (messageId) {
+    const { data: messageData } = await supabase
+      .from('sms_scheduled_messages')
+      .select('selected_clients, deselected_clients')
+      .eq('id', messageId)
+      .single()
+
+    if (messageData) {
+      selectedClients = messageData.selected_clients || []
+      deselectedPhones = messageData.deselected_clients || []
+    }
+  }
+
+  // Score all clients
   const today = new Date()
   const scoredClients: ScoredClient[] = clients.map(client =>
     scoreClientForHoliday(client, today)
   )
 
-  // FINAL STEP: Sort alphabetically by full name (first + last, case-insensitive)
-  scoredClients.sort((a, b) => {
+  // Remove manually deselected phones + ensure phone exists
+  const filteredClients = scoredClients.filter(
+    client =>
+      client.phone_normalized !== null &&
+      !deselectedPhones.includes(client.phone_normalized)
+  )
+
+  // Sort alphabetically by full name
+  const sortedClients = filteredClients.toSorted((a, b) => {
     const aFullName = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase()
     const bFullName = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase()
-    
     return aFullName.localeCompare(bFullName)
   })
 
+  // Account for pre-selected clients
+  const selectedCount = selectedClients.length
+  const algorithmLimit = Math.max(0, limit - selectedCount)
+
+  const algorithmClients = sortedClients.slice(0, algorithmLimit)
+
+  const finalClients: ScoredClient[] = [
+    ...selectedClients,
+    ...algorithmClients,
+  ]
+
+  // --- NEW: compute deselected as set difference ---
+
+  const finalPhoneSet = new Set(
+    finalClients
+      .map(c => c.phone_normalized)
+      .filter((p): p is string => !!p)
+  )
+
+  const deselectedClients = scoredClients.filter(
+    c => !c.phone_normalized || !finalPhoneSet.has(c.phone_normalized)
+  )
+
   return {
-    clients: scoredClients,
-    totalAvailableClients: scoredClients.length
+    clients: finalClients,
+    deselectedClients,
+    totalAvailableClients,
   }
 }
 
-function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient {
+function scoreClientForHoliday(
+  client: AcuityClient,
+  today: Date
+): ScoredClient {
   const lastApptDate = client.last_appt ? new Date(client.last_appt) : null
-  const lastSmsSentDate = client.date_last_sms_sent ? new Date(client.date_last_sms_sent) : null
 
   if (!lastApptDate) {
     return {
@@ -80,7 +134,6 @@ function scoreClientForHoliday(client: AcuityClient, today: Date): ScoredClient 
     (today.getTime() - lastApptDate.getTime()) / (1000 * 60 * 60 * 24)
   )
 
-  // Clamp to 0 minimum
   if (daysSinceLastVisit < 0) daysSinceLastVisit = 0
 
   const MAX_SCORE = 240

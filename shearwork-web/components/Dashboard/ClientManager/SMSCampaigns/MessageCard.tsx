@@ -1,36 +1,34 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Clock, CheckCircle, XCircle, Edit, Pencil, Check, X, Send, Loader2, Users } from 'lucide-react';
+import { Trash2, Clock, CheckCircle, XCircle, Edit, Pencil, Check, X, Send, Loader2, Users, Lock, AlertCircle } from 'lucide-react';
 import { SMSMessage } from './types';
 import { MessageContent } from './MessageContent';
 import { MessageSchedule } from './MessageSchedule';
 import { supabase } from '@/utils/supabaseClient';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
-interface PreviewClient {
-  client_id: string;
+interface Recipient {
+  phone_normalized: string;
+  is_sent: boolean;
+  reason: string | null;
+  created_at: string;
+  client_id: string | null;
   first_name: string | null;
   last_name: string | null;
-  phone_normalized: string;
-  visiting_type: string | null;
-  avg_weekly_visits: number | null;
-  last_appt: string | null;
-  total_appointments: number;
-  days_since_last_visit: number;
-  days_overdue: number;
-  expected_visit_interval_days: number;
-  score: number;
-  date_last_sms_sent: string | null;
 }
 
-interface PreviewStats {
-  total_selected: number;
-  breakdown: Record<string, number>;
-  avg_score: string;
-  avg_days_overdue: string;
-  avg_days_since_last_visit: string;
+interface CampaignProgress {
+  success: number;
+  fail: number;
+  total: number;
+  expected: number;
+  percentage: number;
+  is_finished: boolean;
+  is_active: boolean;
 }
 
 interface MessageCardProps {
+  maxClients: number;
   profile: any; 
   setAlgorithmType: (type: 'campaign' | 'mass') => void;
   availableCredits?: number;
@@ -44,6 +42,7 @@ interface MessageCardProps {
   previewCount?: number;
   loadingPreview: boolean;
   testMessagesUsed: number; 
+  campaignProgress?: CampaignProgress;
   onLoadPreview: (limit: number) => void;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onRemove: (id: string) => void;
@@ -51,8 +50,8 @@ interface MessageCardProps {
   onCancelEdit: (id: string) => void;
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
   onValidate: (msgId: string) => void;
-  onRequestTest: (msgId: string) => void; // Add this
-  onTestComplete: () => void; // Add this
+  onRequestTest: (msgId: string) => void;
+  onTestComplete: () => void;
   onStartEditingTitle: (id: string, currentTitle: string) => void;
   onSaveTitle: (id: string) => void;
   onCancelEditTitle: () => void;
@@ -60,6 +59,7 @@ interface MessageCardProps {
 }
 
 export function MessageCard({
+  maxClients,
   profile,
   setAlgorithmType,
   availableCredits,
@@ -73,8 +73,8 @@ export function MessageCard({
   tempTitle,
   previewCount,
   loadingPreview,
+  campaignProgress,
   onRequestTest,
-  onTestComplete,
   onLoadPreview,
   onUpdate,
   onRemove,
@@ -87,6 +87,81 @@ export function MessageCard({
   onCancelEditTitle,
   onTempTitleChange,
 }: MessageCardProps) {
+  
+  const [showRecipientsModal, setShowRecipientsModal] = useState(false);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [recipientsStats, setRecipientsStats] = useState<{ total: number; successful: number; failed: number } | null>(null);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+
+  const fetchRecipients = async () => {
+    setLoadingRecipients(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch(`/api/client-messaging/get-campaign-recipients?messageId=${msg.id}&userId=${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch recipients');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setRecipients(data.recipients || []);
+        setRecipientsStats(data.stats || null);
+        setShowRecipientsModal(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch recipients:', error);
+    } finally {
+      setLoadingRecipients(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    setShowDeactivateModal(false);
+    
+    try {
+      // First refund credits via onEnableEdit
+      await onEnableEdit(msg.id);
+      
+      // Then save the DRAFT status to database
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch('/api/client-messaging/save-sms-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{
+            id: msg.id,
+            title: msg.title,
+            message: msg.message,
+            scheduleDate: msg.scheduleDate,
+            clientLimit: msg.clientLimit,
+            hour: msg.hour,
+            minute: msg.minute,
+            period: msg.period,
+            scheduledFor: new Date(msg.scheduleDate + 'T00:00:00').toISOString(),
+            validationStatus: 'DRAFT',
+            isValidated: msg.isValidated,
+            purpose: msg.purpose || 'campaign',
+          }]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save draft status');
+      }
+
+      toast.success('Campaign deactivated and set to draft');
+    } catch (error) {
+      console.error('Failed to deactivate:', error);
+      toast.error('Failed to deactivate campaign');
+    }
+  };
   
   const getSchedulePreview = (msg: SMSMessage) => {
     const minute = msg.minute ?? 0;
@@ -108,20 +183,54 @@ export function MessageCard({
     return `Send at ${timeStr}`;
   };
 
+  // Determine if message is locked
+  const isLocked = campaignProgress?.is_active || campaignProgress?.is_finished;
+  const canEdit = !isLocked && msg.isSaved && !msg.isEditing;
+  const canDelete = true; // Can always delete
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
-      className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl overflow-hidden"
+      className={`bg-white/5 backdrop-blur-lg border rounded-2xl shadow-xl overflow-visible ${
+        isLocked ? 'border-amber-300/30' : 'border-white/10'
+      }`}
     >
+      {/* Locked Banner */}
+      {isLocked && (
+        <div className={`px-6 py-3 flex items-center gap-2 ${
+          campaignProgress?.is_finished 
+            ? 'bg-lime-300/10 border-b border-lime-300/20'
+            : 'bg-amber-300/10 border-b border-amber-300/20'
+        }`}>
+          <Lock className={`w-4 h-4 ${campaignProgress?.is_finished ? 'text-lime-300' : 'text-amber-300'}`} />
+          <p className={`text-sm font-semibold ${campaignProgress?.is_finished ? 'text-lime-300' : 'text-amber-300'}`}>
+            {campaignProgress?.is_finished 
+              ? 'Campaign Completed - This message cannot be edited or reused'
+              : 'Campaign In Progress - Messages are being sent, editing is locked'
+            }
+          </p>
+        </div>
+      )}
+
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sky-300/20 rounded-full flex items-center justify-center">
-              <span className="text-sky-300 font-bold">{index + 1}</span>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              campaignProgress?.is_finished 
+                ? 'bg-lime-300/20 text-lime-300'
+                : campaignProgress?.is_active
+                  ? 'bg-amber-300/20 text-amber-300'
+                  : 'bg-sky-300/20 text-sky-300'
+            }`}>
+              {campaignProgress?.is_finished ? (
+                <CheckCircle className="w-5 h-5" />
+              ) : (
+                <span className="font-bold">{index + 1}</span>
+              )}
             </div>
             <div>
               {/* Editable Title */}
@@ -159,7 +268,7 @@ export function MessageCard({
                   <h3 className="text-white font-semibold">
                     {msg.title}
                   </h3>
-                  {msg.isEditing && (
+                  {msg.isEditing && !isLocked && (
                     <button
                       onClick={() => onStartEditingTitle(msg.id, msg.title)}
                       className="p-1 rounded hover:bg-white/10 text-[#bdbdbd] hover:text-white transition-all"
@@ -171,38 +280,33 @@ export function MessageCard({
               )}
               <p className="text-xs text-[#bdbdbd] flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {getSchedulePreview(msg)}
+                {getSchedulePreview(msg)}{msg.validationStatus !== 'ACCEPTED' ? ' | Inactive' : ''}
               </p>
             </div>
           </div>
-
+          
+          {/* Status Cards */}
           <div className="flex items-center gap-2">
             {/* Preview Button with tooltip */}
-            <div className="relative group">
-              <button
-                onClick={() => onLoadPreview(msg.clientLimit)}
-                disabled={loadingPreview}
-                className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loadingPreview ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Users className="w-3 h-3" />
-                )}
-                Preview
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                  View which clients will receive this message
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                    <div className="border-4 border-transparent border-t-[#0a0a0a]" />
-                  </div>
-                </div>
+            {!isLocked && (
+              <div className="relative group">
+                <button
+                  onClick={() => onLoadPreview(msg.clientLimit)}
+                  disabled={loadingPreview}
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingPreview ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Users className="w-3 h-3" />
+                  )}
+                  Who will receive this message?
+                </button>
               </div>
-            </div>
+            )}
 
             {/* Edit Button with tooltip */}
-            {!msg.isEditing && msg.isSaved && (
+            {canEdit && msg.validationStatus !== 'ACCEPTED' && (
               <div className="relative group">
                 <button
                   onClick={() => onEnableEdit(msg.id)}
@@ -213,7 +317,66 @@ export function MessageCard({
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
                   <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                    {msg.validationStatus === 'ACCEPTED' ? 'Edit message (will refund reserved credits)' : 'Edit this message'}
+                    Edit this message
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active/Draft Toggle - Only show if saved and not locked */}
+            {msg.isSaved && !isLocked && (
+              <button
+                onClick={() => {
+                  if (msg.validationStatus === 'ACCEPTED') {
+                    setShowDeactivateModal(true);
+                  } else {
+                    toast.error('Please use the Activate button to schedule this message');
+                  }
+                }}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                  msg.validationStatus === 'ACCEPTED'
+                    ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30'
+                    : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                }`}
+              >
+                {msg.validationStatus === 'ACCEPTED' ? 'Active - Click to toggle' : 'Inactive'}
+              </button>
+            )}
+
+            <div className="flex items-center gap-2">
+              {/* Saved/Draft Badge */}
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                msg.isSaved 
+                  ? 'bg-lime-300/10 text-lime-300 border border-lime-300/20'
+                  : 'bg-amber-300/10 text-amber-300 border border-amber-300/20'
+              }`}>
+                {msg.isSaved ? 'Saved' : 'Draft'}
+              </span>
+
+              {/* Verified Badge */}
+              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                msg.isValidated
+                  ? 'bg-sky-300/10 text-sky-300 border border-sky-300/20'
+                  : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+              }`}>
+                {msg.isValidated ? 'Verified' : 'Unverified'}
+              </span>
+
+            </div>
+
+            {/* Locked indicator */}
+            {isLocked && !campaignProgress?.is_finished && (
+              <div className="relative group">
+                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20 flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Locked
+                </div>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                    Campaign is sending - cannot edit until complete
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                       <div className="border-4 border-transparent border-t-[#0a0a0a]" />
                     </div>
@@ -223,61 +386,346 @@ export function MessageCard({
             )}
 
             {/* Delete Button with tooltip */}
-            <div className="relative group">
-              <button
-                onClick={() => onRemove(msg.id)}
-                className="p-2 rounded-full bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-300"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                  Delete this message permanently
-                  <div className="absolute top-full right-4 -mt-1">
-                    <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+            {canDelete && (
+              <div className="relative group">
+                <button
+                  onClick={() => onRemove(msg.id)}
+                  className="p-2 rounded-full bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all duration-300"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                    Delete this message permanently
+                    <div className="absolute top-full right-4 -mt-1">
+                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* 50/50 Split Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* LEFT: Message Content (50%) */}
-          <MessageContent
-            profile={profile}
-            message={msg}
-            validatingId={validatingId}
-            testMessagesUsed={testMessagesUsed} 
-            onUpdate={onUpdate}
-            onValidate={onValidate}
-            onRequestTest={onRequestTest} 
-          />
+        {/* Progress Bar */}
+        {campaignProgress && (campaignProgress.is_active || campaignProgress.is_finished) && (
+          <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white">
+                  {campaignProgress.is_finished ? 'Campaign Complete' : 'Sending Progress'}
+                </span>
+                {!campaignProgress.is_finished && (
+                  <Loader2 className="w-4 h-4 text-sky-300 animate-spin" />
+                )}
+              </div>
+              <span className="text-sm font-bold text-white">
+                {campaignProgress.total} / {campaignProgress.expected}
+              </span>
+            </div>
 
-          {/* RIGHT: Schedule Settings (50%) */}
-          <MessageSchedule
-            setAlgorithmType={setAlgorithmType}
-            availableCredits={availableCredits}
-            message={msg}
-            isSaving={isSaving}
-            savingMode={savingMode}
-            previewCount={previewCount}
-            onUpdate={onUpdate}
-            onSave={onSave}
-            onCancelEdit={onCancelEdit}
-          />
+            {/* Progress Bar */}
+            <div className="relative h-3 bg-white/10 rounded-full overflow-hidden mb-2">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${campaignProgress.percentage}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className={`h-full rounded-full ${
+                  campaignProgress.is_finished 
+                    ? 'bg-gradient-to-r from-lime-300 to-green-400'
+                    : 'bg-gradient-to-r from-sky-300 to-blue-400'
+                }`}
+              />
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-lime-300" />
+                <span className="text-lime-300 font-semibold">{campaignProgress.success} successful</span>
+              </div>
+              {campaignProgress.fail > 0 && (
+                <div className="flex items-center gap-1">
+                  <XCircle className="w-3 h-3 text-rose-300" />
+                  <span className="text-rose-300 font-semibold">{campaignProgress.fail} failed</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 text-[#bdbdbd]">
+                <span>{campaignProgress.percentage}% complete</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 50/50 Split Layout - Only show if not locked or if editing */}
+        {(!isLocked || msg.isEditing) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* LEFT: Message Content (50%) */}
+            <MessageContent
+              profile={profile}
+              message={msg}
+              validatingId={validatingId}
+              testMessagesUsed={testMessagesUsed} 
+              onUpdate={onUpdate}
+              onValidate={onValidate}
+              onRequestTest={onRequestTest} 
+            />
+
+            {/* RIGHT: Schedule Settings (50%) */}
+            <MessageSchedule
+              maxClients={maxClients}
+              setAlgorithmType={setAlgorithmType}
+              availableCredits={availableCredits}
+              message={msg}
+              isSaving={isSaving}
+              savingMode={savingMode}
+              previewCount={previewCount}
+              onUpdate={onUpdate}
+              onSave={onSave}
+              onCancelEdit={onCancelEdit}
+            />
+          </div>
+        )}
+
+        {/* Locked Message View */}
+        {isLocked && !msg.isEditing && (
+          <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
+            <p className="text-sm text-[#bdbdbd] mb-4">Message content:</p>
+            <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">
+              {msg.message}
+            </p>
+            {campaignProgress?.is_finished && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-[#bdbdbd]">
+                    This campaign has finished. You can delete this message or create a new one.
+                  </p>
+                  <button
+                    onClick={fetchRecipients}
+                    disabled={loadingRecipients}
+                    className="flex items-center gap-2 px-4 py-2 bg-sky-300/10 border border-sky-300/20 text-sky-300 rounded-lg hover:bg-sky-300/20 transition-all duration-300 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingRecipients ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Users className="w-4 h-4" />
+                    )}
+                    Who was it sent to?
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Recipients Modal */}
+      <AnimatePresence>
+        {showRecipientsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+            onClick={() => setShowRecipientsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Users className="w-4 h-4 text-sky-300" />
+                    Campaign Recipients - {msg.title}
+                  </h3>
+                  {recipientsStats && (
+                    <p className="text-xs text-[#bdbdbd] mt-0.5">
+                      {recipientsStats.total} total • {recipientsStats.successful} successful • {recipientsStats.failed} failed
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowRecipientsModal(false)}
+                  className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4 text-[#bdbdbd]" />
+                </button>
+              </div>
+
+              {/* Stats Bar */}
+              {recipientsStats && (
+                <div className="px-4 py-2.5 border-b border-white/10 bg-white/5 flex gap-4 text-xs">
+                  <div>
+                    <p className="text-[#bdbdbd] mb-0.5">Total</p>
+                    <p className="text-base font-bold text-white">{recipientsStats.total}</p>
+                  </div>
+                  <div>
+                    <p className="text-[#bdbdbd] mb-0.5">Successful</p>
+                    <p className="text-base font-bold text-lime-300">{recipientsStats.successful}</p>
+                  </div>
+                  {recipientsStats.failed > 0 && (
+                    <div>
+                      <p className="text-[#bdbdbd] mb-0.5">Failed</p>
+                      <p className="text-base font-bold text-rose-300">{recipientsStats.failed}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recipients List */}
+              <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-4">
+                {recipients.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-10 h-10 text-[#bdbdbd] mx-auto mb-2 opacity-50" />
+                    <p className="text-sm text-[#bdbdbd]">No recipients found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {recipients.map((recipient, index) => (
+                      <div
+                        key={index}
+                        className={`p-2.5 rounded-lg border transition-colors ${
+                          recipient.is_sent
+                            ? 'bg-lime-300/5 border-lime-300/20 hover:bg-lime-300/10'
+                            : 'bg-rose-300/5 border-rose-300/20 hover:bg-rose-300/10'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {recipient.first_name && recipient.last_name ? (
+                                <h4 className="font-semibold text-white text-sm truncate">
+                                  {recipient.first_name} {recipient.last_name}
+                                </h4>
+                              ) : (
+                                <h4 className="font-semibold text-[#bdbdbd] text-sm">Unknown Client</h4>
+                              )}
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
+                                recipient.is_sent
+                                  ? 'bg-lime-300/20 text-lime-300'
+                                  : 'bg-rose-300/20 text-rose-300'
+                              }`}>
+                                {recipient.is_sent ? 'Sent' : 'Failed'}
+                              </span>
+                              {/* Failure Reason - Inline with tag */}
+                              {!recipient.is_sent && recipient.reason && (
+                                <span className="flex items-center gap-1 text-[10px] text-rose-300">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">{recipient.reason}</span>
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[#bdbdbd] mt-0.5">
+                              {recipient.phone_normalized}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {recipient.is_sent ? (
+                              <CheckCircle className="w-4 h-4 text-lime-300" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-rose-300" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-white/10 px-4 py-3 bg-white/5">
+                <button
+                  onClick={() => setShowRecipientsModal(false)}
+                  className="w-full px-4 py-2 rounded-lg font-semibold text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Deactivate Confirmation Modal */}
+      <AnimatePresence>
+        {showDeactivateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setShowDeactivateModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Deactivate Campaign?
+                  </h3>
+                  <p className="text-sm text-[#bdbdbd]">
+                    This will set your campaign to draft and refund{' '}
+                    <span className="text-lime-300 font-semibold">{previewCount || 0} credits</span>{' '}
+                    back to your available balance.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-6">
+                <div className="flex items-start gap-2 text-sm text-amber-300">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold mb-1">You'll need to reactivate</p>
+                    <p className="text-amber-200/80">
+                      Once deactivated, you'll need to verify and activate this message again before it can be sent.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeactivateModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeactivate}
+                  className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
+                >
+                  Deactivate & Refund
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preview Banner - Only show if ACTIVE */}
+      {msg.validationStatus === 'ACCEPTED' && !isLocked && (
+        <div className="bg-sky-300/10 border-t border-sky-300/20 px-6 py-3">
+          <p className="text-xs text-sky-300 flex items-center gap-2">
+            <Send className="w-3 h-3" />
+            <span className="font-medium">Next send:</span>
+            <span className="text-sky-200">{getSchedulePreview(msg)}</span>
+          </p>
         </div>
-      </div>
-
-      {/* Preview Banner */}
-      <div className="bg-sky-300/10 border-t border-sky-300/20 px-6 py-3">
-        <p className="text-xs text-sky-300 flex items-center gap-2">
-          <Send className="w-3 h-3" />
-          <span className="font-medium">Next send:</span>
-          <span className="text-sky-200">{getSchedulePreview(msg)}</span>
-        </p>
-      </div>
+      )}
     </motion.div>
   );
 }
