@@ -88,8 +88,8 @@ export async function selectClientsForSMS_Campaign(
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
   const { data: allEligibleClients, error } = await supabase
-  // acuity_clients change for testing
-    .from('acuity_clients')
+  // acuity_clients_testing change for testing
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -137,9 +137,9 @@ async function getStrictClients(
   const twoWeeksAgo = new Date(today);
   twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
   
-  // acuity_clients change for testing
+  // acuity_clients_testing change for testing
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -437,9 +437,9 @@ export async function markClientsAsMessaged(
   supabase: SupabaseClient,
   clientIds: string[]
 ): Promise<void> {
-  // acuity_clients change for testing
   const { error } = await supabase
-    .from('acuity_clients')
+    // acuity_clients_testing change for testing
+    .from('acuity_clients_testing')
     .update({ date_last_sms_sent: new Date().toISOString() })
     .in('client_id', clientIds);
 

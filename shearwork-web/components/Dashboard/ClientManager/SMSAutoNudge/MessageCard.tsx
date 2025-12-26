@@ -13,11 +13,15 @@ interface MessageCardProps {
   editingTitleId: string | null;
   tempTitle: string;
   phoneNumbers: PhoneNumber[];
+  testMessagesUsed: number;
+  availableCredits: number;
+  profile: any;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onEnableEdit: (id: string) => void;
   onCancelEdit: (id: string) => void;
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
   onValidate: (msgId: string) => void;
+  onRequestTest: (msgId: string) => void;
   onStartEditingTitle: (id: string, currentTitle: string) => void;
   onSaveTitle: (id: string) => void;
   onCancelEditTitle: () => void;
@@ -33,11 +37,15 @@ export function MessageCard({
   editingTitleId,
   tempTitle,
   phoneNumbers,
+  testMessagesUsed,
+  availableCredits,
+  profile,
   onUpdate,
   onEnableEdit,
   onCancelEdit,
   onSave,
   onValidate,
+  onRequestTest,
   onStartEditingTitle,
   onSaveTitle,
   onCancelEditTitle,
@@ -99,7 +107,40 @@ export function MessageCard({
               </button>
             )}
 
-            {/* Validation Status Badge */}
+            {/* Saved/Draft Badge */}
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+              msg.isSaved 
+                ? 'bg-lime-300/10 text-lime-300 border border-lime-300/20'
+                : 'bg-amber-300/10 text-amber-300 border border-amber-300/20'
+            }`}>
+              {msg.isSaved ? 'Saved' : 'Draft'}
+            </span>
+
+            {/* Verified Badge */}
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+              msg.isValidated
+                ? 'bg-sky-300/10 text-sky-300 border border-sky-300/20'
+                : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+            }`}>
+              {msg.isValidated ? 'Verified' : 'Unverified'}
+            </span>
+
+            {/* Active/Inactive Status - Only show if saved and validated as ACCEPTED */}
+            {msg.isSaved && msg.validationStatus === 'ACCEPTED' && (
+              <button
+                onClick={() => onUpdate(msg.id, { enabled: !msg.enabled })}
+                disabled={!msg.isEditing}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                  msg.enabled
+                    ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
+                    : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                } ${!msg.isEditing ? 'cursor-not-allowed opacity-70' : ''}`}
+              >
+                {msg.enabled ? 'Active' : 'Inactive'}
+              </button>
+            )}
+
+            {/* Validation Status Badge - Only show if validated (approved/denied) */}
             {msg.isValidated && msg.validationStatus === 'ACCEPTED' && (
               <div className="px-3 py-1 rounded-full text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />
@@ -112,45 +153,6 @@ export function MessageCard({
                 Denied
               </div>
             )}
-
-            {/* Status Badge */}
-            {msg.isSaved ? (
-              msg.validationStatus === 'ACCEPTED' ? (
-                <button
-                  onClick={() =>
-                    onUpdate(msg.id, { enabled: !msg.enabled })
-                  }
-                  disabled={!msg.isEditing}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
-                    msg.enabled
-                      ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
-                      : 'bg-white/5 text-[#bdbdbd] border border-white/10'
-                  } ${!msg.isEditing ? 'cursor-not-allowed opacity-70' : ''}`}
-                >
-                  {msg.enabled ? 'Active' : 'Paused'}
-                </button>
-              ) : (
-                <>
-                  <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30">
-                    Draft
-                  </div>
-                  <div className="px-3 py-1 rounded-full text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    Saved
-                  </div>
-                </>
-              )
-            ) : (
-              <>
-                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30">
-                  Draft
-                </div>
-                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-rose-300/20 text-rose-300 border border-rose-300/30 flex items-center gap-1">
-                  <XCircle className="w-3 h-3" />
-                  Not Saved
-                </div>
-              </>
-            )}
           </div>
         </div>
 
@@ -160,71 +162,32 @@ export function MessageCard({
           <MessageContent
             message={msg}
             validatingId={validatingId}
+            testMessagesUsed={testMessagesUsed}
+            profile={profile}
             onUpdate={onUpdate}
             onValidate={onValidate}
+            onRequestTest={onRequestTest}
           />
 
           {/* RIGHT: Recipients List (50%) */}
           <MessageClientList
             message={msg}
             phoneNumbers={phoneNumbers}
+            isSaving={isSaving}
+            savingMode={savingMode}
+            onSave={onSave}
+            onCancelEdit={onCancelEdit}
           />
         </div>
       </div>
 
-      {/* Preview Banner with Save Buttons */}
+      {/* Preview Banner */}
       <div className="bg-sky-300/10 border-t border-sky-300/20 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-sky-300 flex items-center gap-2">
-            <Send className="w-3 h-3" />
-            <span className="font-medium">Will send to:</span>
-            <span className="text-sky-200">{phoneNumbers.length} {msg.visitingType} clients</span>
-          </p>
-          
-          {/* Save Buttons - Only show when editing */}
-          {msg.isEditing && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onSave(msg.id, 'draft')}
-                disabled={isSaving || !msg.message.trim() || msg.message.length < 100}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl font-semibold text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving && savingMode === 'draft' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>Save Draft</>
-                )}
-              </button>
-              
-              <button
-                onClick={() => onSave(msg.id, 'activate')}
-                disabled={isSaving || !msg.isValidated || msg.validationStatus !== 'DRAFT' || !msg.message.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-lime-300/20 border border-lime-300/30 text-lime-300 rounded-xl font-semibold text-sm hover:bg-lime-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSaving && savingMode === 'activate' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Activating...
-                  </>
-                ) : (
-                  <>Activate</>
-                )}
-              </button>
-              
-              {msg.isSaved && (
-                <button
-                  onClick={() => onCancelEdit(msg.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl font-semibold text-sm hover:bg-white/10 transition-all duration-300"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <p className="text-xs text-sky-300 flex items-center gap-2">
+          <Send className="w-3 h-3" />
+          <span className="font-medium">Will send to:</span>
+          <span className="text-sky-200">{phoneNumbers.length} {msg.visitingType} clients</span>
+        </p>
       </div>
     </motion.div>
   );

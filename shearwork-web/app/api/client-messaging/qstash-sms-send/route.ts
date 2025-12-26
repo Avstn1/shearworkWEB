@@ -113,7 +113,7 @@ async function handler(request: Request) {
         ? 'mass' 
         : scheduledMessage.purpose === 'campaign' 
           ? 'campaign' 
-          : 'overdue';
+          : 'auto-nudge';
       const limit = scheduledMessage.message_limit || 100;
 
       console.log(`📊 Fetching recipients with ${algorithm} algorithm, limit: ${limit}`);

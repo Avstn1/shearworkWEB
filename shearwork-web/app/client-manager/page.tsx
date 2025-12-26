@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard';
-import SMSManager from '@/components/Dashboard/ClientManager/SMSManager/SMSManager'
+import SMSAutoNudge from '@/components/Dashboard/ClientManager/SMSAutoNudge/SMSAutoNudge'
 import SMSCampaigns from '@/components/Dashboard/ClientManager/SMSCampaigns/SMSCampaigns';
 import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
@@ -62,7 +62,7 @@ export default function ClientManagerPage() {
                     : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
                 }`}
               >
-                SMS Manager
+                SMS Auto Nudge
               </button>
               <button
                 onClick={() => setActiveView('sms-campaign')}
@@ -98,7 +98,7 @@ export default function ClientManagerPage() {
 
             {activeView === 'sms' && (
               <UnderConstructionWrapper>
-                <SMSManager />
+                <SMSAutoNudge />
               </UnderConstructionWrapper>
             )}
 

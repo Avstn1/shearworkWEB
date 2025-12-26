@@ -193,7 +193,7 @@ export async function POST(request: Request) {
         let cronText: string
         let qstashScheduleIds: string[] = []
 
-        // DETERMINE IF THIS IS ONE-TIME (campaign) OR RECURRING (marketing)
+        // DETERMINE IF THIS IS ONE-TIME (campaign) OR RECURRING (auto-nudge)
         const isOneTime = msg.scheduledFor !== undefined
         const isRecurring = !isOneTime && msg.frequency && (msg.dayOfMonth || msg.dayOfWeek)
 
@@ -246,15 +246,30 @@ export async function POST(request: Request) {
           }
 
         } else if (isRecurring) {
-          // ===== RECURRING MARKETING MESSAGE =====
+          // ===== RECURRING AUTO-NUDGE MESSAGE =====
           
           // Convert 12hr to 24hr for cron
-          let hour24 = msg.hour
-          if (msg.period === 'PM' && msg.hour !== 12) {
-            hour24 += 12
-          } else if (msg.period === 'AM' && msg.hour === 12) {
-            hour24 = 0
+          let hour24 = msg.hour ?? 10;
+
+          // Only convert if we have a period (AM/PM) and hour is in 12hr format (1-12)
+          if (msg.period && msg.hour >= 1 && msg.hour <= 12) {
+            if (msg.period === 'PM' && msg.hour !== 12) {
+              hour24 = msg.hour + 12;
+            } else if (msg.period === 'AM' && msg.hour === 12) {
+              hour24 = 0;
+            } else {
+              hour24 = msg.hour;
+            }
+          } else if (msg.hour >= 0 && msg.hour <= 23) {
+            // Already in 24hr format, use as-is
+            hour24 = msg.hour;
           }
+
+          console.log('🔍 Time conversion:', {
+            input: `${msg.hour}:${msg.minute} ${msg.period}`,
+            hour24: hour24,
+            minute: msg.minute
+          });
 
           // Generate cron expression(s)
           const cronExpressions = generateCronExpressions(

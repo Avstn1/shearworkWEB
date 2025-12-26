@@ -1,3 +1,5 @@
+// SMS Campaigns Message Schedule
+
 import { motion } from 'framer-motion';
 import { Calendar, Clock, FileText, Zap, Users, Hash, Info } from 'lucide-react';
 import { SMSMessage, HOURS_12, MINUTES, PERIODS, CLIENT_LIMITS, CAMPAIGN_TYPES } from './types';

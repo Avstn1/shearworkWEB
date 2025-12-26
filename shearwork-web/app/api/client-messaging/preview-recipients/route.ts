@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
-import { selectClientsForSMS_Overdue } from '@/lib/clientSmsSelectionAlgorithm_Overdue' 
+import { selectClientsForSMS_AutoNudge } from '@/lib/clientSmsSelectionAlgorithm_AutoNudge' 
 import { selectClientsForSMS_Campaign } from '@/lib/clientSmsSelectionAlgorithm_Campaign'
 import { selectClientsForSMS_Mass } from '@/lib/clientSmsSelectionAlgorithm_Mass'
 
@@ -39,8 +39,8 @@ export async function GET(request: Request) {
     let selectedClients;
     let result;
 
-    if (algorithm === 'overdue') {
-      selectedClients = await selectClientsForSMS_Overdue(supabase, userId, limit, visitingType || undefined)
+    if (algorithm === 'auto-nudge') {
+      selectedClients = await selectClientsForSMS_AutoNudge(supabase, userId, limit, visitingType || undefined)
     } else if (algorithm === 'mass') {
        result = await selectClientsForSMS_Mass(supabase, userId, limit || undefined, messageId ?? undefined);
       selectedClients = result.clients;

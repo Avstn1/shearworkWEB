@@ -1,6 +1,6 @@
 // lib/sms/recentAppointmentCampaignAlgorithm.ts
 import { SupabaseClient } from '@supabase/supabase-js'
-import { AcuityClient, ScoredClient } from './clientSmsSelectionAlgorithm_Overdue'
+import { AcuityClient, ScoredClient } from './clientSmsSelectionAlgorithm_AutoNudge'
 
 export interface CampaignResult {
   clients: ScoredClient[];

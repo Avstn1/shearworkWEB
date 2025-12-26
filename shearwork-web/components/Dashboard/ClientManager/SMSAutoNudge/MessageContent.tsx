@@ -1,5 +1,3 @@
-// SMS Campaigns Message Content
-
 import { motion } from 'framer-motion';
 import { Shield, AlertCircle, Send, Sparkles } from 'lucide-react';
 import { SMSMessage } from './types';
@@ -187,7 +185,7 @@ export function MessageContent({
         </div>
       </div>
 
-            {/* Test Requirements Info */}
+      {/* Test Requirements Info */}
       {!msg.isSaved && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
@@ -206,8 +204,8 @@ export function MessageContent({
         </div>
       )}
 
-      {/* Test Limit Info */}
-      {msg.isSaved && msg.isValidated && msg.validationStatus === 'DRAFT' && (
+      {/* Test Limit Info - Only show when saved AND validated */}
+      {msg.isSaved && msg.isValidated && (
         <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
           <p className="text-sm text-sky-300">
             {testsUsedToday >= DAILY_TEST_LIMIT ? (
@@ -320,8 +318,24 @@ export function MessageContent({
                 }
                 onRequestTest(msg.id);
               }}
-              disabled={isTesting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-xl font-semibold hover:bg-sky-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={
+                isTesting ||
+                !msg.isSaved ||
+                !msg.isValidated ||
+                msg.validationStatus !== 'DRAFT' ||
+                !msg.message.trim() ||
+                msg.message.length < 100
+              }
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 ${
+                isTesting ||
+                !msg.isSaved ||
+                !msg.isValidated ||
+                msg.validationStatus !== 'DRAFT' ||
+                !msg.message.trim() ||
+                msg.message.length < 100
+                  ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600/50'
+                  : 'bg-sky-300/20 border border-sky-300/30 text-sky-300 hover:bg-sky-300/30'
+              }`}
             >
               {isTesting ? (
                 <>
