@@ -2,7 +2,7 @@ export interface SMSMessage {
   id: string;
   title: string;
   message: string;
-  visitingType?: 'consistent' | 'semi-consistent' | 'easy-going' | 'rare'; 
+  visitingType?: 'consistent' | 'semi-consistent' | 'easy-going' | 'rare' | 'new'; 
   frequency: 'weekly' | 'biweekly' | 'monthly';
   dayOfWeek?: string;
   dayOfMonth?: number;
