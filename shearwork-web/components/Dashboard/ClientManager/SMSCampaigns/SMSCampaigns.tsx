@@ -72,7 +72,7 @@ export default function SMSCampaigns() {
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('hard');
 
-  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'marketing'>('marketing');
+  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'auto-nudge'>('auto-nudge');
   const [maxClients, setMaxClients] = useState<number>(0);
 
   const [profile, setProfile] = useState<any>(null);
@@ -290,7 +290,7 @@ export default function SMSCampaigns() {
       const userId = user?.id || '';
 
       let response;
-      if (algorithmType === 'marketing') {
+      if (algorithmType === 'auto-nudge') {
         const { data: messageData } = await supabase
           .from('sms_scheduled_messages')
           .select('purpose, title')
@@ -807,9 +807,6 @@ const confirmDelete = async () => {
               <MessageSquare className="w-6 h-6 text-sky-300" />
               SMS Campaign Manager
             </h2>
-            <p className="text-[#bdbdbd] text-sm">
-              Schedule up to 3 automated marketing messages to keep your clients engaged
-            </p>
 
             <button
               onClick={() => setShowCampaignHistoryModal(true)}
@@ -874,7 +871,7 @@ const confirmDelete = async () => {
         </div>
 
         {/* Usage indicator */}
-        <div className="flex items-center gap-2 text-xs text-[#bdbdbd]">
+        <div className="flex items-center gap-2 text-xs -mt-8 text-[#bdbdbd]">
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <div

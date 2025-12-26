@@ -26,7 +26,7 @@ export interface ScoredClient extends AcuityClient {
  * Heavily prioritizes consistent and semi-consistent clients (90%).
  * Requires clients to be at least 14 days overdue based on their visit pattern.
  */
-export async function selectClientsForSMS_Overdue(
+export async function selectClientsForSMS_AutoNudge(
   supabase: SupabaseClient,
   userId: string,
   limit: number = 50,
@@ -36,7 +36,8 @@ export async function selectClientsForSMS_Overdue(
   
   // Fetch eligible clients
   let query = supabase
-    .from('acuity_clients')
+    // Change to acuity_clients_testing for testing
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -172,7 +173,7 @@ function scoreClient(client: AcuityClient, today: Date): ScoredClient {
 
   const daysOverdue = Math.max(0, daysSinceLastVisit - expectedVisitIntervalDays);
 
-  // UNIVERSAL REQUIREMENT: Must be at least 14 days overdue
+  // UNIVERSAL REQUIREMENT: Must be at least 14 days  
   if (daysOverdue < 14) {
     return { ...client, score: 0, days_since_last_visit: daysSinceLastVisit, expected_visit_interval_days: expectedVisitIntervalDays, days_overdue: daysOverdue };
   }
@@ -211,7 +212,8 @@ export async function markClientsAsMessaged(
   clientIds: string[]
 ): Promise<void> {
   const { error } = await supabase
-    .from('acuity_clients')
+    // Change to acuity_clients_testing for testing
+    .from('acuity_clients_testing')
     .update({ date_last_sms_sent: new Date().toISOString() })
     .in('client_id', clientIds);
 

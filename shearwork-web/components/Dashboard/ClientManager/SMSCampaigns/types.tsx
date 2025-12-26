@@ -14,7 +14,7 @@ export interface SMSMessage {
   validationStatus?: 'ACCEPTED' | 'DENIED' | 'DRAFT' | null;
   validationReason?: string;
   isEditing?: boolean;
-  purpose: 'campaign' | 'mass' | 'marketing';
+  purpose: 'campaign' | 'mass' | 'auto-nudge';
 }
 
 export const HOURS_12 = Array.from({ length: 12 }, (_, i) => ({
