@@ -6,8 +6,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { openai } from '@/lib/openaiClient'
 import { prompts } from '../prompts'
-
-import { getWeeklyBreakdown, RecurringExpense } from './weeklyExpenses';
+import { getWeeklyBreakdown } from './weeklyExpenses'
 
 interface DailyRow {
   date: string
@@ -26,7 +25,6 @@ interface WeeklyRow {
   end_date: string
   total_revenue: number
   tips: number
-  // final_revenue: number // NOT USED
   expenses: number
   num_appointments: number
   new_clients: number
@@ -47,45 +45,61 @@ const MONTH_MAP: Record<string, number> = {
   October: 10,
   November: 11,
   December: 12,
-};
+}
 
 async function notifyUserAboutReport(
   userId: string,
   reportId: string,
   reportType: string,
   reportTitle: string,
-  supabase: any
+  supabase: any,
 ) {
-  const { data, error } = await supabase.functions.invoke(
-    'send-push-notif',
-    {
-      body: {
-        userId,
-        title: 'New Report Available',
-        body: reportTitle,
-        reportId,
-        reportType,
-      },
-    }
-  )
+  const { data, error } = await supabase.functions.invoke('send-push-notif', {
+    body: {
+      userId,
+      title: 'New Report Available',
+      body: reportTitle,
+      reportId,
+      reportType,
+    },
+  })
 
-  if (error) {
-    console.error('Error sending notification:', error)
-  } else {
-    console.log('Notification sent:', data)
-  }
+  if (error) console.error('Error sending notification:', error)
+  else console.log('Notification sent:', data)
 }
 
+async function safeRpc(supabase: any, fn: string, args?: Record<string, any>) {
+  const { error } = await supabase.rpc(fn, args ?? {})
+  if (error) console.warn(`RPC ${fn} failed:`, error)
+}
+
+// ✅ optional: tiny helper to avoid month/year mismatches when tables store report_month/report_year
+function monthYearFallback(params: {
+  isWeekly: boolean
+  month: string
+  year: number
+  bodyMonth?: any
+  bodyYear?: any
+}) {
+  // You can extend this later if you want smarter fallbacks.
+  return { month: params.month, year: params.year }
+}
 
 export async function POST(req: Request) {
   try {
     const supabase = await createSupabaseServerClient()
     const authHeader = req.headers.get('authorization')
 
-    if (!authHeader || authHeader !== `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    if (
+      !authHeader ||
+      authHeader !== `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 },
+      )
     }
-    
+
     const body = await req.json()
 
     const typeParam = body.type || 'monthly/rental'
@@ -93,16 +107,27 @@ export async function POST(req: Request) {
     const user_id = body.user_id
 
     if (!user_id) {
-      return NextResponse.json({ success: false, error: 'Missing user_id' }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: 'Missing user_id' },
+        { status: 400 },
+      )
     }
 
-    // ✅ Allow passing any week_number via body
-    const week_number = body.week_number ? Number.parseInt(body.week_number, 10) : null
+    const week_number =
+      body.week_number != null ? Number.parseInt(body.week_number, 10) : null
 
-    let month = body.month || new Date().toLocaleString('default', { month: 'long' })
-    const year = Number.parseInt(body.year || String(new Date().getFullYear()), 10)
+    let effectiveWeekNumber: number | null = week_number
 
-    // 🧲 Fetch barber’s full name & commission rate
+    let month =
+      body.month || new Date().toLocaleString('default', { month: 'long' })
+    const year = Number.parseInt(
+      body.year || String(new Date().getFullYear()),
+      10,
+    )
+
+    const isWeekly = type === 'weekly' || type === 'weekly_comparison'
+
+    // 🧲 Fetch barber's full name & commission rate
     const { data: userData, error: nameError } = await supabase
       .from('profiles')
       .select('full_name, commission_rate')
@@ -116,15 +141,32 @@ export async function POST(req: Request) {
 
     // Standardize month capitalization
     const monthNames = [
-      'January','February','March','April','May','June',
-      'July','August','September','October','November','December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ]
-    const monthIndex = monthNames.findIndex((m) => m.toLowerCase() === month.toLowerCase())
+    const monthIndex = monthNames.findIndex(
+      (m) => m.toLowerCase() === String(month).toLowerCase(),
+    )
     if (monthIndex === -1) throw new Error(`Invalid month: ${month}`)
     month = monthNames[monthIndex]
 
-    const firstDayOfMonth = new Date(year, monthIndex, 1)
-    const lastDayOfMonth = new Date(year, monthIndex + 1, 0)
+    // (optional) placeholder for future fallbacks
+    const normalized = monthYearFallback({ isWeekly, month, year, bodyMonth: body.month, bodyYear: body.year })
+    month = normalized.month
+    const normalizedYear = normalized.year
+
+    const firstDayOfMonth = new Date(normalizedYear, monthIndex, 1)
+    const lastDayOfMonth = new Date(normalizedYear, monthIndex + 1, 0)
 
     // 🧮 Fetch daily data
     const { data: allDailyRows, error: allDailyError } = await supabase
@@ -132,7 +174,7 @@ export async function POST(req: Request) {
       .select('*')
       .eq('user_id', user_id)
       .eq('month', month)
-      .eq('year', year)
+      .eq('year', normalizedYear)
     if (allDailyError) throw allDailyError
 
     const dailyPoints: DailyRow[] = allDailyRows || []
@@ -142,13 +184,12 @@ export async function POST(req: Request) {
 
     // 🧮 Monthly summary
     if (type.startsWith('monthly')) {
-      // Fetch summary from monthly_data
       const { data, error } = await supabase
         .from('monthly_data')
         .select('*')
         .eq('user_id', user_id)
         .eq('month', month)
-        .eq('year', year)
+        .eq('year', normalizedYear)
         .maybeSingle()
       if (error) throw error
 
@@ -159,113 +200,66 @@ export async function POST(req: Request) {
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
 
-      // console.log(`Summary data: ${JSON.stringify(summaryData, null, 2)}`)
-
-      // Also generate weekly_rows
-      // const weeklyRows: WeeklyRow[] = []
-      // let weekNumber = 1
-      // let weekStart = new Date(firstDayOfMonth)
-      // const end = new Date(lastDayOfMonth)
-
-      // while (weekStart <= end) {
-      //   const weekEnd = new Date(weekStart)
-      //   weekEnd.setDate(weekEnd.getDate() + 6)
-      //   if (weekEnd > end) weekEnd.setDate(end.getDate())
-
-      //   const weekDaily = dailyPoints.filter(
-      //     (d) => new Date(d.date) >= weekStart && new Date(d.date) <= weekEnd
-      //   )
-
-      //   if (weekDaily.length > 0) {
-      //     const total_revenue = weekDaily.reduce((sum, d) => sum + (d.total_revenue || 0), 0)
-      //     const num_appointments = weekDaily.reduce((sum, d) => sum + (d.num_appointments || 0), 0)
-      //     const new_clients = weekDaily.reduce((sum, d) => sum + (d.new_clients || 0), 0)
-      //     const returning_clients = weekDaily.reduce((sum, d) => sum + (d.returning_clients || 0), 0)
-
-      //     weeklyRows.push({
-      //       week_number: weekNumber,
-      //       start_date: weekStart.toISOString().split('T')[0],
-      //       end_date: weekEnd.toISOString().split('T')[0],
-      //       total_revenue,
-      //       tips: 0,
-      //       // final_revenue: total_revenue, // NOT USED
-      //       expenses: 0,
-      //       num_appointments,
-      //       new_clients,
-      //       returning_clients,
-      //     })
-      //   }
-
-      //   weekStart.setDate(weekStart.getDate() + 7)
-      //   weekNumber += 1
-      // }
-
-      // weekly_rows = weeklyRows
-
       const { data: weeklyData, error: weeklyError } = await supabase
         .from('weekly_data')
         .select('*')
         .eq('user_id', user_id)
         .eq('month', month)
-        .eq('year', year)
+        .eq('year', normalizedYear)
         .order('week_number', { ascending: true })
-      
-      if (weeklyError) throw weeklyError
-      
-      weekly_rows = weeklyData || []
-    }
 
-    // 🧮 Weekly summary (supports week_number)
-    else if (type.startsWith('weekly')) {
+      if (weeklyError) throw weeklyError
+      weekly_rows = weeklyData || []
+    } else if (type.startsWith('weekly')) {
       let weeklyQuery = supabase
         .from('weekly_data')
         .select('*')
         .eq('user_id', user_id)
         .eq('month', month)
-        .eq('year', year)
-      
-      if (type.includes('comparison') && week_number != null) {
-        weeklyQuery = weeklyQuery.lte('week_number', week_number)  // ≤ week_number
-      } else if (week_number != null) {
-        weeklyQuery = weeklyQuery.eq('week_number', week_number)  // = week_number
-      }
-      
-      const { data: weeklyData, error: weeklyError } = await weeklyQuery.order('week_number', { ascending: true })
-      
-      if (weeklyError) throw weeklyError
-      if (!weeklyData || weeklyData.length === 0) throw new Error('No weekly data found')
-        
-      // ✅ Comparison mode uses cumulative weekly dataset (weeks 1-N)
-      if (type.includes('comparison')) {
-        weekly_rows = weeklyData as WeeklyRow[]  // All weeks up to week_number
-        summaryData = null
+        .eq('year', normalizedYear)
 
-        const { data: deletedRow, error } = await supabase
+      if (type.includes('comparison') && week_number != null) {
+        weeklyQuery = weeklyQuery.lte('week_number', week_number)
+      } else if (week_number != null) {
+        weeklyQuery = weeklyQuery.eq('week_number', week_number)
+      }
+
+      const { data: weeklyData, error: weeklyError } = await weeklyQuery.order(
+        'week_number',
+        { ascending: true },
+      )
+
+      if (weeklyError) throw weeklyError
+      if (!weeklyData || weeklyData.length === 0)
+        throw new Error('No weekly data found')
+
+      if (type.includes('comparison')) {
+        weekly_rows = weeklyData as WeeklyRow[]
+        summaryData = null
+        effectiveWeekNumber = null
+
+        await supabase
           .from('reports')
           .delete()
           .eq('type', 'weekly_comparison')
           .eq('month', month)
-          .eq('year', year)
+          .eq('year', normalizedYear)
           .eq('user_id', user_id)
-          .select();
-
-        console.log("Deleted Row: " + deletedRow)
-
       } else {
-        // ✅ Single week report
         const selectedWeek =
           week_number != null
-            ? weeklyData.find((w) => w.week_number === week_number)
+            ? weeklyData.find((w: any) => w.week_number === week_number)
             : weeklyData[weeklyData.length - 1]
 
         if (!selectedWeek)
-          throw new Error(`Week ${week_number} not found for ${month} ${year}`)
+          throw new Error(`Week ${week_number} not found for ${month} ${normalizedYear}`)
 
         weekly_rows = selectedWeek
         summaryData = selectedWeek
+        effectiveWeekNumber = selectedWeek.week_number
       }
 
-      // ✅ Only use daily_points to highlight best day in that week
+      // best day (single-week only)
       const filteredDailyPoints = dailyPoints.filter((d) => {
         if (!summaryData || Array.isArray(weekly_rows)) return false
         return d.date >= summaryData.start_date && d.date <= summaryData.end_date
@@ -274,135 +268,229 @@ export async function POST(req: Request) {
       const bestDay: DailyRow | null =
         filteredDailyPoints.length > 0
           ? filteredDailyPoints.reduce((prev, curr) =>
-              (curr.total_revenue || 0) > (prev.total_revenue || 0) ? curr : prev
+              (curr.total_revenue || 0) > (prev.total_revenue || 0) ? curr : prev,
             )
           : null
 
       if (!Array.isArray(weekly_rows)) summaryData.best_day = bestDay
     }
 
-    let services
+    // ---------------- Services ----------------
+    let services: any[] | null = null
 
-    if (type == 'monthly') {
-      const { data } = await supabase
+    if (type === 'monthly') {
+      const { data, error } = await supabase
         .from('service_bookings')
         .select('*')
         .eq('user_id', user_id)
         .eq('report_month', month)
-        .eq('report_year', year)
+        .eq('report_year', normalizedYear)
+      if (error) throw error
       services = data
     } else if (type === 'weekly') {
-      const { data } = await supabase
+      if (effectiveWeekNumber == null) {
+        throw new Error('effectiveWeekNumber is null for weekly services')
+      }
+      const { data, error } = await supabase
         .from('weekly_service_bookings')
         .select('*')
         .eq('user_id', user_id)
+        // NOTE: your weekly_service_bookings uses month/year (not report_month/report_year)
         .eq('month', month)
-        .eq('year', year)
-        .eq('week_number', week_number)
-
+        .eq('year', normalizedYear)
+        .eq('week_number', effectiveWeekNumber)
+      if (error) throw error
       services = data
-    } else if (type == 'weekly_comparison') {
-      const { data } = await supabase
+    } else if (type === 'weekly_comparison') {
+      let q = supabase
         .from('weekly_service_bookings')
         .select('*')
         .eq('user_id', user_id)
         .eq('month', month)
-        .eq('year', year)
+        .eq('year', normalizedYear)
+
+      if (week_number != null) q = q.lte('week_number', week_number)
+
+      const { data, error } = await q.order('week_number', { ascending: true })
+      if (error) throw error
       services = data
     }
 
-    const totalBookings = services?.reduce((sum, s) => sum + (s.bookings || 0), 0) || 0
-    const services_percentage = (services || []).map((s) => ({
+    const totalBookings =
+      services?.reduce((sum: number, s: any) => sum + (s.bookings || 0), 0) || 0
+    const services_percentage = (services || []).map((s: any) => ({
       name: s.service_name,
       bookings: s.bookings || 0,
       percentage: totalBookings ? ((s.bookings || 0) / totalBookings) * 100 : 0,
     }))
 
-    // 🧩 Fetch marketing funnels
-    let funnels
-    if (type == 'monthly') {
-      const { data } = await supabase
-        .from('marketing_funnels')
+    // ---------------- Marketing funnels ----------------
+    let funnels: any[] = []
+
+    // ✅ UPDATED: Query from weekly_marketing_funnels_base (new base table)
+    const fetchFunnels = async () => {
+      if (type === 'monthly') {
+        const { data, error } = await supabase
+          .from('marketing_funnels')
+          .select('*')
+          .eq('user_id', user_id)
+          .eq('report_month', month)
+          .eq('report_year', normalizedYear)
+        if (error) throw error
+        return data ?? []
+      }
+
+      if (type === 'weekly') {
+        if (effectiveWeekNumber == null) {
+          throw new Error('effectiveWeekNumber is null for weekly funnels')
+        }
+        const { data, error } = await supabase
+          .from('weekly_marketing_funnels_base')  // ✅ CHANGED from weekly_marketing_funnels
+          .select('*')
+          .eq('user_id', user_id)
+          .eq('report_month', month)
+          .eq('report_year', normalizedYear)
+          .eq('week_number', effectiveWeekNumber)
+        if (error) throw error
+        return data ?? []
+      }
+
+      // weekly_comparison
+      let q = supabase
+        .from('weekly_marketing_funnels_base')  // ✅ CHANGED from weekly_marketing_funnels
         .select('*')
         .eq('user_id', user_id)
         .eq('report_month', month)
-        .eq('report_year', year)
-      funnels = data
-    } else if (type === 'weekly') {
-      const { data } = await supabase
-        .from('weekly_marketing_funnels')
-        .select('*')
-        .eq('user_id', user_id)
-        .eq('report_month', month)
-        .eq('report_year', year)
-        .eq('week_number', week_number)
-      funnels = data
-    } else if (type == 'weekly_comparison') {
-      const { data } = await supabase
-        .from('weekly_marketing_funnels')
-        .select('*')
-        .eq('user_id', user_id)
-        .eq('report_month', month)
-        .eq('report_year', year)
-      funnels = data
+        .eq('report_year', normalizedYear)
+
+      if (week_number != null) q = q.lte('week_number', week_number)
+
+      const { data, error } = await q.order('week_number', { ascending: true })
+      if (error) throw error
+      return data ?? []
     }
 
-    // FETCH TOP CLIENTS
-    let topClients;
-    if (type.startsWith('weekly')) {
-      const { data } = await supabase
+    funnels = await fetchFunnels()
+
+    console.log('=== FUNNELS FETCH DEBUG ===')
+    console.log('Report type:', type)
+    console.log('Effective week number:', effectiveWeekNumber)
+    console.log('Fetched funnels count:', funnels.length)
+    console.log('Fetched funnels:', JSON.stringify(funnels, null, 2))
+    console.log('Query params:', {
+      table: isWeekly ? 'weekly_marketing_funnels_base' : 'marketing_funnels',
+      user_id,
+      report_month: month,
+      report_year: normalizedYear,
+      week_number: effectiveWeekNumber
+    })
+
+    // ✅ Extra visibility: confirm if ANY funnels exist for this user/month/year
+    const { data: funnelAny, error: funnelAnyErr } = await supabase
+      .from('weekly_marketing_funnels_base')  // ✅ CHANGED from weekly_marketing_funnels
+      .select('user_id, report_month, report_year, week_number, source')
+      .eq('user_id', user_id)
+      .eq('report_month', month)
+      .eq('report_year', normalizedYear)
+      .limit(5)
+    if (funnelAnyErr) console.warn('FUNNELS ANY query failed:', funnelAnyErr)
+
+    // ---------------- Top clients ----------------
+    let topClients: any[] = []
+
+    if (type === 'weekly') {
+      if (effectiveWeekNumber == null) {
+        throw new Error('effectiveWeekNumber is null for weekly top clients')
+      }
+      const { data, error } = await supabase
         .from('weekly_top_clients')
         .select('*')
         .eq('user_id', user_id)
         .eq('month', month)
-        .eq('year', year)
-        .eq('week_number', week_number)
-        .order('total_paid', { ascending: false });
+        .eq('year', normalizedYear)
+        .eq('week_number', effectiveWeekNumber)
+        .order('total_paid', { ascending: false })
+      if (error) throw error
+      topClients = data ?? []
+    } else if (type === 'weekly_comparison') {
+      let q = supabase
+        .from('weekly_top_clients')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('month', month)
+        .eq('year', normalizedYear)
 
-      topClients = data;
+      if (week_number != null) q = q.lte('week_number', week_number)
+
+      const { data, error } = await q
+        .order('week_number', { ascending: true })
+        .order('total_paid', { ascending: false })
+
+      if (error) throw error
+      topClients = data ?? []
     } else {
-      // Monthly
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('report_top_clients')
         .select('*')
         .eq('user_id', user_id)
         .eq('month', month)
-        .eq('year', year)
-        .order('total_paid', { ascending: false });
-
-      topClients = data;
+        .eq('year', normalizedYear)
+        .order('total_paid', { ascending: false })
+      if (error) throw error
+      topClients = data ?? []
     }
 
-    // FETCH EXPENSES
-    const numericMonth = MONTH_MAP[month];
-    const startOfMonth = new Date(year, numericMonth - 1, 1); // 0-indexed
-    const endOfMonth = new Date(year, numericMonth, 0); // 1 is first day so 0 is the last day
+    // ---------------- Expenses (weekly comparison) ----------------
+    const numericMonth = MONTH_MAP[month]
+    const startOfMonth = new Date(normalizedYear, numericMonth - 1, 1)
+    const endOfMonth = new Date(normalizedYear, numericMonth, 0)
 
-    let weeklyExpensesData;
+    let weeklyExpensesData: any
     if (type === 'weekly_comparison') {
       const { data, error } = await supabase
-        .from("recurring_expenses")
-        .select("*")
-        .eq("user_id", user_id)
-        .lte("start_date", endOfMonth.toISOString())
-        .or(`end_date.is.null,end_date.gte.${startOfMonth.toISOString()}`); // Include expenses that have no end date OR end after the start of the month
+        .from('recurring_expenses')
+        .select('*')
+        .eq('user_id', user_id)
+        .lte('start_date', endOfMonth.toISOString())
+        .or(`end_date.is.null,end_date.gte.${startOfMonth.toISOString()}`)
 
       if (error) {
-        console.error("Error fetching recurring expenses:", error);
-        weeklyExpensesData = [];
+        console.error('Error fetching recurring expenses:', error)
+        weeklyExpensesData = undefined
       } else {
-        weeklyExpensesData = getWeeklyBreakdown(data, year, numericMonth);
+        weeklyExpensesData = getWeeklyBreakdown(data, normalizedYear, numericMonth)
       }
     }
 
-    // 🧠 Build dataset for OpenAI
+    // ✅ FIX: week_number in dataset must be correct + consistent
+    const datasetWeekNumber =
+      type === 'weekly'
+        ? effectiveWeekNumber
+        : type === 'weekly_comparison'
+          ? week_number ?? null
+          : null
+
+    console.log('DEBUG', {
+      type,
+      user_id,
+      month,
+      year: normalizedYear,
+      week_number,
+      effectiveWeekNumber,
+      datasetWeekNumber,
+      funnelsCount: funnels.length,
+      topClientsCount: topClients.length,
+      sampleTopClient: topClients[0] ?? null,
+      sampleFunnel: funnels[0] ?? null,
+      funnelAny: funnelAny ?? [],
+    })
+
     const dataset = {
       month,
-      year,
-      week_number: type.startsWith('weekly') && !Array.isArray(weekly_rows) ? summaryData?.week_number : null,
+      year: normalizedYear,
+      week_number: datasetWeekNumber,
       user_name: userName,
       summary: summaryData,
-      // daily_rows: dailyPoints,
       weekly_rows,
       services,
       services_percentage,
@@ -416,7 +504,6 @@ export async function POST(req: Request) {
     const promptTemplate =
       prompts[promptKey as keyof typeof prompts] || prompts['monthly/rental']
 
-    // 🧠 Generate report via OpenAI
     const response = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       temperature: 0.5,
@@ -426,16 +513,12 @@ export async function POST(req: Request) {
           content:
             'You are an expert analytics report writer specializing in barbershop business performance summaries.',
         },
-        { role: 'user', content: promptTemplate(dataset, userName, month, year) },
+        { role: 'user', content: promptTemplate(dataset, userName, month, normalizedYear) },
       ],
     })
 
     const htmlReport = response.choices?.[0]?.message?.content?.trim() || ''
 
-
-
-    // 🧾 Store report in DB
-    // console.log(`Database writing ${type} report for ${user_id} for ${month} ${year}. Current time: ${new Date().toISOString()}`)
     const { data: newReport, error: insertError } = await supabase
       .from('reports')
       .insert({
@@ -444,7 +527,7 @@ export async function POST(req: Request) {
         barber_type,
         month,
         week_number: dataset.week_number,
-        year,
+        year: normalizedYear,
         content: htmlReport,
         created_at: new Date().toISOString(),
       })
@@ -452,64 +535,50 @@ export async function POST(req: Request) {
       .single()
     if (insertError) throw insertError
 
-    let message = "";
-
     const formatType = (str: string) =>
       str
-        .split('_')                 
-        .map(s => s.charAt(0).toUpperCase() + s.slice(1)) 
-        .join(' ');               
-    const formattedType = formatType(type);
+        .split('_')
+        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+        .join(' ')
+    const formattedType = formatType(type)
 
-    if (type === "monthly") {
-      message = `Your ${formattedType} report has been generated for ${month} ${year}.`;
-    } else if (type === "weekly" || type === "weekly_comparison") {
-      const week = dataset.week_number;
-
+    let message = ''
+    if (type === 'monthly') {
+      message = `Your ${formattedType} report has been generated for ${month} ${normalizedYear}.`
+    } else if (type === 'weekly' || type === 'weekly_comparison') {
+      const week = dataset.week_number
       if (week != null) {
         const suffix =
-          week === 1 ? "st" :
-          week === 2 ? "nd" :
-          week === 3 ? "rd" : "th";
-
-        message = `Your ${formattedType} report has been generated for the ${week}${suffix} week of ${month} ${year}.`;
+          week === 1 ? 'st' : week === 2 ? 'nd' : week === 3 ? 'rd' : 'th'
+        message = `Your ${formattedType} report has been generated for the ${week}${suffix} week of ${month} ${normalizedYear}.`
       } else {
-        message = `Your ${formattedType} report has been generated for the weeks of ${month} ${year}.`;
+        message = `Your ${formattedType} report has been generated for the weeks of ${month} ${normalizedYear}.`
       }
     }
 
-    // Insert into notifications table
-    const { error: notifError } = await supabase
-      .from("notifications")
-      .insert({
-        user_id,
-        header: `${formattedType} report generated`,
-        message,
-        reference: newReport.id, 
-        reference_type: type
-      });
+    const { error: notifError } = await supabase.from('notifications').insert({
+      user_id,
+      header: `${formattedType} report generated`,
+      message,
+      reference: newReport.id,
+      reference_type: type,
+    })
+    if (notifError) throw notifError
 
-    if (notifError) throw notifError;
-
-    console.log(`Notification created for ${user_id}`);
-
-    notifyUserAboutReport(user_id, newReport.id, type, `${formattedType} report generated`, supabase)
-    console.log("Notification!")
-
-    supabase.rpc('refresh_weekly_funnels')
-    .then(
-      () => console.log('Refreshed weekly funnels'),
-      (e: any) => console.warn('Refresh failed:', e)
+    notifyUserAboutReport(
+      user_id,
+      newReport.id,
+      type,
+      `${formattedType} report generated`,
+      supabase,
     )
 
     return NextResponse.json({ success: true, report: newReport })
-
-
   } catch (err: any) {
     console.error('❌ Report generation error:', err)
     return NextResponse.json(
       { success: false, error: err.message || 'Unknown error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

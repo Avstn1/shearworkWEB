@@ -5,6 +5,17 @@
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import crypto from 'crypto'
+import {
+  buildClientKey,
+  extractSourceFromForms,
+  canonicalizeSource,
+  normalizePhone as normPhoneUtil,
+  computeFunnelsFromAppointments,
+  buildMonthlyTimeframes,
+  type AcuityAppointment,
+  type TimeframeDef,
+  type FunnelStats,
+} from '@/lib/marketingFunnels'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -124,9 +135,8 @@ function normName(firstName?: string | null, lastName?: string | null) {
   return n || null
 }
 
-// ✅ NEW: Stable identity resolver (fixes duplicates)
+// Stable identity resolver (fixes duplicates)
 function makeClientIdentityResolver(userId: string) {
-  // any identifier (email/phone/name) -> canonical key
   const identifierToCanonical = new Map<string, string>()
 
   const getCanonical = (email: string | null, phone: string | null, name: string | null) => {
@@ -135,17 +145,14 @@ function makeClientIdentityResolver(userId: string) {
     if (phone) ids.push(`phone:${phone}`)
     if (name) ids.push(`name:${name}`)
 
-    // If any identifier already mapped, reuse that canonical
     for (const id of ids) {
       const existing = identifierToCanonical.get(id)
       if (existing) {
-        // also union: map the rest onto it
         for (const other of ids) identifierToCanonical.set(other, existing)
         return existing
       }
     }
 
-    // Otherwise choose a canonical in priority order
     const canonical =
       (email ? `email:${email}` : null) ||
       (phone ? `phone:${phone}` : null) ||
@@ -157,7 +164,6 @@ function makeClientIdentityResolver(userId: string) {
   }
 
   const canonicalToClientId = (canonical: string) => {
-    // deterministic stable id per user + canonical
     return crypto.createHash('sha256').update(`${userId}|${canonical}`).digest('hex')
   }
 
@@ -194,7 +200,6 @@ async function isReturningClient(
       if (emailData && emailData.length > 0) data = emailData
     }
 
-    // ✅ FIX: prefer phone_normalized for lookups (phone column might not be normalized)
     if (data.length === 0 && p) {
       const { data: phoneData, error } = await supabase
         .from('acuity_clients')
@@ -230,7 +235,6 @@ async function isReturningClient(
   }
 }
 
-// ✅ FIX: this was using appt.first_name / appt.last_name (not Acuity fields)
 function addUniqueClient(list: any[], appt: any) {
   const email = normEmail(appt.email)
   const phone = normPhone(appt.phone)
@@ -242,7 +246,6 @@ function addUniqueClient(list: any[], appt: any) {
     const cEmail = normEmail(c.email)
     const cPhone = normPhone(c.phone)
     const cName = normName(c.firstName ?? null, c.lastName ?? null)
-
     return (email && cEmail === email) || (phone && cPhone === phone) || (name && cName === name)
   })
 
@@ -255,6 +258,8 @@ function addUniqueClient(list: any[], appt: any) {
     })
   }
 }
+
+// Note: Referral source extraction now handled by marketingFunnels module
 
 export async function GET(request: Request) {
   const { user, supabase } = await getAuthenticatedUser(request)
@@ -354,7 +359,6 @@ export async function GET(request: Request) {
   // -------------------- Fetch appointments --------------------
   let allData: any[] = []
 
-  // ✅ NEW: helper for Acuity appointments pagination by day
   async function fetchAppointmentsForDay(dayStr: string) {
     const pageSize = 100
     let offset = 0
@@ -392,7 +396,7 @@ export async function GET(request: Request) {
   if (requestedMonth && requestedYear) {
     const start = new Date(`${requestedMonth} 1, ${requestedYear}`)
 
-    // keep your teammate’s “week overlap” behavior for weekly calculations:
+    // keep "week overlap" behavior
     const end = new Date(start)
     end.setMonth(end.getMonth() + 1)
     end.setDate(7)
@@ -412,11 +416,124 @@ export async function GET(request: Request) {
   const now = new Date()
   const appointments = allData.filter((a) => new Date(a.datetime) <= now)
 
+  // ============================================================
+  //  BUILD FIRST APPOINTMENT LOOKUP from acuity_clients table
+  // ============================================================
+  const { data: existingClients } = await supabase
+    .from('acuity_clients')
+    .select('email, phone, phone_normalized, first_name, last_name, first_appt')
+    .eq('user_id', user.id)
+
+  const firstApptLookup: Record<string, string> = {}
+  
+  console.log('=== FIRST APPT LOOKUP ===')
+  console.log('Existing clients:', existingClients?.length || 0)
+  
+  if (existingClients) {
+    for (const client of existingClients) {
+      const email = (client.email || '').toLowerCase().trim()
+      const phone = normPhoneUtil(client.phone_normalized || client.phone)
+      const nameKey = `${client.first_name || ''} ${client.last_name || ''}`.trim().toLowerCase()
+      
+      // Use the SAME identifiers that buildClientKey uses
+      // buildClientKey uses: email || phone || name
+      // So we store first_appt under ALL THREE keys to match
+      if (email && client.first_appt) firstApptLookup[email] = client.first_appt
+      if (phone && client.first_appt) firstApptLookup[phone] = client.first_appt
+      if (nameKey && client.first_appt) firstApptLookup[nameKey] = client.first_appt
+    }
+  }
+  
+  console.log('First appt lookup entries:', Object.keys(firstApptLookup).length)
+  console.log('Sample lookup keys:', Object.keys(firstApptLookup).slice(0, 10))
+
+  // ============================================================
+  //  BUILD WEEK TIMEFRAMES for the requested month
+  // ============================================================
+  const requestedMonthIndex = MONTHS.indexOf(requestedMonth!)
+  const requestedMonthStart = new Date(requestedYear!, requestedMonthIndex, 1)
+  const requestedMonthEnd = new Date(requestedYear!, requestedMonthIndex + 1, 0)
+
+  // Get all weeks that start within this month
+  const weekTimeframes: TimeframeDef[] = []
+  const weekMetaMap: Record<string, any> = {} // weekKey -> meta
+  
+  for (let d = new Date(requestedMonthStart); d <= requestedMonthEnd; d.setDate(d.getDate() + 1)) {
+    const weekMeta = getWeekMetaForDate(d)
+    const weekStart = new Date(weekMeta.weekStartISO)
+    
+    const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate())
+    const monthStartDay = Date.UTC(requestedMonthStart.getUTCFullYear(), requestedMonthStart.getUTCMonth(), requestedMonthStart.getUTCDate())
+    const monthEndDay = Date.UTC(requestedMonthEnd.getUTCFullYear(), requestedMonthEnd.getUTCMonth(), requestedMonthEnd.getUTCDate())
+    
+    // Only include weeks that start within the month
+    if (weekStartDay >= monthStartDay && weekStartDay <= monthEndDay) {
+      const weekKey = `week-${weekMeta.weekNumber}`
+      
+      if (!weekMetaMap[weekKey]) {
+        weekMetaMap[weekKey] = weekMeta
+        weekTimeframes.push({
+          id: weekKey,
+          startISO: weekMeta.weekStartISO,
+          endISO: weekMeta.weekEndISO,
+        })
+      }
+    }
+  }
+
+  // ============================================================
+  //  COMPUTE WEEKLY FUNNELS using the module
+  // ============================================================
+  const funnelDebugLog: string[] = []
+  funnelDebugLog.push('=== COMPUTING WEEKLY FUNNELS ===')
+  funnelDebugLog.push(`Appointments count: ${appointments.length}`)
+  funnelDebugLog.push(`Week timeframes: ${weekTimeframes.length}`)
+  funnelDebugLog.push(`Week timeframes: ${JSON.stringify(weekTimeframes)}`)
+  funnelDebugLog.push(`First appt lookup keys: ${Object.keys(firstApptLookup).length}`)
+  funnelDebugLog.push(`Sample first appt lookup entries: ${JSON.stringify(Object.entries(firstApptLookup).slice(0, 5))}`)
+  
+  const weeklyFunnelsComputed = computeFunnelsFromAppointments(
+    appointments as AcuityAppointment[],
+    user.id,
+    firstApptLookup,
+    weekTimeframes,
+  )
+  
+  funnelDebugLog.push(`Weekly funnels computed: ${Object.keys(weeklyFunnelsComputed).length}`)
+  funnelDebugLog.push(`Weekly funnels data: ${JSON.stringify(weeklyFunnelsComputed, null, 2)}`)
+  
+  // Check if the issue is that new_clients/returning_clients are all 0
+  for (const [weekId, sources] of Object.entries(weeklyFunnelsComputed)) {
+    for (const [source, stats] of Object.entries(sources)) {
+      if (stats.new_clients === 0 && stats.returning_clients === 0 && stats.total_visits > 0) {
+        funnelDebugLog.push(`⚠️ ${weekId} - ${source} has ${stats.total_visits} visits but 0 new/returning clients!`)
+      }
+    }
+  }
+  
+  // Print all logs at once
+  console.log('\n\n' + '='.repeat(80))
+  console.log(funnelDebugLog.join('\n'))
+  console.log('='.repeat(80) + '\n\n')
+
+  // ============================================================
+  //  COMPUTE MONTHLY FUNNELS using the module
+  // ============================================================
+  const monthlyTimeframes: TimeframeDef[] = [{
+    id: requestedMonth!,
+    startISO: requestedMonthStart.toISOString().split('T')[0],
+    endISO: requestedMonthEnd.toISOString().split('T')[0],
+  }]
+
+  const monthlyFunnelsComputed = computeFunnelsFromAppointments(
+    appointments as AcuityAppointment[],
+    user.id,
+    firstApptLookup,
+    monthlyTimeframes,
+  )
+
   // ---------------- Single loop aggregation ----------------
-  const monthlyAgg: Record<
-    string,
-    { revenue: number; count: number; returning: number; new: number }
-  > = {}
+  const monthlyAgg: Record<string, { revenue: number; count: number; returning: number; new: number }> = {}
   const dailyAgg: Record<string, { revenue: number; count: number }> = {}
   const weeklyAgg: Record<
     string,
@@ -431,14 +548,17 @@ export async function GET(request: Request) {
       clientVisitMap: Record<string, number>
     }
   > = {}
-  const serviceCounts: Record<
-    string,
-    { month: string; year: number; count: number; price: number }
-  > = {}
+  const serviceCounts: Record<string, { month: string; year: number; count: number; price: number }> = {}
   const dailyServiceCounts: Record<string, { date: string; count: number; price: number }> = {}
-  const topClientsMap: Record<string, Record<string, any>> = {}
-  const funnelMap: Record<string, Record<string, any>> = {}
-  const funnelMapDaily: Record<string, Record<string, any>> = {}
+
+  // Note: We're no longer building funnelMap/weeklyFunnelMap inline
+  // They're computed by the module above
+
+  const funnelMapDaily: Record<
+    string,
+    Record<string, { totalVisits: number; totalRevenue: number; clientIds: Set<string> }>
+  > = {}
+
   const monthlyClientMap: Record<string, Record<string, number>> = {}
   const monthlyWeekdayAgg: Record<string, number> = {}
 
@@ -455,26 +575,26 @@ export async function GET(request: Request) {
       last_appt: string | null
       total_appointments: number
       total_tips_all_time: number
+      first_source?: string | null
     }
   > = {}
 
-  const referralKeywords = [
-    'referral',
-    'referred',
-    'hear',
-    'heard',
-    'source',
-    'social',
-    'instagram',
-    'facebook',
-    'tiktok',
-    'walking',
-    'walk',
-  ]
-  const referralFilter = ['unknown', 'returning', 'return', 'returning client']
-
-  // ✅ NEW: stable identity resolver instance for this user
+  //  stable identity resolver instance for this user
   const identityResolver = makeClientIdentityResolver(user.id)
+
+  //  weekly per-client totals computed DURING main pass (prevents Unknown/$0)
+  const weeklyClientTotals: Record<
+    string,
+    Record<
+      string,
+      { totalPaid: number; visits: number; sampleFirstName?: string | null; sampleLastName?: string | null; sampleEmail?: string | null; samplePhone?: string | null; sampleNotes?: string | null }
+    >
+  > = {}
+
+  //  Calculate month boundaries for filtering
+  const monthIndex = MONTHS.indexOf(requestedMonth!)
+  const startOfMonth = new Date(requestedYear!, monthIndex, 1)
+  const endOfMonth = new Date(requestedYear!, monthIndex + 1, 0)
 
   let uniqueClients: any[] = []
   for (const appt of appointments) {
@@ -497,9 +617,15 @@ export async function GET(request: Request) {
 
     if (!nameDisplay && !email && !phone) continue
 
-    // ✅ NEW: canonical identity that merges email/phone/name if any overlap
-    const canonical = identityResolver.getCanonical(email, phone, nameKey)
-    const clientKey = identityResolver.canonicalToClientId(canonical)
+    // Use buildClientKey from the module for consistency
+    const clientKey = buildClientKey({
+      email: appt.email,
+      phone: appt.phone,
+      firstName: appt.firstName,
+      lastName: appt.lastName,
+      datetime: appt.datetime,
+      forms: appt.forms,
+    } as AcuityAppointment, user.id)
 
     const returning = await isReturningClient(
       supabase,
@@ -509,6 +635,8 @@ export async function GET(request: Request) {
       appt.firstName,
       appt.lastName
     )
+
+    const referralSource = extractSourceFromForms(appt.forms)
 
     // ---------- per-client stats (acuity_clients) ----------
     if (!clientStats[clientKey]) {
@@ -522,27 +650,24 @@ export async function GET(request: Request) {
         last_appt: dayKey,
         total_appointments: 0,
         total_tips_all_time: 0,
+        first_source: referralSource ?? null,
       }
     }
 
     const stats = clientStats[clientKey]
     stats.total_appointments += 1
-
-    // fill missing identifiers if later appts have them
+    if (!stats.first_source && referralSource) stats.first_source = referralSource
     if (!stats.email && email) stats.email = email
     if (!stats.phone && phone) stats.phone = phone
     if (!stats.first_name && appt.firstName) stats.first_name = appt.firstName
     if (!stats.last_name && appt.lastName) stats.last_name = appt.lastName
-
     if (!stats.first_appt || dayKey < stats.first_appt) stats.first_appt = dayKey
     if (!stats.last_appt || dayKey > stats.last_appt) stats.last_appt = dayKey
 
     // 3️⃣ Weekly
     const weekMeta = getWeekMetaForDate(apptDate)
-    const weekKey = `${weekMeta.year}||${weekMeta.month}||${String(weekMeta.weekNumber).padStart(
-      2,
-      '0'
-    )}||${weekMeta.weekStartISO}`
+    // Use a consistent week key based on start date, not natural month
+    const weekKey = `${requestedYear}||${requestedMonth}||${String(weekMeta.weekNumber).padStart(2, '0')}||${weekMeta.weekStartISO}`
 
     if (!weeklyAgg[weekKey]) {
       weeklyAgg[weekKey] = {
@@ -561,26 +686,50 @@ export async function GET(request: Request) {
     wEntry.revenue += price
     wEntry.numAppointments++
 
+    // Track new clients for this week (simplified - proper tracking is in the module)
     if (!returning) {
-      for (const form of appt.forms ?? []) {
-        if (!form.values || !Array.isArray(form.values)) continue
-        for (const field of form.values) {
-          const fieldName = field.name?.toLowerCase() || ''
-          const fieldValue = field.value?.toLowerCase() || ''
-          if (!referralKeywords.some((k) => fieldName.includes(k))) continue
-          if (referralFilter.some((k) => fieldValue.includes(k))) continue
-          if (fieldValue === '') continue
-          wEntry.new++
-          break
-        }
+      const sourceExtracted = extractSourceFromForms(appt.forms)
+      if (sourceExtracted) {
+        wEntry.new++
       }
     }
 
     if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
     wEntry.clientVisitMap[clientKey]++
 
+    // Check if week belongs to requested month (same logic as weekly_data filtering)
+    const weekStart = new Date(weekMeta.weekStartISO)
+    const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate())
+    const monthStartDay = Date.UTC(requestedMonthStart.getUTCFullYear(), requestedMonthStart.getUTCMonth(), requestedMonthStart.getUTCDate())
+    const monthEndDay = Date.UTC(requestedMonthEnd.getUTCFullYear(), requestedMonthEnd.getUTCMonth(), requestedMonthEnd.getUTCDate())
+    
+    const weekBelongsToRequestedMonth = weekStartDay >= monthStartDay && weekStartDay <= monthEndDay
+
+    // weekly top clients totals computed here (same canonical key, no second pass)
+    if (weekBelongsToRequestedMonth) {
+      if (!weeklyClientTotals[weekKey]) weeklyClientTotals[weekKey] = {}
+      if (!weeklyClientTotals[weekKey][clientKey]) {
+        weeklyClientTotals[weekKey][clientKey] = {
+          totalPaid: 0,
+          visits: 0,
+          sampleFirstName: appt.firstName ?? null,
+          sampleLastName: appt.lastName ?? null,
+          sampleEmail: email,
+          samplePhone: phone,
+          sampleNotes: appt.notes ?? null,
+        }
+      }
+      weeklyClientTotals[weekKey][clientKey].totalPaid += price
+      weeklyClientTotals[weekKey][clientKey].visits += 1
+      // fill in blanks if later appointments have identifiers
+      if (!weeklyClientTotals[weekKey][clientKey].sampleEmail && email) weeklyClientTotals[weekKey][clientKey].sampleEmail = email
+      if (!weeklyClientTotals[weekKey][clientKey].samplePhone && phone) weeklyClientTotals[weekKey][clientKey].samplePhone = phone
+      if (!weeklyClientTotals[weekKey][clientKey].sampleFirstName && appt.firstName) weeklyClientTotals[weekKey][clientKey].sampleFirstName = appt.firstName
+      if (!weeklyClientTotals[weekKey][clientKey].sampleLastName && appt.lastName) weeklyClientTotals[weekKey][clientKey].sampleLastName = appt.lastName
+    }
+
     // Skip appointments not in the requested month for monthly/daily stuff
-    if (apptDate.getMonth() !== MONTHS.indexOf(requestedMonth!)) continue
+    if (apptDate.getMonth() !== requestedMonthIndex) continue
 
     // Weekday aggregation
     const weekdayKey = parsed ? getWeekdayName(apptDate) : getWeekdayName(new Date(appt.datetime))
@@ -594,21 +743,11 @@ export async function GET(request: Request) {
     monthlyAgg[monthKey].revenue += price
     monthlyAgg[monthKey].count++
 
+    // Track new clients for this month (simplified - proper tracking is in the module)
     if (!returning) {
-      for (const form of appt.forms ?? []) {
-        if (!form.values || !Array.isArray(form.values)) continue
-        for (const field of form.values) {
-          const fieldName = field.name?.toLowerCase() || ''
-          const fieldValue = field.value?.toLowerCase() || ''
-          if (
-            !referralKeywords.some((k) => fieldName.includes(k)) ||
-            referralFilter.some((k) => fieldValue.includes(k)) ||
-            fieldValue === ''
-          )
-            continue
-          monthlyAgg[monthKey].new++
-          break
-        }
+      const sourceExtracted = extractSourceFromForms(appt.forms)
+      if (sourceExtracted) {
+        monthlyAgg[monthKey].new++
       }
     }
 
@@ -620,6 +759,21 @@ export async function GET(request: Request) {
     if (!monthlyClientMap[monthKey]) monthlyClientMap[monthKey] = {}
     if (!monthlyClientMap[monthKey][clientKey]) monthlyClientMap[monthKey][clientKey] = 0
     monthlyClientMap[monthKey][clientKey]++
+
+    // daily funnels aggregation (keep this for now as it's day-level granularity)
+    const sourceResolvedDaily = referralSource || stats.first_source || 'Unknown'
+    if (!funnelMapDaily[dayKey]) funnelMapDaily[dayKey] = {}
+    if (!funnelMapDaily[dayKey][sourceResolvedDaily]) {
+      funnelMapDaily[dayKey][sourceResolvedDaily] = {
+        totalVisits: 0,
+        totalRevenue: 0,
+        clientIds: new Set(),
+      }
+    }
+    const df = funnelMapDaily[dayKey][sourceResolvedDaily]
+    df.totalVisits += 1
+    df.totalRevenue += price
+    df.clientIds.add(clientKey)
 
     // 4️⃣ Service bookings
     let cleanApptType = `${appt.type}`
@@ -640,49 +794,96 @@ export async function GET(request: Request) {
       dailyServiceCounts[dailySvcKey] = { date: dayKey, count: 0, price: appt.price }
     }
     dailyServiceCounts[dailySvcKey].count++
-
-    // 5️⃣ Top clients
-    if (!topClientsMap[monthKey]) topClientsMap[monthKey] = {}
-    if (!topClientsMap[monthKey][clientKey]) {
-      topClientsMap[monthKey][clientKey] = {
-        client_name: nameDisplay || 'Unknown',
-        email: email ?? '',
-        phone: phone ?? '',
-        client_key: clientKey,
-        total_paid: 0,
-        num_visits: 0,
-        month: monthName,
-        year,
-      }
-    }
-    topClientsMap[monthKey][clientKey].total_paid += price
-    topClientsMap[monthKey][clientKey].num_visits++
   }
 
   // -----------------------------------------------
   // ---------------- Batch upserts ----------------
 
-  // Marketing funnels (kept)
-  const funnelUpserts = Object.entries(funnelMap).flatMap(([monthKey, sources]) => {
-    const [yearStr, month] = monthKey.split('||')
+  // Marketing funnels (MONTHLY) - using computed results
+  const funnelUpserts = Object.entries(monthlyFunnelsComputed).flatMap(([timeframeId, sources]) => {
     return Object.entries(sources).map(([source, stats]) => ({
       user_id: user.id,
       source,
-      new_clients: stats.newClients,
-      returning_clients: stats.returningClients,
-      retention:
-        stats.newClients + stats.returningClients > 0
-          ? (stats.returningClients / stats.newClients) * 100
-          : 0,
-      avg_ticket: stats.totalVisits > 0 ? stats.totalRevenue / stats.totalVisits : 0,
-      report_month: month,
-      report_year: parseInt(yearStr),
-      created_at: new Date().toISOString(),
+      new_clients: stats.new_clients,
+      returning_clients: stats.returning_clients,
+      retention: stats.new_clients > 0 ? (stats.returning_clients / stats.new_clients) * 100 : 0,
+      avg_ticket: stats.total_visits > 0 ? stats.total_revenue / stats.total_visits : 0,
+      report_month: requestedMonth,
+      report_year: requestedYear,
+      // Note: removed created_at if table doesn't have this column
     }))
   })
-  await supabase
-    .from('marketing_funnels')
-    .upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+  
+  if (funnelUpserts.length > 0) {
+    const { error: monthlyFunnelError } = await supabase
+      .from('marketing_funnels')
+      .upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+    
+    if (monthlyFunnelError) {
+      console.error('Monthly funnels upsert error:', monthlyFunnelError)
+    } else {
+      console.log('Monthly funnels upserted successfully')
+    }
+  }
+
+  // Weekly marketing funnels - using NEW base table
+  const weeklyFunnelUpserts: any[] = []
+  
+  console.log('=== WEEKLY FUNNELS DEBUG ===')
+  console.log('weeklyFunnelsComputed keys:', Object.keys(weeklyFunnelsComputed))
+  console.log('weekMetaMap keys:', Object.keys(weekMetaMap))
+  
+  for (const [timeframeId, sources] of Object.entries(weeklyFunnelsComputed)) {
+    const weekKey = timeframeId // e.g., "week-1", "week-2"
+    const weekNumber = parseInt(weekKey.split('-')[1])
+    const meta = weekMetaMap[weekKey]
+    
+    console.log(`Processing ${weekKey}:`, {
+      weekNumber,
+      hasMeta: !!meta,
+      sourcesCount: Object.keys(sources).length,
+      sources: Object.keys(sources)
+    })
+    
+    if (!meta) {
+      console.warn(`Missing meta for ${weekKey}`)
+      continue
+    }
+    
+    for (const [source, stats] of Object.entries(sources)) {
+      weeklyFunnelUpserts.push({
+        user_id: user.id,
+        source,
+        week_number: weekNumber,
+        report_month: requestedMonth,
+        report_year: requestedYear,
+        new_clients: stats.new_clients,
+        returning_clients: stats.returning_clients,
+        retention: stats.new_clients > 0 ? (stats.returning_clients / stats.new_clients) * 100 : 0,
+        avg_ticket: stats.total_visits > 0 ? stats.total_revenue / stats.total_visits : 0,
+        updated_at: new Date().toISOString(),
+      })
+    }
+  }
+
+  console.log('weeklyFunnelUpserts count:', weeklyFunnelUpserts.length)
+  console.log('Sample upserts:', JSON.stringify(weeklyFunnelUpserts.slice(0, 3), null, 2))
+
+  if (weeklyFunnelUpserts.length > 0) {
+    const { data: upsertResult, error: upsertError } = await supabase
+      .from('weekly_marketing_funnels_base')
+      .upsert(weeklyFunnelUpserts, { onConflict: 'user_id,source,week_number,report_month,report_year' })
+      .select()
+    
+    if (upsertError) {
+      console.error('Weekly funnels upsert error:', upsertError)
+    } else {
+      console.log('✅ Weekly funnels upserted successfully:', upsertResult?.length || 0, 'rows')
+      console.log('Upserted funnels summary:', JSON.stringify(upsertResult, null, 2))
+    }
+  } else {
+    console.warn('⚠️ No weekly funnel upserts generated!')
+  }
 
   // Monthly (kept)
   const monthlyUpserts = await Promise.all(
@@ -793,63 +994,74 @@ export async function GET(request: Request) {
 
   await supabase.from('weekly_data').upsert(weeklyUpserts, { onConflict: 'user_id,week_number,month,year' })
 
-  // Weekly Top Clients (kept exactly)
-  for (const w of Object.values(weeklyAgg)) {
-    const weekMeta = w.meta
-    const c = new Date().toISOString()
-    if (weekMeta.month !== requestedMonth) continue
+  // Weekly Top Clients – FIXED (v2)
+  // Uses weeklyClientTotals computed during the main pass (no brittle refiltering).
+  console.log('=== WEEKLY TOP CLIENTS DEBUG ===')
+  console.log('weeklyClientTotals keys:', Object.keys(weeklyClientTotals))
+  
+  for (const [weekKey, perClient] of Object.entries(weeklyClientTotals)) {
+    const parts = weekKey.split('||')
+    const weekYear = parseInt(parts[0])
+    const weekMonth = parts[1]
+    const weekNumber = parseInt(parts[2])
+    const weekStartISO = parts[3]
 
-    const weekAppointments = appointments.filter((appt) => {
-      const parsed = parseDateStringSafe(appt.datetime)
-      if (!parsed) return false
-      return parsed.dayKey >= weekMeta.weekStartISO && parsed.dayKey <= weekMeta.weekEndISO
+    console.log(`\nProcessing ${weekKey}:`, {
+      weekYear,
+      weekMonth,
+      weekNumber,
+      clientCount: Object.keys(perClient).length
     })
 
-    const weeklyClientUpserts = Object.entries(w.clientVisitMap).map(([clientKey, visits]) => {
-      const totalPaid = weekAppointments
-        .filter((appt) => {
-          const email = normEmail(appt.email) ?? ''
-          const phone = normPhone(appt.phone) ?? ''
-          const name = normName(appt.firstName ?? null, appt.lastName ?? null) ?? ''
-          const rawKey = `${email}|${phone}|${name}`
-          const key = crypto.createHash('sha256').update(rawKey).digest('hex')
-          return key === clientKey
-        })
-        .reduce((sum, appt) => sum + parseFloat(appt.priceSold || '0'), 0)
+    // only write weeks belonging to requestedMonth (already ensured, but keep safe)
+    if (weekMonth !== requestedMonth) {
+      console.log(`Skipping ${weekKey} - month mismatch: ${weekMonth} !== ${requestedMonth}`)
+      continue
+    }
 
-      const apptClient = weekAppointments.find((appt) => {
-        const email = normEmail(appt.email) ?? ''
-        const phone = normPhone(appt.phone) ?? ''
-        const name = normName(appt.firstName ?? null, appt.lastName ?? null) ?? ''
-        const rawKey = `${email}|${phone}|${name}`
-        const key = crypto.createHash('sha256').update(rawKey).digest('hex')
-        return key === clientKey
-      })
+    const meta = weeklyAgg[weekKey]?.meta
+    const startISO = meta?.weekStartISO ?? weekStartISO
+    const endISO = meta?.weekEndISO ?? (() => {
+      const start = new Date(`${startISO}T00:00:00`)
+      start.setDate(start.getDate() + 6)
+      return toISODate(start)
+    })()
+
+    const c = new Date().toISOString()
+
+    const weeklyClientUpserts = Object.entries(perClient).map(([clientKey, info]) => {
+      const first = info.sampleFirstName ?? ''
+      const last = info.sampleLastName ?? ''
+      const display = `${first} ${last}`.trim()
 
       return {
         user_id: user.id,
-        client_name: apptClient ? `${apptClient.firstName || ''} ${apptClient.lastName || ''}`.trim() : 'Unknown',
-        total_paid: totalPaid,
-        num_visits: visits,
-        email: apptClient?.email ?? '',
-        phone: apptClient?.phone ?? '',
+        client_id: clientKey,
         client_key: clientKey,
-        week_number: weekMeta.weekNumber,
-        start_date: weekMeta.weekStartISO,
-        end_date: weekMeta.weekEndISO,
+        client_name: display || 'Unknown',
+        total_paid: Math.round((info.totalPaid ?? 0) * 100) / 100,
+        num_visits: info.visits ?? 0,
+        email: info.sampleEmail ?? '',
+        phone: info.samplePhone ?? '',
+        week_number: weekNumber,
+        start_date: startISO,
+        end_date: endISO,
         month: requestedMonth,
         year: requestedYear,
         updated_at: c,
         created_at: c,
-        notes: apptClient?.notes ?? null,
+        notes: info.sampleNotes ?? null,
       }
     })
+
+    console.log(`Upserting ${weeklyClientUpserts.length} clients for ${weekKey}`)
 
     if (weeklyClientUpserts.length > 0) {
       const { error } = await supabase.from('weekly_top_clients').upsert(weeklyClientUpserts, {
         onConflict: 'user_id,week_number,month,year,client_key',
       })
       if (error) console.error('Weekly top clients upsert failed:', error)
+      else console.log(`Successfully upserted ${weeklyClientUpserts.length} clients`)
     }
   }
 
@@ -886,19 +1098,7 @@ export async function GET(request: Request) {
     .from('daily_service_bookings')
     .upsert(dailyServiceUpserts, { onConflict: 'user_id,service_name,report_date' })
 
-  // Top clients (kept)
-  for (const clients of Object.values(topClientsMap)) {
-    const upserts = Object.values(clients).map((c) => ({
-      ...c,
-      user_id: user.id,
-      updated_at: new Date().toISOString(),
-    }))
-    await supabase
-      .from('report_top_clients')
-      .upsert(upserts, { onConflict: 'user_id,month,year,client_key' })
-  }
-
-  // Daily marketing funnels (kept)
+  //  Daily marketing funnels (kept)
   const dailyFunnelUpserts = Object.entries(funnelMapDaily).flatMap(([dayKey, sources]) => {
     return Object.entries(sources).map(([source, stats]) => ({
       user_id: user.id,
@@ -912,14 +1112,16 @@ export async function GET(request: Request) {
     }))
   })
 
-  const { error } = await supabase
-    .from('daily_marketing_funnels')
-    .upsert(dailyFunnelUpserts, { onConflict: 'user_id,source,report_date' })
-    .select('*')
+  if (dailyFunnelUpserts.length > 0) {
+    const { error } = await supabase
+      .from('daily_marketing_funnels')
+      .upsert(dailyFunnelUpserts, { onConflict: 'user_id,source,report_date' })
+      .select('*')
 
-  if (error) console.error('Supabase upsert error:', error)
+    if (error) console.error('Supabase upsert error:', error)
+  }
 
-  // --------- ✅ FIXED: merge clientStats into acuity_clients without inflating totals ---------
+  // --------- acuity_clients merge (unchanged, but you may want to store first_source too later) ---------
   if (Object.keys(clientStats).length > 0) {
     const clientIds = Object.keys(clientStats)
 
@@ -942,15 +1144,12 @@ export async function GET(request: Request) {
         const prevLast = (row.last_appt as string | null) ?? null
         if (prevLast && (!stats.last_appt || prevLast > stats.last_appt)) stats.last_appt = prevLast
 
-        // ✅ DO NOT add totals (that double-counts on reruns).
-        // Keep whichever is larger. This avoids “shrinking” when syncing partial months.
         const prevTotal = (row.total_appointments as number | null) ?? 0
         if (prevTotal > stats.total_appointments) stats.total_appointments = prevTotal
 
         const prevTips = (row.total_tips_all_time as number | null) ?? 0
         if (prevTips > stats.total_tips_all_time) stats.total_tips_all_time = prevTips
 
-        // preserve identifiers if DB has them but current month didn’t
         if (!stats.email && row.email) stats.email = row.email
         if (!stats.phone && (row.phone_normalized || row.phone)) stats.phone = (row.phone_normalized || row.phone) as string
         if (!stats.first_name && row.first_name) stats.first_name = row.first_name
@@ -958,18 +1157,19 @@ export async function GET(request: Request) {
       }
     }
 
-    const clientUpserts = Object.values(clientStats).map((s) => ({
+    const clientUpserts = Object.values(clientStats).map((s: any) => ({
       user_id: user.id,
       client_id: s.client_id,
       first_name: s.first_name,
       last_name: s.last_name,
       email: s.email,
       phone: s.phone,
-      phone_normalized: s.phone, // keep digits
+      phone_normalized: s.phone,
       first_appt: s.first_appt,
       last_appt: s.last_appt,
       total_appointments: s.total_appointments,
-      total_tips_all_time: s.total_tips_all_time,
+      // Cap total_tips_all_time at 999.99 to prevent numeric overflow (field is numeric(5,2))
+      total_tips_all_time: Math.min(s.total_tips_all_time, 999.99),
       updated_at: new Date().toISOString(),
     }))
 
