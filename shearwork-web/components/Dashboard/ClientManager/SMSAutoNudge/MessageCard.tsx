@@ -25,6 +25,7 @@ interface MessageCardProps {
   onStartEditingTitle: (id: string, currentTitle: string) => void;
   onSaveTitle: (id: string) => void;
   onCancelEditTitle: () => void;
+  onRequestDeactivate: (msgId: string) => void; 
   onTempTitleChange: (title: string) => void;
 }
 
@@ -46,6 +47,7 @@ export function MessageCard({
   onSave,
   onValidate,
   onRequestTest,
+  onRequestDeactivate,
   onStartEditingTitle,
   onSaveTitle,
   onCancelEditTitle,
@@ -96,8 +98,8 @@ export function MessageCard({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Edit Button (only show if not editing and message is saved) */}
-            {!msg.isEditing && msg.isSaved && (
+             {/* Edit Button - CHANGED: Only show if not editing, saved, and NOT currently active */}
+            {!msg.isEditing && msg.isSaved && !(msg.enabled && msg.validationStatus === 'ACCEPTED') && (
               <button
                 onClick={() => onEnableEdit(msg.id)}
                 className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-300 flex items-center gap-1"
@@ -125,33 +127,26 @@ export function MessageCard({
               {msg.isValidated ? 'Verified' : 'Unverified'}
             </span>
 
-            {/* Active/Inactive Status - Only show if saved and validated as ACCEPTED */}
+            {/* Active/Inactive Status - CHANGED: Now clickable when active */}
             {msg.isSaved && msg.validationStatus === 'ACCEPTED' && (
-              <button
-                onClick={() => onUpdate(msg.id, { enabled: !msg.enabled })}
-                disabled={!msg.isEditing}
-                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                  msg.enabled
-                    ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
-                    : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
-                } ${!msg.isEditing ? 'cursor-not-allowed opacity-70' : ''}`}
-              >
-                {msg.enabled ? 'Active' : 'Inactive'}
-              </button>
-            )}
-
-            {/* Validation Status Badge - Only show if validated (approved/denied) */}
-            {msg.isValidated && msg.validationStatus === 'ACCEPTED' && (
-              <div className="px-3 py-1 rounded-full text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
-                Approved
-              </div>
-            )}
-            {msg.isValidated && msg.validationStatus === 'DENIED' && (
-              <div className="px-3 py-1 rounded-full text-xs font-semibold bg-rose-300/20 text-rose-300 border border-rose-300/30 flex items-center gap-1">
-                <XCircle className="w-3 h-3" />
-                Denied
-              </div>
+              <>
+                {msg.enabled ? (
+                  <button
+                    onClick={() => onRequestDeactivate(msg.id)}
+                    className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30 cursor-pointer"
+                  >
+                    Active - click to toggle
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onEnableEdit(msg.id)}
+                    className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-300 flex items-center gap-1"
+                  >
+                    <Edit className="w-3 h-3" />
+                    Edit
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

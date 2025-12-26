@@ -72,6 +72,10 @@ export default function SMSAutoNudge() {
   // Test message modal
   const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
+
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [pendingDeactivateMessageId, setPendingDeactivateMessageId] = useState<string | null>(null);
+
   // #endregion
 
   // Load existing messages on mount
@@ -296,7 +300,7 @@ export default function SMSAutoNudge() {
   };
 
   const createDefaultMessages = () => {
-    const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare'> = [
+    const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare' | 'new'> = [
       'consistent',
       'semi-consistent',
       'easy-going',
@@ -308,6 +312,7 @@ export default function SMSAutoNudge() {
       'semi-consistent': 'Semi-Consistent (Once every 2-3 weeks)',
       'easy-going': 'Easy-Going (Once every 3-8 weeks)',
       'rare': 'Rare (Less than once every 2 months)',
+      'new': 'New (Has only gone once)'
     };
 
     const defaultMessages: SMSMessage[] = visitingTypes.map((type) => ({
@@ -1070,6 +1075,92 @@ export default function SMSAutoNudge() {
         )}
       </AnimatePresence>
 
+      {/* Edit confirmation modal */}
+      <AnimatePresence>
+        {showDeactivateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowDeactivateModal(false);
+              setPendingDeactivateMessageId(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Deactivate Message?</h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setPendingDeactivateMessageId(null);
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-[#bdbdbd]" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <p className="text-[#bdbdbd] mb-4">
+                  This message will be converted to a <span className="text-amber-300 font-semibold">draft</span> and will <span className="text-amber-300 font-semibold">no longer be sent out</span> on the scheduled date.
+                </p>
+                <p className="text-[#bdbdbd]">
+                  You can reactivate it later by editing and re-activating the message.
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10">
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setPendingDeactivateMessageId(null);
+                  }}
+                  className="px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl font-semibold hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (pendingDeactivateMessageId) {
+                      // Update state immediately so UI reflects the change
+                      updateMessage(pendingDeactivateMessageId, { 
+                        enabled: false,
+                        validationStatus: 'DRAFT'
+                      });
+                      enableEditMode(pendingDeactivateMessageId);
+                      setShowDeactivateModal(false);
+                      setPendingDeactivateMessageId(null);
+                      
+                      // Then save to backend
+                      await handleSave(pendingDeactivateMessageId, 'draft');
+                    }
+                  }}
+                  className="px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl font-semibold hover:bg-amber-300/30 transition-all"
+                >
+                  Deactivate Message
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Messages List */}
       <div className="space-y-4">
         {messages.length === 0 ? (
@@ -1161,6 +1252,10 @@ export default function SMSAutoNudge() {
               onCancelEditTitle={() => {
                 setEditingTitleId(null);
                 setTempTitle('');
+              }}
+              onRequestDeactivate={(msgId: string) => {
+                setPendingDeactivateMessageId(msgId);
+                setShowDeactivateModal(true);
               }}
               onTempTitleChange={setTempTitle}
             />
