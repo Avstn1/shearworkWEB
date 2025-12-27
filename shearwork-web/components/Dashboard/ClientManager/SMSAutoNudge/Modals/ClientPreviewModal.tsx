@@ -1,0 +1,218 @@
+'use client';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, X } from 'lucide-react';
+
+interface PreviewClient {
+  client_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone_normalized: string;
+  visiting_type: string | null;
+  avg_weekly_visits: number | null;
+  last_appt: string | null;
+  total_appointments: number;
+  days_since_last_visit: number;
+  days_overdue: number;
+  expected_visit_interval_days: number;
+  score: number;
+  date_last_sms_sent: string | null;
+}
+
+interface PreviewStats {
+  total_selected: number;
+  breakdown: Record<string, number>;
+  avg_score: string;
+  avg_days_overdue: string;
+  avg_days_since_last_visit: string;
+}
+
+interface ClientPreviewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  previewClients: PreviewClient[];
+  previewStats: PreviewStats | null;
+}
+
+export default function ClientPreviewModal({
+  isOpen,
+  onClose,
+  previewClients,
+  previewStats,
+}: ClientPreviewModalProps) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 text-sky-300" />
+                  Clients Selected for Next Campaign
+                </h3>
+                {previewStats && (
+                  <p className="text-sm text-[#bdbdbd] mt-1">
+                    {previewStats.total_selected} clients will receive your next SMS
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-[#bdbdbd]" />
+              </button>
+            </div>
+
+            {/* Stats */}
+            {previewStats && (
+              <div className="p-6 border-b border-white/10 bg-white/5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-[#bdbdbd] mb-1">Total Selected</p>
+                    <p className="text-2xl font-bold text-white">{previewStats.total_selected}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#bdbdbd] mb-1">Avg Score</p>
+                    <p className="text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Since Visit</p>
+                    <p className="text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Overdue</p>
+                    <p className="text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
+                  </div>
+                </div>
+
+                {/* Legend Section */}
+                <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd]">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                    <div>
+                      <span className="text-sky-300 font-medium">Score:</span>{" "}
+                      Higher = client needs message more urgently
+                    </div>
+                    <div>
+                      <span className="text-purple-400 font-medium">
+                        Days Since Visit:
+                      </span>{" "}
+                      Days since last appointment
+                    </div>
+                    <div>
+                      <span className="text-orange-400 font-medium">
+                        Days Overdue:
+                      </span>{" "}
+                      How late based on their typical pattern
+                    </div>
+                  </div>
+
+                  {/* Client Types Legend */}
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    {previewStats.breakdown.consistent > 0 && (
+                      <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                        <span className="font-medium">Consistent:</span> Weekly
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/20">
+                          {previewStats.breakdown.consistent}
+                        </span>
+                      </span>
+                    )}
+                    {previewStats.breakdown["semi-consistent"] > 0 && (
+                      <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                        <span className="font-medium">Semi-consistent:</span>{" "}
+                        Every 2-3 weeks
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20">
+                          {previewStats.breakdown["semi-consistent"]}
+                        </span>
+                      </span>
+                    )}
+                    {previewStats.breakdown["easy-going"] > 0 && (
+                      <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                        <span className="font-medium">Easy-going:</span> Every
+                        1-2 months
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-500/20">
+                          {previewStats.breakdown["easy-going"]}
+                        </span>
+                      </span>
+                    )}
+                    {previewStats.breakdown.rare > 0 && (
+                      <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                        <span className="font-medium">Rare:</span> Every 2+
+                        months
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20">
+                          {previewStats.breakdown.rare}
+                        </span>
+                      </span>
+                    )}
+                    {previewStats.breakdown.new > 0 && (
+                      <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
+                        <span className="font-medium">New:</span> First visit
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-500/20">
+                          {previewStats.breakdown.new}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Clients List - Scrollable */}
+            <div className="overflow-y-auto p-6">
+              <div className="space-y-2">
+                {previewClients.map((client) => (
+                  <div
+                    key={client.client_id}
+                    className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold text-white">
+                          {client.first_name} {client.last_name}
+                        </h4>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
+                          client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
+                          client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
+                          client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {client.visiting_type}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
+                        <span>{client.phone_normalized}</span>
+                        <span>•</span>
+                        <span>{client.days_since_last_visit} days since last visit</span>
+                        <span>•</span>
+                        <span className="text-orange-400">{client.days_overdue} days overdue</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
+                      <p className="text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

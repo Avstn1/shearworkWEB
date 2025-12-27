@@ -147,6 +147,8 @@ async function getStrictClients(
     .neq('sms_subscribed', false)
     .lt('last_appt', twoWeeksAgo.toISOString())
     .gt('total_appointments', 0)
+    .gte('avg_weekly_visits', 0.01)
+    .lte('avg_weekly_visits', 2.5)
     .order('last_appt', { ascending: false });
 
   if (error || !clients || clients.length === 0) {
@@ -188,6 +190,8 @@ async function getLenientClients(
     .neq('sms_subscribed', false)
     .lt('last_appt', oneWeekAgo.toISOString())
     .gt('total_appointments', 0)
+    .gte('avg_weekly_visits', 0.01)
+    .lte('avg_weekly_visits', 2.5)
     .order('last_appt', { ascending: false });
 
   if (error || !clients || clients.length === 0) {
