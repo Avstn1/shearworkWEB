@@ -18,6 +18,11 @@ interface Recipient {
   last_name: string | null;
 }
 
+interface AutoNudgeCampaignProgress {
+  is_finished: boolean;
+  is_running: boolean;
+}
+
 interface MessageCardProps {
   profile: any;
   availableCredits?: number;
@@ -30,7 +35,8 @@ interface MessageCardProps {
   tempTitle: string;
   phoneNumbers: PhoneNumber[];
   testMessagesUsed: number;
-  isLocked?: boolean; // NEW: Lock indicator from parent
+  isLocked?: boolean;
+  autoNudgeCampaignProgress?: AutoNudgeCampaignProgress;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onEnableEdit?: (id: string) => void;
   onCancelEdit: (id: string) => void;
@@ -56,7 +62,8 @@ export function MessageCard({
   editingTitleId,
   tempTitle,
   phoneNumbers,
-  isLocked = false, // NEW
+  isLocked = false,
+  autoNudgeCampaignProgress,
   onUpdate,
   onEnableEdit,
   onCancelEdit,
@@ -99,7 +106,7 @@ export function MessageCard({
         .limit(1)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // Ignore "no rows" error
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching last sent date:', error);
         return;
       }
@@ -156,7 +163,6 @@ export function MessageCard({
     let targetMonth = currentMonth;
     let targetYear = currentYear;
     
-    // If we've passed the day this month, show next month
     if (currentDay >= (msg.dayOfMonth || 1)) { 
       targetMonth += 1;
       if (targetMonth > 11) {
@@ -165,7 +171,6 @@ export function MessageCard({
       }
     }
     
-    // Handle months with fewer days
     const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
     const actualDay = Math.min(msg.dayOfMonth || 1, daysInTargetMonth);
     
@@ -187,8 +192,23 @@ export function MessageCard({
     });
   };
 
+  // Determine lock states from campaign progress
+  const isFullLock = autoNudgeCampaignProgress?.is_running || false;
+  const isPartialLock = (autoNudgeCampaignProgress?.is_finished && !autoNudgeCampaignProgress?.is_running) || false;
+  const isAnyLock = isFullLock || isPartialLock || isLocked;
+
+  // Debug log to verify lock states
+  console.log('MessageCard lock states:', {
+    messageId: msg.id,
+    autoNudgeCampaignProgress,
+    isFullLock,
+    isPartialLock,
+    isAnyLock
+  });
+
   // Determine edit capabilities
-  const canEdit = !isLocked && msg.isSaved && !msg.isEditing;
+  const canEdit = !isFullLock && msg.isSaved && !msg.isEditing; // Can edit if not full locked
+  const canEditMessage = !isFullLock; // Message content is editable during partial lock
 
   return (
     <motion.div
@@ -197,11 +217,31 @@ export function MessageCard({
       exit={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
       className={`bg-white/5 backdrop-blur-lg border rounded-2xl shadow-xl overflow-visible ${
-        isLocked ? 'border-amber-300/30' : 'border-white/10'
+        isFullLock ? 'border-rose-300/30' : isPartialLock ? 'border-amber-300/30' : 'border-white/10'
       }`}
     >
-      {/* Locked Banner */}
-      {isLocked && (
+      {/* Full Lock Banner - Campaign in progress */}
+      {isFullLock && (
+        <div className="px-6 py-3 flex items-center gap-2 bg-rose-300/10 border-b border-rose-300/20">
+          <Lock className="w-4 h-4 text-rose-300" />
+          <p className="text-sm font-semibold text-rose-300">
+            Campaign in progress - Locked until messaging completes
+          </p>
+        </div>
+      )}
+
+      {/* Partial Lock Banner - Campaign finished, can edit but not activate */}
+      {isPartialLock && !isFullLock && (
+        <div className="px-6 py-3 flex items-center gap-2 bg-amber-300/10 border-b border-amber-300/20">
+          <Lock className="w-4 h-4 text-amber-300" />
+          <p className="text-sm font-semibold text-amber-300">
+            Campaign sent this month - You can edit and save as draft, but cannot activate until {getUnlockDate()}
+          </p>
+        </div>
+      )}
+
+      {/* Legacy Lock Banner - Fallback for old lock system */}
+      {isLocked && !isFullLock && !isPartialLock && (
         <div className="px-6 py-3 flex items-center gap-2 bg-amber-300/10 border-b border-amber-300/20">
           <Lock className="w-4 h-4 text-amber-300" />
           <p className="text-sm font-semibold text-amber-300">
@@ -217,13 +257,15 @@ export function MessageCard({
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
               msg.validationStatus === 'ACCEPTED' && msg.enabled
                 ? 'bg-lime-300/20 text-lime-300'
-                : isLocked
-                  ? 'bg-amber-300/20 text-amber-300'
-                  : 'bg-sky-300/20 text-sky-300'
+                : isFullLock
+                  ? 'bg-rose-300/20 text-rose-300'
+                  : isPartialLock
+                    ? 'bg-amber-300/20 text-amber-300'
+                    : 'bg-sky-300/20 text-sky-300'
             }`}>
               {msg.validationStatus === 'ACCEPTED' && msg.enabled ? (
                 <CheckCircle className="w-5 h-5" />
-              ) : isLocked ? (
+              ) : isFullLock || isPartialLock ? (
                 <Lock className="w-5 h-5" />
               ) : (
                 <span className="font-bold">{index + 1}</span>
@@ -244,12 +286,12 @@ export function MessageCard({
                     className="bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-300/50"
                     maxLength={50}
                     autoFocus
-                    disabled={!msg.isEditing}
+                    disabled={!msg.isEditing || isFullLock}
                   />
                   <button
                     onClick={() => onSaveTitle(msg.id)}
                     className="p-1 rounded hover:bg-lime-300/20 text-lime-300 transition-all"
-                    disabled={!msg.isEditing}
+                    disabled={!msg.isEditing || isFullLock}
                   >
                     <Check className="w-4 h-4" />
                   </button>
@@ -265,7 +307,7 @@ export function MessageCard({
                   <h3 className="text-white font-semibold">
                     {msg.title}
                   </h3>
-                  {msg.isEditing && !isLocked && (
+                  {msg.isEditing && !isFullLock && (
                     <button
                       onClick={() => onStartEditingTitle(msg.id, msg.title)}
                       className="p-1 rounded hover:bg-white/10 text-[#bdbdbd] hover:text-white transition-all"
@@ -311,7 +353,7 @@ export function MessageCard({
               </div>
             )}
 
-            {/* Edit Button */}
+            {/* Edit Button - Can edit during partial lock */}
             {canEdit && msg.validationStatus !== 'ACCEPTED' && (
               <div className="relative group">
                 <button
@@ -332,13 +374,13 @@ export function MessageCard({
               </div>
             )}
 
-            {/* Active/Draft Toggle - Only show if saved and not locked */}
-            {msg.isSaved && !isLocked && (
+            {/* Active/Draft Toggle - Show during partial lock with special behavior */}
+            {msg.isSaved && !isFullLock && (
               <button
                 onClick={() => {
                   if (msg.validationStatus === 'ACCEPTED' && msg.enabled) {
                     onRequestDeactivate(msg.id);
-                  } else {
+                  } else if (!isPartialLock) {
                     toast.error('Please use the Activate button to schedule this message');
                   }
                 }}
@@ -372,16 +414,33 @@ export function MessageCard({
               </span>
             </div>
 
-            {/* Locked indicator */}
-            {isLocked && (
+            {/* Lock indicators */}
+            {isFullLock && (
               <div className="relative group">
-                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20 flex items-center gap-1">
+                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-rose-300/10 text-rose-300 border border-rose-300/20 flex items-center gap-1">
                   <Lock className="w-3 h-3" />
-                  Locked
+                  Sending
                 </div>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
                   <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                    Already sent this month - unlocks {getUnlockDate()}
+                    Campaign is currently sending messages
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isPartialLock && !isFullLock && (
+              <div className="relative group">
+                <div className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20 flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Partial Lock
+                </div>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
+                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                    Can edit and save as draft - unlocks {getUnlockDate()}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                       <div className="border-4 border-transparent border-t-[#0a0a0a]" />
                     </div>
@@ -430,6 +489,8 @@ export function MessageCard({
             onUpdate={onUpdate}
             onValidate={onValidate}
             onRequestTest={onRequestTest}
+            isFullLock={isFullLock}
+            isPartialLock={isPartialLock}
           />
 
           {/* RIGHT: Recipients List (50%) */}
@@ -440,6 +501,8 @@ export function MessageCard({
             savingMode={savingMode}
             onSave={onSave}
             onCancelEdit={onCancelEdit}
+            isFullLock={isFullLock}
+            isPartialLock={isPartialLock}
           />
         </div>
       </div>
@@ -577,7 +640,7 @@ export function MessageCard({
       </AnimatePresence>
 
       {/* Next Send Banner - Only show if ACTIVE and not locked */}
-      {msg.validationStatus === 'ACCEPTED' && msg.enabled && !isLocked && (
+      {msg.validationStatus === 'ACCEPTED' && msg.enabled && !isAnyLock && (
         <div className="bg-sky-300/10 border-t border-sky-300/20 px-6 py-3">
           <p className="text-xs text-sky-300 flex items-center gap-2">
             <Send className="w-3 h-3" />

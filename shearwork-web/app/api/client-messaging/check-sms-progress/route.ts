@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     // Mark as finished if all messages sent
     if (allSent) {
       updateData.is_finished = true;
+      updateData.is_running = false;
     }
 
     const { error: updateMessageError } = await supabase

@@ -73,13 +73,6 @@ async function handler(request: Request) {
       )
     }
 
-    console.log('📨 Processing message:', {
-      messageId,
-      purpose: scheduledMessage.purpose,
-      visitingType: scheduledMessage.visiting_type,
-      messageLimit: scheduledMessage.message_limit
-    })
-
     // Fetch recipients based on mode
     let recipients: Recipients[] = []
 
@@ -146,6 +139,15 @@ async function handler(request: Request) {
 
       if (finalClientsToMessageError) {
         console.log('Failed to update final_clients_to_message.\n' + error)
+      }
+
+      const { error: markRunningError } = await supabase
+        .from('sms_scheduled_messages')
+        .update({ is_running: true })
+        .eq('id', scheduledMessage.id);
+
+      if (markRunningError) {
+        console.error('Failed to mark campaign as running:', markRunningError);
       }
 
       // START RECURSIVE PROGRESS TRACKING (checks every 3 seconds)

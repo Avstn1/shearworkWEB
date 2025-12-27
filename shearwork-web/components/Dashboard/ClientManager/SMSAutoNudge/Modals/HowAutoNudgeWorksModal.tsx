@@ -56,13 +56,28 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                       <h4 className="font-semibold text-white mb-2 flex items-center gap-2">
                         Auto-generated Messages
                       </h4>
-                      <p className="text-sm text-[#bdbdbd]">
-                        Your messages are automatically generated the first time you open the page. Each message is for each type of client. You can see client types when you click on the{' '}
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-xs pointer-events-none whitespace-nowrap">
-                          Client Preview
-                        </span>
-                        {' '}button. Messages will NOT be sent unless explicitly activated.
-                      </p>
+                        <p className="text-sm text-[#bdbdbd]">
+                          Your messages are automatically generated the first time you open the page. Each message is for each type of client. You can see client types when you click {' '}
+                          <button
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white align-middle"
+                          >
+                            <svg 
+                              className="w-3 h-3" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                              />
+                            </svg>
+                            Frequently Asked Questions
+                          </button>
+                          {' '} and open the question: &quot;What are the different client types?&quot; <br /><br />Messages will NOT be sent unless explicitly activated.
+                        </p>
                     </div>
                   </div>
                 </div>
@@ -217,6 +232,53 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                           Inactive
                         </span>
                         <span className="text-xs text-rose-300">← No messages will be sent</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lock System Explanation */}
+                <div className="p-5 bg-gradient-to-br from-rose-500/10 to-amber-500/10 border border-rose-500/20 rounded-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 bg-rose-300/20 rounded-full flex items-center justify-center">
+                      <span className="text-rose-300 font-bold">🔒</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                        Understanding Message Locks
+                      </h4>
+                      
+                      {/* Full Lock */}
+                      <div className="mb-4 p-3 bg-rose-300/5 border border-rose-300/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-300/10 text-rose-300 border border-rose-300/20 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            Full Lock - Campaign Sending
+                          </div>
+                        </div>
+                        <p className="text-sm text-[#bdbdbd]">
+                          When your campaign is actively sending messages, the message card is <span className="text-rose-300 font-semibold">fully locked</span>. You cannot edit, save, or activate anything until all messages finish sending. The card will show a rose/red border and a "Sending" badge.
+                        </p>
+                      </div>
+
+                      {/* Partial Lock */}
+                      <div className="p-3 bg-amber-300/5 border border-amber-300/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            Partial Lock - Sent This Month
+                          </div>
+                        </div>
+                        <p className="text-sm text-[#bdbdbd] mb-2">
+                          After your campaign finishes sending for the month, the message enters a <span className="text-amber-300 font-semibold">partial lock</span>. You can still edit and save as a draft, but you <span className="text-amber-300 font-semibold">cannot activate</span> until the first day of next month. The card shows an amber border and "Partial Lock" badge.
+                        </p>
+                        <p className="text-xs text-amber-300/80 italic">
+                          This prevents duplicate messages to the same clients within the same month.
+                        </p>
                       </div>
                     </div>
                   </div>

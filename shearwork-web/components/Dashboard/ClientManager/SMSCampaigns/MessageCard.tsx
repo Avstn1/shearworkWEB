@@ -407,56 +407,6 @@ export function MessageCard({
           </div>
         </div>
 
-        {/* Progress Bar */}
-        {campaignProgress && (campaignProgress.is_active || campaignProgress.is_finished) && (
-          <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white">
-                  {campaignProgress.is_finished ? 'Campaign Complete' : 'Sending Progress'}
-                </span>
-                {!campaignProgress.is_finished && (
-                  <Loader2 className="w-4 h-4 text-sky-300 animate-spin" />
-                )}
-              </div>
-              <span className="text-sm font-bold text-white">
-                {campaignProgress.total} / {campaignProgress.expected}
-              </span>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="relative h-3 bg-white/10 rounded-full overflow-hidden mb-2">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${campaignProgress.percentage}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-                className={`h-full rounded-full ${
-                  campaignProgress.is_finished 
-                    ? 'bg-gradient-to-r from-lime-300 to-green-400'
-                    : 'bg-gradient-to-r from-sky-300 to-blue-400'
-                }`}
-              />
-            </div>
-
-            {/* Stats */}
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-3 h-3 text-lime-300" />
-                <span className="text-lime-300 font-semibold">{campaignProgress.success} successful</span>
-              </div>
-              {campaignProgress.fail > 0 && (
-                <div className="flex items-center gap-1">
-                  <XCircle className="w-3 h-3 text-rose-300" />
-                  <span className="text-rose-300 font-semibold">{campaignProgress.fail} failed</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1 text-[#bdbdbd]">
-                <span>{campaignProgress.percentage}% complete</span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* 50/50 Split Layout - Only show if not locked or if editing */}
         {(!isLocked || msg.isEditing) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
