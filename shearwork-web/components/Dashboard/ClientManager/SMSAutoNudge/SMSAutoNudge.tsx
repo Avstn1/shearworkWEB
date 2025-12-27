@@ -85,6 +85,8 @@ export default function SMSAutoNudge() {
 
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
 
+  const [lockedMessages, setLockedMessages] = useState<Set<string>>(new Set());
+  const [checkingLocks, setCheckingLocks] = useState(true);
 
   // #endregion
 
@@ -103,7 +105,7 @@ export default function SMSAutoNudge() {
     }
   }, [isLoading, messages.length]);
 
-// loading schedule from db
+  // loading schedule from db
   useEffect(() => {
     const loadSchedule = async () => {
       try {
@@ -180,7 +182,51 @@ export default function SMSAutoNudge() {
     };
 
   loadSchedule();
-}, []);
+  }, []);
+
+  useEffect(() => {
+    const initializeData = async () => {
+      await loadMessages();
+      await loadClientPreview();
+      await fetchCredits();
+      await fetchTestMessageCount();
+      await checkMessageLocks(); // Add this
+    };
+    
+    initializeData();
+  }, []);
+
+  const checkMessageLocks = async () => {
+    setCheckingLocks(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get start and end of current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+      const { data, error } = await supabase
+        .from('sms_scheduled_messages')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('purpose', 'auto-nudge')
+        .eq('is_finished', true)
+        .gte('created_at', startOfMonth.toISOString())
+        .lte('created_at', endOfMonth.toISOString());
+
+      if (error) throw error;
+
+      // Create a set of message IDs that have already been sent this month
+      const lockedIds = new Set(data?.map(msg => msg.id) || []);
+      setLockedMessages(lockedIds);
+    } catch (error) {
+      console.error('Failed to check message locks:', error);
+    } finally {
+      setCheckingLocks(false);
+    }
+  };
 
   const fetchCredits = async () => {
     try {
@@ -621,6 +667,11 @@ export default function SMSAutoNudge() {
   const handleSave = async (msgId: string, mode: 'draft' | 'activate') => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
+
+    if (mode === 'activate' && lockedMessages.has(msgId)) {
+      toast.error('This message has already been sent this month. It will be unlocked next month.');
+      return;
+    }
 
     // Check if schedule is set
     if (!hasSchedule) {
@@ -1265,6 +1316,7 @@ export default function SMSAutoNudge() {
         ) : (
           messages.map((msg, index) => (
             <MessageCard
+              isLocked={lockedMessages.has(msg.id)}
               key={msg.id}
               message={msg}
               index={index}
