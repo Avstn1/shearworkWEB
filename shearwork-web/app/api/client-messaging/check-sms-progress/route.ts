@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
     const totalCount = successCount + failCount;
     const userId = sentMessages[0].user_id;
 
-    // Step 2: Get the scheduled message to check final_clients_to_message
+    // Step 2: Get the scheduled message to check final_clients_to_message and purpose
     const { data: scheduledMessage, error: scheduledMessageError } = await supabase
       .from('sms_scheduled_messages')
-      .select('final_clients_to_message')
+      .select('final_clients_to_message, purpose')
       .eq('id', message_id)
       .single();
 
@@ -88,43 +88,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 4: Get current user credits
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('reserved_credits, available_credits')
-      .eq('user_id', userId)
-      .single();
+    let newReservedCredits = 0;
+    let newAvailableCredits = 0;
 
-    if (profileError || !profile) {
-      console.error('Error fetching user profile:', profileError);
-      return NextResponse.json(
-        { error: 'Failed to fetch user profile' },
-        { status: 500 }
-      );
-    }
+    // Only charge credits for campaign and mass messages, not auto-nudge
+    if (scheduledMessage.purpose !== 'auto-nudge') {
+      // Step 4: Get current user credits
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('reserved_credits, available_credits')
+        .eq('user_id', userId)
+        .single();
 
-    // Step 5: Calculate new credit values
-    // Remove all attempts (success + fail) from reserved_credits
-    const newReservedCredits = Math.max(0, profile.reserved_credits - totalCount);
-    
-    // Refund failed attempts to available_credits
-    const newAvailableCredits = profile.available_credits + failCount;
+      if (profileError || !profile) {
+        console.error('Error fetching user profile:', profileError);
+        return NextResponse.json(
+          { error: 'Failed to fetch user profile' },
+          { status: 500 }
+        );
+      }
 
-    // Step 6: Update user credits
-    const { error: updateCreditsError } = await supabase
-      .from('profiles')
-      .update({
-        reserved_credits: newReservedCredits,
-        available_credits: newAvailableCredits,
-      })
-      .eq('user_id', userId);
+      // Step 5: Calculate new credit values
+      // Remove all attempts (success + fail) from reserved_credits
+      newReservedCredits = Math.max(0, profile.reserved_credits - totalCount);
+      
+      // Refund failed attempts to available_credits
+      newAvailableCredits = profile.available_credits + failCount;
 
-    if (updateCreditsError) {
-      console.error('Error updating user credits:', updateCreditsError);
-      return NextResponse.json(
-        { error: 'Failed to update user credits' },
-        { status: 500 }
-      );
+      // Step 6: Update user credits
+      const { error: updateCreditsError } = await supabase
+        .from('profiles')
+        .update({
+          reserved_credits: newReservedCredits,
+          available_credits: newAvailableCredits,
+        })
+        .eq('user_id', userId);
+
+      if (updateCreditsError) {
+        console.error('Error updating user credits:', updateCreditsError);
+        return NextResponse.json(
+          { error: 'Failed to update user credits' },
+          { status: 500 }
+        );
+      }
+
+      // Log credit transaction for campaign completion
+      if (allSent) {
+        const { data: campaignTitle } = await supabase
+          .from('sms_scheduled_messages')
+          .select('title')
+          .eq('id', message_id)
+          .single();
+
+        const oldReserved = newReservedCredits + successCount;
+
+        const { error: transactionError } = await supabase
+          .from('credit_transactions')
+          .insert({
+            user_id: userId,
+            action: `Campaign finished - ${campaignTitle?.title || 'Untitled'}`,
+            old_available: profile.available_credits,
+            new_available: newAvailableCredits,
+            old_reserved: oldReserved,
+            new_reserved: newReservedCredits,
+            reference_id: message_id,
+            created_at: new Date().toISOString()
+          });
+
+        if (transactionError) {
+          console.error('Error creating credit transaction:', transactionError);
+        }
+      }
     }
 
     // Step 7: Handle completion or reschedule
@@ -132,12 +166,16 @@ export async function POST(request: NextRequest) {
       // All messages sent - create notification
       console.log('✅ All messages sent, creating completion notification');
       
+      const notificationMessage = scheduledMessage.purpose === 'auto-nudge'
+        ? `Your auto-nudge campaign has finished sending. ${successCount} successful, ${failCount} failed out of ${totalCount} total messages.`
+        : `Your SMS campaign has finished sending. ${successCount} successful, ${failCount} failed out of ${totalCount} total messages.`;
+
       const { error: notificationError } = await supabase
         .from('notifications')
         .insert({
           user_id: userId,
-          header: 'SMS Campaign Completed',
-          message: `Your SMS campaign has finished sending. ${successCount} successful, ${failCount} failed out of ${totalCount} total messages.`,
+          header: scheduledMessage.purpose === 'auto-nudge' ? 'Auto-Nudge Completed' : 'SMS Campaign Completed',
+          message: notificationMessage,
           reference: message_id,
           reference_type: 'sms_campaign',
         });
@@ -145,32 +183,6 @@ export async function POST(request: NextRequest) {
       if (notificationError) {
         console.error('Error creating notification:', notificationError);
         // Don't fail the entire request if notification fails
-      }
-
-      // Log credit transaction for campaign completion
-      const { data: campaignTitle } = await supabase
-        .from('sms_scheduled_messages')
-        .select('title')
-        .eq('id', message_id)
-        .single();
-
-      const oldReserved = newReservedCredits + successCount;
-
-      const { error: transactionError } = await supabase
-        .from('credit_transactions')
-        .insert({
-          user_id: userId,
-          action: `Campaign finished - ${campaignTitle?.title || 'Untitled'}`,
-          old_available: profile.available_credits,
-          new_available: newAvailableCredits,
-          old_reserved: oldReserved,
-          new_reserved: newReservedCredits,
-          reference_id: message_id,
-          created_at: new Date().toISOString()
-        });
-
-      if (transactionError) {
-        console.error('Error creating credit transaction:', transactionError);
       }
     } else {
       // Not all messages sent yet - reschedule another check in 3 seconds
@@ -198,11 +210,13 @@ export async function POST(request: NextRequest) {
         total: totalCount,
         expected: scheduledMessage.final_clients_to_message,
       },
-      credits: {
-        reserved_credits: newReservedCredits,
-        available_credits: newAvailableCredits,
-        refunded: failCount,
-      },
+      credits: scheduledMessage.purpose === 'auto-nudge' 
+        ? { message: 'Auto-nudge messages are free' }
+        : {
+            reserved_credits: newReservedCredits,
+            available_credits: newAvailableCredits,
+            refunded: failCount,
+          },
     });
   } catch (error) {
     console.error('Unexpected error in check-sms-progress:', error);
