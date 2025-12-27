@@ -11,12 +11,17 @@ export const weeklyRentalPrompt = (dataset: any, userName: string, month: string
   // ✅ FIX 1: Calculate total unique clients correctly
   const totalUniqueClients = (summary.new_clients || 0) + (summary.returning_clients || 0);
   
-  // ✅ FIX 2: Filter out empty marketing funnels (keep sources with ANY client activity)
-  const activeFunnels = funnels.filter((f: any) => 
-    f.source !== 'Returning Client' && 
-    f.source !== 'Walk In' &&
-    ((f.new_clients || 0) > 0 || (f.returning_clients || 0) > 0)
-  );
+  // ✅ FIX 2: Filter marketing funnels - only show sources with new clients > 0
+  const activeFunnels = funnels
+    .filter((f: any) => 
+      f.source !== 'Returning Client' && 
+      f.source !== 'Walk In' &&
+      (f.new_clients || 0) > 0
+    )
+    .map((f: any) => ({
+      ...f,
+      source: f.source === 'Unknown' ? 'No Source' : f.source
+    }));
 
   return `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional named ${userName}.
@@ -86,7 +91,7 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
    ${
      activeFunnels.length
        ? `<table>
-            <thead><tr><th>Source</th><th>New Clients</th><th>Returning Clients</th><th>Avg Ticket</th></tr></thead>
+            <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
             <tbody>
               ${activeFunnels
                 .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
@@ -95,15 +100,14 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
                     `<tr>
                         <td>${f.source}</td>
                         <td>${f.new_clients || 0}</td>
-                        <td>${f.returning_clients || 0}</td>
-                        <td>${(f.avg_ticket || 0).toFixed(2)}</td>
+                        <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
                     </tr>`
                 )
                 .join('')}
             </tbody>
           </table>
-          <p>Your top-performing channel this week was <strong>${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'Unknown'}</strong>, bringing in ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.new_clients || 0} new clients. ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'Unknown' && activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'Walking By' ? 'Consider showcasing more of your work publicly to attract even more potential clients!' : 'Consider asking satisfied clients how they heard about you to better track your marketing channels.'}</p>`
-       : `<p>No marketing funnel data available for this week.</p>`
+          <p>Your top-performing channel this week was <strong>${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'No Source'}</strong>, bringing in ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.new_clients || 0} new clients. ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'No Source' && activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'Walking By' ? 'Consider showcasing more of your work publicly to attract even more potential clients!' : 'Consider asking satisfied clients how they heard about you to better track your marketing channels.'}</p>`
+       : `<p>No new client acquisition data available for this week.</p>`
    }
 
 <h2>Top Clients 💈</h2>

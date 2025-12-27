@@ -204,10 +204,11 @@ export function computeFunnelsFromAppointments(
     // Store identity info
     clientIdentity[clientKey] = { email, phone, nameKey }
 
+    // ✅ CHANGED: Use "No Source" instead of "Unknown"
     // Determine canonical source for this client (only set once, first occurrence wins)
     if (!clientSource[clientKey]) {
       const extracted = extractSourceFromForms(appt.forms)
-      clientSource[clientKey] = extracted || 'Unknown'
+      clientSource[clientKey] = extracted || 'No Source'
     }
   }
 
@@ -249,7 +250,7 @@ export function computeFunnelsFromAppointments(
     if (!funnels[tf.id]) funnels[tf.id] = {}
 
     for (const [clientKey, visits] of Object.entries(clientVisits)) {
-      const source = clientSource[clientKey] || 'Unknown'
+      const source = clientSource[clientKey] || 'No Source'
       const firstAppt = clientFirstAppt[clientKey]
       
       if (!firstAppt) continue
