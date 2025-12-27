@@ -37,13 +37,15 @@ export async function selectClientsForSMS_AutoNudge(
   // Fetch eligible clients
   let query = supabase
     // Change to acuity_clients_testing for testing
-    .from('acuity_clients_testing')
+    .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
     .not('last_appt', 'is', null)
     .neq('sms_subscribed', false)
     .gt('total_appointments', 1)
+    .gte('avg_weekly_visits', 0.01)
+    .lte('avg_weekly_visits', 2.5)
     .order('last_appt', { ascending: false });
 
   // Conditionally add visiting_type filter if provided
@@ -213,7 +215,7 @@ export async function markClientsAsMessaged(
 ): Promise<void> {
   const { error } = await supabase
     // Change to acuity_clients_testing for testing
-    .from('acuity_clients_testing')
+    .from('acuity_clients')
     .update({ date_last_sms_sent: new Date().toISOString() })
     .in('client_id', clientIds);
 

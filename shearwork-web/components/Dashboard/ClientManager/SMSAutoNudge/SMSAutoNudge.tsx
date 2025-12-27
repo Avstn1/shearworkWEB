@@ -11,6 +11,7 @@ import { supabase } from '@/utils/supabaseClient';
 import TestMessageConfirmModal from './Modals/TestMessageConfirmModal';
 import HowAutoNudgeWorksModal from './Modals/HowAutoNudgeWorksModal'
 import AutoNudgeHistoryModal from './Modals/AutoNudgeHistoryModal'
+import ClientPreviewModal from './Modals/ClientPreviewModal'
 
 interface PreviewClient {
   client_id: string;
@@ -990,120 +991,12 @@ export default function SMSAutoNudge() {
       />
 
       {/* Client Preview Modal */}
-      <AnimatePresence>
-        {showPreview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowPreview(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div>
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-sky-300" />
-                    Clients Selected for Next Campaign
-                  </h3>
-                  {previewStats && (
-                    <p className="text-sm text-[#bdbdbd] mt-1">
-                      {previewStats.total_selected} clients will receive your next SMS
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-[#bdbdbd]" />
-                </button>
-              </div>
-
-              {/* Stats */}
-              {previewStats && (
-                <div className="p-6 border-b border-white/10 bg-white/5">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Total Selected</p>
-                      <p className="text-2xl font-bold text-white">{previewStats.total_selected}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Score</p>
-                      <p className="text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Since Visit</p>
-                      <p className="text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Overdue</p>
-                      <p className="text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Breakdown</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {Object.entries(previewStats.breakdown).map(([type, count]) => (
-                          <span key={type} className="text-xs px-2 py-1 bg-white/10 rounded-full text-white">
-                            {type}: {count}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Clients List */}
-              <div className="overflow-y-auto max-h-[50vh] p-6">
-                <div className="space-y-2">
-                  {previewClients.map((client) => (
-                    <div
-                      key={client.client_id}
-                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-semibold text-white">
-                            {client.first_name} {client.last_name}
-                          </h4>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                            client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                            client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                            client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
-                            {client.visiting_type}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                          <span>{client.phone_normalized}</span>
-                          <span>•</span>
-                          <span>{client.days_since_last_visit} days since last visit</span>
-                          <span>•</span>
-                          <span className="text-orange-400">{client.days_overdue} days overdue</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                        <p className="text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ClientPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        previewClients={previewClients}
+        previewStats={previewStats}
+      />
 
       {/* Schedule Modal */}
       <AnimatePresence>
