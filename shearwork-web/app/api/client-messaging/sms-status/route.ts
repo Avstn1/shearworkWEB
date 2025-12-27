@@ -96,11 +96,18 @@ export async function POST(req: NextRequest) {
 
   // ✅ Delivered → update last SMS sent timestamp AND handle credits
   if (messageStatus === 'delivered') {
+    // Fetch message and cron from sms_scheduled_messages
+    const { data: scheduledMessage } = await supabase
+      .from('sms_scheduled_messages')
+      .select('message, cron')
+      .eq('id', messageId)
+      .single();
+
     // Only update client record for non-test messages
     if (purpose !== 'test_message') {
       await supabase
         // acuity_clients_testing change for testing
-        .from('acuity_clients')
+        .from('acuity_clients_testing')
         .update({
           date_last_sms_sent: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -118,15 +125,10 @@ export async function POST(req: NextRequest) {
         purpose: purpose,
         reason: null,
         phone_normalized: phoneNormalized,
-        client_id: client_id
+        client_id: client_id,
+        message: scheduledMessage?.message || null,
+        cron: scheduledMessage?.cron || null
       })
-
-    // Handle credit deduction based on message purpose
-    // if (purpose === 'test_message' && user_id) {
-    //   await handleTestMessageCredit(user_id, 'success')
-    // } else if (phoneNormalized) {
-    //   await handleCreditDeduction(phoneNormalized, 'success')
-    // }
 
     return NextResponse.json({ ok: true })
   }
@@ -168,7 +170,7 @@ async function getClientId(phoneNormalized: string): Promise<string | null> {
   try {
     const { data } = await supabase
       // acuity_clients_testing change for testing
-      .from('acuity_clients')
+      .from('acuity_clients_testing')
       .select('client_id')
       .eq('phone_normalized', phoneNormalized)
       .single()

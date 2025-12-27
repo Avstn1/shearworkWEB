@@ -19,6 +19,7 @@ export async function selectClientsForSMS_Mass(
   oneAndHalfYearsAgo.setMonth(oneAndHalfYearsAgo.getMonth() - 18)
 
   const query = supabase
+  // acuity_clients_testing change for testing
     .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
