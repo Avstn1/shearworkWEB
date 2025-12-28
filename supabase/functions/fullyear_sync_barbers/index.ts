@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
     // Get current year and define year range to sync
     const currentYear = new Date().getFullYear()
-    const startYear = currentYear
+    const startYear = 2023
     const yearsToSync = []
     
     for (let year = startYear; year <= currentYear; year++) {
