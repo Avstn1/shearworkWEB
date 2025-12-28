@@ -16,6 +16,7 @@ export type TimeframeDef = {
 export type FunnelStats = {
   new_clients: number
   returning_clients: number
+  new_clients_retained: number  // NEW: new clients who came back within the same timeframe
   total_revenue: number
   total_visits: number
 }
@@ -286,6 +287,7 @@ export function computeFunnelsFromAppointments(
         funnels[tf.id][source] = {
           new_clients: 0,
           returning_clients: 0,
+          new_clients_retained: 0,
           total_revenue: 0,
           total_visits: 0,
         }
@@ -310,6 +312,7 @@ export function computeFunnelsFromAppointments(
         // they are ALSO a returning client within this timeframe
         if (visitsInTimeframe.length > 1) {
           stats.returning_clients += 1
+          stats.new_clients_retained += 1  // ✅ NEW: Track new clients who came back same timeframe
         }
       } else if (isFirstApptBeforeTimeframe) {
         // First appointment was BEFORE this timeframe started
