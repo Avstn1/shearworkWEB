@@ -95,16 +95,16 @@ export function MessageCard({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Query sms_sent instead of sms_scheduled_messages
       const { data, error } = await supabase
-        .from('sms_scheduled_messages')
+        .from('sms_sent')
         .select('created_at')
-        .eq('id', msg.id)
+        .eq('message_id', msg.id)
         .eq('user_id', user.id)
-        .eq('purpose', 'auto-nudge')
-        .eq('is_finished', true)
+        .eq('purpose', 'client_sms')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching last sent date:', error);
@@ -196,15 +196,6 @@ export function MessageCard({
   const isFullLock = autoNudgeCampaignProgress?.is_running || false;
   const isPartialLock = (autoNudgeCampaignProgress?.is_finished && !autoNudgeCampaignProgress?.is_running) || false;
   const isAnyLock = isFullLock || isPartialLock || isLocked;
-
-  // Debug log to verify lock states
-  console.log('MessageCard lock states:', {
-    messageId: msg.id,
-    autoNudgeCampaignProgress,
-    isFullLock,
-    isPartialLock,
-    isAnyLock
-  });
 
   // Determine edit capabilities
   const canEdit = !isFullLock && msg.isSaved && !msg.isEditing; // Can edit if not full locked

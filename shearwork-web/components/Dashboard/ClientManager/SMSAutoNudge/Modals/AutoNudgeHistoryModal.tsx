@@ -9,15 +9,16 @@ interface AutoNudgeHistoryModalProps {
 }
 
 interface AutoNudge {
-  id: string;
+  message_id: string;
   title: string;
   message: string;
   cron: string;
   cron_text: string;
   success: number;
   fail: number;
+  total: number;
   final_clients_to_message: number;
-  created_at: string;
+  last_sent: string;
 }
 
 interface Recipient {
@@ -73,33 +74,17 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
         return;
       }
 
-      const { data, error } = await supabase
-        .from('sms_scheduled_messages')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_finished', true)
-        .eq('is_deleted', false)
-        .in('purpose', ['auto-nudge'])
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      const response = await fetch(`/api/client-messaging/get-auto-nudge-recipients?userId=${user.id}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error response:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch auto-nudge history');
       }
 
-      // Filter in JavaScript instead of SQL
-      const filteredData = data?.filter(item => item.purpose === 'auto-nudge') || [];
-
-      console.log('Fetched auto-nudges:', filteredData);
-      setAutoNudges(filteredData);
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Fetched auto-nudges:', data);
-      setAutoNudges(data || []);
+      const data = await response.json();
+      console.log('Fetched auto-nudge campaigns:', data.campaigns);
+      setAutoNudges(data.campaigns || []);
     } catch (error) {
       console.error('Failed to fetch auto-nudges:', error);
     } finally {
@@ -107,7 +92,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
     }
   };
 
-  const fetchRecipients = async (messageId: string) => {
+  const fetchRecipients = async (autoNudge: AutoNudge) => {
     setLoadingRecipients(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -116,9 +101,14 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
         return;
       }
 
-      console.log('Fetching recipients for messageId:', messageId);
+      const params = new URLSearchParams({
+        messageId: autoNudge.message_id, 
+        message: autoNudge.message,
+        cron: autoNudge.cron,
+        userId: user.id
+      });
 
-      const response = await fetch(`/api/client-messaging/get-auto-nudge-recipients?messageId=${messageId}&userId=${user.id}`);
+      const response = await fetch(`/api/client-messaging/get-auto-nudge-recipients?${params.toString()}`);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -127,7 +117,6 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
       }
 
       const data = await response.json();
-      console.log('Recipients data:', data);
       
       if (data.success) {
         setRecipients(data.recipients || []);
@@ -144,7 +133,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
 
   const handleAutoNudgeClick = (autoNudge: AutoNudge) => {
     setSelectedAutoNudge(autoNudge);
-    fetchRecipients(autoNudge.id);
+    fetchRecipients(autoNudge);
   };
 
   const handleBack = () => {
@@ -230,7 +219,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                       <div className="space-y-3">
                         {autoNudges.map((autoNudge) => (
                           <button
-                            key={autoNudge.id}
+                            key={`${autoNudge.message_id}-${autoNudge.cron}`}
                             onClick={() => handleAutoNudgeClick(autoNudge)}
                             className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-blue-300/30 transition-all duration-300 text-left group"
                           >
@@ -245,12 +234,12 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                             <div className="flex items-center gap-4 text-xs text-[#bdbdbd] flex-wrap">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
-                                {formatDate(autoNudge.created_at)}
+                                {formatDate(autoNudge.last_sent)}
                               </span>
                               <span>•</span>
                               <span className="text-blue-300">{autoNudge.cron_text}</span>
                               <span>•</span>
-                              <span>{autoNudge.final_clients_to_message || 0} recipients</span>
+                              <span>{autoNudge.success + autoNudge.fail} recipients</span>
                               <span>•</span>
                               <span className="text-lime-300">{autoNudge.success} sent</span>
                               <span>•</span>
@@ -305,7 +294,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-bold text-white">{selectedAutoNudge.title}</h3>
                         <p className="text-xs text-[#bdbdbd] mt-0.5">
-                          {cronText || selectedAutoNudge.cron_text} • {formatDate(selectedAutoNudge.created_at)}
+                          {cronText || selectedAutoNudge.cron_text} • {formatDate(selectedAutoNudge.last_sent)}
                         </p>
                       </div>
                     </div>

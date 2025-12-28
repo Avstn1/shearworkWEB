@@ -24,14 +24,6 @@ export function MessageClientList({
   isPartialLock = false
 }: MessageClientListProps) {
   
-  // Debug log
-  console.log('MessageClientList render:', { 
-    messageId: msg.id, 
-    isFullLock, 
-    isPartialLock,
-    isValidated: msg.isValidated,
-    messageLength: msg.message.length
-  });
   
   // Format client data for textarea with aligned numbers
   const formatClientList = () => {
