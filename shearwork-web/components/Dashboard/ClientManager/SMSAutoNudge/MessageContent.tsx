@@ -6,13 +6,15 @@ import toast from 'react-hot-toast';
 import { supabase } from '@/utils/supabaseClient';
 
 interface MessageContentProps {
-  profile: any;
   message: SMSMessage;
   validatingId: string | null;
   testMessagesUsed: number;
+  profile: any;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onValidate: (msgId: string) => void;
   onRequestTest: (msgId: string) => void;
+  isFullLock?: boolean;
+  isPartialLock?: boolean;
 }
 
 export function MessageContent({
@@ -23,13 +25,14 @@ export function MessageContent({
   onUpdate,
   onValidate,
   onRequestTest, 
+  isFullLock = false,
+  isPartialLock = false,
 }: MessageContentProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [testsUsedToday, setTestsUsedToday] = useState(0);
   const DAILY_TEST_LIMIT = 10;
 
-  // Load test count on mount
   useEffect(() => {
     loadTestCount();
   }, []);
@@ -39,7 +42,6 @@ export function MessageContent({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get start of today in user's timezone
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -91,19 +93,16 @@ export function MessageContent({
   };
 
   const handleTestMessage = async () => {
-    // Check if message is saved
     if (!msg.isSaved) {
       toast.error('Please save the message as a draft before testing');
       return;
     }
 
-    // Check if message is validated
     if (!msg.isValidated) {
       toast.error('Message must be validated before testing');
       return;
     }
 
-    // Check if message is in DRAFT status (not activated)
     if (msg.validationStatus !== 'DRAFT') {
       toast.error('Only draft messages can be tested');
       return;
@@ -164,9 +163,9 @@ export function MessageContent({
             }
             placeholder="Type your marketing message here or generate a template..."
             rows={11}
-            disabled={!msg.isEditing}
+            disabled={!msg.isEditing || isFullLock}
             className={`w-full bg-white/5 border border-white/10 rounded-2xl px-4 pb-15 -mb-3 py-3 pr-20 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 ${
-              !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
+              !msg.isEditing || isFullLock ? 'cursor-not-allowed opacity-70' : ''
             }`}
             style={{ scrollbarWidth: 'thin' }}
             maxLength={240}
@@ -228,7 +227,7 @@ export function MessageContent({
           <div className="relative group">
             <button
               onClick={handleGenerateTemplate}
-              disabled={isGenerating}
+              disabled={isGenerating || isFullLock}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl font-semibold hover:bg-purple-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
@@ -262,7 +261,7 @@ export function MessageContent({
           <div className="relative group">
             <button
               onClick={() => onValidate(msg.id)}
-              disabled={msg.message.length < 100 || validatingId === msg.id}
+              disabled={msg.message.length < 100 || validatingId === msg.id || isFullLock}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {validatingId === msg.id ? (
@@ -324,7 +323,8 @@ export function MessageContent({
                 !msg.isValidated ||
                 msg.validationStatus !== 'DRAFT' ||
                 !msg.message.trim() ||
-                msg.message.length < 100
+                msg.message.length < 100 ||
+                isFullLock
               }
               className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all duration-300 ${
                 isTesting ||
@@ -332,7 +332,8 @@ export function MessageContent({
                 !msg.isValidated ||
                 msg.validationStatus !== 'DRAFT' ||
                 !msg.message.trim() ||
-                msg.message.length < 100
+                msg.message.length < 100 ||
+                isFullLock
                   ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600/50'
                   : 'bg-sky-300/20 border border-sky-300/30 text-sky-300 hover:bg-sky-300/30'
               }`}

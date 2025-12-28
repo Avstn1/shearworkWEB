@@ -147,6 +147,8 @@ async function getStrictClients(
     .neq('sms_subscribed', false)
     .lt('last_appt', twoWeeksAgo.toISOString())
     .gt('total_appointments', 0)
+    .gte('avg_weekly_visits', 0.01)
+    .lte('avg_weekly_visits', 2.5)
     .order('last_appt', { ascending: false });
 
   if (error || !clients || clients.length === 0) {
@@ -178,9 +180,9 @@ async function getLenientClients(
   const oneWeekAgo = new Date(today);
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   
-  // acuity_clients change for testingz
+  // acuity_clients change for testing
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -188,6 +190,8 @@ async function getLenientClients(
     .neq('sms_subscribed', false)
     .lt('last_appt', oneWeekAgo.toISOString())
     .gt('total_appointments', 0)
+    .gte('avg_weekly_visits', 0.01)
+    .lte('avg_weekly_visits', 2.5)
     .order('last_appt', { ascending: false });
 
   if (error || !clients || clients.length === 0) {

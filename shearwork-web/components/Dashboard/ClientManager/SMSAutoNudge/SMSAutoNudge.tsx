@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle, Coins, Send } from 'lucide-react';
+import { Plus, MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle, Coins, Send, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage, PhoneNumber } from './types';
 import { supabase } from '@/utils/supabaseClient';
 import TestMessageConfirmModal from './Modals/TestMessageConfirmModal';
+import HowAutoNudgeWorksModal from './Modals/HowAutoNudgeWorksModal'
+import AutoNudgeHistoryModal from './Modals/AutoNudgeHistoryModal'
+import ClientPreviewModal from './Modals/ClientPreviewModal'
 
 interface PreviewClient {
   client_id: string;
@@ -72,14 +75,39 @@ export default function SMSAutoNudge() {
   // Test message modal
   const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
+
+  // Auto Nudge modals
+  const [showAutoNudgeHistoryModal, setShowAutoNudgeHistoryModal] = useState(false);
+  const [showHowAutoNudgeWorksModal, setShowHowAutoNudgeWorksModal] = useState(false);
+
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [pendingDeactivateMessageId, setPendingDeactivateMessageId] = useState<string | null>(null);
+
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
+
+  const [lockedMessages, setLockedMessages] = useState<Set<string>>(new Set());
+  const [checkingLocks, setCheckingLocks] = useState(true);
+
+  const [autoNudgeCampaignProgress, setAutoNudgeCampaignProgress] = useState<Record<string, {
+    is_finished: boolean;
+    is_running: boolean;
+  }>>({});
+
   // #endregion
 
   // Load existing messages on mount
   useEffect(() => {
-    loadMessages();
-    loadClientPreview();
-    fetchCredits();
-    fetchTestMessageCount();
+    const initializeData = async () => {
+      setIsLoading(true); // Keep loading
+      await checkMessageLocks(); // Check locks FIRST
+      await loadMessages();
+      await loadClientPreview();
+      await fetchCredits();
+      await fetchTestMessageCount();
+      setIsLoading(false); // Only after everything loads
+    };
+    
+    initializeData();
   }, []);
 
   // Safety check - if messages is still empty after loading, create defaults
@@ -88,6 +116,128 @@ export default function SMSAutoNudge() {
       createDefaultMessages();
     }
   }, [isLoading, messages.length]);
+
+  // loading schedule from db
+  useEffect(() => {
+    const loadSchedule = async () => {
+      try {
+        setIsLoadingSchedule(true);
+        
+        // Get user session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session?.user?.id) {
+          console.log('❌ No session found');
+          setIsLoadingSchedule(false);
+          return;
+        }
+
+        // Fetch profile with auto_nudge_schedule
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('auto_nudge_schedule')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (profileError || !profile?.auto_nudge_schedule) {
+          console.log('⚠️ No schedule found in profile');
+          setIsLoadingSchedule(false);
+          return;
+        }
+
+        // Parse the schedule: "minute hour day * * | startdate | enddate"
+        const parts = profile.auto_nudge_schedule.split(' | ');
+
+        if (parts.length === 3) {
+          const cronParts = parts[0].split(' ');
+          const startDate = parts[1];
+          const endDate = parts[2] === 'null' ? '' : parts[2];
+
+          if (cronParts.length === 5) {
+            const minute = parseInt(cronParts[0]);
+            const hour24 = parseInt(cronParts[1]);
+            const dayOfMonth = parseInt(cronParts[2]);
+
+            // Convert 24-hour to 12-hour format
+            let hour12 = hour24;
+            let period: 'AM' | 'PM' = 'AM';
+            
+            if (hour24 === 0) {
+              hour12 = 12;
+              period = 'AM';
+            } else if (hour24 === 12) {
+              hour12 = 12;
+              period = 'PM';
+            } else if (hour24 > 12) {
+              hour12 = hour24 - 12;
+              period = 'PM';
+            } else {
+              hour12 = hour24;
+              period = 'AM';
+            }
+
+            // Set all the schedule states
+            setScheduleDayOfMonth(dayOfMonth);
+            setScheduleHour(hour12);
+            setScheduleMinute(minute);
+            setSchedulePeriod(period);
+            setScheduleStartDate(startDate);
+            setScheduleEndDate(endDate);
+            setHasSchedule(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading schedule:', error);
+      } finally {
+        setIsLoadingSchedule(false);
+      }
+    };
+
+  loadSchedule();
+  }, []);
+
+  const checkMessageLocks = async () => {
+    setCheckingLocks(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get all auto-nudge scheduled messages with their status
+      const { data, error } = await supabase
+        .from('sms_scheduled_messages')
+        .select('id, is_finished, is_running')
+        .eq('user_id', user.id)
+        .eq('purpose', 'auto-nudge');
+
+      if (error) {
+        console.error('❌ Error fetching scheduled messages:', error);
+        throw error;
+      }
+
+      // Create autoNudgeCampaignProgress map
+      const progressMap: Record<string, { is_finished: boolean; is_running: boolean }> = {};
+      const lockedIds = new Set<string>();
+
+      data?.forEach(msg => {
+        progressMap[msg.id] = {
+          is_finished: msg.is_finished || false,
+          is_running: msg.is_running || false
+        };
+
+        // If message is finished, it's locked
+        if (msg.is_finished) {
+          lockedIds.add(msg.id);
+        }
+      });
+
+      setAutoNudgeCampaignProgress(progressMap);
+      setLockedMessages(lockedIds);
+    } catch (error) {
+      console.error('❌ Failed to check message locks:', error);
+    } finally {
+      setCheckingLocks(false);
+    }
+  };
 
   const fetchCredits = async () => {
     try {
@@ -152,11 +302,12 @@ export default function SMSAutoNudge() {
       const data = await response.json();
       
       // Define all possible visiting types and their titles
-      const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare'> = [
+      const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare' | 'new'> = [
         'consistent',
         'semi-consistent',
         'easy-going',
-        'rare'
+        'rare',
+        'new'
       ];
 
       const titles = {
@@ -164,6 +315,7 @@ export default function SMSAutoNudge() {
         'semi-consistent': 'Semi-Consistent (Once every 2-3 weeks)',
         'easy-going': 'Easy-Going (Once every 3-8 weeks)',
         'rare': 'Rare (Less than once every 2 months)',
+        'new': 'New (Has only gone once)'
       };
 
       // Start with an empty array
@@ -176,12 +328,6 @@ export default function SMSAutoNudge() {
       if (data.success && data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
         
         data.messages.forEach((dbMsg: any) => {
-          console.log('📝 Processing saved message:', {
-            visiting_type: dbMsg.visiting_type,
-            title: dbMsg.title,
-            status: dbMsg.status
-          });
-          
           // Parse cron to extract time
           const cronParts = dbMsg.cron.split(' ');
           const minute = parseInt(cronParts[0]);
@@ -234,16 +380,6 @@ export default function SMSAutoNudge() {
           allMessages.push(convertedMsg);
           if (dbMsg.visiting_type) {
             loadedTypes.add(dbMsg.visiting_type);
-            console.log('✅ Added saved message for type:', dbMsg.visiting_type);
-          }
-
-          // Set schedule from first saved message if exists
-          if (!hasSchedule && allMessages.length === 1) {
-            setScheduleDayOfMonth(dayOfMonth);
-            setScheduleHour(hour12);
-            setScheduleMinute(minute);
-            setSchedulePeriod(period);
-            setHasSchedule(true);
           }
         });
       } else {
@@ -253,7 +389,6 @@ export default function SMSAutoNudge() {
       // Now create defaults for any missing types
       visitingTypes.forEach((type) => {
         if (!loadedTypes.has(type)) {
-          console.log('🆕 Creating default message for missing type:', type);
           allMessages.push({
             id: uuidv4(),
             title: titles[type],
@@ -290,17 +425,17 @@ export default function SMSAutoNudge() {
       console.log('🔄 Creating default messages due to error...');
       createDefaultMessages();
     } finally {
-      console.log('✅ loadMessages complete, setting isLoading to false');
       setIsLoading(false);
     }
   };
 
   const createDefaultMessages = () => {
-    const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare'> = [
+    const visitingTypes: Array<'consistent' | 'semi-consistent' | 'easy-going' | 'rare' | 'new'> = [
       'consistent',
       'semi-consistent',
       'easy-going',
-      'rare'
+      'rare',
+      'new'
     ];
 
     const titles = {
@@ -308,6 +443,7 @@ export default function SMSAutoNudge() {
       'semi-consistent': 'Semi-Consistent (Once every 2-3 weeks)',
       'easy-going': 'Easy-Going (Once every 3-8 weeks)',
       'rare': 'Rare (Less than once every 2 months)',
+      'new': 'New (Has only gone once)'
     };
 
     const defaultMessages: SMSMessage[] = visitingTypes.map((type) => ({
@@ -430,7 +566,7 @@ export default function SMSAutoNudge() {
     }
   };
 
-  const handleSetSchedule = () => {
+  const handleSetSchedule = async () => {
     if (!scheduleDayOfMonth) {
       toast.error('Please select a day of the month');
       return;
@@ -441,19 +577,62 @@ export default function SMSAutoNudge() {
       return;
     }
 
-    // Apply schedule to all messages
-    setMessages(messages.map(msg => ({
-      ...msg,
-      dayOfMonth: scheduleDayOfMonth,
-      hour: scheduleHour,
-      minute: scheduleMinute,
-      period: schedulePeriod,
-      frequency: 'monthly',
-    })));
+    try {
+      // Get user session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.user?.id) {
+        toast.error('Unable to get user session');
+        return;
+      }
 
-    setHasSchedule(true);
-    setShowScheduleModal(false);
-    toast.success('Schedule applied to all messages!');
+      // Convert hour to 24-hour format
+      let hour24 = scheduleHour;
+      if (schedulePeriod === 'PM' && scheduleHour !== 12) {
+        hour24 = scheduleHour + 12;
+      } else if (schedulePeriod === 'AM' && scheduleHour === 12) {
+        hour24 = 0;
+      }
+
+      // Build cron expression: minute hour day-of-month * *
+      const cronExpression = `${scheduleMinute} ${hour24} ${scheduleDayOfMonth} * *`;
+      
+      // Format dates - handle both Date objects and strings
+      const startDateStr = scheduleStartDate; 
+      const endDateStr = scheduleEndDate || 'null';
+      
+      // Combine into the format: cron | startdate | enddate
+      const autoNudgeSchedule = `${cronExpression} | ${startDateStr} | ${endDateStr}`;
+
+      // Update profile with the schedule
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ auto_nudge_schedule: autoNudgeSchedule })
+        .eq('user_id', session.user.id);
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        toast.error('Failed to save schedule');
+        return;
+      }
+
+      // Apply schedule to all messages
+      setMessages(messages.map(msg => ({
+        ...msg,
+        dayOfMonth: scheduleDayOfMonth,
+        hour: scheduleHour,
+        minute: scheduleMinute,
+        period: schedulePeriod,
+        frequency: 'monthly',
+      })));
+
+      setHasSchedule(true);
+      setShowScheduleModal(false);
+      toast.success('Schedule applied to all messages!');
+    } catch (error) {
+      console.error('Error setting schedule:', error);
+      toast.error('An error occurred while setting schedule');
+    }
   };
 
   const updateMessage = (id: string, updates: Partial<SMSMessage>) => {
@@ -499,6 +678,11 @@ export default function SMSAutoNudge() {
   const handleSave = async (msgId: string, mode: 'draft' | 'activate') => {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
+
+    if (mode === 'activate' && lockedMessages.has(msgId)) {
+      toast.error('This message has already been sent this month. It will be unlocked next month.');
+      return;
+    }
 
     // Check if schedule is set
     if (!hasSchedule) {
@@ -574,6 +758,67 @@ export default function SMSAutoNudge() {
     } catch (err: any) {
       console.error(err);
       toast.error('Failed to save SMS schedule');
+    } finally {
+      setIsSaving(false);
+      setSavingMode(null);
+    }
+  };
+
+  const handleDeactivate = async (msgId: string) => {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    setIsSaving(true);
+    setSavingMode('draft');
+    try {
+      const messageToSave = {
+        id: msg.id,
+        title: msg.title,
+        message: msg.message,
+        visitingType: msg.visitingType,
+        frequency: 'monthly',
+        dayOfMonth: scheduleDayOfMonth,
+        hour: scheduleHour,
+        minute: scheduleMinute,
+        period: schedulePeriod,
+        validationStatus: 'DRAFT',
+        purpose: 'auto-nudge'
+      };
+
+      const response = await fetch('/api/client-messaging/save-sms-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [messageToSave] }),
+      });
+
+      if (!response.ok) throw new Error('Failed to deactivate');
+
+      const data = await response.json();
+      if (data.success) {
+        // Update with isEditing: true to keep it editable
+        setMessages(messages.map(m =>
+          m.id === msgId
+            ? { 
+                ...m, 
+                isSaved: true, 
+                isEditing: true,  // ← Keep it editable
+                validationStatus: 'DRAFT',
+                enabled: false,
+                dayOfMonth: scheduleDayOfMonth,
+                hour: scheduleHour,
+                minute: scheduleMinute,
+                period: schedulePeriod,
+                frequency: 'monthly'
+              }
+            : m
+        ));
+        toast.success('Message deactivated and ready for editing');
+      } else {
+        toast.error('Failed to deactivate');
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to deactivate message');
     } finally {
       setIsSaving(false);
       setSavingMode(null);
@@ -660,7 +905,26 @@ export default function SMSAutoNudge() {
               <MessageSquare className="w-6 h-6 text-sky-300" />
               SMS Auto Nudge
             </h2>
-            <p className="text-[#bdbdbd] text-sm">
+            
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={() => setShowAutoNudgeHistoryModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
+              >
+                <Clock className="w-4 h-4" />
+                Auto Nudge History
+              </button>
+
+              <button
+                onClick={() => setShowHowAutoNudgeWorksModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
+              >
+                <Info className="w-4 h-4" />
+                How does this work?
+              </button>
+            </div>
+            
+            <p className="text-[#bdbdbd] text-sm mt-3">
               Manage automated monthly marketing messages for each client type
             </p>
           </div>
@@ -759,6 +1023,16 @@ export default function SMSAutoNudge() {
         </div>
       </div>
 
+      <HowAutoNudgeWorksModal 
+        isOpen={showHowAutoNudgeWorksModal}
+        onClose={() => setShowHowAutoNudgeWorksModal(false)}
+      />
+
+      <AutoNudgeHistoryModal 
+        isOpen={showAutoNudgeHistoryModal}
+        onClose={() => setShowAutoNudgeHistoryModal(false)}
+      />
+
       {/* Test Message Confirmation Modal */}
       <TestMessageConfirmModal
         isOpen={showTestConfirmModal}
@@ -779,120 +1053,12 @@ export default function SMSAutoNudge() {
       />
 
       {/* Client Preview Modal */}
-      <AnimatePresence>
-        {showPreview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowPreview(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div>
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-sky-300" />
-                    Clients Selected for Next Campaign
-                  </h3>
-                  {previewStats && (
-                    <p className="text-sm text-[#bdbdbd] mt-1">
-                      {previewStats.total_selected} clients will receive your next SMS
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-[#bdbdbd]" />
-                </button>
-              </div>
-
-              {/* Stats */}
-              {previewStats && (
-                <div className="p-6 border-b border-white/10 bg-white/5">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Total Selected</p>
-                      <p className="text-2xl font-bold text-white">{previewStats.total_selected}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Score</p>
-                      <p className="text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Since Visit</p>
-                      <p className="text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Overdue</p>
-                      <p className="text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[#bdbdbd] mb-1">Breakdown</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {Object.entries(previewStats.breakdown).map(([type, count]) => (
-                          <span key={type} className="text-xs px-2 py-1 bg-white/10 rounded-full text-white">
-                            {type}: {count}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Clients List */}
-              <div className="overflow-y-auto max-h-[50vh] p-6">
-                <div className="space-y-2">
-                  {previewClients.map((client) => (
-                    <div
-                      key={client.client_id}
-                      className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-semibold text-white">
-                            {client.first_name} {client.last_name}
-                          </h4>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                            client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                            client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                            client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                            'bg-gray-500/20 text-gray-400'
-                          }`}>
-                            {client.visiting_type}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                          <span>{client.phone_normalized}</span>
-                          <span>•</span>
-                          <span>{client.days_since_last_visit} days since last visit</span>
-                          <span>•</span>
-                          <span className="text-orange-400">{client.days_overdue} days overdue</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                        <p className="text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ClientPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        previewClients={previewClients}
+        previewStats={previewStats}
+      />
 
       {/* Schedule Modal */}
       <AnimatePresence>
@@ -909,29 +1075,29 @@ export default function SMSAutoNudge() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full"
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
                 <div>
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-purple-300" />
+                  <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-300" />
                     Set Monthly SMS Schedule
                   </h3>
-                  <p className="text-sm text-[#bdbdbd] mt-1">
+                  <p className="text-xs sm:text-sm text-[#bdbdbd] mt-1">
                     All messages will be sent on this schedule
                   </p>
                 </div>
                 <button
                   onClick={() => setShowScheduleModal(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                 >
-                  <X className="w-5 h-5 text-[#bdbdbd]" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbdbd]" />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Day of Month */}
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -940,7 +1106,7 @@ export default function SMSAutoNudge() {
                   <select
                     value={scheduleDayOfMonth}
                     onChange={(e) => setScheduleDayOfMonth(parseInt(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                       <option key={day} value={day} className="bg-[#1a1a1a]">
@@ -949,8 +1115,8 @@ export default function SMSAutoNudge() {
                     ))}
                   </select>
                   {scheduleDayOfMonth > 28 && (
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 mt-2">
-                      <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="p-2 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 mt-2">
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-amber-300">
                         <strong>Note:</strong> In months with fewer than {scheduleDayOfMonth} days, messages will be sent on the last available day of that month.
                       </p>
@@ -972,7 +1138,7 @@ export default function SMSAutoNudge() {
                     <select
                       value={scheduleHour}
                       onChange={(e) => setScheduleHour(parseInt(e.target.value))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
                       {Array.from({ length: 12 }, (_, i) => i === 0 ? 12 : i).map((hour) => (
                         <option key={hour} value={hour} className="bg-[#1a1a1a]">
@@ -985,7 +1151,7 @@ export default function SMSAutoNudge() {
                     <select
                       value={scheduleMinute}
                       onChange={(e) => setScheduleMinute(parseInt(e.target.value))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
                       {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
                         <option key={minute} value={minute} className="bg-[#1a1a1a]">
@@ -998,7 +1164,7 @@ export default function SMSAutoNudge() {
                     <select
                       value={schedulePeriod}
                       onChange={(e) => setSchedulePeriod(e.target.value as 'AM' | 'PM')}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
                       <option value="AM" className="bg-[#1a1a1a]">AM</option>
                       <option value="PM" className="bg-[#1a1a1a]">PM</option>
@@ -1015,7 +1181,7 @@ export default function SMSAutoNudge() {
                     type="date"
                     value={scheduleStartDate}
                     onChange={(e) => setScheduleStartDate(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                   />
                   <p className="text-xs text-[#bdbdbd] mt-1">
                     When should the SMS nudging start?
@@ -1032,7 +1198,7 @@ export default function SMSAutoNudge() {
                     value={scheduleEndDate}
                     onChange={(e) => setScheduleEndDate(e.target.value)}
                     min={scheduleStartDate || new Date().toISOString().split('T')[0]}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                   />
                   <p className="text-xs text-[#bdbdbd] mt-1">
                     Messages will be drafted after this date
@@ -1040,29 +1206,107 @@ export default function SMSAutoNudge() {
                 </div>
 
                 {/* Info Box */}
-                <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                  <p className="text-sm text-purple-300">
+                <div className="p-3 sm:p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                  <p className="text-xs sm:text-sm text-purple-300">
                     <strong>Monthly Schedule:</strong> Messages will be sent on day {scheduleDayOfMonth} of every month at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
                   </p>
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10">
+              <div className="flex items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-white/10 sticky bottom-0 bg-[#1a1a1a]">
                 <button
                   onClick={() => {
                     setShowScheduleModal(false);
                   }}
-                  className="px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl font-semibold hover:bg-white/10 transition-all"
+                  className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl text-sm sm:text-base font-semibold hover:bg-white/10 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSetSchedule}
                   disabled={!scheduleDayOfMonth || !scheduleStartDate}
-                  className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl font-semibold hover:bg-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 sm:px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Apply Schedule
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit confirmation modal */}
+      <AnimatePresence>
+        {showDeactivateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowDeactivateModal(false);
+              setPendingDeactivateMessageId(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Deactivate Message?</h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setPendingDeactivateMessageId(null);
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-[#bdbdbd]" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <p className="text-[#bdbdbd] mb-4">
+                  This message will be converted to a <span className="text-amber-300 font-semibold">draft</span> and will <span className="text-amber-300 font-semibold">no longer be sent out</span> on the scheduled date.
+                </p>
+                <p className="text-[#bdbdbd]">
+                  You can reactivate it later by editing and re-activating the message.
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10">
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setPendingDeactivateMessageId(null);
+                  }}
+                  className="px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl font-semibold hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (pendingDeactivateMessageId) {
+                      setShowDeactivateModal(false);
+                      setPendingDeactivateMessageId(null);
+                      await handleDeactivate(pendingDeactivateMessageId);
+                    }
+                  }}
+                  className="px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl font-semibold hover:bg-amber-300/30 transition-all"
+                >
+                  Deactivate Message
                 </button>
               </div>
             </motion.div>
@@ -1083,6 +1327,8 @@ export default function SMSAutoNudge() {
         ) : (
           messages.map((msg, index) => (
             <MessageCard
+              isLocked={lockedMessages.has(msg.id)}
+              autoNudgeCampaignProgress={autoNudgeCampaignProgress[msg.id]} 
               key={msg.id}
               message={msg}
               index={index}
@@ -1161,6 +1407,10 @@ export default function SMSAutoNudge() {
               onCancelEditTitle={() => {
                 setEditingTitleId(null);
                 setTempTitle('');
+              }}
+              onRequestDeactivate={(msgId: string) => {
+                setPendingDeactivateMessageId(msgId);
+                setShowDeactivateModal(true);
               }}
               onTempTitleChange={setTempTitle}
             />

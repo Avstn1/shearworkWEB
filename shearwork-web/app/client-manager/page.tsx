@@ -8,6 +8,7 @@ import SMSAutoNudge from '@/components/Dashboard/ClientManager/SMSAutoNudge/SMSA
 import SMSCampaigns from '@/components/Dashboard/ClientManager/SMSCampaigns/SMSCampaigns';
 import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
+import FAQModal from '@/components/Dashboard/ClientManager/FAQModal';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -20,6 +21,7 @@ const fadeInUp = {
 
 export default function ClientManagerPage() {
   const [activeView, setActiveView] = useState<'sheets' | 'sms' | 'sms-campaign'>('sheets');
+  const [showFAQ, setShowFAQ] = useState(false);
 
   return (
     <OnboardingGuard>
@@ -76,6 +78,27 @@ export default function ClientManagerPage() {
               </button>
             </div>
           </div>
+
+          {/* FAQ Button */}
+          <button
+            onClick={() => setShowFAQ(true)}
+            className="flex items-center gap-2 px-5 py-3 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 whitespace-nowrap shadow-lg hover:shadow-emerald-500/30 hover:scale-105"
+          >
+            <svg 
+              className="w-4 h-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+              />
+            </svg>
+            Frequently Asked Questions
+          </button>
         </motion.div>
 
         {/* Content Area */}
@@ -109,6 +132,9 @@ export default function ClientManagerPage() {
             )}
           </motion.div>
         </AnimatePresence>
+
+        {/* FAQ Modal */}
+        <FAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} />
       </div>
     </OnboardingGuard>
   );

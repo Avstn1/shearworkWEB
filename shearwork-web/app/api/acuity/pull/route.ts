@@ -795,7 +795,7 @@ export async function GET(request: Request) {
 
     const referralSource = extractSourceFromForms(appt.forms)
 
-    // ---------- per-client stats (acuity_clients) ----------
+    // ---------- per-client stats (acuity_clients') ----------
     if (!clientStats[clientKey]) {
       clientStats[clientKey] = {
         client_id: clientKey,
