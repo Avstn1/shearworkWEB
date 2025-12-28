@@ -3,11 +3,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-]
-
 const supabase = createClient(
   Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? '', 
   Deno.env.get("SERVICE_ROLE_KEY") ?? '', 
@@ -37,26 +32,29 @@ Deno.serve(async (req) => {
 
     console.log(`STARTING SYNC FOR ${tokens?.length || 0} USERS. CURRENT TIME: ${new Date()}`)
     
-    const CONCURRENCY_LIMIT = 100
+    const CONCURRENCY_LIMIT = 10 // Reduced since we're doing full years now
 
-    // Build all requests to be made
-    const allRequests: { userId: string; month: string; year: number }[] = []
+    // Build all requests (one per user per year)
+    const allRequests: { userId: string; year: number }[] = []
     
     for (const tokenItem of tokens || []) {
       for (const year of yearsToSync) {
-        for (const month of MONTHS) {
-          allRequests.push({
-            userId: tokenItem.user_id,
-            month,
-            year
-          })
-        }
+        allRequests.push({
+          userId: tokenItem.user_id,
+          year
+        })
       }
     }
+
+    console.log(`Total requests to make: ${allRequests.length}`)
 
     async function fireWithConcurrency(items, limit) {
       let active = 0
       let index = 0
+      const results = {
+        success: 0,
+        failed: 0
+      }
 
       return new Promise(resolve => {
         function next() {
@@ -64,7 +62,9 @@ Deno.serve(async (req) => {
             const request = items[index++]
             active++
 
-            const url = `https://shearwork-web.vercel.app/api/acuity/pull?endpoint=appointments&month=${request.month}&year=${request.year}`
+            const url = `https://shearwork-web.vercel.app/api/acuity/pull-year?year=${request.year}`
+            
+            console.log(`🔄 Starting: ${request.userId} - Year ${request.year}`)
             
             fetch(url, {
               method: 'GET',
@@ -75,21 +75,31 @@ Deno.serve(async (req) => {
                 'x-vercel-protection-bypass': BYPASS_TOKEN
               }
             })
-              .then(response => {
+              .then(async response => {
                 if (!response.ok) {
-                    return response.text().then(errorText => {
-                    console.error(`✗ ${request.userId} - ${request.month} ${request.year}: ${errorText}`)
-                  })
+                  const errorText = await response.text()
+                  console.error(`✗ ${request.userId} - Year ${request.year}: ${response.status} ${errorText}`)
+                  results.failed++
+                } else {
+                  const data = await response.json()
+                  console.log(`✓ ${request.userId} - Year ${request.year}: ${data.totalClients || 0} clients, ${data.totalAppointments || 0} appointments`)
+                  results.success++
                 }
               })
-              .catch(err => console.error(`Error for ${request.userId} - ${request.month} ${request.year}:`, err))
+              .catch(err => {
+                console.error(`Error for ${request.userId} - Year ${request.year}:`, err)
+                results.failed++
+              })
               .finally(() => {
                 active--
                 next()
               })
           }
 
-          if (active === 0 && index >= items.length) resolve()
+          if (active === 0 && index >= items.length) {
+            console.log(`\n📊 RESULTS: ${results.success} succeeded, ${results.failed} failed`)
+            resolve(results)
+          }
         }
 
         next()
@@ -98,10 +108,12 @@ Deno.serve(async (req) => {
 
     await fireWithConcurrency(allRequests, CONCURRENCY_LIMIT)
 
-    console.log(`All requests dispatched (with concurrency limit ${CONCURRENCY_LIMIT})`)
     console.log(`SYNC ENDED. CURRENT TIME: ${new Date()}`)
 
-    return new Response(JSON.stringify({ }), {
+    return new Response(JSON.stringify({ 
+      message: 'Sync completed',
+      totalRequests: allRequests.length
+    }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
