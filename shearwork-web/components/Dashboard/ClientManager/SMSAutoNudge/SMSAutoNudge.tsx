@@ -196,25 +196,11 @@ export default function SMSAutoNudge() {
   loadSchedule();
   }, []);
 
-  useEffect(() => {
-    const initializeData = async () => {
-      await loadMessages();
-      await loadClientPreview();
-      await fetchCredits();
-      await fetchTestMessageCount();
-      await checkMessageLocks(); // Add this
-    };
-    
-    initializeData();
-  }, []);
-
   const checkMessageLocks = async () => {
     setCheckingLocks(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
-      console.log('🔍 Checking message locks for user:', user.id);
 
       // Get all auto-nudge scheduled messages with their status
       const { data, error } = await supabase
@@ -228,8 +214,6 @@ export default function SMSAutoNudge() {
         throw error;
       }
 
-      console.log('📊 Scheduled messages from database:', data);
-
       // Create autoNudgeCampaignProgress map
       const progressMap: Record<string, { is_finished: boolean; is_running: boolean }> = {};
       const lockedIds = new Set<string>();
@@ -240,20 +224,11 @@ export default function SMSAutoNudge() {
           is_running: msg.is_running || false
         };
 
-        console.log(`📝 Message ${msg.id}:`, {
-          is_finished: msg.is_finished,
-          is_running: msg.is_running,
-          willBeLocked: msg.is_finished
-        });
-
         // If message is finished, it's locked
         if (msg.is_finished) {
           lockedIds.add(msg.id);
         }
       });
-
-      console.log('✅ Campaign Progress Map:', progressMap);
-      console.log('🔒 Locked Message IDs:', Array.from(lockedIds));
 
       setAutoNudgeCampaignProgress(progressMap);
       setLockedMessages(lockedIds);
