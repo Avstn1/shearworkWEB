@@ -54,11 +54,13 @@ export default function MarketingFunnelsChart({
         return
       }
 
+      // ✅ UPDATED: Filter out "No Source" in addition to "Unknown" and "Returning Client"
       let filtered = (funnels as MarketingFunnel[]).filter(
         (f) =>
           f.source &&
           f.source !== 'Unknown' &&
-          f.source !== 'Returning Client'
+          f.source !== 'Returning Client' &&
+          f.source !== 'No Source'
       )
 
       filtered.sort(

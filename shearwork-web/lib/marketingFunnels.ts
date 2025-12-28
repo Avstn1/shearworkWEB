@@ -68,7 +68,7 @@ const REFERRAL_KEYWORDS = [
   'walk',
 ]
 
-const REFERRAL_FILTER = ['unknown', 'returning', 'return', 'returning client']
+const REFERRAL_FILTER = ['unknown']
 
 export function canonicalizeSource(raw?: string | null): string | null {
   if (!raw) return null
@@ -99,10 +99,21 @@ export function extractSourceFromForms(forms: AcuityAppointment['forms']): strin
       const fieldName = field.name?.toLowerCase() || ''
       const fieldValue = (field.value || '').toString().trim()
 
+      // Must match a referral keyword in the field name
       if (!REFERRAL_KEYWORDS.some((k) => fieldName.includes(k))) continue
+      
+      // Skip empty or multi-select values (comma-separated)
       if (!fieldValue || fieldValue.includes(',')) continue
 
       const valueLower = fieldValue.toLowerCase()
+      
+      // Return "Returning Client" as the actual source
+      // We'll handle the classification logic in the computation phase
+      if (valueLower.includes('returning') || valueLower.includes('return')) {
+        return 'Returning Client'
+      }
+      
+      // Filter out "unknown" only
       if (REFERRAL_FILTER.some((k) => valueLower.includes(k))) continue
 
       const canonical = canonicalizeSource(fieldValue)
@@ -170,7 +181,7 @@ export function buildMonthlyTimeframes(year: number): TimeframeDef[] {
   return tfs
 }
 
-// -------------------- Core funnel computation (FIXED) --------------------
+// -------------------- Core funnel computation --------------------
 
 // firstApptLookup maps identity key (email or phone or nameKey) to earliest first_appt ISO date
 export function computeFunnelsFromAppointments(
@@ -204,7 +215,6 @@ export function computeFunnelsFromAppointments(
     // Store identity info
     clientIdentity[clientKey] = { email, phone, nameKey }
 
-    // ✅ CHANGED: Use "No Source" instead of "Unknown"
     // Determine canonical source for this client (only set once, first occurrence wins)
     if (!clientSource[clientKey]) {
       const extracted = extractSourceFromForms(appt.forms)
@@ -250,10 +260,26 @@ export function computeFunnelsFromAppointments(
     if (!funnels[tf.id]) funnels[tf.id] = {}
 
     for (const [clientKey, visits] of Object.entries(clientVisits)) {
-      const source = clientSource[clientKey] || 'No Source'
+      let source = clientSource[clientKey] || 'No Source'
       const firstAppt = clientFirstAppt[clientKey]
       
       if (!firstAppt) continue
+
+      // Get all visits within this timeframe
+      const visitsInTimeframe = visits.filter(
+        v => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO
+      )
+
+      if (visitsInTimeframe.length === 0) continue
+
+      // ✅ NEW LOGIC: Reclassify "Returning Client" as "No Source" if they're actually NEW
+      const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
+      
+      if (source === 'Returning Client' && isFirstApptInTimeframe) {
+        // This person selected "Returning Client" but it's their FIRST appointment
+        // They're confused/mistaken - treat them as "No Source" (unknown marketing source)
+        source = 'No Source'
+      }
 
       // Initialize stats for this source if needed
       if (!funnels[tf.id][source]) {
@@ -267,21 +293,13 @@ export function computeFunnelsFromAppointments(
 
       const stats = funnels[tf.id][source]
 
-      // Get all visits within this timeframe
-      const visitsInTimeframe = visits.filter(
-        v => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO
-      )
-
-      if (visitsInTimeframe.length === 0) continue
-
       // Add revenue and visit counts
       for (const visit of visitsInTimeframe) {
         stats.total_revenue += visit.price
         stats.total_visits += 1
       }
 
-      // ✅ FIXED LOGIC: Properly classify new vs returning clients
-      const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
+      // Classify new vs returning clients
       const isFirstApptBeforeTimeframe = firstAppt < tf.startISO
 
       if (isFirstApptInTimeframe) {
