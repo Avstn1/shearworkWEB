@@ -1,11 +1,3 @@
-// Key changes made to reduce debug noise:
-// 1. Removed excessive funnel debug logging
-// 2. Removed comprehensive debug output section
-// 3. Removed forms debug that's inside the main loop (causing duplication)
-// 4. Kept only: firstApptLookup stats and weekly/monthly aggregation logs
-
-// Search for "REMOVED DEBUG" comments to see what was taken out
-
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
@@ -869,6 +861,7 @@ export async function GET(request: Request) {
     wEntry.revenue += price
     wEntry.numAppointments++
 
+
     if (!wEntry.clientVisitMap[clientKey]) wEntry.clientVisitMap[clientKey] = 0
     wEntry.clientVisitMap[clientKey]++
 
@@ -911,6 +904,7 @@ export async function GET(request: Request) {
     if (!monthlyAgg[monthKey]) monthlyAgg[monthKey] = { revenue: 0, count: 0 }
     monthlyAgg[monthKey].revenue += price
     monthlyAgg[monthKey].count++
+
 
     if (!dailyAgg[dayKey]) dailyAgg[dayKey] = { revenue: 0, count: 0 }
     dailyAgg[dayKey].revenue += price
