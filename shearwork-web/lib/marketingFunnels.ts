@@ -16,6 +16,7 @@ export type TimeframeDef = {
 export type FunnelStats = {
   new_clients: number
   returning_clients: number
+  new_clients_retained: number  // NEW: new clients who came back within the same timeframe
   total_revenue: number
   total_visits: number
 }
@@ -68,7 +69,7 @@ const REFERRAL_KEYWORDS = [
   'walk',
 ]
 
-const REFERRAL_FILTER = ['unknown', 'returning', 'return', 'returning client']
+const REFERRAL_FILTER = ['unknown']
 
 export function canonicalizeSource(raw?: string | null): string | null {
   if (!raw) return null
@@ -99,10 +100,21 @@ export function extractSourceFromForms(forms: AcuityAppointment['forms']): strin
       const fieldName = field.name?.toLowerCase() || ''
       const fieldValue = (field.value || '').toString().trim()
 
+      // Must match a referral keyword in the field name
       if (!REFERRAL_KEYWORDS.some((k) => fieldName.includes(k))) continue
+      
+      // Skip empty or multi-select values (comma-separated)
       if (!fieldValue || fieldValue.includes(',')) continue
 
       const valueLower = fieldValue.toLowerCase()
+      
+      // Return "Returning Client" as the actual source
+      // We'll handle the classification logic in the computation phase
+      if (valueLower.includes('returning') || valueLower.includes('return')) {
+        return 'Returning Client'
+      }
+      
+      // Filter out "unknown" only
       if (REFERRAL_FILTER.some((k) => valueLower.includes(k))) continue
 
       const canonical = canonicalizeSource(fieldValue)
@@ -184,7 +196,7 @@ export function computeFunnelsFromAppointments(
   const clientIdentity: Record<string, { email: string; phone: string; nameKey: string }> = {}
   const clientSource: Record<string, string> = {}
 
-  // ---------- First pass. visits, revenue, identity, source ----------
+  // ==================== PASS 1: Collect all visits and determine sources ====================
   for (const appt of appointments) {
     const apptDateISO = appt.datetime.split('T')[0]
     const price = parseFloat((appt.priceSold as any) || '0')
@@ -197,108 +209,117 @@ export function computeFunnelsFromAppointments(
 
     const clientKey = buildClientKey(appt as any, userId)
 
+    // Store all visits for this client
     if (!clientVisits[clientKey]) clientVisits[clientKey] = []
     clientVisits[clientKey].push({ dateISO: apptDateISO, price })
 
+    // Store identity info
     clientIdentity[clientKey] = { email, phone, nameKey }
 
-    // Determine canonical source for this client
-    let source = clientSource[clientKey]
-    if (!source) {
+    // Determine canonical source for this client (only set once, first occurrence wins)
+    if (!clientSource[clientKey]) {
       const extracted = extractSourceFromForms(appt.forms)
-      if (extracted) {
-        clientSource[clientKey] = extracted
-        source = extracted
-      }
-    }
-
-    if (!source) continue
-
-    // Aggregate revenue and visits per timeframe
-    for (const tf of tfDefs) {
-      if (apptDateISO >= tf.startISO && apptDateISO <= tf.endISO) {
-        if (!funnels[tf.id]) funnels[tf.id] = {}
-        if (!funnels[tf.id][source]) {
-          funnels[tf.id][source] = {
-            new_clients: 0,
-            returning_clients: 0,
-            total_revenue: 0,
-            total_visits: 0,
-          }
-        }
-        const stats = funnels[tf.id][source]
-        stats.total_revenue += price
-        stats.total_visits += 1
-      }
+      clientSource[clientKey] = extracted || 'No Source'
     }
   }
 
-  // ---------- Second pass. new vs returning per timeframe ----------
-  for (const [clientKey, visits] of Object.entries(clientVisits)) {
-    const source = clientSource[clientKey]
-    if (!source) continue
+  // ==================== PASS 2: Determine first appointment date for each client ====================
+  const clientFirstAppt: Record<string, string> = {}
 
+  for (const [clientKey, visits] of Object.entries(clientVisits)) {
     const identity = clientIdentity[clientKey]
-    const idKeys = [
-      identity?.email || '',
-      identity?.phone || '',
-      identity?.nameKey || '',
+    
+    // Build lookup keys (must match acuity/pull logic EXACTLY)
+    const lookupKeys = [
+      identity?.email,
+      identity?.phone,
+      identity?.nameKey
     ].filter(Boolean) as string[]
 
+    // Find earliest first_appt from database lookup
     let firstAppt: string | null = null
-    for (const k of idKeys) {
-      const fa = firstApptLookup[k]
-      if (fa && (!firstAppt || fa < firstAppt)) {
-        firstAppt = fa
+    for (const key of lookupKeys) {
+      const dbFirstAppt = firstApptLookup[key]
+      if (dbFirstAppt && (!firstAppt || dbFirstAppt < firstAppt)) {
+        firstAppt = dbFirstAppt
       }
     }
 
-    const sortedVisits = [...visits].sort((a, b) =>
-      a.dateISO.localeCompare(b.dateISO),
-    )
-
-    if (!firstAppt && sortedVisits.length > 0) {
+    // If not in DB, use earliest visit from current data
+    if (!firstAppt && visits.length > 0) {
+      const sortedVisits = [...visits].sort((a, b) => a.dateISO.localeCompare(b.dateISO))
       firstAppt = sortedVisits[0].dateISO
     }
 
-    const secondAppt =
-      sortedVisits.length > 1 ? sortedVisits[1].dateISO : null
+    if (firstAppt) {
+      clientFirstAppt[clientKey] = firstAppt
+    }
+  }
 
-    if (!firstAppt) continue
+  // ==================== PASS 3: Process each timeframe and classify clients ====================
+  for (const tf of tfDefs) {
+    if (!funnels[tf.id]) funnels[tf.id] = {}
 
-    for (const tf of tfDefs) {
-      if (!funnels[tf.id]) funnels[tf.id] = {}
+    for (const [clientKey, visits] of Object.entries(clientVisits)) {
+      let source = clientSource[clientKey] || 'No Source'
+      const firstAppt = clientFirstAppt[clientKey]
+      
+      if (!firstAppt) continue
+
+      // Get all visits within this timeframe
+      const visitsInTimeframe = visits.filter(
+        v => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO
+      )
+
+      if (visitsInTimeframe.length === 0) continue
+
+      // ✅ NEW LOGIC: Reclassify "Returning Client" as "No Source" if they're actually NEW
+      const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
+      
+      if (source === 'Returning Client' && isFirstApptInTimeframe) {
+        // This person selected "Returning Client" but it's their FIRST appointment
+        // They're confused/mistaken - treat them as "No Source" (unknown marketing source)
+        source = 'No Source'
+      }
+
+      // Initialize stats for this source if needed
       if (!funnels[tf.id][source]) {
         funnels[tf.id][source] = {
           new_clients: 0,
           returning_clients: 0,
+          new_clients_retained: 0,
           total_revenue: 0,
           total_visits: 0,
         }
       }
+
       const stats = funnels[tf.id][source]
 
-      // New client in this timeframe
-      if (firstAppt >= tf.startISO && firstAppt <= tf.endISO) {
+      // Add revenue and visit counts
+      for (const visit of visitsInTimeframe) {
+        stats.total_revenue += visit.price
+        stats.total_visits += 1
+      }
+
+      // Classify new vs returning clients
+      const isFirstApptBeforeTimeframe = firstAppt < tf.startISO
+
+      if (isFirstApptInTimeframe) {
+        // This client's FIRST EVER appointment is in this timeframe = NEW CLIENT
         stats.new_clients += 1
-      }
-
-      // Returning client in this timeframe
-      let isReturning = false
-      if (secondAppt) {
-        if (
-          firstAppt >= tf.startISO &&
-          firstAppt <= tf.endISO &&
-          secondAppt > firstAppt &&
-          secondAppt <= tf.endISO
-        ) {
-          isReturning = true
+        
+        // Special case: If they also had ADDITIONAL visits in this same timeframe,
+        // they are ALSO a returning client within this timeframe
+        if (visitsInTimeframe.length > 1) {
+          stats.returning_clients += 1
+          stats.new_clients_retained += 1  // ✅ NEW: Track new clients who came back same timeframe
         }
-      }
-
-      if (isReturning) {
+      } else if (isFirstApptBeforeTimeframe) {
+        // First appointment was BEFORE this timeframe started
+        // Any visit in this timeframe makes them a RETURNING CLIENT
         stats.returning_clients += 1
       }
+      // Note: If firstAppt is AFTER tf.endISO, we already filtered out their visits above
     }
   }
 

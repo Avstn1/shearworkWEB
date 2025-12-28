@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
@@ -20,13 +19,6 @@ export interface StripeSubscriptionFixed {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
-
-// ⚠️ Disable automatic body parsing for Stripe webhook
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature')

@@ -6,7 +6,22 @@ export const weeklyRentalPrompt = (dataset: any, userName: string, month: string
   const avgTicket = summary.num_appointments > 0 
     ? (summary.total_revenue / summary.num_appointments).toFixed(2) 
     : '0.00';
-  const netProfit = (summary.total_revenue || 0) - (summary.expenses || 0) + dataset.weekly_rows.tips;
+  const netProfit = (summary.total_revenue || 0) - (summary.expenses || 0) + (summary.tips || 0);
+  
+  // ✅ FIX 1: Calculate total unique clients correctly
+  const totalUniqueClients = (summary.new_clients || 0) + (summary.returning_clients || 0);
+  
+  // ✅ FIX 2: Filter marketing funnels - only show sources with new clients > 0
+  const activeFunnels = funnels
+    .filter((f: any) => 
+      f.source !== 'Returning Client' && 
+      f.source !== 'Walk In' &&
+      (f.new_clients || 0) > 0
+    )
+    .map((f: any) => ({
+      ...f,
+      source: f.source === 'Unknown' ? 'No Source' : f.source
+    }));
 
   return `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional named ${userName}.
@@ -33,7 +48,7 @@ Use the provided data and computed values. Pull values directly from the dataset
 
 <h2>Weekly Summary 📊</h2>
 <ul>
-  <li>Total Clients: ${summary.num_appointments || 0}</li>
+  <li>Total Clients: ${totalUniqueClients}</li>
   <li>New Clients: ${summary.new_clients || 0} | Returning: ${summary.returning_clients || 0}</li>
   <li>Total Revenue: $${(summary.total_revenue || 0).toFixed(2)}</li>
   <li>Tips: $${(summary.tips || 0).toFixed(2)}</li>
@@ -45,9 +60,9 @@ Use the provided data and computed values. Pull values directly from the dataset
 <h2>Notes & Highlights 📝</h2>
 THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
 <ul>
-  <li><strong>Retention Rate:</strong> ${summary.num_appointments > 0 ? (((summary.returning_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of clients were returning customers.</li>
+  <li><strong>Retention Rate:</strong> ${totalUniqueClients > 0 ? (((summary.returning_clients || 0) / totalUniqueClients) * 100).toFixed(1) : '0.0'}% of clients were returning customers.</li>
   <li><strong>Revenue Performance:</strong> Analyze whether $${(summary.total_revenue || 0).toFixed(2)} is strong or weak for the week. Compare to previous weeks if possible.</li>
-  <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients (${summary.num_appointments > 0 ? (((summary.new_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of total).</li>
+  <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients (${totalUniqueClients > 0 ? (((summary.new_clients || 0) / totalUniqueClients) * 100).toFixed(1) : '0.0'}% of total).</li>
   ${bestDay ? `<li><strong>Best Day:</strong> ${bestDay.date} with $${(bestDay.total_revenue || 0).toFixed(2)} in revenue.</li>` : ''}
   <li><strong>Average Ticket:</strong> $${avgTicket} per client. ${parseFloat(avgTicket) > 50 ? 'Strong average ticket!' : 'Consider upselling opportunities.'}</li>
 </ul>
@@ -68,19 +83,17 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
               <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.price||0),0).toFixed(2)}</td><td>$${(services.reduce((sum:any,s:any)=>sum+(s.bookings > 0 ? s.price / s.bookings : 0),0) / services.filter((s:any)=>s.bookings > 0).length).toFixed(2)}</td></tr>
             </tbody>
           </table>
-          <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing consistent client demand and service value.</p>`
+          <p>💇‍♂️ ${userName}'s most popular service this week was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing consistent client demand and service value.</p>`
        : `<p>No data available for this section.</p>`
    }
 
 <h2>📣 Marketing Funnels</h2>
-   (extra instructions: do not include a row if source is literally called "Returning Client")
    ${
-     funnels.length
+     activeFunnels.length
        ? `<table>
             <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
             <tbody>
-              ${funnels
-                .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
+              ${activeFunnels
                 .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
                 .map(
                     (f: any) =>
@@ -93,9 +106,8 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
                 .join('')}
             </tbody>
           </table>
-          <p>PROMPT: State which channels did the well (UNLESS it's "Walking By") and Encourage exposing more of their work publicly. DO NOT mention any other channels</p>
-          Instructions: creative analysis/generation`
-       : `<p>No data available for this section.</p>`
+          <p>Your top-performing channel this week was <strong>${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'No Source'}</strong>, bringing in ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.new_clients || 0} new clients. ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'No Source' && activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'Walking By' ? 'Consider showcasing more of your work publicly to attract even more potential clients!' : 'Consider asking satisfied clients how they heard about you to better track your marketing channels.'}</p>`
+       : `<p>No new client acquisition data available for this week.</p>`
    }
 
 <h2>Top Clients 💈</h2>
@@ -132,9 +144,9 @@ AI INSTRUCTIONS: Based on the data provided, generate 2-3 insightful observation
 <h2>Action Steps 🚀</h2>
 Suggest 2-3 actionable improvements for next week:
 <ul>
-  <li>Focus on improving rebooking rates if retention is low (currently ${summary.num_appointments > 0 ? (((summary.returning_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}%)</li>
+  <li>Focus on improving rebooking rates if retention is low (currently ${totalUniqueClients > 0 ? (((summary.returning_clients || 0) / totalUniqueClients) * 100).toFixed(1) : '0.0'}%)</li>
   <li>Promote high-performing services: ${dataset.services_percentage?.[0]?.name || 'N/A'}</li>
-  <li>Target new client acquisition through ${dataset.marketing_funnels?.filter((f: any) => f.new_clients > 0).map((f: any) => f.source).join(', ') || 'referrals'}</li>
+  <li>Target new client acquisition through ${activeFunnels.filter((f: any) => f.new_clients > 0).map((f: any) => f.source).join(', ') || 'referrals'}</li>
 </ul>
 `;
 };

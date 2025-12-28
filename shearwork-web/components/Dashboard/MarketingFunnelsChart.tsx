@@ -20,6 +20,7 @@ export interface MarketingFunnel {
   source: string
   new_clients: number
   returning_clients: number
+  new_clients_retained: number
   retention: number
   avg_ticket: number
   [key: string]: string | number | undefined
@@ -44,7 +45,7 @@ export default function MarketingFunnelsChart({
     const fetchData = async () => {
       const { data: funnels, error } = await supabase
         .from('marketing_funnels')
-        .select('source, new_clients, returning_clients, retention, avg_ticket')
+        .select('source, new_clients, returning_clients, new_clients_retained, retention, avg_ticket')
         .eq('user_id', barberId)
         .eq('report_month', month)
         .eq('report_year', year)
@@ -54,12 +55,27 @@ export default function MarketingFunnelsChart({
         return
       }
 
+      // ✅ Filter out "No Source", "Unknown", and "Returning Client"
       let filtered = (funnels as MarketingFunnel[]).filter(
         (f) =>
           f.source &&
           f.source !== 'Unknown' &&
-          f.source !== 'Returning Client'
+          f.source !== 'Returning Client' &&
+          f.source !== 'No Source'
       )
+
+      // ✅ Calculate retention for chart: % of new clients who came back within the same month
+      filtered = filtered.map((f) => {
+        const newClientsRetained = f.new_clients_retained || 0
+        const newClients = f.new_clients || 0
+        const timeframeRetention = newClients > 0 
+          ? (newClientsRetained / newClients) * 100 
+          : 0
+        return {
+          ...f,
+          retention: timeframeRetention,
+        }
+      })
 
       filtered.sort(
         (a, b) =>
@@ -74,7 +90,7 @@ export default function MarketingFunnelsChart({
           (acc, f) => {
             acc.new_clients += f.new_clients || 0
             acc.returning_clients += f.returning_clients || 0
-            acc.retention += f.retention || 0
+            acc.new_clients_retained += f.new_clients_retained || 0
             acc.avg_ticket += f.avg_ticket || 0
             return acc
           },
@@ -82,12 +98,14 @@ export default function MarketingFunnelsChart({
             source: 'Other',
             new_clients: 0,
             returning_clients: 0,
+            new_clients_retained: 0,
             retention: 0,
             avg_ticket: 0,
           } as MarketingFunnel
         )
-        other.retention = otherSources.length
-          ? other.retention / otherSources.length
+        // ✅ Calculate retention for "Other" bucket: % of new clients who came back
+        other.retention = other.new_clients > 0
+          ? (other.new_clients_retained / other.new_clients) * 100
           : 0
         other.avg_ticket = otherSources.length
           ? other.avg_ticket / otherSources.length
@@ -292,15 +310,15 @@ export default function MarketingFunnelsChart({
 
             <Bar
               xAxisId="clients"
-              dataKey="returning_clients"
-              name="Returning Clients"
+              dataKey="new_clients_retained"
+              name="New Clients Retained"
               fill={COLORS[3]}
               radius={[8, 8, 0, 0]}
               barSize={barSize}
             >
-              {/* Show returning_clients value - conditionally positioned based on % of max */}
+              {/* Show new_clients_retained value - conditionally positioned based on % of max */}
               <LabelList
-                dataKey="returning_clients"
+                dataKey="new_clients_retained"
                 content={(props: any) => {
                   const { x, y, width, height, value, index } = props;
                   const filteredData = data.filter(d => d.new_clients > 0);
@@ -308,11 +326,11 @@ export default function MarketingFunnelsChart({
                   
                   if (!entry) return null; // Safety check
                   
-                  // Find max of both new and returning clients for proper scaling
+                  // Find max of both new and new_clients_retained for proper scaling
                   const maxClients = Math.max(
-                    ...filteredData.map(d => Math.max(d.new_clients, d.returning_clients))
+                    ...filteredData.map(d => Math.max(d.new_clients, d.new_clients_retained))
                   );
-                  const percentage = (entry.returning_clients / maxClients) * 100;
+                  const percentage = (entry.new_clients_retained / maxClients) * 100;
                   
                   if (percentage > 70) {
                     // Position inside on the left

@@ -7,13 +7,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
 
-// ⚠️ Disable automatic body parsing for Stripe webhook
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
 // Credit package mapping
 const CREDIT_AMOUNTS: Record<string, number> = {
   '100': 100,
