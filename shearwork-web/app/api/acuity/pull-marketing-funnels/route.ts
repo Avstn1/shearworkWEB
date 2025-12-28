@@ -414,6 +414,7 @@ export async function GET(request: Request) {
           funnels[tf.id][source] = {
             new_clients: 0,
             returning_clients: 0,
+            new_clients_retained: 0,
             total_revenue: 0,
             total_visits: 0,
           }
@@ -468,6 +469,7 @@ export async function GET(request: Request) {
         funnels[tf.id][source] = {
           new_clients: 0,
           returning_clients: 0,
+          new_clients_retained: 0,
           total_revenue: 0,
           total_visits: 0,
         }
@@ -475,24 +477,27 @@ export async function GET(request: Request) {
 
       const stats = funnels[tf.id][source]
 
-      if (firstAppt >= tf.startISO && firstAppt <= tf.endISO) {
+      const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
+
+      if (isFirstApptInTimeframe) {
         stats.new_clients += 1
       }
 
-      let isReturning = false
+      // Check if new client returned within the same timeframe
+      let isNewClientRetained = false
       if (secondAppt) {
         if (
-          firstAppt >= tf.startISO &&
-          firstAppt <= tf.endISO &&
+          isFirstApptInTimeframe &&
           secondAppt > firstAppt &&
           secondAppt <= tf.endISO
         ) {
-          isReturning = true
+          isNewClientRetained = true
         }
       }
 
-      if (isReturning) {
+      if (isNewClientRetained) {
         stats.returning_clients += 1
+        stats.new_clients_retained += 1
       }
     }
   }
@@ -507,7 +512,7 @@ export async function GET(request: Request) {
       for (const [source, stats] of Object.entries(tfStats)) {
         const retention =
           stats.new_clients > 0
-            ? (stats.returning_clients / stats.new_clients) * 100
+            ? (stats.new_clients_retained / stats.new_clients) * 100
             : 0
         const avg_ticket =
           stats.total_visits > 0
@@ -520,6 +525,7 @@ export async function GET(request: Request) {
           report_month: requestedMonth,
           new_clients: stats.new_clients,
           returning_clients: stats.returning_clients,
+          new_clients_retained: stats.new_clients_retained,
           retention,
           avg_ticket,
           report_year: requestedYear,
@@ -535,7 +541,7 @@ export async function GET(request: Request) {
       for (const [source, stats] of Object.entries(tfStats)) {
         const retention =
           stats.new_clients > 0
-            ? (stats.returning_clients / stats.new_clients) * 100
+            ? (stats.new_clients_retained / stats.new_clients) * 100
             : 0
         const avg_ticket =
           stats.total_visits > 0
@@ -548,6 +554,7 @@ export async function GET(request: Request) {
           timeframe: tf.id,
           new_clients: stats.new_clients,
           returning_clients: stats.returning_clients,
+          new_clients_retained: stats.new_clients_retained,
           retention,
           avg_ticket,
           report_year: requestedYear,
