@@ -22,10 +22,10 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden"
+            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10">
+            <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 flex-shrink-0">
               <div className="flex-1 min-w-0 pr-2">
                 <h3 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2">
                   <Info className="w-5 h-5 sm:w-6 sm:h-6 text-sky-300 flex-shrink-0" />
@@ -45,7 +45,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
             </div>
 
             {/* Modal Content */}
-            <div className="overflow-y-auto max-h-[calc(95vh-160px)] sm:max-h-[calc(90vh-200px)] p-3 sm:p-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
               <div className="space-y-3 sm:space-y-6">
                 {/* Step 1 */}
                 <div className="p-3 sm:p-5 bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 rounded-xl">
@@ -317,7 +317,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-white/10 px-3 sm:px-6 py-3 sm:py-4 bg-white/5">
+            <div className="border-t border-white/10 px-3 sm:px-6 py-3 sm:py-4 bg-white/5 flex-shrink-0">
               <button
                 onClick={onClose}
                 className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)] transition-all"

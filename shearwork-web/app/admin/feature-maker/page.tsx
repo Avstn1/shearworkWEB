@@ -146,11 +146,6 @@ export default function FeatureMakerPage() {
       return { valid: false, error: 'Major version cannot be 0' }
     }
 
-    // Cannot end with x.x.0 unless it's x.0.x
-    if (patch === 0 && minor !== 0) {
-      return { valid: false, error: 'Patch version cannot be 0 unless minor version is also 0 (e.g., 2.0.0 is valid, 2.1.0 is not)' }
-    }
-
     const latest = getLatestVersion()
     if (!latest) return { valid: true } // First version ever
 

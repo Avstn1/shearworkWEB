@@ -110,47 +110,55 @@ export default function Navbar() {
   }, [open])
 
   useEffect(() => {
-    const checkUnreadFeatures = async () => {
-      if (!user?.id) return
+    checkUnreadFeatures()
+  }, [user])
 
-      try {
-        // Get user's last read timestamp
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('last_read_feature_updates')
-          .eq('user_id', user.id)
-          .single()
-
-        if (profileError) throw profileError
-
-        // Get most recent published feature update
-        const { data: latestFeature, error: featureError } = await supabase
-          .from('feature_updates')
-          .select('updated_at')
-          .eq('is_published', true)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .single()
-
-        if (featureError && featureError.code !== 'PGRST116') throw featureError
-
-        // Check if there are unread updates
-        if (!latestFeature) {
-          setHasUnreadFeatures(false)
-          return
-        }
-
-        const lastRead = profileData?.last_read_feature_updates
-        const latestUpdate = latestFeature.updated_at
-
-        setHasUnreadFeatures(!lastRead || new Date(lastRead) < new Date(latestUpdate))
-      } catch (error) {
-        console.error('Error checking unread features:', error)
-      }
+  useEffect(() => {
+    if (hasUnreadFeatures && user?.id) {
+      setShowFeaturesModal(true)
     }
 
     checkUnreadFeatures()
-  }, [user])
+  }, [hasUnreadFeatures, user?.id])
+
+  const checkUnreadFeatures = async () => {
+    if (!user?.id) return
+
+    try {
+      // Get user's last read timestamp
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('last_read_feature_updates')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profileError) throw profileError
+
+      // Get most recent published feature update
+      const { data: latestFeature, error: featureError } = await supabase
+        .from('feature_updates')
+        .select('updated_at')
+        .eq('is_published', true)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (featureError && featureError.code !== 'PGRST116') throw featureError
+
+      // Check if there are unread updates
+      if (!latestFeature) {
+        setHasUnreadFeatures(false)
+        return
+      }
+
+      const lastRead = profileData?.last_read_feature_updates
+      const latestUpdate = latestFeature.updated_at
+
+      setHasUnreadFeatures(!lastRead || new Date(lastRead) < new Date(latestUpdate))
+    } catch (error) {
+      console.error('Error checking unread features:', error)
+    }
+  }
 
   if (loading) return null
 

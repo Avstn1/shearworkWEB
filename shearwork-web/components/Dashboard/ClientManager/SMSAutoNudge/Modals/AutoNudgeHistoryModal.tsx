@@ -170,7 +170,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden"
+            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
           >
             <AnimatePresence mode="wait">
               {view === 'list' && (
@@ -180,9 +180,10 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
+                  className="flex flex-col max-h-[85vh]"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
+                  <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 flex-shrink-0">
                     <div className="flex-1 min-w-0 pr-2">
                       <h3 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2">
                         <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-blue-300 flex-shrink-0" />
@@ -201,7 +202,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                   </div>
 
                   {/* Auto-Nudges List */}
-                  <div className="overflow-y-auto h-[calc(95vh-140px)] sm:h-[60vh] p-3 sm:p-6">
+                  <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
                     {isLoading ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-blue-300 animate-spin mx-auto mb-4" />
@@ -263,7 +264,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-3 sm:px-6 py-3 sm:py-4 bg-white/5">
+                  <div className="border-t border-white/10 px-3 sm:px-6 py-3 sm:py-4 bg-white/5 flex-shrink-0">
                     <button
                       onClick={onClose}
                       className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base bg-white/10 text-white hover:bg-white/20 transition-all"
@@ -281,9 +282,10 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2 }}
+                  className="flex flex-col max-h-[85vh]"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10">
+                  <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10 flex-shrink-0">
                     <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                       <button
                         onClick={handleBack}
@@ -308,7 +310,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
 
                   {/* Stats Bar */}
                   {recipientsStats && (
-                    <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5">
+                    <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5 flex-shrink-0">
                       <div className="flex gap-3 sm:gap-4 text-[10px] sm:text-xs mb-2">
                         <div>
                           <p className="text-[#bdbdbd] mb-0.5">Total</p>
@@ -338,7 +340,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                   )}
 
                   {/* Recipients List */}
-                  <div className="overflow-y-auto h-[calc(95vh-280px)] sm:h-[60vh] p-3 sm:p-4">
+                  <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
                     {loadingRecipients ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-sky-300 animate-spin mx-auto mb-4" />
@@ -403,7 +405,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/5">
+                  <div className="border-t border-white/10 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/5 flex-shrink-0">
                     <button
                       onClick={handleBack}
                       className="w-full px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
@@ -418,5 +420,5 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
         </motion.div>
       )}
     </AnimatePresence>
-  );
+  )
 }
