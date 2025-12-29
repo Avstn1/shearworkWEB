@@ -103,21 +103,21 @@ export function MessageSchedule({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Campaign Type Selection */}
       <div>
-        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          <Zap className="w-3 h-3 inline mr-1" />
+        <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd] mb-1.5 sm:mb-2">
+          <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
           Algorithm Type
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
           {CAMPAIGN_TYPES.map((type) => (
             <div key={type.value} className="relative group">
               <button
                 type="button"
                 onClick={() => handlepurposeChange(type.value)}
                 disabled={!msg.isEditing}
-                className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                className={`w-full px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${
                   msg.purpose === type.value
                     ? 'bg-sky-300/20 text-sky-300 border-2 border-sky-300/50 shadow-[0_0_12px_rgba(125,211,252,0.3)]'
                     : 'bg-white/5 text-[#bdbdbd] border-2 border-white/10 hover:border-white/20'
@@ -125,9 +125,9 @@ export function MessageSchedule({
               >
                 {type.label}
                 <div className="relative">
-                  <Info className="w-3 h-3" />
+                  <Info className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-72">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-64 sm:w-72">
                     <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                       <p className="whitespace-normal break-words">{type.description}</p>
                       <div className="mt-1 text-amber-300 font-semibold">
@@ -147,9 +147,9 @@ export function MessageSchedule({
 
       {/* Client Limit Selection */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-[#bdbdbd]">
-            <Users className="w-3 h-3 inline mr-1" />
+        <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd]">
+            <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
             Maximum Number of Clients to Message.
           </label>
         </div>
@@ -164,7 +164,7 @@ export function MessageSchedule({
           }
           onChange={(e) => handleLimitChange(parseInt(e.target.value))}
           disabled={!msg.isEditing}
-          className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
+          className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
             !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
           }`}
         >
@@ -197,7 +197,7 @@ export function MessageSchedule({
         {showCustomInput && (
           <div className="mt-2">
             <div className="relative">
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
+              <Hash className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bdbdbd]" />
               <input
                 type="number"
                 min="1"
@@ -206,18 +206,18 @@ export function MessageSchedule({
                 onChange={(e) => handleCustomLimitChange(e.target.value)}
                 disabled={!msg.isEditing}
                 placeholder={`Enter custom limit (min 100, max ${getMaxLimit().toLocaleString()})`}
-                className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
+                className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
                   !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
                 }`}
               />
             </div>
             {previewCount > 0 && (
-              <p className="text-xs text-[#bdbdbd] mt-2">
+              <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-2">
                 {previewCount} clients will receive this message.
                 <button
                   type="button"
                   onClick={() => setShowLimitModal(true)}
-                  className="ml-1.5 text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
+                  className="ml-1.5 text-[10px] sm:text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
                 >
                   See why
                 </button>
@@ -227,12 +227,12 @@ export function MessageSchedule({
         )}
         
         {!showCustomInput && previewCount > 0 && (
-          <p className="text-xs text-[#bdbdbd] mt-2">
+          <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-2">
             {previewCount} clients will receive this message.
             <button
               type="button"
               onClick={() => setShowLimitModal(true)}
-              className="ml-1.5 text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
+              className="ml-1.5 text-[10px] sm:text-xs italic text-sky-300/80 hover:text-sky-300 transition-colors"
             >
               See why
             </button>
@@ -241,7 +241,7 @@ export function MessageSchedule({
 
         {/* Credit/Limit warnings */}
         {msg.clientLimit > availableCredits && (
-          <p className="text-xs text-rose-400 mt-2">
+          <p className="text-[10px] sm:text-xs text-rose-400 mt-2">
             ⚠️ You only have {availableCredits} credits available
           </p>
         )}
@@ -249,8 +249,8 @@ export function MessageSchedule({
 
       {/* Schedule Date */}
       <div>
-        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          <Calendar className="w-3 h-3 inline mr-1" />
+        <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd] mb-1.5 sm:mb-2">
+          <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
           Send Date
         </label>
         <input
@@ -259,7 +259,7 @@ export function MessageSchedule({
           min={today}
           onChange={(e) => onUpdate(msg.id, { scheduleDate: e.target.value })}
           disabled={!msg.isEditing}
-          className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
+          className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
             !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
           }`}
         />
@@ -267,11 +267,11 @@ export function MessageSchedule({
 
       {/* Time - 12hr format with AM/PM */}
       <div>
-        <label className="block text-sm font-medium text-[#bdbdbd] mb-2">
-          <Clock className="w-3 h-3 inline mr-1" />
+        <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd] mb-1.5 sm:mb-2">
+          <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
           Send Time
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {/* Hour */}
           <select
             value={msg.hour === 0 ? 12 : msg.hour > 12 ? msg.hour - 12 : msg.hour}
@@ -280,7 +280,7 @@ export function MessageSchedule({
               onUpdate(msg.id, { hour: newHour });
             }}
             disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
+            className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
               !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
             }`}
           >
@@ -304,7 +304,7 @@ export function MessageSchedule({
               })
             }
             disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
+            className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
               !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
             }`}
           >
@@ -328,7 +328,7 @@ export function MessageSchedule({
               })
             }
             disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
+            className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
               !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
             }`}
           >
@@ -349,12 +349,12 @@ export function MessageSchedule({
       {msg.isEditing && (
         <div className="mt-auto">
           {/* Two Choice Buttons */}
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
             {/* Save as Draft */}
             <button
               onClick={() => onSave(msg.id, 'draft')}
               disabled={isSaving || msg.message.length < 100}
-              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 ${
                 isSaving || msg.message.length < 100
                   ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
                   : 'bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30'
@@ -366,14 +366,16 @@ export function MessageSchedule({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Clock className="w-5 h-5" />
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                   </motion.div>
-                  Saving...
+                  <span className="hidden sm:inline">Saving...</span>
+                  <span className="sm:hidden">Save...</span>
                 </>
               ) : (
                 <>
-                  <FileText className="w-5 h-5" />
-                  Save Draft
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline">Save Draft</span>
+                  <span className="sm:hidden">Draft</span>
                 </>
               )}
             </button>
@@ -386,7 +388,7 @@ export function MessageSchedule({
                 msg.message.length < 100 ||
                 !msg.isValidated
               }
-              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 ${
                 isSaving ||
                 msg.message.length < 100 ||
                 !msg.isValidated
@@ -400,14 +402,16 @@ export function MessageSchedule({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Clock className="w-5 h-5" />
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                   </motion.div>
-                  Activating...
+                  <span className="hidden sm:inline">Activating...</span>
+                  <span className="sm:hidden">Act...</span>
                 </>
               ) : (
                 <>
-                  <Zap className="w-5 h-5" />
-                  Activate
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline">Activate</span>
+                  <span className="sm:hidden">Active</span>
                 </>
               )}
             </button>
@@ -417,7 +421,7 @@ export function MessageSchedule({
           {msg.isSaved && (
             <button
               onClick={() => onCancelEdit(msg.id)}
-              className="w-full px-6 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+              className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
             >
               Cancel
             </button>
@@ -428,17 +432,18 @@ export function MessageSchedule({
       {/* Client Limit Info Modal */}
       {showLimitModal && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 rounded-2xl overflow-hidden"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 rounded-xl sm:rounded-2xl overflow-hidden"
           onClick={() => setShowLimitModal(false)}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1a1a1a] border border-white/20 rounded-2xl max-w-lg w-full p-6 shadow-2xl"
+            className="bg-[#1a1a1a] border border-white/20 rounded-xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-sky-300" />
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-sky-300" />
                 Client Limit Explained
               </h3>
               <button
@@ -449,31 +454,31 @@ export function MessageSchedule({
               </button>
             </div>
             
-            <div className="space-y-4 text-sm text-[#bdbdbd]">
+            <div className="space-y-3 sm:space-y-4 text-xs sm:text-sm text-[#bdbdbd]">
               <p>
                 You might see that your client list is less than what you&apos;re expecting, and that&apos;s normal.
               </p>
               
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-              <h4 className="font-semibold text-white mb-2">Here&apos;s how It Works:</h4>
-              <ul className="space-y-2">
-                <li className="flex gap-2">
-                  <span className="text-white mt-1">•</span>
-                  <span>For all lists, anyone with no numbers are automatically disqualified.</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-white mt-1">•</span>
-                  <span>For campaign lists, anyone who has not visited for more than 8 months are disqualified.</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-white mt-1">•</span>
-                  <span>For mass messages, the cut-off is at 1 year and 6 months of not visiting.</span>
-                </li>
-              </ul>
-            </div>
+              <div className="bg-white/5 border border-white/10 rounded-lg p-3 sm:p-4">
+                <h4 className="font-semibold text-white mb-2 text-xs sm:text-sm">Here&apos;s how It Works:</h4>
+                <ul className="space-y-2">
+                  <li className="flex gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>For all lists, anyone with no numbers are automatically disqualified.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>For campaign lists, anyone who has not visited for more than 8 months are disqualified.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>For mass messages, the cut-off is at 1 year and 6 months of not visiting.</span>
+                  </li>
+                </ul>
+              </div>
                           
-              <div className="bg-amber-300/10 border border-amber-300/20 rounded-lg p-4">
-                <h4 className="font-semibold text-amber-300 mb-2">Important Notes:</h4>
+              <div className="bg-amber-300/10 border border-amber-300/20 rounded-lg p-3 sm:p-4">
+                <h4 className="font-semibold text-amber-300 mb-2 text-xs sm:text-sm">Important Notes:</h4>
                 <p className="text-amber-200/80">
                   There are numerous processes that decide which clients are included, but rest assured that you are getting the right people to message.
                 </p>
@@ -482,7 +487,7 @@ export function MessageSchedule({
             
             <button
               onClick={() => setShowLimitModal(false)}
-              className="w-full mt-6 px-6 py-3 rounded-xl font-bold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all"
+              className="w-full mt-4 sm:mt-6 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all"
             >
               Got it!
             </button>

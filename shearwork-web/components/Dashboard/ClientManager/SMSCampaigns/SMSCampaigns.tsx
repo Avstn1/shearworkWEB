@@ -798,85 +798,86 @@ const confirmDelete = async () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-              <MessageSquare className="w-6 h-6 text-sky-300" />
+      <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 sm:mb-4 gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-white mb-2 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 sm:w-6 sm:h-6 text-sky-300" />
               SMS Campaign Manager
             </h2>
 
-            <button
-              onClick={() => setShowCampaignHistoryModal(true)}
-              className="inline-flex items-center gap-2 px-4 mr-2 py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
-            >
-              <Clock className="w-4 h-4" />
-              Campaign History
-            </button>
+            <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3">
+              <button
+                onClick={() => setShowCampaignHistoryModal(true)}
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
+              >
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Campaign History</span>
+                <span className="xs:hidden">History</span>
+              </button>
 
-            <button
-              onClick={() => setShowHowCampaignsWorkModal(true)}
-              className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
-            >
-              <Info className="w-4 h-4" />
-              How does this work?
-            </button>
+              <button
+                onClick={() => setShowHowCampaignsWorkModal(true)}
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
+              >
+                <Info className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">How does this work?</span>
+                <span className="xs:hidden">How it works</span>
+              </button>
+            </div>
+            
+            <p className="text-[#bdbdbd] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
+              Schedule targeted SMS campaigns to stay connected with your clients
+            </p>
           </div>
           
-          <div className="flex flex-col items-end gap-3">
-            {/* Create Message Button */}
-            {messages.length < 3 && (
-              <div className="relative group">
-                <button
-                  onClick={addMessage}
-                  className="flex items-center gap-2 px-4 py-2 bg-sky-300 text-black rounded-full font-semibold text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Message
-                </button>
-                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl whitespace-nowrap">
-                    Create a new scheduled SMS campaign
-                    <div className="absolute top-full right-4 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Credits and Test Messages Display */}
-            <div className="flex flex-col gap-2">
-              <div className="px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center gap-2">
-                <Coins className="w-4 h-4 text-lime-300" />
-                <span className="text-sm font-semibold text-lime-300">
-                  {availableCredits.toLocaleString()} credits available
+          <div className="flex flex-col items-stretch lg:items-end gap-2 sm:gap-3">
+            {/* Credits, Tests, and Create Button - All responsive */}
+            <div className="grid grid-cols-4 lg:grid-cols-2 gap-1.5 sm:gap-2">
+              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1">
+                <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-lime-300 flex-shrink-0" />
+                <span className="text-[10px] sm:text-sm font-semibold text-lime-300 truncate">
+                  <span className="hidden sm:inline">{availableCredits.toLocaleString()} credits available</span>
+                  <span className="sm:hidden">{availableCredits > 999 ? `${(availableCredits / 1000).toFixed(1)}k` : availableCredits}</span>
                 </span>
               </div>
               
-              <div className={`px-3 py-1.5 rounded-full flex items-center gap-2 ${
+              <div className={`px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 ${
                 testMessagesUsed >= 10 
                   ? 'bg-rose-300/10 border border-rose-300/20'
                   : 'bg-sky-300/10 border border-sky-300/20'
               }`}>
-                <Send className={`w-4 h-4 ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`} />
-                <span className={`text-sm font-semibold ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`}>
-                  {10 - testMessagesUsed} free tests left today
+                <Send className={`w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`} />
+                <span className={`text-[10px] sm:text-sm font-semibold truncate ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`}>
+                  <span className="hidden sm:inline">{10 - testMessagesUsed} free tests left today</span>
+                  <span className="sm:hidden">{10 - testMessagesUsed}</span>
                 </span>
               </div>
+
+              {/* Create Message Button - Only show if under limit */}
+              {messages.length < 3 && (
+                <button
+                  onClick={addMessage}
+                  className="col-span-2 flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-300 text-black rounded-full font-semibold text-[10px] sm:text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+                >
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Create Message</span>
+                  <span className="sm:hidden">Create</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Usage indicator */}
-        <div className="flex items-center gap-2 text-xs -mt-8 text-[#bdbdbd]">
+        <div className="flex items-center gap-2 text-[10px] sm:text-xs text-[#bdbdbd]">
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className={`w-16 h-1 rounded-full transition-all duration-300 ${
+                className={`w-12 sm:w-16 h-1 rounded-full transition-all duration-300 ${
                   i < messages.length
                     ? 'bg-sky-300 shadow-[0_0_4px_rgba(125,211,252,0.6)]'
                     : 'bg-white/10'
@@ -964,27 +965,27 @@ const confirmDelete = async () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-12 text-center"
+            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl sm:rounded-2xl shadow-xl p-8 sm:p-12 text-center"
           >
-            <div className="w-20 h-20 bg-sky-300/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageSquare className="w-10 h-10 text-sky-300" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-sky-300/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10 text-sky-300" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
               No messages scheduled
             </h3>
-            <p className="text-[#bdbdbd] mb-6 max-w-md mx-auto">
+            <p className="text-[#bdbdbd] text-sm sm:text-base mb-6 max-w-md mx-auto">
               Create your first automated SMS message to stay connected with your clients
             </p>
             <button
               onClick={addMessage}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-sky-300 text-black rounded-full font-semibold hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+              className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-sky-300 text-black rounded-full font-semibold text-sm sm:text-base hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               Create Message
             </button>
           </motion.div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {messages.map((msg, index) => (
               <MessageCard
                 maxClients={maxClients}
