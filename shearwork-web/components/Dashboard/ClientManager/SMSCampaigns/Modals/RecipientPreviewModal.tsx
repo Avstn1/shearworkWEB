@@ -784,14 +784,14 @@ const confirmReselect = async () => {
     return selectedClients.some((c) => c.phone_normalized === phone);
   };
 
-  return (
+return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 min-h-screen"
           onClick={onClose}
         >
           <motion.div
@@ -799,44 +799,54 @@ const confirmReselect = async () => {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full min-h-[90vh] max-h-[90vh] overflow-hidden flex flex-col"
+            className="
+              bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl
+              w-full
+              max-w-4xl
+              h-[80dvh] md:h-auto
+              md:min-h-[90vh] md:max-h-[90vh]
+              overflow-hidden flex flex-col
+            "
           >
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-sky-300" />
-                  Recipients for {messageTitle}
-                </h3>
-                {previewStats && (
-                  <p className="text-sm text-[#bdbdbd] mt-1">
-                    {activeClientCount} active clients • {selectedClients.length} manually selected • {totalUnselectedClients} deselected • Max: {maxClients}
-                  </p>
-                )}
+            <div className="p-4 md:p-6 border-b border-white/10 flex-shrink-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+                    <Users className="w-4 h-4 md:w-5 md:h-5 text-sky-300 flex-shrink-0" />
+                    <span className="truncate">Recipients for {messageTitle}</span>
+                  </h3>
+                  {previewStats && (
+                    <p className="text-xs md:text-sm text-[#bdbdbd] mt-1">
+                      <span className="block sm:inline">{activeClientCount} active • {selectedClients.length} selected</span>
+                      <span className="block sm:inline sm:before:content-['_•_']">{totalUnselectedClients} deselected • Max: {maxClients}</span>
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                >
+                  <X className="w-5 h-5 text-[#bdbdbd]" />
+                </button>
               </div>
-
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-[#bdbdbd]" />
-              </button>
-
             </div>
             
             {/* Tabs */}
             <div className="grid grid-cols-2 border-b border-white/10 flex-shrink-0">
               <button
                 onClick={() => setActiveTab("client-list")}
-                className={`px-4 py-3 text-sm font-semibold transition-all relative flex justify-center items-center ${
+                className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold transition-all relative flex justify-center items-center ${
                   activeTab === "client-list"
                     ? "text-sky-300"
                     : "text-[#bdbdbd] hover:text-white"
                 }`}
               >
-                Client List
-                <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
+                <span className="hidden sm:inline">Client List</span>
+                <span className="sm:hidden">Clients</span>
+                <span className="ml-1.5 md:ml-2 px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-white/10">
                   {activeClientCount}
                 </span>
                 {activeTab === "client-list" && (
@@ -849,14 +859,15 @@ const confirmReselect = async () => {
 
               <button
                 onClick={() => setActiveTab("deselected")}
-                className={`px-4 py-3 text-sm font-semibold transition-all relative flex justify-center items-center ${
+                className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold transition-all relative flex justify-center items-center ${
                   activeTab === "deselected"
                     ? "text-sky-300"
                     : "text-[#bdbdbd] hover:text-white"
                 }`}
               >
-                Other Clients
-                <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-white/10">
+                <span className="hidden sm:inline">Other Clients</span>
+                <span className="sm:hidden">Other</span>
+                <span className="ml-1.5 md:ml-2 px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-white/10">
                   {totalUnselectedClients > 0 ? totalUnselectedClients : '...'}
                 </span>
                 {activeTab === "deselected" && (
@@ -869,15 +880,15 @@ const confirmReselect = async () => {
             </div>
 
             {/* Search Bar */}
-            <div className="p-4 border-b border-white/10 flex-shrink-0">
+            <div className="p-3 md:p-4 border-b border-white/10 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bdbdbd]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by name or phone number..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all"
+                  placeholder="Search by name or phone..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm md:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all"
                 />
               </div>
             </div>
@@ -886,36 +897,36 @@ const confirmReselect = async () => {
             <div className="overflow-y-auto flex-1 relative">
               {/* Stats - Only show on Client List tab - INSIDE SCROLLABLE CONTAINER */}
               {previewStats && activeTab === "client-list" && (
-                <div className="px-6 py-4 border-b border-white/10 bg-white/5">
-                  <div className="flex items-center justify-between gap-6">
-                    <div className="flex gap-6 flex-wrap">
+                <div className="px-3 md:px-6 py-3 md:py-4 border-b border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between gap-3 md:gap-6">
+                    <div className="grid grid-cols-2 md:flex md:gap-6 gap-3 md:gap-y-0 w-full">
                       <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">
+                        <p className="text-[10px] md:text-xs text-[#bdbdbd] mb-0.5">
                           Total Selected
                         </p>
-                        <p className="text-xl font-bold text-white">
+                        <p className="text-base md:text-xl font-bold text-white">
                           {activeClientCount}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">Avg Score</p>
-                        <p className="text-xl font-bold text-sky-300">
+                        <p className="text-[10px] md:text-xs text-[#bdbdbd] mb-0.5">Avg Score</p>
+                        <p className="text-base md:text-xl font-bold text-sky-300">
                           {previewStats.avg_score}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">
-                          Avg Days Since Visit
+                        <p className="text-[10px] md:text-xs text-[#bdbdbd] mb-0.5">
+                          Avg Days Since
                         </p>
-                        <p className="text-xl font-bold text-purple-400">
+                        <p className="text-base md:text-xl font-bold text-purple-400">
                           {previewStats.avg_days_since_last_visit}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-[#bdbdbd] mb-0.5">
-                          Avg Days Overdue
+                        <p className="text-[10px] md:text-xs text-[#bdbdbd] mb-0.5">
+                          Avg Overdue
                         </p>
-                        <p className="text-xl font-bold text-orange-400">
+                        <p className="text-base md:text-xl font-bold text-orange-400">
                           {previewStats.avg_days_overdue}
                         </p>
                       </div>
@@ -923,67 +934,68 @@ const confirmReselect = async () => {
                   </div>
 
                   {/* Metric Explanations */}
-                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd] min-w-max">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-[10px] md:text-xs text-[#bdbdbd]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
                       <div>
                         <span className="text-sky-300 font-medium">Score:</span>{" "}
-                        Higher = client needs message more urgently
+                        Higher = more urgent
                       </div>
                       <div>
                         <span className="text-purple-400 font-medium">
-                          Days Since Visit:
+                          Days Since:
                         </span>{" "}
-                        Days since last appointment
+                        Since last appointment
                       </div>
                       <div>
                         <span className="text-orange-400 font-medium">
-                          Days Overdue:
+                          Overdue:
                         </span>{" "}
-                        How late based on their typical pattern
+                        Late based on pattern
                       </div>
                     </div>
 
                     {/* Client Types Legend */}
-                    <div className="flex flex-wrap gap-3 pt-2">
+                    <div className="flex flex-wrap gap-2 md:gap-3 pt-2">
                       {previewStats.breakdown.consistent > 0 && (
-                        <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                          <span className="font-medium">Consistent:</span> Weekly
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/20">
+                        <span className="bg-green-500/10 text-green-400 px-1.5 md:px-2 py-0.5 rounded text-[9px] md:text-[11px] flex items-center gap-1 md:gap-1.5">
+                          <span className="font-medium">Consistent:</span>
+                          <span className="hidden sm:inline">Weekly</span>
+                          <span className="px-1 md:px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-green-500/20">
                             {previewStats.breakdown.consistent}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown["semi-consistent"] > 0 && (
-                        <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                          <span className="font-medium">Semi-consistent:</span>{" "}
-                          Every 2-3 weeks
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20">
+                        <span className="bg-blue-500/10 text-blue-400 px-1.5 md:px-2 py-0.5 rounded text-[9px] md:text-[11px] flex items-center gap-1 md:gap-1.5">
+                          <span className="font-medium">Semi:</span>
+                          <span className="hidden sm:inline">2-3 weeks</span>
+                          <span className="px-1 md:px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-blue-500/20">
                             {previewStats.breakdown["semi-consistent"]}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown["easy-going"] > 0 && (
-                        <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                          <span className="font-medium">Easy-going:</span> Every
-                          1-2 months
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-500/20">
+                        <span className="bg-yellow-500/10 text-yellow-400 px-1.5 md:px-2 py-0.5 rounded text-[9px] md:text-[11px] flex items-center gap-1 md:gap-1.5">
+                          <span className="font-medium">Easy:</span>
+                          <span className="hidden sm:inline">1-2 mo</span>
+                          <span className="px-1 md:px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-yellow-500/20">
                             {previewStats.breakdown["easy-going"]}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown.rare > 0 && (
-                        <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                          <span className="font-medium">Rare:</span> Every 2+
-                          months
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20">
+                        <span className="bg-red-500/10 text-red-400 px-1.5 md:px-2 py-0.5 rounded text-[9px] md:text-[11px] flex items-center gap-1 md:gap-1.5">
+                          <span className="font-medium">Rare:</span>
+                          <span className="hidden sm:inline">2+ mo</span>
+                          <span className="px-1 md:px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-red-500/20">
                             {previewStats.breakdown.rare}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown.new > 0 && (
-                        <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                          <span className="font-medium">New:</span> First visit
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-500/20">
+                        <span className="bg-gray-500/10 text-gray-400 px-1.5 md:px-2 py-0.5 rounded text-[9px] md:text-[11px] flex items-center gap-1 md:gap-1.5">
+                          <span className="font-medium">New</span>
+                          <span className="px-1 md:px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-gray-500/20">
                             {previewStats.breakdown.new}
                           </span>
                         </span>
@@ -995,56 +1007,59 @@ const confirmReselect = async () => {
 
               {/* Sticky Pagination - Client List */}
               {activeTab === "client-list" && (
-                <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <p className="text-sm text-[#bdbdbd]">
-                        Page {clientListPage} of {clientListTotalPages} • {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""} on this page
+                <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-3 md:px-6 py-2 md:py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 md:gap-4 min-w-0">
+                      <p className="text-xs md:text-sm text-[#bdbdbd] truncate">
+                        <span className="hidden sm:inline">Page {clientListPage} of {clientListTotalPages} • </span>
+                        {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}
                       </p>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 md:gap-2 flex-shrink-0">
                       <button
                         onClick={handleResetSelections}
-                        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
+                        className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
                       >
-                        Reset All
+                        <span className="hidden sm:inline">Reset All</span>
+                        <span className="sm:hidden">Reset</span>
                       </button>
                       
                       {batchSelectedForAction.size > 0 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" />
+                          <div className="w-px h-6 md:h-8 bg-white/10" />
                           <button
                             onClick={() => setBatchSelectedForAction(new Set())}
-                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                           >
                             Clear
                           </button>
                           <button
                             onClick={() => handleBatchConfirm('deselect')}
-                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
+                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300 whitespace-nowrap"
                           >
-                            Deselect {batchSelectedForAction.size}
+                            <span className="hidden sm:inline">Deselect {batchSelectedForAction.size}</span>
+                            <span className="sm:hidden">-{batchSelectedForAction.size}</span>
                           </button>
                         </>
                       )}
                       
                       {clientListTotalPages > 1 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" />
+                          <div className="w-px h-6 md:h-8 bg-white/10" />
                           <button
                             onClick={() => setClientListPage((p) => Math.max(1, p - 1))}
                             disabled={clientListPage === 1}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
                           </button>
                           <button
                             onClick={() => setClientListPage((p) => Math.min(clientListTotalPages, p + 1))}
                             disabled={clientListPage === clientListTotalPages}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
                           </button>
                         </>
                       )}
@@ -1055,56 +1070,59 @@ const confirmReselect = async () => {
 
               {/* Sticky Pagination - Deselected Clients */}
               {activeTab === "deselected" && (
-                <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-6 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <p className="text-sm text-[#bdbdbd]">
-                        Page {currentPage} of {totalPages} • {allClients.length} client{allClients.length !== 1 ? "s" : ""} on this page
+                <div className="sticky top-0 z-10 bg-[#1a1a1a] border-b border-white/10 px-3 md:px-6 py-2 md:py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 md:gap-4 min-w-0">
+                      <p className="text-xs md:text-sm text-[#bdbdbd] truncate">
+                        <span className="hidden sm:inline">Page {currentPage} of {totalPages} • </span>
+                        {allClients.length} client{allClients.length !== 1 ? "s" : ""}
                       </p>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 md:gap-2 flex-shrink-0">
                       <button
                         onClick={handleResetSelections}
-                        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
+                        className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
                       >
-                        Reset All
+                        <span className="hidden sm:inline">Reset All</span>
+                        <span className="sm:hidden">Reset</span>
                       </button>
                       
                       {batchSelectedForAction.size > 0 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" />
+                          <div className="w-px h-6 md:h-8 bg-white/10" />
                           <button
                             onClick={() => setBatchSelectedForAction(new Set())}
-                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                           >
                             Clear
                           </button>
                           <button
                             onClick={() => handleBatchConfirm('select')}
-                            className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all duration-300"
+                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all duration-300 whitespace-nowrap"
                           >
-                            Select {batchSelectedForAction.size}
+                            <span className="hidden sm:inline">Select {batchSelectedForAction.size}</span>
+                            <span className="sm:hidden">+{batchSelectedForAction.size}</span>
                           </button>
                         </>
                       )}
                       
                       {totalPages > 1 && (
                         <>
-                          <div className="w-px h-8 bg-white/10" />
+                          <div className="w-px h-6 md:h-8 bg-white/10" />
                           <button
                             onClick={() => setOtherClientsPage((p) => Math.max(1, p - 1))}
                             disabled={otherClientsPage === 1}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
                           </button>
                           <button
                             onClick={() => setOtherClientsPage((p) => Math.min(totalPages, p + 1))}
                             disabled={otherClientsPage === totalPages}
-                            className="p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
                           </button>
                         </>
                       )}
@@ -1113,7 +1131,7 @@ const confirmReselect = async () => {
                 </div>
               )}
 
-              <div className="p-6">
+              <div className="p-3 md:p-6">
                 {loadingAllClients && activeTab === "deselected" ? (
                   <div className="text-center py-12">
                     <div className="w-8 h-8 border-2 border-sky-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -1122,7 +1140,7 @@ const confirmReselect = async () => {
                 ) : filteredClients.length === 0 ? (
                   <div className="text-center py-12">
                     <Users className="w-12 h-12 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
-                    <p className="text-[#bdbdbd]">
+                    <p className="text-sm md:text-base text-[#bdbdbd]">
                       {debouncedSearch
                         ? "No clients found matching your search"
                         : activeTab === "deselected"
@@ -1147,7 +1165,7 @@ const confirmReselect = async () => {
                         return (
                           <div
                             key={client.client_id}
-                            className={`flex items-center gap-4 p-4 border rounded-xl hover:bg-white/10 transition-colors ${
+                            className={`flex items-center gap-2 md:gap-4 p-3 md:p-4 border rounded-xl hover:bg-white/10 transition-colors ${
                               isBatchSelected
                                 ? "bg-purple-300/10 border-purple-300/30"
                                 : isDeselected
@@ -1159,21 +1177,21 @@ const confirmReselect = async () => {
                               type="checkbox"
                               checked={isBatchSelected}
                               onChange={() => toggleBatchSelection(client.phone_normalized)}
-                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-300 focus:ring-2 focus:ring-purple-300/50 cursor-pointer"
+                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-300 focus:ring-2 focus:ring-purple-300/50 cursor-pointer flex-shrink-0"
                             />
 
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3">
-                                <h4 className="font-semibold text-white">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-semibold text-sm md:text-base text-white truncate">
                                   {client.first_name} {client.last_name}
                                 </h4>
                                 {isDeselected && (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30">
+                                  <span className="px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30 flex-shrink-0">
                                     Deselected
                                   </span>
                                 )}
                                 <span
-                                  className={`text-xs px-2 py-1 rounded-full ${
+                                  className={`text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded-full flex-shrink-0 ${
                                     client.visiting_type === "consistent"
                                       ? "bg-green-500/20 text-green-400"
                                       : client.visiting_type ===
@@ -1189,26 +1207,25 @@ const confirmReselect = async () => {
                                   {client.visiting_type}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                                <span>{client.phone_normalized}</span>
-                                <span>•</span>
-                                <span>
-                                  {client.days_since_last_visit} days since last
-                                  visit
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1.5 md:mt-2 text-[10px] md:text-xs text-[#bdbdbd]">
+                                <span className="truncate">{client.phone_normalized}</span>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="truncate">
+                                  {client.days_since_last_visit} days since visit
                                 </span>
-                                <span>•</span>
-                                <span className="text-orange-400">
+                                <span className="hidden sm:inline">•</span>
+                                <span className="text-orange-400 truncate">
                                   {client.days_overdue} days overdue
                                 </span>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm font-semibold text-sky-300">
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-xs md:text-sm font-semibold text-sky-300">
                                 Score: {client.score}
                               </p>
                               {normalVisitInterval && (
-                                <p className="text-xs text-[#bdbdbd]">
-                                  Goes every ~{normalVisitInterval} days
+                                <p className="text-[10px] md:text-xs text-[#bdbdbd] hidden sm:block">
+                                  Every ~{normalVisitInterval} days
                                 </p>
                               )}
                             </div>
@@ -1227,7 +1244,7 @@ const confirmReselect = async () => {
                         return (
                           <div
                             key={client.client_id}
-                            className={`flex items-center gap-4 p-4 border rounded-xl hover:bg-white/10 transition-colors ${
+                            className={`flex items-center gap-2 md:gap-4 p-3 md:p-4 border rounded-xl hover:bg-white/10 transition-colors ${
                               isBatchSelected
                                 ? "bg-purple-300/10 border-purple-300/30"
                                 : isSelected
@@ -1239,30 +1256,30 @@ const confirmReselect = async () => {
                               type="checkbox"
                               checked={isBatchSelected}
                               onChange={() => toggleBatchSelection(client.phone_normalized || '')}
-                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-300 focus:ring-2 focus:ring-purple-300/50 cursor-pointer"
+                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-300 focus:ring-2 focus:ring-purple-300/50 cursor-pointer flex-shrink-0"
                             />
 
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3">
-                                <h4 className="font-semibold text-white">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-semibold text-sm md:text-base text-white truncate">
                                   {client.first_name} {client.last_name}
                                 </h4>
                                 {isSelected && (
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-300/20 text-sky-300 border border-sky-300/30">
+                                  <span className="px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-sky-300/20 text-sky-300 border border-sky-300/30 flex-shrink-0">
                                     Selected
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                                <span>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1.5 md:mt-2 text-[10px] md:text-xs text-[#bdbdbd]">
+                                <span className="truncate">
                                   {(client.phone_normalized || 
                                     ('phone' in client ? client.phone : '') || 
                                     "No phone") as React.ReactNode}
                                 </span>
                                 {client.last_appt && (
                                   <>
-                                    <span>•</span>
-                                    <span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span className="truncate">
                                       Last visit:{" "}
                                       {new Date(
                                         client.last_appt,
@@ -1272,8 +1289,8 @@ const confirmReselect = async () => {
                                 )}
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs text-[#bdbdbd]">
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-[10px] md:text-xs text-[#bdbdbd]">
                                 {client.total_appointments} visits
                               </p>
                             </div>
@@ -1301,17 +1318,17 @@ const confirmReselect = async () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-sky-300/20 text-sky-300 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-6 h-6" />
+                  <div className="flex items-start gap-3 md:gap-4 mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-sky-300/20 text-sky-300 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Select Client?
                       </h3>
-                      <p className="text-sm text-[#bdbdbd]">
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
                         <span className="text-white font-semibold">
                           {pendingSelectClient.first_name}{" "}
                           {pendingSelectClient.last_name}
@@ -1322,9 +1339,9 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-sm text-sky-300">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div className="p-2.5 md:p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-xs md:text-sm text-sky-300">
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         This client will not appear on the Client List page
                         but they will receive your message.
@@ -1332,19 +1349,19 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 md:gap-3">
                     <button
                       onClick={() => {
                         setShowSelectModal(false);
                         setPendingSelectClient(null);
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={confirmSelect}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all duration-300"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30 transition-all duration-300"
                     >
                       Select Client
                     </button>
@@ -1369,17 +1386,17 @@ const confirmReselect = async () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-6 h-6" />
+                  <div className="flex items-start gap-3 md:gap-4 mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Remove Selection?
                       </h3>
-                      <p className="text-sm text-[#bdbdbd]">
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
                         <span className="text-white font-semibold">
                           {pendingUnselectClient.first_name}{" "}
                           {pendingUnselectClient.last_name}
@@ -1389,9 +1406,9 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-sm text-amber-300">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div className="p-2.5 md:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-xs md:text-sm text-amber-300">
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         This client may or may not receive future messages
                         depending on the algorithm.
@@ -1399,19 +1416,19 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 md:gap-3">
                     <button
                       onClick={() => {
                         setShowUnselectModal(false);
                         setPendingUnselectClient(null);
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={confirmUnselect}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
                     >
                       Remove Selection
                     </button>
@@ -1436,17 +1453,17 @@ const confirmReselect = async () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-6 h-6" />
+                  <div className="flex items-start gap-3 md:gap-4 mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Deselect Client?
                       </h3>
-                      <p className="text-sm text-[#bdbdbd]">
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
                         <span className="text-white font-semibold">
                           {pendingDeselectName}
                         </span>{" "}
@@ -1456,9 +1473,9 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-sm text-amber-300">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div className="p-2.5 md:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-xs md:text-sm text-amber-300">
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         This client will be excluded from all future sends of
                         this campaign.
@@ -1466,20 +1483,20 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 md:gap-3">
                     <button
                       onClick={() => {
                         setShowDeselectModal(false);
                         setPendingDeselectPhone(null);
                         setPendingDeselectName("");
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={confirmDeselect}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
                     >
                       Deselect Client
                     </button>
@@ -1504,17 +1521,17 @@ const confirmReselect = async () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-lime-300/20 text-lime-300 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-6 h-6" />
+                  <div className="flex items-start gap-3 md:gap-4 mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-lime-300/20 text-lime-300 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Remove from Deselected?
                       </h3>
-                      <p className="text-sm text-[#bdbdbd]">
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
                         <span className="text-white font-semibold">
                           {pendingReselectName}
                         </span>{" "}
@@ -1524,9 +1541,9 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-lime-500/10 border border-lime-500/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-sm text-lime-300">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div className="p-2.5 md:p-3 bg-lime-500/10 border border-lime-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-xs md:text-sm text-lime-300">
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         This client will be eligible to receive messages from
                         this campaign again based on the algorithm.
@@ -1534,20 +1551,20 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 md:gap-3">
                     <button
                       onClick={() => {
                         setShowReselectModal(false);
                         setPendingReselectPhone(null);
                         setPendingReselectName("");
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={confirmReselect}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30 transition-all duration-300"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30 transition-all duration-300"
                     >
                       Remove from Deselected
                     </button>
@@ -1571,19 +1588,19 @@ const confirmReselect = async () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  <div className="flex items-start gap-3 md:gap-4 mb-4">
+                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                       batchActionType === 'select' ? 'bg-sky-300/20 text-sky-300' : 'bg-amber-300/20 text-amber-300'
                     }`}>
-                      <AlertCircle className="w-6 h-6" />
+                      <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         {batchActionType === 'select' ? 'Select' : 'Deselect'} {batchSelectedForAction.size} Client{batchSelectedForAction.size > 1 ? 's' : ''}?
                       </h3>
-                      <p className="text-sm text-[#bdbdbd]">
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
                         {batchActionType === 'select' 
                           ? `${batchSelectedForAction.size} client${batchSelectedForAction.size > 1 ? 's' : ''} will always receive this message regardless of the algorithm.`
                           : `${batchSelectedForAction.size} client${batchSelectedForAction.size > 1 ? 's' : ''} will not receive this message.`
@@ -1592,13 +1609,13 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className={`p-3 rounded-lg mb-4 ${
+                  <div className={`p-2.5 md:p-3 rounded-lg mb-4 ${
                     batchActionType === 'select' ? 'bg-sky-500/10 border border-sky-500/20' : 'bg-amber-500/10 border border-amber-500/20'
                   }`}>
-                    <div className={`flex items-start gap-2 text-sm ${
+                    <div className={`flex items-start gap-2 text-xs md:text-sm ${
                       batchActionType === 'select' ? 'text-sky-300' : 'text-amber-300'
                     }`}>
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         {batchActionType === 'select'
                           ? 'These clients will not appear on the Client List page but they will receive your message.'
@@ -1608,19 +1625,19 @@ const confirmReselect = async () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 md:gap-3">
                     <button
                       onClick={() => {
                         setShowBatchConfirmModal(false);
                         setBatchActionType(null);
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={confirmBatchAction}
-                      className={`flex-1 px-4 py-3 rounded-xl font-bold transition-all duration-300 ${
+                      className={`flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold transition-all duration-300 ${
                         batchActionType === 'select'
                           ? 'bg-sky-300/20 text-sky-300 border border-sky-300/30 hover:bg-sky-300/30'
                           : 'bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30'
@@ -1649,41 +1666,41 @@ const confirmReselect = async () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0">
-                      <AlertCircle className="w-6 h-6" />
+                  <div className="flex items-start gap-3 md:gap-4 mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Reset All Selections?
                       </h3>
-                      <p className="text-sm text-[#bdbdbd]">
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
                         This will reset all your deselected and manually selected clients. The algorithm will return to its default selection.
                       </p>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-sm text-red-400">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div className="p-2.5 md:p-3 bg-red-500/10 border border-red-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-xs md:text-sm text-red-400">
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         This action cannot be undone. All custom selections will be cleared.
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-2 md:gap-3">
                     <button
                       onClick={() => setShowResetModal(false)}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={confirmReset}
-                      className="flex-1 px-4 py-3 rounded-xl font-bold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
                     >
                       Reset All
                     </button>
