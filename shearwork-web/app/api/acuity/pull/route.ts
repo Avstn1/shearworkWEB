@@ -484,7 +484,6 @@ export async function GET(request: Request) {
     .single()
 
   if (profileError || !profile) {
-    console.log(profileError)
     return NextResponse.json({ error: 'No profile found' }, { status: 400 })
   }
 
@@ -608,8 +607,6 @@ export async function GET(request: Request) {
     }
   }
 
-  console.log('First appt lookup entries:', Object.keys(firstApptLookup).length)
-
   // ============================================================
   // ✅ BUILD WEEK TIMEFRAMES for the requested month
   // ============================================================
@@ -720,7 +717,7 @@ export async function GET(request: Request) {
   const startOfMonth = new Date(requestedYear!, monthIndex, 1)
   const endOfMonth = new Date(requestedYear!, monthIndex + 1, 0)
 
-  // Pre-load ALL existing clients into cache (do this BEFORE the loop)
+  // Pre-load ALL existing clients into cache from BOTH sources
   const { data: existingClients } = await supabase
     .from('acuity_clients')
     .select('client_id, email, phone_normalized, first_name, last_name')
@@ -728,6 +725,7 @@ export async function GET(request: Request) {
 
   const clientCache = new Map<string, string>() // identifier -> client_id
 
+  // FIRST: Load from acuity_clients
   if (existingClients) {
     for (const client of existingClients) {
       if (client.phone_normalized) clientCache.set(`phone:${client.phone_normalized}`, client.client_id)
@@ -738,6 +736,27 @@ export async function GET(request: Request) {
       if (nameKey) clientCache.set(nameKey, client.client_id)
     }
   }
+
+  // SECOND: Load from acuity_appointments (this is the source of truth for client_ids)
+  const { data: existingAppointments } = await supabase
+    .from('acuity_appointments')
+    .select('client_id, phone_normalized')
+    .eq('user_id', user.id)
+    .not('phone_normalized', 'is', null) // Only get appointments with phone numbers
+
+  if (existingAppointments) {
+    for (const appt of existingAppointments) {
+      if (appt.phone_normalized) {
+        // If this phone -> client_id mapping doesn't exist yet, add it
+        const phoneKey = `phone:${appt.phone_normalized}`
+        if (!clientCache.has(phoneKey)) {
+          clientCache.set(phoneKey, appt.client_id)
+        }
+      }
+    }
+  }
+
+  console.log('Loaded client cache from both acuity_clients and acuity_appointments:', clientCache.size)
 
   // Track client data for batch upsert
   const clientDataMap = new Map<string, {
@@ -784,26 +803,61 @@ export async function GET(request: Request) {
     const referralSource = extractSourceFromForms(appt.forms)
 
     // Get client_id from cache or generate new UUID
+    // Get client_id from cache or create new one (with proper deduplication)
     let clientKey: string | undefined
-    
+
+    // Check phone_normalized
     if (phoneNormalized && clientCache.has(`phone:${phoneNormalized}`)) {
       clientKey = clientCache.get(`phone:${phoneNormalized}`)
-    } else if (email && clientCache.has(`email:${email}`)) {
+    }
+
+    // Priority 2: Check email (only if no phone match)
+    if (!clientKey && email && clientCache.has(`email:${email}`)) {
       clientKey = clientCache.get(`email:${email}`)
-    } else if (nameDisplay) {
+    }
+
+    // Priority 3: Check name (only if no phone or email match)
+    if (!clientKey && nameDisplay) {
       const nameKey = `name:${nameDisplay.toLowerCase()}`
       if (clientCache.has(nameKey)) {
         clientKey = clientCache.get(nameKey)
       }
     }
-    
-    // If no match, create new client_id
+
+    // If no match found, create new client_id and add ALL identifiers to cache
     if (!clientKey) {
       clientKey = crypto.randomUUID()
-      // Add to cache for subsequent appointments
-      if (phoneNormalized) clientCache.set(`phone:${phoneNormalized}`, clientKey)
-      if (email) clientCache.set(`email:${email}`, clientKey)
-      if (nameDisplay) clientCache.set(`name:${nameDisplay.toLowerCase()}`, clientKey)
+      
+      // CRITICAL: Add ALL identifiers to cache pointing to same UUID
+      // This prevents future appointments from creating duplicates
+      if (phoneNormalized) {
+        clientCache.set(`phone:${phoneNormalized}`, clientKey)
+      }
+      if (email) {
+        clientCache.set(`email:${email}`, clientKey)
+      }
+      if (nameDisplay) {
+        clientCache.set(`name:${nameDisplay.toLowerCase()}`, clientKey)
+      }
+      
+      console.log('Created new client:', {
+        client_id: clientKey,
+        phone: phoneNormalized,
+        email,
+        name: nameDisplay
+      })
+    } else {
+      // Client exists - update cache with any NEW identifiers for this client
+      // This handles cases where a client gains a phone/email in a later appointment
+      if (phoneNormalized && !clientCache.has(`phone:${phoneNormalized}`)) {
+        clientCache.set(`phone:${phoneNormalized}`, clientKey)
+      }
+      if (email && !clientCache.has(`email:${email}`)) {
+        clientCache.set(`email:${email}`, clientKey)
+      }
+      if (nameDisplay && !clientCache.has(`name:${nameDisplay.toLowerCase()}`)) {
+        clientCache.set(`name:${nameDisplay.toLowerCase()}`, clientKey)
+      }
     }
 
     // Track client data for later upsert
@@ -948,17 +1002,25 @@ export async function GET(request: Request) {
     dailyServiceCounts[dailySvcKey].count++
   }
 
-  console.log('=== CLIENT DATA DEBUG ===')
-  console.log('clientDataMap size:', clientDataMap.size)
-  console.log('clientDataMap sample:', JSON.stringify(Array.from(clientDataMap.entries()).slice(0, 3), null, 2))
-
   // BATCH OPERATIONS after loop
-
   // 1. Batch upsert appointments (idempotent)
   if (appointmentsToUpsert.length > 0) {
-    await supabase
+    console.log('=== UPSERTING APPOINTMENTS ===')
+    console.log('Appointments to upsert:', appointmentsToUpsert.length)
+    console.log('Sample appointment:', JSON.stringify(appointmentsToUpsert[0], null, 2))
+    
+    const { data, error } = await supabase
       .from('acuity_appointments')
       .upsert(appointmentsToUpsert, { onConflict: 'user_id,acuity_appointment_id' })
+      .select()
+    
+    if (error) {
+      console.error('APPOINTMENT UPSERT ERROR:', error)
+    } else {
+      console.log('Appointments upserted successfully:', data?.length || 0)
+    }
+  } else {
+    console.log('No appointments to upsert')
   }
 
   // 2. Calculate totals from acuity_appointments
@@ -992,7 +1054,6 @@ export async function GET(request: Request) {
     }
   }
 
-  console.log('=== ABOUT TO CREATE CLIENT UPSERTS ===')
   // 3. Batch upsert clients with calculated totals
   const clientUpserts = Array.from(clientDataMap.values()).map(client => ({
     user_id: user.id,
@@ -1009,22 +1070,13 @@ export async function GET(request: Request) {
     updated_at: new Date().toISOString(),
   }))
 
-  console.log('=== CLIENT UPSERT DEBUG ===')
-  console.log('clientUpserts count:', clientUpserts.length)
-  console.log('clientUpserts sample:', JSON.stringify(clientUpserts.slice(0, 2), null, 2))
-
   if (clientUpserts.length > 0) {
-    console.log('=== ATTEMPTING CLIENT UPSERT ===')
     const { data, error } = await supabase
       .from('acuity_clients')
       .upsert(clientUpserts, { onConflict: 'user_id,client_id' })
       .select()
-    
-    console.log('Client upsert error:', error)
-    console.log('Client upsert data count:', data?.length)
-    console.log('Client upsert data sample:', JSON.stringify(data?.slice(0, 2), null, 2))
   } else {
-    console.log('⚠️ NO CLIENT UPSERTS - clientUpserts.length is 0!')
+    console.log('NO CLIENT UPSERTS - clientUpserts.length is 0!')
   }
 
   // -----------------------------------------------
@@ -1254,10 +1306,134 @@ export async function GET(request: Request) {
     })
 
     if (weeklyClientUpserts.length > 0) {
-      await supabase.from('weekly_top_clients').upsert(weeklyClientUpserts, {
-        onConflict: 'user_id,week_number,month,year,client_key',
-      })
+      console.log('=== UPSERTING WEEKLY TOP CLIENTS ===')
+      console.log('Week:', weekMonth, weekYear, 'Week Number:', weekNumber)
+      console.log('Weekly client upserts count:', weeklyClientUpserts.length)
+      console.log('Sample weekly client:', JSON.stringify(weeklyClientUpserts[0], null, 2))
+      
+      const { data, error } = await supabase
+        .from('weekly_top_clients')
+        .upsert(weeklyClientUpserts, {
+          onConflict: 'user_id,week_number,month,year,client_key',
+        })
+        .select()
+      
+      if (error) {
+        console.error('❌ WEEKLY TOP CLIENTS UPSERT ERROR:', error)
+      } else {
+        console.log('✅ Weekly top clients upserted successfully:', data?.length || 0)
+      }
+    } else {
+      console.log('⚠️ NO WEEKLY TOP CLIENTS for week', weekNumber)
     }
+  }
+
+  // Monthly Top Clients (report_top_clients) - we're now using the appointments table which should be the main source of truth
+  const { data: monthlyAppointments, error: queryError } = await supabase
+    .from('acuity_appointments')
+    .select('client_id, revenue')
+    .eq('user_id', user.id)
+    .gte('appointment_date', requestedMonthStart.toISOString().split('T')[0])
+    .lte('appointment_date', requestedMonthEnd.toISOString().split('T')[0])
+
+  console.log('=== MONTHLY TOP CLIENTS DEBUG ===')
+  console.log('Query error:', queryError)
+  console.log('Monthly appointments count:', monthlyAppointments?.length || 0)
+  
+  // Get unique client IDs
+  const clientIds = [...new Set(monthlyAppointments?.map(a => a.client_id) || [])]
+  console.log('Unique client IDs:', clientIds.length)
+  
+  // Fetch client details
+  const { data: clientDetails, error: clientDetailsError } = await supabase
+    .from('acuity_clients')
+    .select('client_id, first_name, last_name, email, phone_normalized, phone')
+    .eq('user_id', user.id)
+    .in('client_id', clientIds)
+
+  console.log('Client details error:', clientDetailsError)
+  console.log('Client details count:', clientDetails?.length || 0)
+
+  // Build lookup map
+  const clientLookup = new Map(
+    clientDetails?.map(c => [c.client_id, c]) || []
+  )
+
+  console.log('Client lookup size:', clientLookup.size)
+
+  // Aggregate by client for the month
+  const monthlyClientAgg: Record<string, {
+    total_paid: number
+    num_visits: number
+    client_name: string
+    email: string
+    phone: string
+    phone_normalized: string
+  }> = {}
+
+  if (monthlyAppointments) {
+    for (const row of monthlyAppointments) {
+      const client = clientLookup.get(row.client_id)
+      if (!client) {
+        console.log('⚠️ No client found for client_id:', row.client_id)
+        continue
+      }
+
+      const clientId = row.client_id
+      const firstName = client.first_name || ''
+      const lastName = client.last_name || ''
+      const clientName = `${firstName} ${lastName}`.trim() || 'Unknown'
+
+      if (!monthlyClientAgg[clientId]) {
+        monthlyClientAgg[clientId] = {
+          total_paid: 0,
+          num_visits: 0,
+          client_name: clientName,
+          email: client.email || '',
+          phone: client.phone || '',
+          phone_normalized: client.phone_normalized || '',
+        }
+      }
+
+      monthlyClientAgg[clientId].total_paid += parseFloat(row.revenue || '0')
+      monthlyClientAgg[clientId].num_visits += 1
+    }
+  }
+
+  console.log('Monthly client aggregations:', Object.keys(monthlyClientAgg).length)
+
+  const reportTopClientsUpserts = Object.entries(monthlyClientAgg).map(([clientId, data]) => ({
+    user_id: user.id,
+    client_id: clientId,
+    client_key: clientId,
+    client_name: data.client_name,
+    total_paid: Math.round(data.total_paid * 100) / 100,
+    num_visits: data.num_visits,
+    email: data.email,
+    phone: data.phone_normalized || data.phone,
+    month: requestedMonth,
+    year: requestedYear,
+    rank: null,
+    report_id: null,
+    notes: null,
+    updated_at: new Date().toISOString(),
+  }))
+
+  console.log('Report top clients upserts count:', reportTopClientsUpserts.length)
+
+  if (reportTopClientsUpserts.length > 0) {
+    const { data, error } = await supabase
+      .from('report_top_clients')
+      .upsert(reportTopClientsUpserts, { onConflict: 'user_id,month,year,client_key' })
+      .select()
+    
+    if (error) {
+      console.error('❌ Report top clients upsert error:', error)
+    } else {
+      console.log('✅ Report top clients upserted successfully:', data?.length || 0)
+    }
+  } else {
+    console.log('⚠️ NO REPORT TOP CLIENTS - reportTopClientsUpserts.length is 0!')
   }
 
   // Service bookings
