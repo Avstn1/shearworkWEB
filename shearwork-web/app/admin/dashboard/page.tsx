@@ -335,13 +335,13 @@ export default function AdminDashboardPage() {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          {/* <button
+          <button
             onClick={handleYearlySync}
             className="h-10 px-4 rounded-md bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] text-sm whitespace-nowrap"
           >
             Manual Yearly Acuity Sync (ALL)
           </button>
-          <button
+          {/* <button
             onClick={handleClientsSync}
             className="h-10 px-4 rounded-md bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] text-sm whitespace-nowrap"
           >
