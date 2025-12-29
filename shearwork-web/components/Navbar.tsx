@@ -3,14 +3,14 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins } from 'lucide-react'
+import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Megaphone } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
 import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
-import Image from 'next/image'
 
+import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 import CreditsModal from '@/components/Dashboard/CreditsModal'
 
 // Color palette matching React Native app
@@ -46,7 +46,11 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
   const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false)
+
+  const [hasUnreadFeatures, setHasUnreadFeatures] = useState(false)
 
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -105,10 +109,129 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
+  useEffect(() => {
+    const checkUnreadFeatures = async () => {
+      if (!user?.id) return
+
+      try {
+        // Get user's last read timestamp
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('last_read_feature_updates')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profileError) throw profileError
+
+        // Get most recent published feature update
+        const { data: latestFeature, error: featureError } = await supabase
+          .from('feature_updates')
+          .select('updated_at')
+          .eq('is_published', true)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (featureError && featureError.code !== 'PGRST116') throw featureError
+
+        // Check if there are unread updates
+        if (!latestFeature) {
+          setHasUnreadFeatures(false)
+          return
+        }
+
+        const lastRead = profileData?.last_read_feature_updates
+        const latestUpdate = latestFeature.updated_at
+
+        setHasUnreadFeatures(!lastRead || new Date(lastRead) < new Date(latestUpdate))
+      } catch (error) {
+        console.error('Error checking unread features:', error)
+      }
+    }
+
+    checkUnreadFeatures()
+  }, [user])
+
   if (loading) return null
 
-const desktopIcons = (
+  const desktopIcons = (
     <>
+      {/* FEATURE UPDATES BUTTON FOR ALL */}
+      {/* <button 
+        onClick={() => {
+          setShowFeaturesModal(true)
+          setHasUnreadFeatures(false)
+        }}
+        className="hidden md:block relative px-4 py-2 rounded-lg font-semibold text-sm transition-all"
+        style={{
+          background: hasUnreadFeatures 
+            ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
+            : 'rgba(115, 170, 87, 0.15)',
+          color: hasUnreadFeatures ? '#000000' : COLORS.green,
+          border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
+          boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)'
+          e.currentTarget.style.boxShadow = hasUnreadFeatures 
+            ? '0 0 25px rgba(115, 170, 87, 0.6)' 
+            : '0 0 10px rgba(115, 170, 87, 0.3)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)'
+          e.currentTarget.style.boxShadow = hasUnreadFeatures 
+            ? '0 0 20px rgba(115, 170, 87, 0.4)' 
+            : 'none'
+        }}
+      >
+        {hasUnreadFeatures && (
+          <span 
+            className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
+            style={{ backgroundColor: '#ff4444' }}
+          />
+        )}
+        Feature Updates
+      </button> */}
+
+      {/* FEATURE UPDATES BUTTON ONLY FOR GAVIN'S ACCOUNT */}
+      {user?.id === '39d5d08d-2deb-4b92-a650-ee10e70b7af1' && (
+        <button 
+          onClick={() => {
+            setShowFeaturesModal(true)
+            setHasUnreadFeatures(false)
+          }}
+          className="hidden md:block relative px-4 py-2 rounded-lg font-semibold text-sm transition-all"
+          style={{
+            background: hasUnreadFeatures 
+              ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
+              : 'rgba(115, 170, 87, 0.15)',
+            color: hasUnreadFeatures ? '#000000' : COLORS.green,
+            border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
+            boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)'
+            e.currentTarget.style.boxShadow = hasUnreadFeatures 
+              ? '0 0 25px rgba(115, 170, 87, 0.6)' 
+              : '0 0 10px rgba(115, 170, 87, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.boxShadow = hasUnreadFeatures 
+              ? '0 0 20px rgba(115, 170, 87, 0.4)' 
+              : 'none'
+          }}
+        >
+          {hasUnreadFeatures && (
+            <span 
+              className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
+              style={{ backgroundColor: '#ff4444' }}
+            />
+          )}
+          Feature Updates
+        </button>
+      )}
+
       <Tooltip label="Dashboard">
         <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
           <div 
@@ -225,6 +348,17 @@ const desktopIcons = (
     if (userRole === 'Admin') {
       return (
         <>
+          <Link href="/admin/feature-maker" className="relative flex flex-col items-center group hidden md:flex">
+            <div 
+              className="p-2 rounded-full transition-colors"
+              style={{ backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            >
+              <Megaphone className="w-6 h-6" style={{ color: COLORS.text }} />
+            </div>
+          </Link>
+          
           <Link href="/admin/syslogs" className="relative flex flex-col items-center group hidden md:flex">
             <div 
               className="p-2 rounded-full transition-colors"
@@ -330,6 +464,17 @@ const desktopIcons = (
     rightSideContent = (
       <>
         {/* --- ADMIN CONTENT --- */}
+        <Link href="/admin/feature-maker" className="relative flex flex-col items-center group hidden md:flex">
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <Megaphone className="w-6 h-6" style={{ color: COLORS.text }} />
+          </div>
+        </Link>
+
         <Link href="/admin/syslogs" className="relative flex flex-col items-center group hidden md:flex">
           <div 
             className="p-2 rounded-full transition-colors"
@@ -445,9 +590,17 @@ const desktopIcons = (
         </div>
       )}
     </nav>
+
     <CreditsModal
       isOpen={showCreditsModal}
       onClose={() => setShowCreditsModal(false)}
+    />
+
+    <NewFeaturesModal
+      isOpen={showFeaturesModal}
+      onClose={() => setShowFeaturesModal(false)}
+      initialViewMode="barberView"
+      userId={user?.id}
     />
 
     </>

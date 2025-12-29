@@ -65,27 +65,6 @@ export default function AnalyticsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Refresh handler
-  // const handleRefresh = async () => {
-  //   setLoading(true)
-  //   try {
-  //     const res = await fetch('/api/analytics', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-  //       },
-  //       body: JSON.stringify({ targetDate: new Date().toISOString().slice(0, 10) }),
-  //     })
-  //     const data = await res.json()
-  //     console.log('Analytics refreshed:', data)
-  //   } catch (err) {
-  //     console.error('Failed to refresh analytics:', err)
-  //   } finally {
-  //     setLoading(false)
-  //   }
-  // }
-
   const handleMonthSelect = (ym: string) => {
     setSelectedMonth(ym)
     setSelectedRange(undefined)
