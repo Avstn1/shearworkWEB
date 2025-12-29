@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins } from 'lucide-react'
+import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Calendar } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/TipsDropdown'
@@ -149,6 +149,26 @@ const desktopIcons = (
         </Link>
       </Tooltip>
 
+      <Tooltip label="Appointment Manager">
+        <Link href="/appointment-manager" className="relative flex flex-col items-center group hidden md:flex">
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+            onClick={() => {logNavLinkClick(user.id, 'appointment-manager')}}
+          >
+            <Calendar className="w-6 h-6" style={{ color: COLORS.text }} />
+          </div>
+        </Link>
+      </Tooltip>
+
       <Tooltip label="Expenses">
         <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
           <div 
@@ -285,6 +305,16 @@ const desktopIcons = (
           onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
         >
           <UserCog className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Client Manager
+        </Link>
+        <Link 
+          href="/appointment-manager" 
+          onClick={() => setOpen(false)} 
+          className="flex items-center gap-1 sm:gap-2 transition"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+        >
+          <Calendar className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Appointment Manager
         </Link>
         <Link 
           href="/expenses" 
