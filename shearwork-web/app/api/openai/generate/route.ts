@@ -412,6 +412,9 @@ export async function POST(req: Request) {
         .order('total_paid', { ascending: false })
       if (error) throw error
       topClients = data ?? []
+
+      // console.log(`Top Clients: ${JSON.stringify(topClients)}`)
+
     } else if (type === 'weekly_comparison') {
       let q = supabase
         .from('weekly_top_clients')
