@@ -12,27 +12,11 @@ interface YearlyRevenueCardProps {
   timeframe?: Timeframe
 }
 
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
-
-const QUARTER_MONTHS: Record<Exclude<Timeframe, 'year'>, string[]> = {
-  Q1: ['January', 'February', 'March'],
-  Q2: ['April', 'May', 'June'],
-  Q3: ['July', 'August', 'September'],
-  Q4: ['October', 'November', 'December'],
-  YTD: ['']
+const QUARTER_DATE_RANGES: Record<Exclude<Timeframe, 'year' | 'YTD'>, { startMonth: number; endMonth: number }> = {
+  Q1: { startMonth: 1, endMonth: 3 },
+  Q2: { startMonth: 4, endMonth: 6 },
+  Q3: { startMonth: 7, endMonth: 9 },
+  Q4: { startMonth: 10, endMonth: 12 },
 }
 
 export default function YearlyRevenueCard({
@@ -41,6 +25,7 @@ export default function YearlyRevenueCard({
   timeframe,
 }: YearlyRevenueCardProps) {
   const [total, setTotal] = useState<number | null>(null)
+  const [tips, setTips] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [barberType, setBarberType] = useState<'rental' | 'commission' | undefined>()
   const [commissionRate, setCommissionRate] = useState<number | null>(null)
@@ -70,73 +55,59 @@ export default function YearlyRevenueCard({
           setCommissionRate(null)
         }
 
+        // 2) Determine date range based on timeframe
+        let startDate: string
+        let endDate: string
+
+        if (timeframe === 'year' || timeframe === 'YTD') {
+          startDate = `${currentYear}-01-01`
+          endDate = `${currentYear + 1}-01-01`
+        } else {
+          const range = QUARTER_DATE_RANGES[timeframe!]
+          startDate = `${currentYear}-${String(range.startMonth).padStart(2, '0')}-01`
+          endDate = range.endMonth === 12 
+            ? `${currentYear + 1}-01-01`
+            : `${currentYear}-${String(range.endMonth + 1).padStart(2, '0')}-01`
+        }
+
+        // 3) Use RPC function for efficient aggregation
+        const { data: aggregateData, error: rpcError } = await supabase
+          .rpc('get_revenue_totals', {
+            p_user_id: userId,
+            p_start_date: startDate,
+            p_end_date: endDate
+          })
+          .single()
+
+        if (rpcError || !aggregateData) {
+          throw rpcError || new Error('No data returned from RPC')
+        }
+
+        const totalRevenue = Number((aggregateData as any).total_revenue) || 0
+        const totalTips = Number((aggregateData as any).total_tips) || 0
+        
         let finalTotal = 0
 
-        // 2) YEAR view – keep using yearly_revenue
-        if (timeframe === 'year' || timeframe === 'YTD') {
-          const { data: yearlyData, error: yearlyError } = await supabase
-            .from('yearly_revenue')
-            .select('total_revenue, tips, final_revenue')
-            .eq('user_id', userId)
-            .eq('year', currentYear)
-            .maybeSingle()
-          if (yearlyError) throw yearlyError
-
-          if (profileData?.role?.toLowerCase() === 'barber') {
-            if (profileData.barber_type === 'commission') {
-              const totalRevenue = yearlyData?.total_revenue ?? 0
-              const tips = yearlyData?.tips ?? 0
-              const rate = profileData.commission_rate ?? 1
-              finalTotal = totalRevenue * rate + tips
-            } else {
-              finalTotal = yearlyData?.final_revenue ?? 0
-            }
+        if (profileData?.role?.toLowerCase() === 'barber') {
+          if (profileData.barber_type === 'commission') {
+            const rate = profileData.commission_rate ?? 1
+            finalTotal = totalRevenue * rate + totalTips
           } else {
-            finalTotal = yearlyData?.final_revenue ?? 0
+            // Rental barber
+            finalTotal = totalRevenue + totalTips
           }
         } else {
-          // 3) QUARTER view – sum from monthly_data for that quarter
-          const months = QUARTER_MONTHS[timeframe!]
-
-          const { data: monthlyRows, error: monthlyError } = await supabase
-            .from('monthly_data')
-            .select('month, total_revenue, final_revenue, tips')
-            .eq('user_id', userId)
-            .eq('year', currentYear)
-            .in('month', months)
-
-          if (monthlyError) throw monthlyError
-
-          if (profileData?.role?.toLowerCase() === 'barber') {
-            if (profileData.barber_type === 'commission') {
-              const rate = profileData.commission_rate ?? 1
-              ;(monthlyRows ?? []).forEach((row: any) => {
-                // follow same pattern as your monthly card:
-                const base =
-                  row.total_revenue ??
-                  row.final_revenue ??
-                  0
-                const tips = row.tips ?? 0
-                finalTotal += base * rate + tips
-              })
-            } else {
-              // rental: use final_revenue
-              ;(monthlyRows ?? []).forEach((row: any) => {
-                finalTotal += Number(row.final_revenue) || 0
-              })
-            }
-          } else {
-            // non-barber user: just use final_revenue
-            ;(monthlyRows ?? []).forEach((row: any) => {
-              finalTotal += Number(row.final_revenue) || 0
-            })
-          }
+          // Non-barber user
+          finalTotal = totalRevenue + totalTips
         }
 
         setTotal(finalTotal)
+        setTips(totalTips)
+
       } catch (err) {
         console.error('Error fetching timeframe revenue:', err)
         setTotal(null)
+        setTips(null)
       } finally {
         setLoading(false)
       }
@@ -171,7 +142,7 @@ export default function YearlyRevenueCard({
         💰 Total {label} ({titleSuffix})
       </h2>
 
-      <div className="flex-1 flex items-center justify-start">
+      <div className="flex-1 flex flex-col justify-center">
         <p className="text-3xl font-bold text-[#F5E6C5] truncate">
           {loading
             ? 'Loading...'
@@ -179,6 +150,11 @@ export default function YearlyRevenueCard({
             ? formatCurrency(total)
             : 'N/A'}
         </p>
+        {!loading && tips !== null && tips > 0 && (
+          <p className="text-sm text-amber-300 mt-1">
+            (includes {formatCurrency(tips)} in tips)
+          </p>
+        )}
       </div>
     </div>
   )

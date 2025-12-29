@@ -1,54 +1,55 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { supabase } from '@/utils/supabaseClient'
 
 interface TopClientsCardProps {
   userId?: string
   selectedMonth?: string
-  selectedYear?: number | null // allow null
+  selectedYear?: number | null
 }
 
 interface TopClient {
-  id: string
-  client_name: string | null
-  total_paid: number | null
-  num_visits: number | null
-  notes: string | null
+  client_id: string
+  client_name: string
+  revenue: number
+  tips: number
+  total_spent: number
+  num_visits: number
 }
 
 export default function TopClientsCard({ userId, selectedMonth, selectedYear }: TopClientsCardProps) {
   const [clients, setClients] = useState<TopClient[]>([])
   const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
     if (!userId || !selectedMonth || !selectedYear) return
 
     const fetchTopClients = async () => {
       try {
         setLoading(true)
+        setError(null)
 
-        const year = selectedYear ?? new Date().getFullYear() // fallback if needed
+        const params = new URLSearchParams({
+          month: selectedMonth,
+          year: String(selectedYear),
+          limit: '5',
+        })
 
-        const { data: topClients, error } = await supabase
-          .from('report_top_clients')
-          .select('id, client_name, total_paid, num_visits, notes')
-          .eq('user_id', userId)
-          .eq('month', selectedMonth)
-          .eq('year', year)
-          .order('total_paid', { ascending: false })
+        const res = await fetch(`/api/dashboard/top-clients?${params.toString()}`, {
+          cache: 'no-store',
+        })
 
-        if (error) throw error
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error(body.error || 'Failed to fetch top clients')
+        }
 
-        const filtered = (topClients as TopClient[]).filter(
-          (f) =>
-            f.client_name &&
-            f.client_name !== 'Unknown' &&
-            f.client_name !== 'Returning Client' &&
-            !/walk/i.test(f.client_name) // excludes any name containing "walk" (case-insensitive)
-        )
-        setClients(filtered || [])
-      } catch (err) {
+        const data = await res.json()
+        setClients(data.clients || [])
+      } catch (err: any) {
         console.error('Error fetching top clients:', err)
+        setError(err.message)
         setClients([])
       } finally {
         setLoading(false)
@@ -56,7 +57,10 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
     }
 
     fetchTopClients()
-  }, [userId ?? '', selectedMonth ?? '', selectedYear ?? 0])
+  }, [userId, selectedMonth, selectedYear])
+
+  const formatCurrency = (amount: number) => 
+    `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   return (
     <div
@@ -75,6 +79,10 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
         <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
           Loading...
         </div>
+      ) : error ? (
+        <div className="flex-1 flex items-center justify-center text-sm text-red-400 text-center">
+          {error}
+        </div>
       ) : clients.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-sm text-gray-400 text-center">
           No data available for {selectedMonth} {selectedYear ?? ''}
@@ -86,15 +94,14 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
               <tr className="text-left border-b border-[#444]">
                 <th className="py-2 px-3 min-w-[30px]">#</th>
                 <th className="py-2 px-3 min-w-[120px]">Client</th>
-                <th className="py-2 px-3 min-w-[80px]">Service Totals</th>
+                <th className="py-2 px-3 min-w-[80px]">Total</th>
                 <th className="py-2 px-3 min-w-[60px]">Visits</th>
-                {/* <th className="py-2 px-3 min-w-[100px]">Notes</th> */}
               </tr>
             </thead>
             <tbody>
-              {clients.slice(0, 5).map((client, idx) => (
+              {clients.map((client, idx) => (
                 <tr
-                  key={client.id}
+                  key={client.client_id}
                   className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
                     idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
                   }`}
@@ -102,17 +109,14 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
                 >
                   <td className="py-2 px-3 font-medium">{idx + 1}</td>
                   <td className="py-2 px-3 font-semibold truncate">
-                    {client.client_name ?? 'N/A'}
+                    {client.client_name}
                   </td>
                   <td className="py-2 px-3 font-semibold text-green-400">
-                    ${client.total_paid?.toFixed(2) ?? '-'}
+                    {formatCurrency(client.total_spent)}
                   </td>
                   <td className="py-2 px-3 font-semibold text-yellow-400">
-                    {client.num_visits ?? '-'}
+                    {client.num_visits}
                   </td>
-                  {/* <td className="py-2 px-3 italic text-gray-300 truncate">
-                    {client.notes ?? '-'}
-                  </td> */}
                 </tr>
               ))}
             </tbody>
