@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Bell, ChevronDown, ChevronUp, Eye, Shield } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface FeatureUpdate {
   id: string
@@ -412,9 +414,22 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                   </div>
 
                                   {/* Description */}
-                                  <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
-                                    {feature.description}
-                                  </p>
+                                  <div className="text-xs text-gray-300 leading-relaxed prose prose-invert prose-sm max-w-none
+                                    prose-p:my-2 prose-p:leading-relaxed
+                                    prose-headings:text-[#F1F5E9] prose-headings:font-bold prose-headings:mt-4 prose-headings:mb-2
+                                    prose-h1:text-base prose-h2:text-sm prose-h3:text-xs
+                                    prose-strong:text-[#F1F5E9] prose-strong:font-bold
+                                    prose-em:text-gray-200 prose-em:italic
+                                    prose-a:text-lime-400 prose-a:no-underline hover:prose-a:underline
+                                    prose-ul:my-2 prose-ul:list-disc prose-ul:pl-5
+                                    prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-5
+                                    prose-li:my-1
+                                    prose-code:text-lime-300 prose-code:bg-[#2a2a2a] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[10px]
+                                    prose-pre:bg-[#2a2a2a] prose-pre:p-3 prose-pre:rounded-lg prose-pre:overflow-x-auto">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                      {feature.description}
+                                    </ReactMarkdown>
+                                  </div>
 
                                   {/* Media */}
                                   {(feature.image_url || feature.video_url) && (

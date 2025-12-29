@@ -204,3 +204,37 @@ html {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+/* SimpleMDE Dark Theme */
+.EasyMDEContainer .CodeMirror {
+  background-color: #2f3a2d !important;
+  color: #F1F5E9 !important;
+  border: 1px solid #55694b !important;
+  border-radius: 0.5rem !important;
+}
+
+.EasyMDEContainer .CodeMirror-cursor {
+  border-left-color: #F1F5E9 !important;
+}
+
+.EasyMDEContainer .editor-toolbar {
+  background-color: #1f2420 !important;
+  border: 1px solid #55694b !important;
+  border-bottom: none !important;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+.EasyMDEContainer .editor-toolbar button {
+  color: #F1F5E9 !important;
+}
+
+.EasyMDEContainer .editor-toolbar button:hover,
+.EasyMDEContainer .editor-toolbar button.active {
+  background-color: #55694b !important;
+  border-color: #6b8e4e !important;
+}
+
+.EasyMDEContainer .editor-preview {
+  background-color: #2f3a2d !important;
+  color: #F1F5E9 !important;
+}

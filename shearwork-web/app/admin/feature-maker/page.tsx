@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
 import { Megaphone, Sparkles, Eye, Edit, X, AlertTriangle, Monitor, Trash2, EyeOff, CheckCircle } from 'lucide-react'
@@ -11,6 +11,10 @@ import VersionConflictModal from '@/components/AdminComponents/AdminFeatureMaker
 import PublishConfirmationModal from '@/components/AdminComponents/AdminFeatureMaker/Modals/PublishConfirmationModal'
 import VersionIncrementWarningModal from '@/components/AdminComponents/AdminFeatureMaker/Modals/VersionIncrementWarningModal'
 import { motion, AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
+import 'easymde/dist/easymde.min.css'
+
+const SimpleMDE = dynamic(() => import('react-simplemde-editor'), { ssr: false })
 
 interface FeatureUpdate {
   id: string
@@ -79,6 +83,15 @@ export default function FeatureMakerPage() {
     is_published: false,
     admin_view_excluded: false,
   })
+
+  // SimpleMDE editor options
+  const mdeOptions = useMemo(() => ({
+    spellChecker: false,
+    toolbar: ['bold', 'italic', 'heading', '|', 'unordered-list', 'ordered-list', '|', 'link', 'preview'],
+    placeholder: 'Detailed explanation of the feature...',
+    minHeight: '250px',
+    status: false,
+  }), [])
 
   // Version validation helpers
   const parseVersion = (version: string): number[] | null => {
@@ -870,17 +883,17 @@ export default function FeatureMakerPage() {
                 </div>
 
                 {/* Description */}
-                <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-h-0 flex-shrink-0">
                   <label className="block text-xs font-semibold mb-1.5 text-[#F1F5E9] flex-shrink-0">
                     Description *
                   </label>
-                  <textarea
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] text-sm focus:outline-none focus:ring-1 focus:ring-[#6b8e4e]/50 focus:border-[#6b8e4e] resize-none flex-1"
-                    placeholder="Detailed explanation of the feature..."
-                  />
+                  <div className="flex-1 overflow-hidden">
+                    <SimpleMDE
+                      value={formData.description}
+                      onChange={(value) => setFormData({ ...formData, description: value })}
+                      options={mdeOptions}
+                    />
+                  </div>
                 </div>
 
                 {/* Row 2: Image URL & Video URL */}
