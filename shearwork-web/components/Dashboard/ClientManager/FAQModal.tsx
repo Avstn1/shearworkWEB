@@ -449,30 +449,30 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
           >
-            <div className="bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-white/10 rounded-2xl shadow-2xl w-full h-[85vh] max-w-4xl flex flex-col overflow-hidden">
+            <div className="bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full h-[95vh] sm:h-[85vh] max-w-4xl flex flex-col overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-slate-700/30 to-emerald-900/30 border-b border-white/10 p-4 sm:p-6 flex items-center justify-between flex-shrink-0">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-200 to-emerald-200 bg-clip-text text-transparent">
+              <div className="bg-gradient-to-r from-slate-700/30 to-emerald-900/30 border-b border-white/10 p-3 sm:p-6 flex items-center justify-between flex-shrink-0">
+                <div className="min-w-0 flex-1 pr-2">
+                  <h2 className="text-base sm:text-2xl font-bold bg-gradient-to-r from-gray-200 to-emerald-200 bg-clip-text text-transparent">
                     Frequently Asked Questions
                   </h2>
-                  <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                  <p className="text-[10px] sm:text-sm text-gray-400 mt-0.5 sm:mt-1 hidden xs:block">
                     Everything you need to know about messaging your clients
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
+                  className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                  <X className="w-4 h-4 sm:w-6 sm:h-6 text-gray-400" />
                 </button>
               </div>
 
               {/* Section Tabs */}
               <div className="border-b border-white/10 bg-black/20 flex-shrink-0">
-                <div className="flex gap-2 p-2 sm:p-3">
+                <div className="flex gap-1.5 sm:gap-2 p-2 sm:p-3">
                   {faqSections.map((section) => (
                     <button
                       key={section.id}
@@ -480,15 +480,15 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
                         setActiveSection(section.id);
                         setExpandedQuestion(null);
                       }}
-                      className={`flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                      className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-lg text-[10px] sm:text-sm font-semibold transition-all ${
                         activeSection === section.id
                           ? `bg-gradient-to-r ${section.color} text-white shadow-lg`
                           : 'bg-white/5 text-gray-400 hover:bg-white/10'
                       }`}
                     >
                       <div className="text-center">
-                        <div className="font-bold">{section.title}</div>
-                        <div className="text-[10px] sm:text-xs opacity-80 mt-0.5 hidden sm:block">
+                        <div className="font-bold leading-tight">{section.title}</div>
+                        <div className="text-[9px] sm:text-xs opacity-80 mt-0.5 hidden sm:block">
                           {section.description}
                         </div>
                       </div>
@@ -499,8 +499,8 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
 
               {/* Content - Fixed Height with Hidden Scrollbar */}
               <div className="flex-1 overflow-y-auto overflow-x-hidden faq-scroll-container">
-                <div className="p-4 sm:p-6">
-                  <div className="space-y-3">
+                <div className="p-3 sm:p-6">
+                  <div className="space-y-2 sm:space-y-3">
                     {filteredFaqs.map((faq, index) => (
                       <div
                         key={index}
@@ -508,15 +508,15 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
                       >
                         <button
                           onClick={() => setExpandedQuestion(expandedQuestion === index ? null : index)}
-                          className="w-full p-3 sm:p-4 flex items-center justify-between hover:bg-white/5 transition-colors text-left"
+                          className="w-full p-2.5 sm:p-4 flex items-start justify-between hover:bg-white/5 transition-colors text-left gap-2"
                         >
-                          <span className="font-semibold text-white pr-4 text-sm sm:text-base">
+                          <span className="font-semibold text-white text-xs sm:text-base leading-snug">
                             {faq.question}
                           </span>
                           {expandedQuestion === index ? (
-                            <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+                            <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                           ) : (
-                            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+                            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                           )}
                         </button>
 
@@ -529,7 +529,7 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
                             >
-                              <div className="px-3 sm:px-4 pb-3 sm:pb-4 text-gray-300 text-xs sm:text-sm border-t border-white/10 pt-3 sm:pt-4">
+                              <div className="px-2.5 sm:px-4 pb-2.5 sm:pb-4 text-gray-300 text-[11px] sm:text-sm border-t border-white/10 pt-2.5 sm:pt-4">
                                 {faq.answer}
                               </div>
                             </motion.div>
@@ -542,7 +542,7 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-white/10 p-3 sm:p-4 bg-black/20 flex-shrink-0">
+              <div className="border-t border-white/10 p-2.5 sm:p-4 bg-black/20 flex-shrink-0">
                 <p className="text-[10px] sm:text-xs text-gray-400 text-center">
                   Still have questions? Reach out to our support team for help!
                 </p>
