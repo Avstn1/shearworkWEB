@@ -47,7 +47,7 @@ export default function ClientPreviewModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
           onClick={onClose}
         >
           <motion.div
@@ -55,113 +55,122 @@ export default function ClientPreviewModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto"
+            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
-              <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-sky-300" />
-                  Clients Selected for Next Campaign
+            <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 flex-shrink-0 bg-[#1a1a1a]">
+              <div className="flex-1 min-w-0 pr-2">
+                <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-sky-300 flex-shrink-0" />
+                  <span className="truncate hidden sm:inline">Clients Selected for Next Campaign</span>
+                  <span className="truncate sm:hidden">Selected Clients</span>
                 </h3>
                 {previewStats && (
-                  <p className="text-sm text-[#bdbdbd] mt-1">
+                  <p className="text-xs sm:text-sm text-[#bdbdbd] mt-1">
                     {previewStats.total_selected} clients will receive your next SMS
                   </p>
                 )}
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
               >
-                <X className="w-5 h-5 text-[#bdbdbd]" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbdbd]" />
               </button>
             </div>
 
             {/* Stats */}
             {previewStats && (
-              <div className="p-6 border-b border-white/10 bg-white/5">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 sm:p-6 border-b border-white/10 bg-white/5 flex-shrink-0">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-xs text-[#bdbdbd] mb-1">Total Selected</p>
-                    <p className="text-2xl font-bold text-white">{previewStats.total_selected}</p>
+                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Total Selected</p>
+                    <p className="text-lg sm:text-2xl font-bold text-white">{previewStats.total_selected}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#bdbdbd] mb-1">Avg Score</p>
-                    <p className="text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
+                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Avg Score</p>
+                    <p className="text-lg sm:text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Since Visit</p>
-                    <p className="text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
+                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Avg Days Since</p>
+                    <p className="text-lg sm:text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#bdbdbd] mb-1">Avg Days Overdue</p>
-                    <p className="text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
+                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Avg Overdue</p>
+                    <p className="text-lg sm:text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
                   </div>
                 </div>
 
                 {/* Legend Section */}
-                <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-xs text-[#bdbdbd]">
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                    <div>
+                <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/5 space-y-1.5 text-[10px] sm:text-xs text-[#bdbdbd]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                    <div className="truncate">
                       <span className="text-sky-300 font-medium">Score:</span>{" "}
-                      Higher = client needs message more urgently
+                      <span className="hidden sm:inline">Higher = client needs message more urgently</span>
+                      <span className="sm:hidden">Urgency level</span>
                     </div>
-                    <div>
+                    <div className="truncate">
                       <span className="text-purple-400 font-medium">
-                        Days Since Visit:
+                        Days Since:
                       </span>{" "}
-                      Days since last appointment
+                      <span className="hidden sm:inline">Days since last appointment</span>
+                      <span className="sm:hidden">Since visit</span>
                     </div>
-                    <div>
+                    <div className="truncate">
                       <span className="text-orange-400 font-medium">
                         Days Overdue:
                       </span>{" "}
-                      How late based on their typical pattern
+                      <span className="hidden sm:inline">How late based on their typical pattern</span>
+                      <span className="sm:hidden">How late</span>
                     </div>
                   </div>
 
                   {/* Client Types Legend */}
-                  <div className="flex flex-wrap gap-3 pt-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-3 pt-1.5 sm:pt-2">
                     {previewStats.breakdown.consistent > 0 && (
-                      <span className="bg-green-500/10 text-green-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Consistent:</span> Weekly
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/20">
+                      <span className="bg-green-500/10 text-green-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                        <span className="font-medium hidden sm:inline">Consistent:</span>
+                        <span className="font-medium sm:hidden">Cons:</span>
+                        <span className="hidden sm:inline">Weekly</span>
+                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-green-500/20">
                           {previewStats.breakdown.consistent}
                         </span>
                       </span>
                     )}
                     {previewStats.breakdown["semi-consistent"] > 0 && (
-                      <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Semi-consistent:</span>{" "}
-                        Every 2-3 weeks
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20">
+                      <span className="bg-blue-500/10 text-blue-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                        <span className="font-medium hidden sm:inline">Semi-consistent:</span>
+                        <span className="font-medium sm:hidden">Semi:</span>
+                        <span className="hidden sm:inline">Every 2-3 weeks</span>
+                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-blue-500/20">
                           {previewStats.breakdown["semi-consistent"]}
                         </span>
                       </span>
                     )}
                     {previewStats.breakdown["easy-going"] > 0 && (
-                      <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Easy-going:</span> Every
-                        1-2 months
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-yellow-500/20">
+                      <span className="bg-yellow-500/10 text-yellow-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                        <span className="font-medium hidden sm:inline">Easy-going:</span>
+                        <span className="font-medium sm:hidden">Easy:</span>
+                        <span className="hidden sm:inline">Every 1-2 months</span>
+                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-yellow-500/20">
                           {previewStats.breakdown["easy-going"]}
                         </span>
                       </span>
                     )}
                     {previewStats.breakdown.rare > 0 && (
-                      <span className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">Rare:</span> Every 2+
-                        months
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20">
+                      <span className="bg-red-500/10 text-red-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                        <span className="font-medium">Rare:</span>
+                        <span className="hidden sm:inline">Every 2+ months</span>
+                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-red-500/20">
                           {previewStats.breakdown.rare}
                         </span>
                       </span>
                     )}
                     {previewStats.breakdown.new > 0 && (
-                      <span className="bg-gray-500/10 text-gray-400 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5">
-                        <span className="font-medium">New:</span> First visit
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-500/20">
+                      <span className="bg-gray-500/10 text-gray-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                        <span className="font-medium">New:</span>
+                        <span className="hidden sm:inline">First visit</span>
+                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-gray-500/20">
                           {previewStats.breakdown.new}
                         </span>
                       </span>
@@ -172,19 +181,19 @@ export default function ClientPreviewModal({
             )}
 
             {/* Clients List - Scrollable */}
-            <div className="overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
               <div className="space-y-2">
                 {previewClients.map((client) => (
                   <div
                     key={client.client_id}
-                    className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors gap-2 sm:gap-0"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h4 className="font-semibold text-white">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <h4 className="font-semibold text-white text-sm sm:text-base truncate">
                           {client.first_name} {client.last_name}
                         </h4>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
+                        <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full flex-shrink-0 ${
                           client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
                           client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
                           client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -194,17 +203,17 @@ export default function ClientPreviewModal({
                           {client.visiting_type}
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-[#bdbdbd]">
-                        <span>{client.phone_normalized}</span>
-                        <span>•</span>
-                        <span>{client.days_since_last_visit} days since last visit</span>
-                        <span>•</span>
+                      <div className="flex items-center gap-2 sm:gap-4 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-[#bdbdbd] flex-wrap">
+                        <span className="truncate">{client.phone_normalized}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>{client.days_since_last_visit} days since visit</span>
+                        <span className="hidden sm:inline">•</span>
                         <span className="text-orange-400">{client.days_overdue} days overdue</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                      <p className="text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
+                    <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0">
+                      <p className="text-xs sm:text-sm font-semibold text-sky-300">Score: {client.score}</p>
+                      <p className="text-[10px] sm:text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
                     </div>
                   </div>
                 ))}
