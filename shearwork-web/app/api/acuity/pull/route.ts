@@ -717,7 +717,7 @@ export async function GET(request: Request) {
   const startOfMonth = new Date(requestedYear!, monthIndex, 1)
   const endOfMonth = new Date(requestedYear!, monthIndex + 1, 0)
 
-  // Pre-load ALL existing clients into cache (do this BEFORE the loop)
+  // Pre-load ALL existing clients into cache from BOTH sources
   const { data: existingClients } = await supabase
     .from('acuity_clients')
     .select('client_id, email, phone_normalized, first_name, last_name')
@@ -725,6 +725,7 @@ export async function GET(request: Request) {
 
   const clientCache = new Map<string, string>() // identifier -> client_id
 
+  // FIRST: Load from acuity_clients
   if (existingClients) {
     for (const client of existingClients) {
       if (client.phone_normalized) clientCache.set(`phone:${client.phone_normalized}`, client.client_id)
@@ -735,6 +736,27 @@ export async function GET(request: Request) {
       if (nameKey) clientCache.set(nameKey, client.client_id)
     }
   }
+
+  // SECOND: Load from acuity_appointments (this is the source of truth for client_ids)
+  const { data: existingAppointments } = await supabase
+    .from('acuity_appointments')
+    .select('client_id, phone_normalized')
+    .eq('user_id', user.id)
+    .not('phone_normalized', 'is', null) // Only get appointments with phone numbers
+
+  if (existingAppointments) {
+    for (const appt of existingAppointments) {
+      if (appt.phone_normalized) {
+        // If this phone -> client_id mapping doesn't exist yet, add it
+        const phoneKey = `phone:${appt.phone_normalized}`
+        if (!clientCache.has(phoneKey)) {
+          clientCache.set(phoneKey, appt.client_id)
+        }
+      }
+    }
+  }
+
+  console.log('Loaded client cache from both acuity_clients and acuity_appointments:', clientCache.size)
 
   // Track client data for batch upsert
   const clientDataMap = new Map<string, {
@@ -1283,9 +1305,25 @@ export async function GET(request: Request) {
     })
 
     if (weeklyClientUpserts.length > 0) {
-      await supabase.from('weekly_top_clients').upsert(weeklyClientUpserts, {
-        onConflict: 'user_id,week_number,month,year,client_key',
-      })
+      console.log('=== UPSERTING WEEKLY TOP CLIENTS ===')
+      console.log('Week:', weekMonth, weekYear, 'Week Number:', weekNumber)
+      console.log('Weekly client upserts count:', weeklyClientUpserts.length)
+      console.log('Sample weekly client:', JSON.stringify(weeklyClientUpserts[0], null, 2))
+      
+      const { data, error } = await supabase
+        .from('weekly_top_clients')
+        .upsert(weeklyClientUpserts, {
+          onConflict: 'user_id,week_number,month,year,client_key',
+        })
+        .select()
+      
+      if (error) {
+        console.error('❌ WEEKLY TOP CLIENTS UPSERT ERROR:', error)
+      } else {
+        console.log('✅ Weekly top clients upserted successfully:', data?.length || 0)
+      }
+    } else {
+      console.log('⚠️ NO WEEKLY TOP CLIENTS for week', weekNumber)
     }
   }
 
