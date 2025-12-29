@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
         revenue,
         datetime,
         created_at,
-        tip
+        tip,
+        service_type
       `, { count: 'exact' })
       .eq('user_id', user.id)
       .lte('datetime', now); // Only past appointments
@@ -113,6 +114,7 @@ export async function GET(request: NextRequest) {
       datetime: appt.datetime,
       revenue: appt.revenue,
       tip: appt.tip,
+      service_type: appt.service_type || null,
       client_first_name: clientMap[appt.client_id]?.first_name || null,
       client_last_name: clientMap[appt.client_id]?.last_name || null,
     }));

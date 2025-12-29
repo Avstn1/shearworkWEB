@@ -839,6 +839,7 @@ export async function GET(request: Request) {
       revenue: price,
       tip: tip,
       datetime: appt.datetime,
+      service_type: appt.type || null,
       created_at: new Date().toISOString(),
     })
 

@@ -335,6 +335,7 @@ export default function AppointmentSheets() {
                 <th className="px-4 py-3 text-left">Appt #</th>
                 <th className="px-4 py-3 text-left">First Name</th>
                 <th className="px-4 py-3 text-left">Last Name</th>
+                <th className="px-4 py-3 text-left">Service</th>
                 <th
                   className="px-4 py-3 text-left cursor-pointer select-none hover:text-amber-200"
                   onClick={() => handleSortClick('revenue')}
@@ -373,6 +374,9 @@ export default function AppointmentSheets() {
                     </td>
                     <td className="px-4 py-3 text-white">
                       {appt.client_last_name || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-[#d4d4d4]">
+                      {appt.service_type || '—'}
                     </td>
                     <td className="px-4 py-3 text-green-300 font-medium">
                       {formatCurrency(appt.revenue)}
