@@ -155,7 +155,7 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
     });
   };
 
-  return (
+return (
     <AnimatePresence>
       {isOpen && (
         <motion.div

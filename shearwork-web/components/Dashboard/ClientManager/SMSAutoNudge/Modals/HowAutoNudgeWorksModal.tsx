@@ -14,7 +14,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 overflow-y-auto min-h-screen"
           onClick={onClose}
         >
           <motion.div
@@ -22,7 +22,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden"
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 flex-shrink-0">
