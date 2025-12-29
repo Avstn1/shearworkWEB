@@ -898,72 +898,77 @@ export default function SMSAutoNudge() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-              <MessageSquare className="w-6 h-6 text-sky-300" />
+      <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 sm:mb-4 gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-white mb-2 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 sm:w-6 sm:h-6 text-sky-300" />
               SMS Auto Nudge
             </h2>
             
-            <div className="flex items-center gap-2 mt-3">
+            <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3">
               <button
                 onClick={() => setShowAutoNudgeHistoryModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
               >
-                <Clock className="w-4 h-4" />
-                Auto Nudge History
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Auto Nudge History</span>
+                <span className="xs:hidden">History</span>
               </button>
 
               <button
                 onClick={() => setShowHowAutoNudgeWorksModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
               >
-                <Info className="w-4 h-4" />
-                How does this work?
+                <Info className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">How does this work?</span>
+                <span className="xs:hidden">How it works</span>
               </button>
             </div>
             
-            <p className="text-[#bdbdbd] text-sm mt-3">
+            <p className="text-[#bdbdbd] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
               Manage automated monthly marketing messages for each client type
             </p>
           </div>
           
-          <div className="flex flex-col items-end gap-3">
-            {/* Credits and Test Messages Display */}
-            <div className="flex flex-col gap-2">
-              <div className="px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center gap-2">
-                <Coins className="w-4 h-4 text-lime-300" />
-                <span className="text-sm font-semibold text-lime-300">
-                  {availableCredits.toLocaleString()} credits available
+          <div className="flex flex-col items-stretch lg:items-end gap-2 sm:gap-3">
+            {/* Credits, Tests, and Action Buttons - All in one row on mobile */}
+            <div className="grid grid-cols-4 lg:grid-cols-2 gap-1.5 sm:gap-2">
+              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1">
+                <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-lime-300 flex-shrink-0" />
+                <span className="text-[10px] sm:text-sm font-semibold text-lime-300 truncate">
+                  <span className="hidden sm:inline">{availableCredits.toLocaleString()} credits available</span>
+                  <span className="sm:hidden">{availableCredits > 999 ? `${(availableCredits / 1000).toFixed(1)}k` : availableCredits}</span>
                 </span>
               </div>
               
-              <div className={`px-3 py-1.5 rounded-full flex items-center gap-2 ${
+              <div className={`px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 ${
                 testMessagesUsed >= 10 
                   ? 'bg-rose-300/10 border border-rose-300/20'
                   : 'bg-sky-300/10 border border-sky-300/20'
               }`}>
-                <Send className={`w-4 h-4 ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`} />
-                <span className={`text-sm font-semibold ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`}>
-                  {10 - testMessagesUsed} free tests left today
+                <Send className={`w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`} />
+                <span className={`text-[10px] sm:text-sm font-semibold truncate ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`}>
+                  <span className="hidden sm:inline">{10 - testMessagesUsed} free tests left today</span>
+                  <span className="sm:hidden">{10 - testMessagesUsed}</span>
                 </span>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
               <button
                 onClick={draftAllActivatedMessages}
                 disabled={isDraftingAll || messages.filter(m => m.validationStatus === 'ACCEPTED' && m.enabled).length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full font-semibold text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-1.5 sm:px-4 sm:py-2 bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full font-semibold text-[10px] sm:text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 lg:col-span-2"
               >
                 {isDraftingAll ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Drafting...
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                    <span className="hidden sm:inline">Drafting...</span>
                   </>
                 ) : (
-                  <>Draft All</>
+                  <>
+                    <span className="hidden sm:inline">Draft All</span>
+                    <span className="sm:hidden">Draft</span>
+                  </>
                 )}
               </button>
               
@@ -973,52 +978,55 @@ export default function SMSAutoNudge() {
                   setShowPreview(true);
                 }}
                 disabled={loadingPreview}
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-1.5 sm:px-4 sm:py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-[10px] sm:text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 lg:col-span-2"
               >
                 {loadingPreview ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                 ) : (
-                  <Users className="w-4 h-4" />
+                  <>
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Client Preview</span>
+                    <span className="sm:hidden">Preview</span>
+                  </>
                 )}
-                Client Preview
               </button>
             </div>
           </div>
         </div>
         
         {/* Schedule Info & Button */}
-        <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-2.5 sm:p-4 bg-white/5 border border-white/10 rounded-xl">
           {hasSchedule ? (
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-lime-300" />
-              <div>
-                <p className="text-sm font-semibold text-white">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0">
+              <Calendar className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-lime-300 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] sm:text-sm font-semibold text-white truncate sm:whitespace-normal">
                   Monthly on day {scheduleDayOfMonth} at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
-                  {scheduleDayOfMonth > 28 && <span className="text-amber-300 ml-2">*</span>}
+                  {scheduleDayOfMonth > 28 && <span className="text-amber-300 ml-1 sm:ml-2">*</span>}
                 </p>
                 {scheduleDayOfMonth > 28 && (
-                  <p className="text-xs text-amber-300 mt-0.5">
+                  <p className="text-[9px] sm:text-xs text-amber-300 mt-0.5 hidden sm:block">
                     * Adjusts to last day in shorter months
                   </p>
                 )}
-                <p className="text-xs text-[#bdbdbd]">
+                <p className="text-[9px] sm:text-xs text-[#bdbdbd] hidden sm:block">
                   {scheduleStartDate && `Starting ${new Date(scheduleStartDate).toLocaleDateString()}`}
                   {scheduleEndDate && ` • Ending ${new Date(scheduleEndDate).toLocaleDateString()}`}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-amber-300" />
-              <p className="text-sm text-amber-300">No schedule set - required to save messages</p>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Clock className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-300 flex-shrink-0" />
+              <p className="text-[10px] sm:text-sm text-amber-300">No schedule set</p>
             </div>
           )}
           <button
             onClick={() => setShowScheduleModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-xl font-semibold text-sm hover:bg-purple-500/30 transition-all duration-300"
+            className="flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-xl font-semibold text-[10px] sm:text-sm hover:bg-purple-500/30 transition-all duration-300 whitespace-nowrap"
           >
-            <Clock className="w-4 h-4" />
-            {hasSchedule ? 'Edit Schedule' : 'Set Schedule'}
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+            {hasSchedule ? 'Edit' : 'Set Schedule'}
           </button>
         </div>
       </div>
@@ -1257,12 +1265,12 @@ export default function SMSAutoNudge() {
               className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full"
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
                     <AlertCircle className="w-5 h-5 text-amber-300" />
                   </div>
-                  <h3 className="text-xl font-bold text-white">Deactivate Message?</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-white">Deactivate Message?</h3>
                 </div>
                 <button
                   onClick={() => {
@@ -1276,23 +1284,23 @@ export default function SMSAutoNudge() {
               </div>
 
               {/* Modal Body */}
-              <div className="p-6">
-                <p className="text-[#bdbdbd] mb-4">
+              <div className="p-4 sm:p-6">
+                <p className="text-sm sm:text-base text-[#bdbdbd] mb-4">
                   This message will be converted to a <span className="text-amber-300 font-semibold">draft</span> and will <span className="text-amber-300 font-semibold">no longer be sent out</span> on the scheduled date.
                 </p>
-                <p className="text-[#bdbdbd]">
+                <p className="text-sm sm:text-base text-[#bdbdbd]">
                   You can reactivate it later by editing and re-activating the message.
                 </p>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10">
+              <div className="flex items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-white/10">
                 <button
                   onClick={() => {
                     setShowDeactivateModal(false);
                     setPendingDeactivateMessageId(null);
                   }}
-                  className="px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl font-semibold hover:bg-white/10 transition-all"
+                  className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl text-sm sm:text-base font-semibold hover:bg-white/10 transition-all"
                 >
                   Cancel
                 </button>
@@ -1304,7 +1312,7 @@ export default function SMSAutoNudge() {
                       await handleDeactivate(pendingDeactivateMessageId);
                     }
                   }}
-                  className="px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl font-semibold hover:bg-amber-300/30 transition-all"
+                  className="px-3 sm:px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-amber-300/30 transition-all"
                 >
                   Deactivate Message
                 </button>
@@ -1317,10 +1325,10 @@ export default function SMSAutoNudge() {
       {/* Messages List */}
       <div className="space-y-4">
         {messages.length === 0 ? (
-          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-12 text-center">
-            <MessageSquare className="w-16 h-16 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
-            <p className="text-[#bdbdbd] text-lg mb-2">No messages configured</p>
-            <p className="text-[#bdbdbd]/70 text-sm">
+          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-8 sm:p-12 text-center">
+            <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
+            <p className="text-[#bdbdbd] text-base sm:text-lg mb-2">No messages configured</p>
+            <p className="text-[#bdbdbd]/70 text-xs sm:text-sm">
               Messages will be created automatically on first load
             </p>
           </div>

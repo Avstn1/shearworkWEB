@@ -26,55 +26,60 @@ export default function ClientManagerPage() {
   return (
     <OnboardingGuard>
       <Navbar />
-      <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+      <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
         {/* Header */}
         <motion.div
           variants={fadeInUp}
           initial="hidden"
           animate="visible"
-          className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+          className="mb-4 sm:mb-6 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 sm:gap-4"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
+          {/* Left side: Title and View Switcher */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+            {/* Title */}
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent animate-gradient">
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent animate-gradient">
                 Client Manager
               </h1>
-              <p className="text-xs text-[#bdbdbd]">
+              <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-0.5">
                 Manage your clients, appointments, and communications
               </p>
             </div>
 
             {/* View Switcher */}
-            <div className="flex gap-1 w-full sm:w-auto bg-[#1a1a1a] rounded-full p-1">
+            <div className="flex gap-1 bg-[#1a1a1a] rounded-full p-1">
               <button
                 onClick={() => setActiveView('sheets')}
-                className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sheets'
                     ? 'bg-lime-300 text-black shadow-[0_0_8px_#c4ff85]'
                     : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
                 }`}
               >
-                Client Sheets
+                <span className="hidden xs:inline">Client Sheets</span>
+                <span className="xs:hidden">Sheets</span>
               </button>
               <button
                 onClick={() => setActiveView('sms')}
-                className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
                     : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
                 }`}
               >
-                SMS Auto Nudge
+                <span className="hidden xs:inline">SMS Auto Nudge</span>
+                <span className="xs:hidden">Auto Nudge</span>
               </button>
               <button
                 onClick={() => setActiveView('sms-campaign')}
-                className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms-campaign'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
                     : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
                 }`}
               >
-                SMS Campaigns
+                <span className="hidden xs:inline">SMS Campaigns</span>
+                <span className="xs:hidden">Campaigns</span>
               </button>
             </div>
           </div>
@@ -82,10 +87,10 @@ export default function ClientManagerPage() {
           {/* FAQ Button */}
           <button
             onClick={() => setShowFAQ(true)}
-            className="flex items-center gap-2 px-5 py-3 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 whitespace-nowrap shadow-lg hover:shadow-emerald-500/30 hover:scale-105"
+            className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 active:scale-95 sm:hover:scale-105 whitespace-nowrap"
           >
             <svg 
-              className="w-4 h-4" 
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -97,7 +102,8 @@ export default function ClientManagerPage() {
                 d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
               />
             </svg>
-            Frequently Asked Questions
+            <span className="hidden xs:inline">Frequently Asked Questions</span>
+            <span className="xs:hidden">Frequently Asked Questions</span>
           </button>
         </motion.div>
 
@@ -112,7 +118,7 @@ export default function ClientManagerPage() {
             className="flex-1"
           >
             {activeView === 'sheets' && (
-              <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 h-full">
+              <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 h-full">
                 <UnderConstructionWrapper>
                   <ClientSheets />
                 </UnderConstructionWrapper>
