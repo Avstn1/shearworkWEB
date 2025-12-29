@@ -90,7 +90,7 @@ export default function FeatureMakerPage() {
   // SimpleMDE editor options
   const mdeOptions = useMemo(() => ({
     spellChecker: false,
-    toolbar: ['bold', 'italic', 'heading', '|', 'unordered-list', 'ordered-list', '|', 'link', 'preview'],
+    toolbar: ['bold', 'italic', 'heading', '|', 'unordered-list', 'ordered-list', '|', 'link', 'preview'] as any,
     placeholder: 'Detailed explanation of the feature...',
     minHeight: '200px',
     status: false,

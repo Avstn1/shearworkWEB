@@ -428,10 +428,12 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                         strong: ({node, ...props}) => <strong className="font-semibold text-[#F1F5E9]" {...props} />,
                                         em: ({node, ...props}) => <em className="italic text-gray-200" {...props} />,
                                         a: ({node, ...props}) => <a className="text-lime-400 hover:underline" {...props} />,
-                                        code: ({node, inline, ...props}) => 
-                                          inline 
+                                        code: ({node, ...props}) => {
+                                          const isInline = !props.className
+                                          return isInline 
                                             ? <code className="text-lime-300 bg-[#2a2a2a] px-1.5 py-0.5 rounded text-[11px] font-mono" {...props} />
-                                            : <code className="block text-lime-300 bg-[#2a2a2a] p-3 rounded-lg text-[11px] font-mono my-2 overflow-x-auto" {...props} />,
+                                            : <code className="block text-lime-300 bg-[#2a2a2a] p-3 rounded-lg text-[11px] font-mono my-2 overflow-x-auto" {...props} />
+                                        },
                                       }}
                                     >
                                       {feature.description}
