@@ -234,54 +234,64 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
-          className="flex gap-4 justify-center"
+          className="flex flex-col items-center gap-4"
         >
-          <a
-            href="/signup"
-            className="font-semibold px-8 py-3 rounded-full shadow-lg hover:scale-105 transition-transform duration-200"
-            style={{ 
-              backgroundColor: COLORS.green,
-              color: '#000000',
-            }}
-          >
-            Get Started
-          </a>
-          <button
-            onClick={() => {
-              const container = document.querySelector('[data-scroll-container]') as HTMLElement
-              if (container) {
-                const sectionWidth = window.innerWidth
-                container.scrollTo({
-                  left: sectionWidth,
-                  behavior: 'smooth'
-                })
-              } else {
-                const scrollContainer = document.querySelector('.overflow-x-scroll') as HTMLElement
-                if (scrollContainer) {
-                  scrollContainer.scrollTo({
-                    left: window.innerWidth,
+          <div className="flex gap-4 justify-center">
+            <a
+              href="/signup"
+              className="font-semibold px-8 py-3 rounded-full shadow-lg hover:scale-105 transition-transform duration-200"
+              style={{ 
+                backgroundColor: COLORS.green,
+                color: '#000000',
+              }}
+            >
+              Get Started
+            </a>
+            <button
+              onClick={() => {
+                const container = document.querySelector('[data-scroll-container]') as HTMLElement
+                if (container) {
+                  const sectionWidth = window.innerWidth
+                  container.scrollTo({
+                    left: sectionWidth,
                     behavior: 'smooth'
                   })
+                } else {
+                  const scrollContainer = document.querySelector('.overflow-x-scroll') as HTMLElement
+                  if (scrollContainer) {
+                    scrollContainer.scrollTo({
+                      left: window.innerWidth,
+                      behavior: 'smooth'
+                    })
+                  }
                 }
-              }
-            }}
-            className="px-8 py-3 rounded-full border transition-all duration-200 hover:scale-105 cursor-pointer"
-            style={{ 
-              borderColor: COLORS.green,
-              color: COLORS.green,
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.green
-              e.currentTarget.style.color = '#000000'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = COLORS.green
-            }}
+              }}
+              className="px-8 py-3 rounded-full border transition-all duration-200 hover:scale-105 cursor-pointer"
+              style={{ 
+                borderColor: COLORS.green,
+                color: COLORS.green,
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.green
+                e.currentTarget.style.color = '#000000'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = COLORS.green
+              }}
+            >
+              Learn More
+            </button>
+          </div>
+          <a 
+            href="/login" 
+            className="text-sm hover:underline transition-all"
+            style={{ color: '#a0a0a0' }}
           >
-            Learn More
-          </button>
+            Already have an account?{' '}
+            <span className="font-semibold" style={{ color: COLORS.green }}>Sign in</span>
+          </a>
         </motion.div>
       </div>
     </section>

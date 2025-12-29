@@ -414,19 +414,26 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                   </div>
 
                                   {/* Description */}
-                                  <div className="text-xs text-gray-300 leading-relaxed prose prose-invert prose-sm max-w-none
-                                    prose-p:my-2 prose-p:leading-relaxed
-                                    prose-headings:text-[#F1F5E9] prose-headings:font-bold prose-headings:mt-4 prose-headings:mb-2
-                                    prose-h1:text-base prose-h2:text-sm prose-h3:text-xs
-                                    prose-strong:text-[#F1F5E9] prose-strong:font-bold
-                                    prose-em:text-gray-200 prose-em:italic
-                                    prose-a:text-lime-400 prose-a:no-underline hover:prose-a:underline
-                                    prose-ul:my-2 prose-ul:list-disc prose-ul:pl-5
-                                    prose-ol:my-2 prose-ol:list-decimal prose-ol:pl-5
-                                    prose-li:my-1
-                                    prose-code:text-lime-300 prose-code:bg-[#2a2a2a] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[10px]
-                                    prose-pre:bg-[#2a2a2a] prose-pre:p-3 prose-pre:rounded-lg prose-pre:overflow-x-auto">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  <div className="text-xs leading-relaxed">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkGfm]}
+                                      components={{
+                                        h1: ({node, ...props}) => <h1 className="text-lg font-bold text-[#F1F5E9] mt-4 mb-2 first:mt-0" {...props} />,
+                                        h2: ({node, ...props}) => <h2 className="text-base font-bold text-[#F1F5E9] mt-3 mb-2 first:mt-0" {...props} />,
+                                        h3: ({node, ...props}) => <h3 className="text-sm font-bold text-[#F1F5E9] mt-3 mb-1.5 first:mt-0" {...props} />,
+                                        ul: ({node, ...props}) => <ul className="list-disc pl-4 my-2 space-y-1" {...props} />,
+                                        ol: ({node, ...props}) => <ol className="list-decimal pl-4 my-2 space-y-1" {...props} />,
+                                        li: ({node, ...props}) => <li className="text-gray-300 leading-relaxed" {...props} />,
+                                        p: ({node, ...props}) => <p className="my-2 text-gray-300 leading-relaxed" {...props} />,
+                                        strong: ({node, ...props}) => <strong className="font-semibold text-[#F1F5E9]" {...props} />,
+                                        em: ({node, ...props}) => <em className="italic text-gray-200" {...props} />,
+                                        a: ({node, ...props}) => <a className="text-lime-400 hover:underline" {...props} />,
+                                        code: ({node, inline, ...props}) => 
+                                          inline 
+                                            ? <code className="text-lime-300 bg-[#2a2a2a] px-1.5 py-0.5 rounded text-[11px] font-mono" {...props} />
+                                            : <code className="block text-lime-300 bg-[#2a2a2a] p-3 rounded-lg text-[11px] font-mono my-2 overflow-x-auto" {...props} />,
+                                      }}
+                                    >
                                       {feature.description}
                                     </ReactMarkdown>
                                   </div>
