@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
 import { Megaphone, Sparkles, Eye, Edit, X, AlertTriangle, Monitor, Trash2, EyeOff, CheckCircle } from 'lucide-react'
@@ -10,7 +10,12 @@ import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 import VersionConflictModal from '@/components/AdminComponents/AdminFeatureMaker/Modals/VersionConflictModal'
 import PublishConfirmationModal from '@/components/AdminComponents/AdminFeatureMaker/Modals/PublishConfirmationModal'
 import VersionIncrementWarningModal from '@/components/AdminComponents/AdminFeatureMaker/Modals/VersionIncrementWarningModal'
+import UnsavedChangesModal from '@/components/AdminComponents/AdminFeatureMaker/Modals/UnsavedChangesModal'
 import { motion, AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
+import 'easymde/dist/easymde.min.css'
+
+const SimpleMDE = dynamic(() => import('react-simplemde-editor'), { ssr: false })
 
 interface FeatureUpdate {
   id: string
@@ -67,6 +72,8 @@ export default function FeatureMakerPage() {
     currentStatus: boolean
   } | null>(null)
   
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false)
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -79,6 +86,20 @@ export default function FeatureMakerPage() {
     is_published: false,
     admin_view_excluded: false,
   })
+
+  // SimpleMDE editor options
+  const mdeOptions = useMemo(() => ({
+    spellChecker: false,
+    toolbar: ['bold', 'italic', 'heading', '|', 'unordered-list', 'ordered-list', '|', 'link', 'preview'] as any,
+    placeholder: 'Detailed explanation of the feature...',
+    minHeight: '200px',
+    status: false,
+    previewRender: (text: string) => {
+      // This ensures markdown is properly parsed in preview
+      const marked = require('marked');
+      return marked.parse(text);
+    },
+  }), [])
 
   // Version validation helpers
   const parseVersion = (version: string): number[] | null => {
@@ -515,6 +536,7 @@ export default function FeatureMakerPage() {
 
         if (error) throw error
         toast.success('✅ Feature update updated successfully!')
+        fetchFeatures()
       } else {
         // Create new feature
         const { error } = await supabase
@@ -526,10 +548,9 @@ export default function FeatureMakerPage() {
 
         if (error) throw error
         toast.success('✅ Feature update created successfully!')
+        handleCancelEdit()
+        fetchFeatures()
       }
-
-      handleCancelEdit()
-      fetchFeatures()
     } catch (error) {
       console.error('Error saving feature update:', error)
       toast.error('Failed to save feature update')
@@ -603,6 +624,20 @@ export default function FeatureMakerPage() {
                     Major Updates
                   </div>
                   <button
+                    onClick={() => {
+                      const hasUnsavedChanges = formData.title || formData.description || formData.version
+                      if (hasUnsavedChanges) {
+                        setShowUnsavedWarning(true)
+                      } else {
+                        handleCancelEdit()
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#4a7c59]/40 hover:bg-[#4a7c59]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Create Feature
+                  </button>
+                  <button
                     onClick={() => setShowPreviewModal(true)}
                     className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#2a2a2a] text-white/70 hover:text-white/90 hover:bg-[#3a3a3a] transition-all duration-300 flex items-center gap-2"
                   >
@@ -622,6 +657,20 @@ export default function FeatureMakerPage() {
                     <Eye className="w-4 h-4" />
                     Minor Updates
                   </div>
+                  <button
+                    onClick={() => {
+                      const hasUnsavedChanges = formData.title || formData.description || formData.version
+                      if (hasUnsavedChanges) {
+                        setShowUnsavedWarning(true)
+                      } else {
+                        handleCancelEdit()
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#4a7c59]/40 hover:bg-[#4a7c59]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Create Feature
+                  </button>
                   <button
                     onClick={() => setShowPreviewModal(true)}
                     className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#2a2a2a] text-white/70 hover:text-white/90 hover:bg-[#3a3a3a] transition-all duration-300 flex items-center gap-2"
@@ -870,17 +919,17 @@ export default function FeatureMakerPage() {
                 </div>
 
                 {/* Description */}
-                <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-h-0 flex-shrink-0">
                   <label className="block text-xs font-semibold mb-1.5 text-[#F1F5E9] flex-shrink-0">
                     Description *
                   </label>
-                  <textarea
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] text-[#F1F5E9] text-sm focus:outline-none focus:ring-1 focus:ring-[#6b8e4e]/50 focus:border-[#6b8e4e] resize-none flex-1"
-                    placeholder="Detailed explanation of the feature..."
-                  />
+                  <div className="flex-1 overflow-hidden">
+                    <SimpleMDE
+                      value={formData.description}
+                      onChange={(value) => setFormData({ ...formData, description: value })}
+                      options={mdeOptions}
+                    />
+                  </div>
                 </div>
 
                 {/* Row 2: Image URL & Video URL */}
@@ -979,6 +1028,13 @@ export default function FeatureMakerPage() {
             currentStatus={publishConfirmation.currentStatus}
           />
         )}
+
+        {/* Unsaved Changes Modal */}
+        <UnsavedChangesModal
+          isOpen={showUnsavedWarning}
+          onClose={() => setShowUnsavedWarning(false)}
+          onConfirm={handleCancelEdit}
+        />
 
       </div>
     </>

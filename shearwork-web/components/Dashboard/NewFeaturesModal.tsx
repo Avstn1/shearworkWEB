@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Bell, ChevronDown, ChevronUp, Eye, Shield } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface FeatureUpdate {
   id: string
@@ -412,9 +414,31 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                   </div>
 
                                   {/* Description */}
-                                  <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
-                                    {feature.description}
-                                  </p>
+                                  <div className="text-xs leading-relaxed">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkGfm]}
+                                      components={{
+                                        h1: ({node, ...props}) => <h1 className="text-lg font-bold text-[#F1F5E9] mt-4 mb-2 first:mt-0" {...props} />,
+                                        h2: ({node, ...props}) => <h2 className="text-base font-bold text-[#F1F5E9] mt-3 mb-2 first:mt-0" {...props} />,
+                                        h3: ({node, ...props}) => <h3 className="text-sm font-bold text-[#F1F5E9] mt-3 mb-1.5 first:mt-0" {...props} />,
+                                        ul: ({node, ...props}) => <ul className="list-disc pl-4 my-2 space-y-1" {...props} />,
+                                        ol: ({node, ...props}) => <ol className="list-decimal pl-4 my-2 space-y-1" {...props} />,
+                                        li: ({node, ...props}) => <li className="text-gray-300 leading-relaxed" {...props} />,
+                                        p: ({node, ...props}) => <p className="my-2 text-gray-300 leading-relaxed" {...props} />,
+                                        strong: ({node, ...props}) => <strong className="font-semibold text-[#F1F5E9]" {...props} />,
+                                        em: ({node, ...props}) => <em className="italic text-gray-200" {...props} />,
+                                        a: ({node, ...props}) => <a className="text-lime-400 hover:underline" {...props} />,
+                                        code: ({node, ...props}) => {
+                                          const isInline = !props.className
+                                          return isInline 
+                                            ? <code className="text-lime-300 bg-[#2a2a2a] px-1.5 py-0.5 rounded text-[11px] font-mono" {...props} />
+                                            : <code className="block text-lime-300 bg-[#2a2a2a] p-3 rounded-lg text-[11px] font-mono my-2 overflow-x-auto" {...props} />
+                                        },
+                                      }}
+                                    >
+                                      {feature.description}
+                                    </ReactMarkdown>
+                                  </div>
 
                                   {/* Media */}
                                   {(feature.image_url || feature.video_url) && (
