@@ -982,9 +982,22 @@ export async function GET(request: Request) {
   // BATCH OPERATIONS after loop
   // 1. Batch upsert appointments (idempotent)
   if (appointmentsToUpsert.length > 0) {
-    await supabase
+    console.log('=== UPSERTING APPOINTMENTS ===')
+    console.log('Appointments to upsert:', appointmentsToUpsert.length)
+    console.log('Sample appointment:', JSON.stringify(appointmentsToUpsert[0], null, 2))
+    
+    const { data, error } = await supabase
       .from('acuity_appointments')
       .upsert(appointmentsToUpsert, { onConflict: 'user_id,acuity_appointment_id' })
+      .select()
+    
+    if (error) {
+      console.error('APPOINTMENT UPSERT ERROR:', error)
+    } else {
+      console.log('Appointments upserted successfully:', data?.length || 0)
+    }
+  } else {
+    console.log('No appointments to upsert')
   }
 
   // 2. Calculate totals from acuity_appointments
