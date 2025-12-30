@@ -47,10 +47,13 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
       new_clients: w.new_clients,
       returning_clients: w.returning_clients,
       expenses: w.expenses, // All expenses are 0 in the database
-      tips: w.tips
     })),
     services_percentage: dataset.services_percentage,
+    tips: dataset.summary.tips
   };
+
+  console.log('Tips: ' + dataset.summary.tips)
+
 
   const formatDate = (d: string) =>
     new Date(d).toISOString().split("T")[0];
@@ -58,7 +61,7 @@ export const weeklyComparisonRentalPrompt = (dataset: any, userName: string, mon
   return `
 IMPORTANT INSTRUCTIONS: You are a professional analytics assistant creating a weekly comparison performance report for a barbershop professional on booth rental named ${userName}.
 Use HTML tags for all formatting: <strong>, <em>, <ul>/<li>, <h1>-<h3>. Do NOT use Markdown (** or *).
-Compute totals and averages exactly. Report will display in TinyMCE. DISPLAY EVERYTHING
+Compute totals and averages exactly. Report will display in TinyMCE. DISPLAY EVERYTHING. DO NOT REMOVE ANY KIND OF DATA.
 
 YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
 
@@ -91,16 +94,16 @@ ${JSON.stringify(minimalDataset, null, 2)}
     </tr>
     <tr>
       <td>Tips</td>
-      ${minimalDataset.weekly_rows
-        .map((w:any) => `<td>$${(w.tips || 0).toFixed(2)}</td>`)
+      ${minimalDataset.tips
+        .map((tipAmount: number) => `<td>$${(tipAmount || 0).toFixed(2)}</td>`)
         .join('')}
       ${
-        minimalDataset.weekly_rows.length > 1
+        minimalDataset.tips.length > 1
           ? (() => {
-              const cur = minimalDataset.weekly_rows.at(-1);
-              const prev = minimalDataset.weekly_rows.at(-2);
-              const delta = (cur.tips || 0) - (prev.tips || 0);
-              const pct = ((delta / (prev.tips || 1)) * 100).toFixed(1);
+              const cur = minimalDataset.tips.at(-1);
+              const prev = minimalDataset.tips.at(-2);
+              const delta = (cur || 0) - (prev || 0);
+              const pct = ((delta / (prev || 1)) * 100).toFixed(1);
               return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
             })()
           : '<td>--</td><td>--</td>'
