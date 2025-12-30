@@ -15,7 +15,7 @@ import SignOutButton from '@/components/SignOutButton'
 import YearDropdown from '@/components/YearDropdown'
 import MonthDropdown from '@/components/MonthDropdown'
 import DailySelector from '@/components/Dashboard/DailySelector'
-import TipsDropdown from '@/components/TipsDropdown'
+import ManageTipsButton from '@/components/ManageTipsButton'
 
 import WeeklyReports from '@/components/Dashboard/WeeklyReports'
 import MonthlyReports from '@/components/Dashboard/MonthlyReports'
@@ -240,7 +240,7 @@ export default function DashboardPage() {
             Profit/Loss
           </button>
         </div>
-        <TipsDropdown barberId={user.id} onRefresh={() => setRefreshKey(prev => prev + 1)}  />
+        <ManageTipsButton />
       </div>
 
       {/* Month + Year Selector */}

@@ -66,29 +66,31 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
     const fetchData = async () => {
       setLoading(true)
       try {
-        const { data: rows, error } = await supabase
-          .from('monthly_data')
-          .select('month, final_revenue')
-          .eq('user_id', userId)
-          .eq('year', year)
+        // Call RPC function to get revenue by month (includes tips)
+        const { data: rows, error } = await supabase.rpc('get_revenue_by_month', {
+          p_user_id: userId,
+          p_year: year,
+        })
 
         if (error) throw error
 
-        // map all months to a fixed order with default 0
+        // Map all months to a fixed order with default 0
         const totals: Record<string, number> = {}
         MONTHS.forEach((m) => (totals[m] = 0))
 
         ;(rows ?? []).forEach((r: any) => {
-          const name = r.month as string
-          const monthName = MONTHS.find((m) => m === name) ?? name
-          totals[monthName] += Number(r.final_revenue) || 0
+          // month_name comes with padding from TO_CHAR, e.g. "January  "
+          const monthName = r.month_name.trim()
+          if (totals[monthName] !== undefined) {
+            totals[monthName] = r.total_revenue || 0
+          }
         })
 
         const visibleMonths = getMonthsForTimeframe(timeframe)
 
         const mapped: MonthData[] = visibleMonths.map((m) => ({
           month: m,
-          total_revenue: totals[m] || 0,
+          total_revenue: Math.round((totals[m] || 0) * 100) / 100,
         }))
 
         setData(mapped)

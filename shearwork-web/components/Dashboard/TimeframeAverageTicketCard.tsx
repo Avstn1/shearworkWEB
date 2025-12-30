@@ -11,16 +11,13 @@ interface TimeframeAverageTicketCardProps {
   timeframe: Timeframe
 }
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
-]
-
-const QUARTER_MONTHS: Record<Exclude<Timeframe, 'year'>, string[]> = {
-  Q1: ['January', 'February', 'March'],
-  Q2: ['April', 'May', 'June'],
-  Q3: ['July', 'August', 'September'],
-  Q4: ['October', 'November', 'December'],
+// Month ranges for quarters
+const QUARTER_MONTHS: Record<Timeframe, { startMonth: number; endMonth: number }> = {
+  year: { startMonth: 1, endMonth: 12 },
+  Q1: { startMonth: 1, endMonth: 3 },
+  Q2: { startMonth: 4, endMonth: 6 },
+  Q3: { startMonth: 7, endMonth: 9 },
+  Q4: { startMonth: 10, endMonth: 12 },
 }
 
 export default function TimeframeAverageTicketCard({
@@ -37,35 +34,19 @@ export default function TimeframeAverageTicketCard({
     const fetchAvgTicket = async () => {
       setLoading(true)
       try {
-        const query = supabase
-          .from('monthly_data')
-          .select('month, avg_ticket')
-          .eq('user_id', userId)
-          .eq('year', year)
+        const { startMonth, endMonth } = QUARTER_MONTHS[timeframe]
 
-        // If a quarter is selected, limit to those months
-        if (timeframe !== 'year') {
-          query.in('month', QUARTER_MONTHS[timeframe])
-        }
+        // Call RPC function to get average ticket (includes tips)
+        const { data, error } = await supabase.rpc('get_yearly_avg_ticket', {
+          p_user_id: userId,
+          p_year: year,
+          p_start_month: startMonth,
+          p_end_month: endMonth,
+        })
 
-        const { data, error } = await query
         if (error) throw error
 
-        const rows = (data ?? []).filter((r: any) => r.avg_ticket !== null)
-
-        if (!rows.length) {
-          setAvgTicket(null)
-          return
-        }
-
-        // Simple average of monthly avg_ticket values in this timeframe
-        const sum = rows.reduce(
-          (acc: number, r: any) => acc + Number(r.avg_ticket),
-          0
-        )
-        const avg = sum / rows.length
-
-        setAvgTicket(avg)
+        setAvgTicket(data || 0)
       } catch (err) {
         console.error('Error fetching timeframe avg_ticket:', err)
         setAvgTicket(null)
