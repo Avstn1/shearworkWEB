@@ -180,9 +180,9 @@ async function getLenientClients(
   const oneWeekAgo = new Date(today);
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   
-  // acuity_clients change for testing
+  // acuity_clients_testing change for testing
   const { data: clients, error } = await supabase
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
