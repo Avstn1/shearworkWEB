@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, X } from 'lucide-react';
+import { useState } from 'react'
 
 interface PreviewClient {
   client_id: string;
@@ -40,6 +41,9 @@ export default function ClientPreviewModal({
   previewClients,
   previewStats,
 }: ClientPreviewModalProps) {
+
+  const [isScrolled, setIsScrolled] = useState(false);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -55,7 +59,7 @@ export default function ClientPreviewModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 flex-shrink-0 bg-[#1a1a1a]">
@@ -79,110 +83,109 @@ export default function ClientPreviewModal({
               </button>
             </div>
 
-            {/* Stats */}
-            {previewStats && (
-              <div className="p-3 sm:p-6 border-b border-white/10 bg-white/5 flex-shrink-0">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Total Selected</p>
-                    <p className="text-lg sm:text-2xl font-bold text-white">{previewStats.total_selected}</p>
+            {/* Clients List - Scrollable (includes stats) */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {/* Stats - Part of scroll content */}
+              {previewStats && (
+                <div className="p-3 sm:p-6 border-b border-white/10 bg-white/5">
+                  {/* Main Stats - Single Row */}
+                  <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-4">
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Total</p>
+                      <p className="text-lg sm:text-2xl font-bold text-white">{previewStats.total_selected}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Score</p>
+                      <p className="text-lg sm:text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Since</p>
+                      <p className="text-lg sm:text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Overdue</p>
+                      <p className="text-lg sm:text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Avg Score</p>
-                    <p className="text-lg sm:text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Avg Days Since</p>
-                    <p className="text-lg sm:text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Avg Overdue</p>
-                    <p className="text-lg sm:text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
+
+                  {/* Legend and Types - Two Columns */}
+                  <div className="pt-3 border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+                    {/* Left Column - Explanations */}
+                    <div className="space-y-1 text-[10px] sm:text-xs text-[#bdbdbd]">
+                      <div className="truncate">
+                        <span className="text-sky-300 font-medium">Score:</span>{" "}
+                        <span className="hidden sm:inline">Higher = more urgent</span>
+                        <span className="sm:hidden">Urgency</span>
+                      </div>
+                      <div className="truncate">
+                        <span className="text-purple-400 font-medium">Since:</span>{" "}
+                        <span className="hidden sm:inline">Days since last appointment</span>
+                        <span className="sm:hidden">Since visit</span>
+                      </div>
+                      <div className="truncate">
+                        <span className="text-orange-400 font-medium">Overdue:</span>{" "}
+                        <span className="hidden sm:inline">How late vs typical pattern</span>
+                        <span className="sm:hidden">How late</span>
+                      </div>
+                    </div>
+
+                    {/* Right Column - Client Types */}
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 content-start">
+                      {previewStats.breakdown.consistent > 0 && (
+                        <span className="bg-green-500/10 text-green-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                          <span className="font-medium hidden sm:inline">Consistent:</span>
+                          <span className="font-medium sm:hidden">Cons:</span>
+                          <span className="hidden sm:inline">Weekly</span>
+                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-green-500/20">
+                            {previewStats.breakdown.consistent}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown["semi-consistent"] > 0 && (
+                        <span className="bg-blue-500/10 text-blue-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                          <span className="font-medium hidden sm:inline">Semi:</span>
+                          <span className="font-medium sm:hidden">Semi:</span>
+                          <span className="hidden sm:inline">2-3w</span>
+                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-blue-500/20">
+                            {previewStats.breakdown["semi-consistent"]}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown["easy-going"] > 0 && (
+                        <span className="bg-yellow-500/10 text-yellow-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                          <span className="font-medium hidden sm:inline">Easy:</span>
+                          <span className="font-medium sm:hidden">Easy:</span>
+                          <span className="hidden sm:inline">1-2mo</span>
+                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-yellow-500/20">
+                            {previewStats.breakdown["easy-going"]}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown.rare > 0 && (
+                        <span className="bg-red-500/10 text-red-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                          <span className="font-medium">Rare:</span>
+                          <span className="hidden sm:inline">2+mo</span>
+                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-red-500/20">
+                            {previewStats.breakdown.rare}
+                          </span>
+                        </span>
+                      )}
+                      {previewStats.breakdown.new > 0 && (
+                        <span className="bg-gray-500/10 text-gray-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
+                          <span className="font-medium">New:</span>
+                          <span className="hidden sm:inline">First</span>
+                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-gray-500/20">
+                            {previewStats.breakdown.new}
+                          </span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Legend Section */}
-                <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/5 space-y-1.5 text-[10px] sm:text-xs text-[#bdbdbd]">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                    <div className="truncate">
-                      <span className="text-sky-300 font-medium">Score:</span>{" "}
-                      <span className="hidden sm:inline">Higher = client needs message more urgently</span>
-                      <span className="sm:hidden">Urgency level</span>
-                    </div>
-                    <div className="truncate">
-                      <span className="text-purple-400 font-medium">
-                        Days Since:
-                      </span>{" "}
-                      <span className="hidden sm:inline">Days since last appointment</span>
-                      <span className="sm:hidden">Since visit</span>
-                    </div>
-                    <div className="truncate">
-                      <span className="text-orange-400 font-medium">
-                        Days Overdue:
-                      </span>{" "}
-                      <span className="hidden sm:inline">How late based on their typical pattern</span>
-                      <span className="sm:hidden">How late</span>
-                    </div>
-                  </div>
-
-                  {/* Client Types Legend */}
-                  <div className="flex flex-wrap gap-1.5 sm:gap-3 pt-1.5 sm:pt-2">
-                    {previewStats.breakdown.consistent > 0 && (
-                      <span className="bg-green-500/10 text-green-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                        <span className="font-medium hidden sm:inline">Consistent:</span>
-                        <span className="font-medium sm:hidden">Cons:</span>
-                        <span className="hidden sm:inline">Weekly</span>
-                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-green-500/20">
-                          {previewStats.breakdown.consistent}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown["semi-consistent"] > 0 && (
-                      <span className="bg-blue-500/10 text-blue-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                        <span className="font-medium hidden sm:inline">Semi-consistent:</span>
-                        <span className="font-medium sm:hidden">Semi:</span>
-                        <span className="hidden sm:inline">Every 2-3 weeks</span>
-                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-blue-500/20">
-                          {previewStats.breakdown["semi-consistent"]}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown["easy-going"] > 0 && (
-                      <span className="bg-yellow-500/10 text-yellow-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                        <span className="font-medium hidden sm:inline">Easy-going:</span>
-                        <span className="font-medium sm:hidden">Easy:</span>
-                        <span className="hidden sm:inline">Every 1-2 months</span>
-                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-yellow-500/20">
-                          {previewStats.breakdown["easy-going"]}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown.rare > 0 && (
-                      <span className="bg-red-500/10 text-red-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                        <span className="font-medium">Rare:</span>
-                        <span className="hidden sm:inline">Every 2+ months</span>
-                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-red-500/20">
-                          {previewStats.breakdown.rare}
-                        </span>
-                      </span>
-                    )}
-                    {previewStats.breakdown.new > 0 && (
-                      <span className="bg-gray-500/10 text-gray-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                        <span className="font-medium">New:</span>
-                        <span className="hidden sm:inline">First visit</span>
-                        <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-gray-500/20">
-                          {previewStats.breakdown.new}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Clients List - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
-              <div className="space-y-2">
+              {/* Client Cards */}
+              <div className="p-3 sm:p-6 space-y-2">
                 {previewClients.map((client) => (
                   <div
                     key={client.client_id}
@@ -225,3 +228,4 @@ export default function ClientPreviewModal({
     </AnimatePresence>
   );
 }
+

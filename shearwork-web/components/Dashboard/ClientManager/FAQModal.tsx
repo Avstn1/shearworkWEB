@@ -451,7 +451,7 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
           >
-            <div className="bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full h-[75vh] sm:h-[85vh] max-w-4xl flex flex-col overflow-hidden">
+            <div className="bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full h-[75vh] sm:h-[85vh] max-w-4xl flex flex-col overflow-hidden mb-16 sm:mb-0">
               {/* Header */}
               <div className="bg-gradient-to-r from-slate-700/30 to-emerald-900/30 border-b border-white/10 p-3 sm:p-6 flex items-center justify-between flex-shrink-0">
                 <div className="min-w-0 flex-1 pr-2">

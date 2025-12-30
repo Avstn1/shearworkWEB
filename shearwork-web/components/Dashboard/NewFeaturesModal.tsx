@@ -254,7 +254,7 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-[#55694b]/50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden ${
+        className={`bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-[#55694b]/50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden mb-16 sm:mb-0 ${
           !userId ? 'max-w-4xl h-[75vh]' : 'max-w-5xl h-[85vh]'
         }`}
       >
