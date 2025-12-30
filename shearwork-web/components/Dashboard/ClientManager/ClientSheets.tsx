@@ -148,7 +148,9 @@ export default function ClientSheets() {
 
   const formatDate = (d: string | null | undefined) => {
     if (!d) return '—';
-    const dateObj = new Date(d);
+    const [year, month, day] = d.split('-').map(Number);
+    if (!year || !month || !day) return '—';
+    const dateObj = new Date(year, month - 1, day);
     if (Number.isNaN(dateObj.getTime())) return '—';
     return dateObj.toLocaleDateString(undefined, {
       year: 'numeric',

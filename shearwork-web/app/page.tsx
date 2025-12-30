@@ -83,22 +83,6 @@ export default function HorizontalLandingPage() {
   return (
     <>
       <Navbar/>
-      
-      {/* Section indicators at bottom */}
-      {/* <div className="fixed bottom-15 left-1/2 -translate-x-1/2 z-50 flex gap-3">
-        {Array.from({ length: totalSections }).map((_, index) => (
-          <button
-            key={index}
-            onClick={() => scrollToSection(index)}
-            className="w-2 h-2 rounded-full transition-all duration-200"
-            style={{
-              backgroundColor: index === currentSection ? '#73aa57' : 'rgba(255, 255, 255, 0.3)',
-              transform: index === currentSection ? 'scale(1.5)' : 'scale(1)',
-            }}
-            aria-label={`Go to section ${index + 1}`}
-          />
-        ))}
-      </div> */}
 
       {/* Horizontal scrolling container */}
       <div
