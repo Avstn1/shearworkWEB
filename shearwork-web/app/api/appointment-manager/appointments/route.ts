@@ -3,8 +3,6 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
 
-type SortField = 'datetime' | 'revenue' | 'tip';
-
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -15,29 +13,14 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search')?.trim().toLowerCase() || '';
-    const sort = (searchParams.get('sort') as SortField) || 'datetime';
-    const dir = searchParams.get('dir') === 'asc' ? 'asc' : 'desc';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '25', 10)));
-    const offset = (page - 1) * limit;
+    const dateParam = searchParams.get('date'); // Expected format: YYYY-MM-DD
 
-    // Get current timestamp for filtering past appointments only
-    const now = new Date().toISOString();
+    // Default to today if no date provided
+    const today = new Date();
+    const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const selectedDate = dateParam || defaultDate;
 
-    // If searching, first find matching client IDs by name
-    let matchingClientIds: string[] = [];
-    if (search) {
-      const { data: matchingClients } = await supabase
-        .from('acuity_clients')
-        .select('client_id')
-        .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
-      
-      matchingClientIds = (matchingClients || []).map((c: any) => c.client_id);
-    }
-
-    // Build query for appointments that have already occurred
-    // Fetching from acuity_appointments WITHOUT join (no FK relationship)
+    // Build query for appointments on the selected date
     let query = supabase
       .from('acuity_appointments')
       .select(`
@@ -52,29 +35,12 @@ export async function GET(request: NextRequest) {
         created_at,
         tip,
         service_type
-      `, { count: 'exact' })
+      `)
       .eq('user_id', user.id)
-      .lte('datetime', now); // Only past appointments
+      .eq('appointment_date', selectedDate)
+      .order('datetime', { ascending: false }); // Latest first
 
-    // Search filter - search by phone number, client_id, or matching client names
-    if (search) {
-      if (matchingClientIds.length > 0) {
-        // Search by phone, client_id, OR any of the matching client IDs from name search
-        const clientIdFilters = matchingClientIds.map(id => `client_id.eq.${id}`).join(',');
-        query = query.or(`phone_normalized.ilike.%${search}%,client_id.ilike.%${search}%,${clientIdFilters}`);
-      } else {
-        // No name matches, just search by phone and client_id
-        query = query.or(`phone_normalized.ilike.%${search}%,client_id.ilike.%${search}%`);
-      }
-    }
-
-    // Sorting
-    query = query.order(sort, { ascending: dir === 'asc' });
-
-    // Pagination
-    query = query.range(offset, offset + limit - 1);
-
-    const { data: appointments, error, count } = await query;
+    const { data: appointments, error } = await query;
 
     if (error) {
       console.error('Error fetching appointments:', error);
@@ -119,15 +85,10 @@ export async function GET(request: NextRequest) {
       client_last_name: clientMap[appt.client_id]?.last_name || null,
     }));
 
-    const total = count || 0;
-    const totalPages = Math.ceil(total / limit);
-
     return NextResponse.json({
       appointments: transformedAppointments,
-      page,
-      limit,
-      total,
-      totalPages,
+      total: transformedAppointments.length,
+      date: selectedDate,
     });
   } catch (err: any) {
     console.error('Appointments GET error:', err);
