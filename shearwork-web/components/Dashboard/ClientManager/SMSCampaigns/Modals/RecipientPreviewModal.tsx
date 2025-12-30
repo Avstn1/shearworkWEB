@@ -803,10 +803,10 @@ return (
               bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl
               w-full
               max-w-4xl
-              h-[80dvh] md:h-auto
+              h-[85dvh] md:h-auto
               md:min-h-[90vh] md:max-h-[90vh]
               overflow-hidden flex flex-col
-              mb-16 sm:mb-0
+              mb-20 sm:mb-0
             "
           >
 
