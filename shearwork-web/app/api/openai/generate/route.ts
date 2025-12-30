@@ -199,18 +199,30 @@ export async function POST(req: Request) {
 
       const { data: tipsData, error: tipsError } = await supabase
         .from('acuity_appointments')
-        .select('tip')
+        .select('service_type, tip')
         .eq('user_id', user_id)
         .gte('appointment_date', start_date)
         .lte('appointment_date', end_date)
 
       if (tipsError) throw tipsError
 
-      totalTips = tipsData?.reduce((sum, appointment) => sum + (appointment.tip || 0), 0) || 0;
+      const tipsServiceType = tipsData?.reduce((acc, appointment) => {
+        const serviceType = appointment.service_type || 'Unknown';
+        const tip = appointment.tip || 0;
+        acc[serviceType] = (acc[serviceType] || 0) + tip;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const totalTips = tipsData?.reduce((sum, appointment) => sum + (appointment.tip || 0), 0) || 0;
+
+      const tipsAggregatedData = {
+        totalTips,
+        tipsServiceType
+      };
 
       summaryData = {
         ...data,
-        tips: totalTips,
+        tips: tipsAggregatedData,
         daily_points: dailyPoints,
         start_date: firstDayOfMonth.toISOString().split('T')[0],
         end_date: lastDayOfMonth.toISOString().split('T')[0],
@@ -300,16 +312,26 @@ export async function POST(req: Request) {
         // Get tips for single week
         const { data: tipsData, error: tipsError } = await supabase
           .from('acuity_appointments')
-          .select('tip')
+          .select('service_type, tip')
           .eq('user_id', user_id)
           .gte('appointment_date', selectedWeek.start_date)
           .lte('appointment_date', selectedWeek.end_date)
         
         if (tipsError) throw tipsError
         
-        totalTips = tipsData?.reduce((sum, appointment) => sum + (appointment.tip || 0), 0) || 0
+        const tipsServiceType = tipsData?.reduce((acc, appointment) => {
+          const serviceType = appointment.service_type || 'Unknown';
+          const tip = appointment.tip || 0;
+          acc[serviceType] = (acc[serviceType] || 0) + tip;
+          return acc;
+        }, {} as Record<string, number>) || {};
 
-        summaryData.tips = totalTips
+        const totalTipsValue = tipsData?.reduce((sum, appointment) => sum + (appointment.tip || 0), 0) || 0;
+
+        summaryData.tips = {
+          totalTips: totalTipsValue,
+          tipsServiceType
+        }
       }
 
       console.log(summaryData.tips)
