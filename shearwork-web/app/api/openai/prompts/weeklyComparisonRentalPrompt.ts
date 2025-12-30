@@ -132,17 +132,22 @@ ${JSON.stringify(minimalDataset, null, 2)}
       ${minimalDataset.weekly_rows
       .map((w: any, i: number) => {
         const revenue = w.final_revenue || 0;
-        const expenses = weeklyExpensesDataTotals[i] || 0; // use correct weekly expenses
-        const netProfit = revenue - expenses + w.tips;
+        const tips = minimalDataset.tips[i] || 0;
+        const expenses = weeklyExpensesDataTotals[i] || 0;
+        const netProfit = revenue + tips - expenses;
         return `<td>$${netProfit.toFixed(2)}</td>`;
       })
       .join('')}
       ${
         minimalDataset.weekly_rows.length > 1
           ? (()=>{ 
-              const cur = minimalDataset.weekly_rows.at(-1), prev = minimalDataset.weekly_rows.at(-2);
-              const curNet = (cur.final_revenue||0)-(cur.expenses||0);
-              const prevNet = (prev.final_revenue||0)-(prev.expenses||0);
+              const last = minimalDataset.weekly_rows.length - 1;
+              const cur = minimalDataset.weekly_rows[last];
+              const prev = minimalDataset.weekly_rows[last - 1];
+              
+              const curNet = (cur.final_revenue || 0) + (minimalDataset.tips[last] || 0) - (weeklyExpensesDataTotals[last] || 0);
+              const prevNet = (prev.final_revenue || 0) + (minimalDataset.tips[last - 1] || 0) - (weeklyExpensesDataTotals[last - 1] || 0);
+              
               const delta = curNet - prevNet;
               const pct = ((delta / (prevNet || 1)) * 100).toFixed(1);
               return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
@@ -338,16 +343,16 @@ ${JSON.stringify(minimalDataset, null, 2)}
           return funnelData?.new_clients || 0;
         });
         
-        const total = weeklyNewClients.reduce((sum: number, c: number) => sum + c, 0);
+        const lastWeekClients = weeklyNewClients[weeklyNewClients.length - 1] || 0;
         
         return {
           name: source,
           weeklyNewClients,
-          total
+          lastWeekClients
         };
       })
-      .filter(s => s.total > 0)  // Remove sources with 0 new clients
-      .sort((a, b) => b.total - a.total);  // Sort by total (highest first)
+      .filter(s => s.weeklyNewClients.some((c: any) => c > 0))  // Remove sources with 0 new clients across all weeks
+      .sort((a, b) => b.lastWeekClients - a.lastWeekClients);  // Sort by latest week (highest first)
       
       // Split into top 5 and others
       const top5 = sourcesWithTotals.slice(0, 5);
