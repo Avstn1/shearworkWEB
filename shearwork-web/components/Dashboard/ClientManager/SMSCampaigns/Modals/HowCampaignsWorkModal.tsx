@@ -22,7 +22,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[75vh] sm:max-h-[90vh] flex flex-col overflow-hidden"
+            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[75vh] sm:max-h-[90vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             {/* Modal Header */}
             <div className="flex items-start justify-between p-3 sm:p-6 border-b border-white/10">
