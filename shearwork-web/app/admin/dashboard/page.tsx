@@ -341,6 +341,13 @@ export default function AdminDashboardPage() {
           >
             Manual Yearly Acuity Sync (ALL)
           </button>
+
+          <button
+            onClick={() => router.push('/admin/qstash')}
+            className="h-10 px-4 rounded-md bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] text-sm whitespace-nowrap"
+          >
+            QStash Schedules
+          </button>
         </div>
 
         
