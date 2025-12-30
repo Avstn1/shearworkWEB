@@ -7,7 +7,8 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const topClients = dataset.top_clients || []
   const weeklyRows = dataset.weekly_rows || []
   const totalRevenue = summary.total_revenue || 0
-  const personalEarnings = (totalRevenue * summary.commission_rate) + summary.tips || 0
+  const tips = summary.tips || 0
+  const personalEarnings = (totalRevenue * summary.commission_rate) + tips || 0
   
   const totalNewClients = funnels.reduce(
     (sum: number, f: any) => sum + (f.new_clients || 0),
@@ -39,7 +40,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
     if (!worstWeek || revenue < worstWeek.total_revenue) worstWeek = w
   })
 
-  console.log(summary)
+  console.log("From monthly commission: " + tips)
 
   const avgWeeklyRevenue = weeklyRows.length ? totalWeeklyRevenue / weeklyRows.length : 0
 
@@ -52,10 +53,11 @@ Do NOT use Markdown (** or *) at all to bold text, use <b>Bold Text</b> or <stro
 After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
 
-YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!! DO NOT  REMOVE ANY KIND OF DATA.
 
 Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
+Tips: ${tips}
 
 Generate a detailed monthly report in HTML suitable for TinyMCE. Fill in all data. DO NOT WRAP WITH '''html and
 Do NOT use Markdown (** or *) at all. 
@@ -67,8 +69,8 @@ Include:
   <thead><tr><th style="width: 50%;">Metric</th><th style="width: 50%;">Value</th></tr></thead>
   <tbody>
     <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
-    <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
-    <tr><td>Personal Earnings</td><td>$${((totalRevenue * dataset.commission_rate) + summary.tips).toFixed(2)}</td></tr>
+    <tr><td>Tips Generated</td><td>$${(tips).toFixed(2)}</td></tr>
+    <tr><td>Personal Earnings</td><td>$${((totalRevenue * dataset.commission_rate) + tips).toFixed(2)}</td></tr>
     <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
     <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
   </tbody>

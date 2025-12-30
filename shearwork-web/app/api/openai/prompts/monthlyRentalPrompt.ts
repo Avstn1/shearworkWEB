@@ -7,9 +7,9 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
   const funnels = dataset.marketing_funnels || []
   const topClients = dataset.top_clients || []
   const weeklyRows = dataset.weekly_rows || []
-  const totalRevenue = summary.total_revenue + summary.tips || 0 // changed
+  const totalRevenue = summary.total_revenue + summary.tips || 0
   const expenses = summary.expenses || 0
-  const profit = totalRevenue - expenses + summary.tips // changed
+  const profit = totalRevenue - expenses + summary.tips 
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
       ? (summary.final_revenue || 0) / summary.num_appointments
@@ -39,6 +39,8 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
     if (!worstWeek || revenue < worstWeek.total_revenue) worstWeek = w
   })
 
+  console.log("From monthly rental: " + summary.tips)
+
   const avgWeeklyRevenue = weeklyRows.length ? totalWeeklyRevenue / weeklyRows.length : 0
 
   return `
@@ -51,7 +53,7 @@ ANALYSIS AND DESCRIPTION!
 After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
 
-YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!! DO NOT  REMOVE ANY KIND OF DATA.
 
 Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
@@ -69,7 +71,7 @@ Include:
      <tbody>
       <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
       <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
-      <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
+      <tr><td>Tips Generated</td><td>$${(summary.tips || 0).toFixed(2)}</td></tr>
       <tr><td>Estimated Profit</td><td>$${profit.toFixed(2)}</td></tr>
       <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
      </tbody>

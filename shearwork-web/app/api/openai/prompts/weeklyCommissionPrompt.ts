@@ -33,7 +33,7 @@ Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
 
 Generate a detailed weekly report in **HTML** suitable for TinyMCE.
-Use the provided data and computed values. Do not invent numbers.
+Use the provided data and computed values. Do not invent numbers. DO NOT REMOVE ANY KIND OF DATA.
 
 <h1>Weekly Report - Week ${summary.week_number || 'N/A'} (${summary.start_date || 'N/A'} → ${summary.end_date || 'N/A'}, ${year})</h1>
 
