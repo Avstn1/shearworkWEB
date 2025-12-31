@@ -8,18 +8,43 @@ const supabase = createClient(
   Deno.env.get("SERVICE_ROLE_KEY") ?? '', 
 )
 
-// Get all users with Acuity tokens
-const { data: tokens, error: tokenError } = await supabase
-  .from('acuity_tokens')
-  .select('user_id')
-
-if (tokenError) throw tokenError
-console.log('Users with Acuity tokens:', tokens)
-
 Deno.serve(async (req) => {
   try {
+    const QSTASH_TOKEN = Deno.env.get('QSTASH_TOKEN') ?? ''
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
-    const token = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
+    const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
+
+    if (!QSTASH_TOKEN) {
+      throw new Error('QSTASH_TOKEN is not set')
+    }
+
+    // Check for optional user_id parameter
+    const url = new URL(req.url)
+    const targetUserId = url.searchParams.get('user_id')
+
+    // Get users with Acuity tokens (filtered by user_id if provided)
+    let query = supabase
+      .from('acuity_tokens')
+      .select('user_id')
+    
+    if (targetUserId) {
+      query = query.eq('user_id', targetUserId)
+    }
+
+    const { data: tokens, error: tokenError } = await query
+
+    if (tokenError) throw tokenError
+    
+    if (targetUserId && (!tokens || tokens.length === 0)) {
+      return new Response(JSON.stringify({ 
+        error: `No Acuity token found for user_id: ${targetUserId}` 
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 404,
+      })
+    }
+
+    console.log(`Users to sync: ${tokens?.length || 0}${targetUserId ? ` (filtered by user_id: ${targetUserId})` : ''}`)
 
     // Get current year and define year range to sync
     const currentYear = new Date().getFullYear()
@@ -30,94 +55,69 @@ Deno.serve(async (req) => {
       yearsToSync.push(year)
     }
 
-    console.log(`STARTING SYNC FOR ${tokens?.length || 0} USERS. CURRENT TIME: ${new Date()}`)
+    console.log(`STARTING QUEUE SUBMISSION FOR ${tokens?.length || 0} USERS. CURRENT TIME: ${new Date()}`)
     
-    const CONCURRENCY_LIMIT = 10 // Reduced since we're doing full years now
-
     // Build all requests (one per user per year)
-    const allRequests: { userId: string; year: number }[] = []
+    const queueRequests: Array<{
+      url: string
+      headers: Record<string, string>
+      userId: string
+      year: number
+    }> = []
     
     for (const tokenItem of tokens || []) {
       for (const year of yearsToSync) {
-        allRequests.push({
+        queueRequests.push({
+          url: `https://shearwork-web.vercel.app/api/acuity/pull-year?year=${year}`,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+            'X-User-Id': tokenItem.user_id,
+            'x-vercel-protection-bypass': BYPASS_TOKEN
+          },
           userId: tokenItem.user_id,
           year
         })
       }
     }
 
-    console.log(`Total requests to make: ${allRequests.length}`)
+    console.log(`Total requests to queue: ${queueRequests.length}`)
 
-    async function fireWithConcurrency(items, limit) {
-      let active = 0
-      let index = 0
-      const results = {
-        success: 0,
-        failed: 0
-      }
-
-      return new Promise(resolve => {
-        function next() {
-          while (active < limit && index < items.length) {
-            const request = items[index++]
-            active++
-
-            const url = `https://shearwork-web.vercel.app/api/acuity/pull-year?year=${request.year}`
-            
-            console.log(`🔄 Starting: ${request.userId} - Year ${request.year}`)
-            
-            fetch(url, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'X-User-Id': request.userId,
-                'x-vercel-protection-bypass': BYPASS_TOKEN
-              }
-            })
-              .then(async response => {
-                if (!response.ok) {
-                  const errorText = await response.text()
-                  console.error(`✗ ${request.userId} - Year ${request.year}: ${response.status} ${errorText}`)
-                  results.failed++
-                } else {
-                  const data = await response.json()
-                  console.log(`✓ ${request.userId} - Year ${request.year}: ${data.totalClients || 0} clients, ${data.totalAppointments || 0} appointments`)
-                  results.success++
-                }
-              })
-              .catch(err => {
-                console.error(`Error for ${request.userId} - Year ${request.year}:`, err)
-                results.failed++
-              })
-              .finally(() => {
-                active--
-                next()
-              })
-          }
-
-          if (active === 0 && index >= items.length) {
-            console.log(`\n📊 RESULTS: ${results.success} succeeded, ${results.failed} failed`)
-            resolve(results)
-          }
-        }
-
-        next()
+    // Fire all requests to QStash (fire and forget)
+    for (const request of queueRequests) {
+      fetch('https://qstash.upstash.io/v2/publish', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${QSTASH_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: request.url,
+          headers: request.headers,
+          method: 'GET',
+          retries: 3,
+          delay: 0,
+        })
       })
+      console.log(`🚀 Queued ${request.userId} - Year ${request.year}`)
     }
 
-    await fireWithConcurrency(allRequests, CONCURRENCY_LIMIT)
-
-    console.log(`SYNC ENDED. CURRENT TIME: ${new Date()}`)
+    console.log(`QUEUE SUBMISSION ENDED. CURRENT TIME: ${new Date()}`)
 
     return new Response(JSON.stringify({ 
-      message: 'Sync completed',
-      totalRequests: allRequests.length
+      message: 'All requests queued to QStash',
+      totalRequests: queueRequests.length
     }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (err) {
-    return new Response(String(err?.message ?? err), { status: 500 })
+    console.error('Edge function error:', err)
+    return new Response(JSON.stringify({ 
+      error: String(err?.message ?? err) 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 })
