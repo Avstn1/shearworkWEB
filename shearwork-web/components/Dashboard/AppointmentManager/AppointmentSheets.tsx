@@ -250,7 +250,7 @@ export default function AppointmentSheets() {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="absolute left-0 sm:left-auto sm:right-0 mt-2 bg-[#1a1e18]/95 border border-white/10 rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl min-w-[300px]"
+                className="absolute left-0 sm:left-auto sm:right-0 mt-2 bg-[#1a1e18]/95 border border-white/10 rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl min-w-[340px]"
               >
                 <DayPicker
                   mode="single"
@@ -294,7 +294,7 @@ export default function AppointmentSheets() {
                       setSelectedDate(new Date());
                       setIsCalendarOpen(false);
                     }}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition"
+                    className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition text-center"
                   >
                     Today
                   </button>
@@ -305,7 +305,7 @@ export default function AppointmentSheets() {
                       setSelectedDate(yesterday);
                       setIsCalendarOpen(false);
                     }}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/10 text-white hover:bg-white/20 transition"
+                    className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-white/10 text-white hover:bg-white/20 transition text-center"
                   >
                     Yesterday
                   </button>
