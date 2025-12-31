@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Calendar, Megaphone } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
-import TipsDropdown from '@/components/TipsDropdown'
+import TipsDropdown from '@/components/ManageTipsButton'
 import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
 

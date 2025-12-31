@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -27,40 +26,72 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
       setLoading(true)
       try {
         const currentYear = year ?? new Date().getFullYear()
+        const monthIndex = MONTHS.indexOf(selectedMonth)
 
-        // ✅ Fetch current month avg_ticket from monthly_data
-        const { data: currentData, error: currentError } = await supabase
-          .from('monthly_data')
-          .select('avg_ticket')
+        // Build date range for current month
+        const startDate = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}-01`
+        const endDate = monthIndex === 11 
+          ? `${currentYear + 1}-01-01`
+          : `${currentYear}-${String(monthIndex + 2).padStart(2, '0')}-01`
+
+        // Fetch current month from acuity_appointments
+        const { data: currentAppts, error: currentError } = await supabase
+          .from('acuity_appointments')
+          .select('revenue, tip')
           .eq('user_id', userId)
-          .eq('month', selectedMonth)
-          .eq('year', currentYear)
-          .maybeSingle()
+          .gte('appointment_date', startDate)
+          .lt('appointment_date', endDate)
 
-        if (currentError) console.error('Error fetching current avg_ticket:', currentError)
-        setAvgTicket(currentData?.avg_ticket ?? null)
+        if (currentError) {
+          console.error('Error fetching current appointments:', currentError)
+        }
 
-        // ✅ Determine previous month/year
-        const currentIndex = MONTHS.indexOf(selectedMonth)
-        let prevIndex = currentIndex - 1
+        // Calculate average ticket (revenue + tips) / count
+        if (currentAppts && currentAppts.length > 0) {
+          const totalRevenue = currentAppts.reduce((sum, appt) => sum + (appt.revenue || 0), 0)
+          const totalTips = currentAppts.reduce((sum, appt) => sum + (appt.tip || 0), 0)
+          const total = totalRevenue + totalTips
+          setAvgTicket(total / currentAppts.length)
+        } else {
+          setAvgTicket(null)
+        }
+
+        // Determine previous month/year
+        let prevMonthIndex = monthIndex - 1
         let prevYear = currentYear
-        if (prevIndex < 0) {
-          prevIndex = 11
+        if (prevMonthIndex < 0) {
+          prevMonthIndex = 11
           prevYear -= 1
         }
-        const prevMonth = MONTHS[prevIndex]
 
-        // ✅ Fetch previous month avg_ticket
-        const { data: prevData, error: prevError } = await supabase
-          .from('monthly_data')
-          .select('avg_ticket')
+        // Build date range for previous month
+        const prevStartDate = `${prevYear}-${String(prevMonthIndex + 1).padStart(2, '0')}-01`
+        const prevEndDate = prevMonthIndex === 11 
+          ? `${prevYear + 1}-01-01`
+          : `${prevYear}-${String(prevMonthIndex + 2).padStart(2, '0')}-01`
+
+        // Fetch previous month from acuity_appointments
+        const { data: prevAppts, error: prevError } = await supabase
+          .from('acuity_appointments')
+          .select('revenue, tip')
           .eq('user_id', userId)
-          .eq('month', prevMonth)
-          .eq('year', prevYear)
-          .maybeSingle()
+          .gte('appointment_date', prevStartDate)
+          .lt('appointment_date', prevEndDate)
 
-        if (prevError) console.error('Error fetching previous avg_ticket:', prevError)
-        setPrevAvgTicket(prevData?.avg_ticket ?? null)
+        if (prevError) {
+          console.error('Error fetching previous appointments:', prevError)
+        }
+
+        // Calculate previous month average ticket
+        if (prevAppts && prevAppts.length > 0) {
+          const prevTotalRevenue = prevAppts.reduce((sum, appt) => sum + (appt.revenue || 0), 0)
+          const prevTotalTips = prevAppts.reduce((sum, appt) => sum + (appt.tip || 0), 0)
+          const prevTotal = prevTotalRevenue + prevTotalTips
+          setPrevAvgTicket(prevTotal / prevAppts.length)
+        } else {
+          setPrevAvgTicket(null)
+        }
+
       } catch (err) {
         console.error('Error fetching average tickets:', err)
       } finally {

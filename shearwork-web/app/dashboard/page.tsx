@@ -15,7 +15,7 @@ import SignOutButton from '@/components/SignOutButton'
 import YearDropdown from '@/components/YearDropdown'
 import MonthDropdown from '@/components/MonthDropdown'
 import DailySelector from '@/components/Dashboard/DailySelector'
-import TipsDropdown from '@/components/TipsDropdown'
+import ManageTipsButton from '@/components/ManageTipsButton'
 
 import WeeklyReports from '@/components/Dashboard/WeeklyReports'
 import MonthlyReports from '@/components/Dashboard/MonthlyReports'
@@ -240,23 +240,7 @@ export default function DashboardPage() {
             Profit/Loss
           </button>
         </div>
-        <Link href="/appointment-manager">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="
-              px-3 py-1.5 sm:px-4 sm:py-2
-              bg-gradient-to-r from-amber-400/30 to-lime-500/30 
-              border border-white/10 text-white font-semibold 
-              rounded-xl shadow-md hover:shadow-lg 
-              transition-all backdrop-blur-md
-              text-xs sm:text-sm
-              active:scale-95
-            "
-          >
-            💰 Manage Tips
-          </motion.button>
-        </Link>
+        <ManageTipsButton />
       </div>
 
       {/* Month + Year Selector */}
