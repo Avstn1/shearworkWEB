@@ -2,6 +2,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { Client } from 'npm:@upstash/qstash@2'
 
 const supabase = createClient(
   Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? '', 
@@ -17,6 +18,9 @@ Deno.serve(async (req) => {
     if (!QSTASH_TOKEN) {
       throw new Error('QSTASH_TOKEN is not set')
     }
+
+    // Initialize QStash client
+    const qstashClient = new Client({ token: QSTASH_TOKEN })
 
     // Check for optional user_id parameter
     const url = new URL(req.url)
@@ -57,56 +61,38 @@ Deno.serve(async (req) => {
 
     console.log(`STARTING QUEUE SUBMISSION FOR ${tokens?.length || 0} USERS. CURRENT TIME: ${new Date()}`)
     
-    // Build all requests (one per user per year)
-    const queueRequests: Array<{
-      url: string
-      headers: Record<string, string>
-      userId: string
-      year: number
-    }> = []
-    
+    // Create queue for acuity sync
+    const queue = qstashClient.queue({
+      queueName: 'acuity-full-year-sync',
+    })
+
+    let enqueuedCount = 0
+
+    // Enqueue all requests
     for (const tokenItem of tokens || []) {
       for (const year of yearsToSync) {
-        queueRequests.push({
-          url: `https://shearwork-web.vercel.app/api/acuity/pull-year?year=${year}`,
+        const targetUrl = `https://shearwork-web.vercel.app/api/acuity/pull-year?year=${year}&user_id=${tokenItem.user_id}`
+        
+        queue.enqueueJSON({
+          url: targetUrl,
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-            'X-User-Id': tokenItem.user_id,
             'x-vercel-protection-bypass': BYPASS_TOKEN
           },
-          userId: tokenItem.user_id,
-          year
+          retries: 3,
         })
+        
+        console.log(`🚀 Queued ${tokenItem.user_id} - Year ${year}`)
+        enqueuedCount++
       }
     }
 
-    console.log(`Total requests to queue: ${queueRequests.length}`)
-
-    // Fire all requests to QStash (fire and forget)
-    for (const request of queueRequests) {
-      fetch('https://qstash.upstash.io/v2/publish', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${QSTASH_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: request.url,
-          headers: request.headers,
-          method: 'GET',
-          retries: 3,
-          delay: 0,
-        })
-      })
-      console.log(`🚀 Queued ${request.userId} - Year ${request.year}`)
-    }
-
-    console.log(`QUEUE SUBMISSION ENDED. CURRENT TIME: ${new Date()}`)
+    console.log(`QUEUE SUBMISSION ENDED. Total enqueued: ${enqueuedCount}. CURRENT TIME: ${new Date()}`)
 
     return new Response(JSON.stringify({ 
       message: 'All requests queued to QStash',
-      totalRequests: queueRequests.length
+      totalRequests: enqueuedCount,
+      queueName: 'acuity-full-year-sync'
     }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
