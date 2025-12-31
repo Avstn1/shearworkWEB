@@ -59,11 +59,6 @@ export default function SettingsPage() {
 
   return (
     <>
-      {/* Navbar */}
-      <div ref={navbarRef}>
-        <Navbar />
-      </div>
-
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (

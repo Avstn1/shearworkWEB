@@ -587,7 +587,6 @@ export default function FeatureMakerPage() {
 
   return (
     <>
-      <Navbar />
       <div className="fixed inset-0 flex flex-col text-[var(--foreground)] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] pt-20">
         
         {/* Header */}

@@ -306,7 +306,6 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <Navbar />
       <div className="flex flex-col gap-5 text-[var(--foreground)] bg-[var(--background)] min-h-screen p-3 sm:p-6 overflow-y-auto">
         <div className="flex flex-wrap justify-between items-center gap-3">
           <h1 className="text-2xl font-semibold text-[var(--highlight)] truncate flex-1 min-w-0">

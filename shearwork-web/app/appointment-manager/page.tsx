@@ -17,7 +17,6 @@ const fadeInUp = {
 export default function AppointmentManagerPage() {
   return (
     <OnboardingGuard>
-      <Navbar />
       <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
         {/* Header */}
         <motion.div

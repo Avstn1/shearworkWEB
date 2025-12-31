@@ -358,13 +358,15 @@ export default function SMSCampaigns() {
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowString = tomorrow.toISOString().split('T')[0];
 
       const newMessage: SMSMessage = {
         id: uuidv4(),
         title: `Message ${messages.length + 1}`,
         message: '',
-        scheduleDate: today,
+        scheduleDate: tomorrowString,
         hour: 10,
         minute: 0,
         period: 'AM',
@@ -395,38 +397,38 @@ export default function SMSCampaigns() {
     setShowDeleteModal(true);
   };
 
-const confirmDelete = async () => {
-  if (!pendingDeleteMessageId) return;
+  const confirmDelete = async () => {
+    if (!pendingDeleteMessageId) return;
 
-  const msg = messages.find((m) => m.id === pendingDeleteMessageId);
-  
-  if (msg?.isSaved) {
-    try {
-      const response = await fetch('/api/client-messaging/save-sms-schedule', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id: pendingDeleteMessageId,
-          softDelete: deleteType === 'soft'
-        }),
-      });
+    const msg = messages.find((m) => m.id === pendingDeleteMessageId);
+    
+    if (msg?.isSaved) {
+      try {
+        const response = await fetch('/api/client-messaging/save-sms-schedule', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            id: pendingDeleteMessageId,
+            softDelete: deleteType === 'soft'
+          }),
+        });
 
-      if (!response.ok) throw new Error('Failed to delete message');
-      
-      toast.success('Message deleted successfully');
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Failed to delete message');
-      setShowDeleteModal(false);
-      setPendingDeleteMessageId(null);
-      return;
+        if (!response.ok) throw new Error('Failed to delete message');
+        
+        toast.success('Message deleted successfully');
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('Failed to delete message');
+        setShowDeleteModal(false);
+        setPendingDeleteMessageId(null);
+        return;
+      }
     }
-  }
-  
-  setMessages(messages.filter((msg) => msg.id !== pendingDeleteMessageId));
-  setShowDeleteModal(false);
-  setPendingDeleteMessageId(null);
-};
+    
+    setMessages(messages.filter((msg) => msg.id !== pendingDeleteMessageId));
+    setShowDeleteModal(false);
+    setPendingDeleteMessageId(null);
+  };
 
   const updateMessage = (id: string, updates: Partial<SMSMessage>) => {
       setMessages(

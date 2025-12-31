@@ -42,14 +42,17 @@ export function MessageSchedule({
   const isPredefinedLimit = [100, 250, 500, 750, 1000, 1500, 2000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
   const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
 
-  // Get minimum date (today)
-  const today = new Date().toLocaleDateString('en-CA', {
+  // Get minimum date (tomorrow)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const minDate = tomorrow.toLocaleDateString('en-CA', {
     timeZone: 'America/Toronto',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   });
-
+  
   // Get max limit based on campaign type
   const getMaxLimit = () => {
     return Math.min(availableCredits, maxClients);
@@ -255,8 +258,8 @@ export function MessageSchedule({
         </label>
         <input
           type="date"
-          value={msg.scheduleDate || today}
-          min={today}
+          value={msg.scheduleDate || minDate}
+          min={minDate}
           onChange={(e) => onUpdate(msg.id, { scheduleDate: e.target.value })}
           disabled={!msg.isEditing}
           className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${

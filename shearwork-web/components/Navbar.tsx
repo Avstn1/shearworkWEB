@@ -164,183 +164,7 @@ export default function Navbar() {
 
   const desktopIcons = (
     <>
-      {/* FEATURE UPDATES BUTTON FOR ALL */}
-      {/* <button 
-        onClick={() => {
-          setShowFeaturesModal(true)
-          setHasUnreadFeatures(false)
-        }}
-        className="hidden md:block relative px-4 py-2 rounded-lg font-semibold text-sm transition-all"
-        style={{
-          background: hasUnreadFeatures 
-            ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
-            : 'rgba(115, 170, 87, 0.15)',
-          color: hasUnreadFeatures ? '#000000' : COLORS.green,
-          border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
-          boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.05)'
-          e.currentTarget.style.boxShadow = hasUnreadFeatures 
-            ? '0 0 25px rgba(115, 170, 87, 0.6)' 
-            : '0 0 10px rgba(115, 170, 87, 0.3)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)'
-          e.currentTarget.style.boxShadow = hasUnreadFeatures 
-            ? '0 0 20px rgba(115, 170, 87, 0.4)' 
-            : 'none'
-        }}
-      >
-        {hasUnreadFeatures && (
-          <span 
-            className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
-            style={{ backgroundColor: '#ff4444' }}
-          />
-        )}
-        Feature Updates
-      </button> */}
-
-      {/* FEATURE UPDATES BUTTON ONLY FOR GAVIN'S ACCOUNT */}
-      {user?.id === '39d5d08d-2deb-4b92-a650-ee10e70b7af1' && (
-        <button 
-          onClick={() => {
-            setShowFeaturesModal(true)
-            setHasUnreadFeatures(false)
-          }}
-          className="hidden md:block relative px-4 py-2 rounded-lg font-semibold text-sm transition-all"
-          style={{
-            background: hasUnreadFeatures 
-              ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
-              : 'rgba(115, 170, 87, 0.15)',
-            color: hasUnreadFeatures ? '#000000' : COLORS.green,
-            border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
-            boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)'
-            e.currentTarget.style.boxShadow = hasUnreadFeatures 
-              ? '0 0 25px rgba(115, 170, 87, 0.6)' 
-              : '0 0 10px rgba(115, 170, 87, 0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)'
-            e.currentTarget.style.boxShadow = hasUnreadFeatures 
-              ? '0 0 20px rgba(115, 170, 87, 0.4)' 
-              : 'none'
-          }}
-        >
-          {hasUnreadFeatures && (
-            <span 
-              className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
-              style={{ backgroundColor: '#ff4444' }}
-            />
-          )}
-          Feature Updates
-        </button>
-      )}
-
-      <Tooltip label="Dashboard">
-        <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'dashboard')}}
-          >
-            <Grid className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-
-      <Tooltip label="Client Manager">
-        <Link href="/client-manager" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'client-manager')}}
-          >
-            <UserCog className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-
-      <Tooltip label="Appointment Manager">
-        <Link href="/appointment-manager" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'appointment-manager')}}
-          >
-            <Calendar className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-
-      <Tooltip label="Expenses">
-        <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'expenses')}}
-          >
-            <CreditCard className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-      
-      <Tooltip label="Credits">
-        <button 
-          onClick={() => setShowCreditsModal(true)}
-          className="relative flex flex-col items-center group hidden md:flex"
-        >
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-          >
-            <Coins className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </button>
-      </Tooltip>
+ 
     </>
   )
 
@@ -351,17 +175,23 @@ export default function Navbar() {
           <Link 
             href="/login" 
             onClick={() => setOpen(false)} 
-            className="transition"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = COLORS.green
+              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = COLORS.text
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
           >
             Sign In
           </Link>
           <Link 
             href="/signup" 
             onClick={() => setOpen(false)} 
-            className="px-4 sm:px-6 py-1 sm:py-2 rounded-md font-semibold hover:scale-105 transition"
+            className="mx-4 px-4 py-3 rounded-lg font-semibold transition"
             style={{ 
               backgroundColor: COLORS.green,
               color: '#000000',
@@ -376,51 +206,77 @@ export default function Navbar() {
     if (userRole === 'Admin') {
       return (
         <>
-          <Link href="/admin/feature-maker" className="relative flex flex-col items-center group hidden md:flex">
-            <div 
-              className="p-2 rounded-full transition-colors"
-              style={{ backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
-            >
-              <Megaphone className="w-6 h-6" style={{ color: COLORS.text }} />
-            </div>
+          <Link 
+            href="/admin/feature-maker" 
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = COLORS.green
+              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = COLORS.text
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <Megaphone className="w-5 h-5" />
+            <span>Feature Maker</span>
           </Link>
           
-          <Link href="/admin/syslogs" className="relative flex flex-col items-center group hidden md:flex">
-            <div 
-              className="p-2 rounded-full transition-colors"
-              style={{ backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
-            >
-              <FileText className="w-6 h-6" style={{ color: COLORS.text }} />
-            </div>
+          <Link 
+            href="/admin/syslogs" 
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = COLORS.green
+              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = COLORS.text
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <FileText className="w-5 h-5" />
+            <span>System Logs</span>
           </Link>
 
-          <Link href="/admin/analytics" className="relative flex flex-col items-center group hidden md:flex">
-            <div 
-              className="p-2 rounded-full transition-colors"
-              style={{ backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
-            >
-              <ChartBar className="w-6 h-6" style={{ color: COLORS.text }} />
-            </div>
+          <Link 
+            href="/admin/analytics" 
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = COLORS.green
+              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = COLORS.text
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <ChartBar className="w-5 h-5" />
+            <span>Analytics</span>
           </Link>
 
-          <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-            <div 
-              className="p-2 rounded-full transition-colors"
-              style={{ backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
-            >
-              <Grid className="w-6 h-6" style={{ color: COLORS.text }} />
-            </div>
+          <Link 
+            href="/dashboard" 
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = COLORS.green
+              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = COLORS.text
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <Grid className="w-5 h-5" />
+            <span>Dashboard</span>
           </Link>
-
-          <UserProfile />
         </>
       )
     }
@@ -431,43 +287,90 @@ export default function Navbar() {
         <Link 
           href="/dashboard" 
           onClick={() => setOpen(false)} 
-          className="flex items-center gap-1 sm:gap-2 transition"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.color = COLORS.green
+            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.color = COLORS.text
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
         >
-          <Grid className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Dashboard
+          <Grid className="w-5 h-5" /> 
+          <span>Dashboard</span>
         </Link>
         <Link 
           href="/client-manager" 
           onClick={() => setOpen(false)} 
-          className="flex items-center gap-1 sm:gap-2 transition"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.color = COLORS.green
+            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.color = COLORS.text
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
         >
-          <UserCog className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Client Manager
+          <UserCog className="w-5 h-5" /> 
+          <span>Client Manager</span>
         </Link>
         <Link 
           href="/appointment-manager" 
           onClick={() => setOpen(false)} 
-          className="flex items-center gap-1 sm:gap-2 transition"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.color = COLORS.green
+            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.color = COLORS.text
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
         >
-          <Calendar className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Appointment Manager
+          <Calendar className="w-5 h-5" /> 
+          <span>Appointment Manager</span>
         </Link>
         <Link 
           href="/expenses" 
           onClick={() => setOpen(false)} 
-          className="flex items-center gap-1 sm:gap-2 transition"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.color = COLORS.green
+            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.color = COLORS.text
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
         >
-          <CreditCard className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Expenses
+          <CreditCard className="w-5 h-5" /> 
+          <span>Expenses</span>
         </Link>
+        <button 
+          onClick={() => {
+            setShowCreditsModal(true)
+            setOpen(false)
+          }}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full text-left"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.color = COLORS.green
+            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.color = COLORS.text
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
+        >
+          <Coins className="w-5 h-5" /> 
+          <span>Credits</span>
+        </button>
       </>
     )
   }
@@ -553,6 +456,27 @@ export default function Navbar() {
       <>
         {/* --- NON-ADMIN CONTENT --- */}
         {desktopIcons}
+        <Tooltip label="Credits">
+          <button 
+            onClick={() => setShowCreditsModal(true)}
+            className="relative flex flex-col items-center group"
+          >
+            <div 
+              className="p-2 rounded-full transition-colors"
+              style={{
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+            >
+              <Coins className="w-6 h-6" style={{ color: COLORS.text }} />
+            </div>
+          </button>
+        </Tooltip>
         <NotificationsDropdown userId={user.id} />
         <UserProfile />
       </>
@@ -612,20 +536,72 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* --- MOBILE MENU --- */}
+      {/* --- MOBILE MENU SIDEBAR --- */}
       {open && (
-        <div 
-          ref={menuRef} 
-          className="md:hidden w-full shadow-lg"
-          style={{
-            backgroundColor: COLORS.navBg,
-            borderTop: `1px solid rgba(115, 170, 87, 0.2)`,
-          }}
-        >
-          <div className="flex flex-col items-center py-2 sm:py-4 space-y-2 sm:space-y-4 text-[clamp(0.9rem,3vw,1.2rem)]">
-            {renderMobileMenu()}
+        <>
+          {/* Backdrop */}
+          <div 
+            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+            onClick={() => setOpen(false)}
+          />
+          
+          {/* Sidebar */}
+          <div 
+            ref={menuRef} 
+            className="md:hidden fixed left-0 top-0 h-screen w-64 z-50 shadow-2xl"
+            style={{
+              backgroundColor: COLORS.navBg,
+              borderRight: `1px solid rgba(115, 170, 87, 0.2)`,
+              animation: 'slideInLeft 0.3s ease-out',
+            }}
+          >
+            <style jsx>{`
+              @keyframes slideInLeft {
+                from {
+                  transform: translateX(-100%);
+                }
+                to {
+                  transform: translateX(0);
+                }
+              }
+            `}</style>
+            
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div className="flex items-center gap-0">
+                <img 
+                  src="/images/corvalogo.png" 
+                  alt="ShearWork Logo" 
+                  className="h-10 w-auto"
+                />
+                <span className="text-xl -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent">
+                  orva
+                </span>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-2 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: 'transparent',
+                  color: COLORS.text,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Menu Items */}
+            <div className="flex flex-col py-4 px-3 space-y-1">
+              {renderMobileMenu()}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </nav>
 
