@@ -41,8 +41,19 @@ export default function Sidebar() {
     }
     checkSession()
 
-    // Set CSS variable for main content offset - always 80px since sidebar stays collapsed
-    document.documentElement.style.setProperty('--sidebar-width', '80px')
+    // Set CSS variable for main content offset
+    const updateSidebarWidth = () => {
+      const isMobile = window.innerWidth < 768 // md breakpoint
+      document.documentElement.style.setProperty(
+        '--sidebar-width',
+        isMobile ? '0px' : '80px'
+      )
+    }
+    
+    updateSidebarWidth()
+    window.addEventListener('resize', updateSidebarWidth)
+    
+    return () => window.removeEventListener('resize', updateSidebarWidth)
   }, [])
 
   const checkUnreadFeatures = async (uid: string) => {

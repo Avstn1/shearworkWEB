@@ -23,7 +23,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AppProvider>
           <Navbar/>
           <Sidebar />
-          <div className="min-h-screen transition-all duration-300" style={{ marginLeft: 'var(--sidebar-width, 0px)' }}>
+          <div 
+            className="min-h-screen transition-all duration-300 md:ml-[var(--sidebar-width,0px)] md:w-[calc(100%-var(--sidebar-width,0px))]"
+          >
             {children}
           </div>
 
