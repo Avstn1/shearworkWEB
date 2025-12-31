@@ -259,12 +259,14 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <NewFeaturesModal
-        isOpen={showFeaturesModal}
-        onClose={() => setShowFeaturesModal(false)}
-        initialViewMode="barberView"
-        userId={userId || undefined}
-      />
+      {userId === '39d5d08d-2deb-4b92-a650-ee10e70b7af1' && (
+        <NewFeaturesModal
+          isOpen={showFeaturesModal}
+          onClose={() => setShowFeaturesModal(false)}
+          initialViewMode="barberView"
+          userId={userId || undefined}
+        />
+      )}
     </>
   )
 }
