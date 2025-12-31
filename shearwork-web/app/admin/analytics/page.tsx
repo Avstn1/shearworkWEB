@@ -101,7 +101,6 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen flex flex-col p-4 sm:p-6 text-[var(--foreground)] pt-[120px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] gap-6">
         
         {/* Header */}

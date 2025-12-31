@@ -82,8 +82,6 @@ export default function HorizontalLandingPage() {
 
   return (
     <>
-      <Navbar/>
-
       {/* Horizontal scrolling container */}
       <div
         ref={containerRef}

@@ -397,7 +397,6 @@ export default function DashboardPage() {
   // -------------------- RENDER --------------------
   return (
     <OnboardingGuard>
-      <Navbar />
       {isMobile && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex flex-col">
           <div className="absolute inset-0 backdrop-blur-sm bg-black/40" onClick={() => setMobileMenuOpen(false)} />

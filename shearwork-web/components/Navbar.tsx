@@ -164,162 +164,6 @@ export default function Navbar() {
 
   const desktopIcons = (
     <>
-      {/* FEATURE UPDATES BUTTON FOR ALL */}
-      {/* <button 
-        onClick={() => {
-          setShowFeaturesModal(true)
-          setHasUnreadFeatures(false)
-        }}
-        className="hidden md:block relative px-4 py-2 rounded-lg font-semibold text-sm transition-all"
-        style={{
-          background: hasUnreadFeatures 
-            ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
-            : 'rgba(115, 170, 87, 0.15)',
-          color: hasUnreadFeatures ? '#000000' : COLORS.green,
-          border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
-          boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.05)'
-          e.currentTarget.style.boxShadow = hasUnreadFeatures 
-            ? '0 0 25px rgba(115, 170, 87, 0.6)' 
-            : '0 0 10px rgba(115, 170, 87, 0.3)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)'
-          e.currentTarget.style.boxShadow = hasUnreadFeatures 
-            ? '0 0 20px rgba(115, 170, 87, 0.4)' 
-            : 'none'
-        }}
-      >
-        {hasUnreadFeatures && (
-          <span 
-            className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
-            style={{ backgroundColor: '#ff4444' }}
-          />
-        )}
-        Feature Updates
-      </button> */}
-
-      {/* FEATURE UPDATES BUTTON ONLY FOR GAVIN'S ACCOUNT */}
-      {user?.id === '39d5d08d-2deb-4b92-a650-ee10e70b7af1' && (
-        <button 
-          onClick={() => {
-            setShowFeaturesModal(true)
-            setHasUnreadFeatures(false)
-          }}
-          className="hidden md:block relative px-4 py-2 rounded-lg font-semibold text-sm transition-all"
-          style={{
-            background: hasUnreadFeatures 
-              ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
-              : 'rgba(115, 170, 87, 0.15)',
-            color: hasUnreadFeatures ? '#000000' : COLORS.green,
-            border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
-            boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.05)'
-            e.currentTarget.style.boxShadow = hasUnreadFeatures 
-              ? '0 0 25px rgba(115, 170, 87, 0.6)' 
-              : '0 0 10px rgba(115, 170, 87, 0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)'
-            e.currentTarget.style.boxShadow = hasUnreadFeatures 
-              ? '0 0 20px rgba(115, 170, 87, 0.4)' 
-              : 'none'
-          }}
-        >
-          {hasUnreadFeatures && (
-            <span 
-              className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
-              style={{ backgroundColor: '#ff4444' }}
-            />
-          )}
-          Feature Updates
-        </button>
-      )}
-
-      <Tooltip label="Dashboard">
-        <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'dashboard')}}
-          >
-            <Grid className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-
-      <Tooltip label="Client Manager">
-        <Link href="/client-manager" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'client-manager')}}
-          >
-            <UserCog className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-
-      <Tooltip label="Appointment Manager">
-        <Link href="/appointment-manager" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'appointment-manager')}}
-          >
-            <Calendar className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-
-      <Tooltip label="Expenses">
-        <Link href="/expenses" className="relative flex flex-col items-center group hidden md:flex">
-          <div 
-            className="p-2 rounded-full transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => {logNavLinkClick(user.id, 'expenses')}}
-          >
-            <CreditCard className="w-6 h-6" style={{ color: COLORS.text }} />
-          </div>
-        </Link>
-      </Tooltip>
-      
       <Tooltip label="Credits">
         <button 
           onClick={() => setShowCreditsModal(true)}
@@ -468,6 +312,18 @@ export default function Navbar() {
         >
           <CreditCard className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Expenses
         </Link>
+        <button 
+          onClick={() => {
+            setShowCreditsModal(true)
+            setOpen(false)
+          }}
+          className="flex items-center gap-1 sm:gap-2 transition"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.text }}
+        >
+          <Coins className="w-[clamp(16px,4vw,20px)] h-[clamp(16px,4vw,20px)]" /> Credits
+        </button>
       </>
     )
   }

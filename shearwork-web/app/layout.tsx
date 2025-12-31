@@ -2,6 +2,8 @@ import './globals.css';
 import { ReactNode } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider } from '@/contexts/AppContext'
+import Sidebar from '@/components/Sidebar'
+import Navbar from '@/components/Navbar'
 
 export const metadata = {
   title: 'Corva',
@@ -19,7 +21,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 font-sans min-h-screen">
         <AppProvider>
-          <div className="min-h-screen">{children}</div>
+          <Navbar/>
+          <Sidebar />
+          <div className="min-h-screen transition-all duration-300" style={{ marginLeft: 'var(--sidebar-width, 0px)' }}>
+            {children}
+          </div>
 
           <Toaster
             position="bottom-center"

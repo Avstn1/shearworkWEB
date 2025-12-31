@@ -82,9 +82,7 @@ export default function LoginPage() {
   ];
 
   return (
-    <>
-      <Navbar />
-      
+    <>      
       {/* Section indicators at bottom - hidden on mobile */}
       <div className="hidden lg:flex fixed bottom-15 left-1/2 -translate-x-1/2 z-50 gap-3">
         {[0, 1, 2].map((index) => (

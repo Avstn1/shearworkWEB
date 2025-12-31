@@ -220,7 +220,6 @@ export default function QStashPage() {
   if (loading) {
     return (
       <>
-        <Navbar />
         <div className="min-h-screen bg-[var(--background)] p-6">
           <div className="max-w-7xl mx-auto">
             <p className="text-[var(--foreground)]">Loading schedules...</p>
@@ -232,7 +231,6 @@ export default function QStashPage() {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-[var(--background)] p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-6 gap-3">

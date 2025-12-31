@@ -162,7 +162,6 @@ export default function SystemLogsPage() {
 
   return (
     <>
-      <Navbar />
       <div className="p-4 sm:p-6 min-h-screen bg-[#1f2420] text-[#F1F5E9]">
         <h1 className="text-3xl font-bold text-[var(--highlight)] mb-6">System Logs</h1>
 
