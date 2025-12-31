@@ -26,16 +26,16 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const targetUserId = url.searchParams.get('user_id')
 
-    // Get users with Acuity tokens (filtered by user_id if provided)
-    let query = supabase
+    // Get users with Acuity tokens AND a calendar set (filtered by user_id if provided)
+    let tokenQuery = supabase
       .from('acuity_tokens')
       .select('user_id')
     
     if (targetUserId) {
-      query = query.eq('user_id', targetUserId)
+      tokenQuery = tokenQuery.eq('user_id', targetUserId)
     }
 
-    const { data: tokens, error: tokenError } = await query
+    const { data: tokens, error: tokenError } = await tokenQuery
 
     if (tokenError) throw tokenError
     
@@ -48,33 +48,66 @@ Deno.serve(async (req) => {
       })
     }
 
-    console.log(`Users to sync: ${tokens?.length || 0}${targetUserId ? ` (filtered by user_id: ${targetUserId})` : ''}`)
+    // Filter users who have a calendar set
+    const userIds = tokens?.map(t => t.user_id) || []
+    
+    if (userIds.length === 0) {
+      return new Response(JSON.stringify({ 
+        message: 'No users with Acuity tokens found',
+        totalRequests: 0
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_id, calendar')
+      .in('user_id', userIds)
+      .not('calendar', 'is', null)
+      .neq('calendar', '')
+
+    if (profileError) throw profileError
+
+    const validUserIds = new Set(profiles?.map(p => p.user_id) || [])
+    const validTokens = tokens?.filter(t => validUserIds.has(t.user_id)) || []
+
+    console.log(`Users to sync: ${validTokens.length}${targetUserId ? ` (filtered by user_id: ${targetUserId})` : ''} (${tokens?.length || 0} total with tokens, ${(tokens?.length || 0) - validTokens.length} without calendar)`)
 
     // Get current year and define year range to sync
     const currentYear = new Date().getFullYear()
-    const startYear = 2024
+    const startYear = currentYear
     const yearsToSync = []
     
     for (let year = startYear; year <= currentYear; year++) {
       yearsToSync.push(year)
     }
 
-    console.log(`STARTING QUEUE SUBMISSION FOR ${tokens?.length || 0} USERS. CURRENT TIME: ${new Date()}`)
+    console.log(`STARTING QUEUE SUBMISSION FOR ${validTokens.length} USERS. CURRENT TIME: ${new Date()}`)
     
-    // Create queue for acuity sync
-    const queue = qstashClient.queue({
-      queueName: 'acuity-full-year-sync',
-    })
+    // Create 5 queues for better parallelism on free tier (parallelism=2 per queue)
+    const NUM_QUEUES = 5
+    const queues = Array.from({ length: NUM_QUEUES }, (_, i) => 
+      qstashClient.queue({
+        queueName: `acuity-sync-${i + 1}`,
+      })
+    )
 
     let enqueuedCount = 0
+    let queueIndex = 0
 
-    // Enqueue all requests
-    for (const tokenItem of tokens || []) {
+    // Enqueue all requests, distributing evenly across queues
+    for (const tokenItem of validTokens) {
       for (const year of yearsToSync) {
         const targetUrl = `https://shearwork-web.vercel.app/api/acuity/pull-year?year=${year}&user_id=${tokenItem.user_id}`
         
-        queue.enqueueJSON({
+        // Round-robin distribution across queues
+        const currentQueue = queues[queueIndex % NUM_QUEUES]
+        
+        currentQueue.enqueueJSON({
           url: targetUrl,
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'x-vercel-protection-bypass': BYPASS_TOKEN
@@ -82,8 +115,9 @@ Deno.serve(async (req) => {
           retries: 3,
         })
         
-        console.log(`🚀 Queued ${tokenItem.user_id} - Year ${year}`)
+        console.log(`🚀 Queued ${tokenItem.user_id} - Year ${year} → Queue ${(queueIndex % NUM_QUEUES) + 1}`)
         enqueuedCount++
+        queueIndex++
       }
     }
 
@@ -92,7 +126,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ 
       message: 'All requests queued to QStash',
       totalRequests: enqueuedCount,
-      queueName: 'acuity-full-year-sync'
+      queues: Array.from({ length: NUM_QUEUES }, (_, i) => `acuity-sync-${i + 1}`),
+      distribution: `Evenly distributed across ${NUM_QUEUES} queues (parallelism=2 each = 10 concurrent total)`
     }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,

@@ -160,23 +160,20 @@ export default function AcuityTab() {
     const toastId = toast.loading(`Syncing appointments for ${year}...`)
 
     try {
-      const res = await fetch(
-        `/api/acuity/pull-all?year=${encodeURIComponent(year)}`,
-        { method: 'POST' }
+      const { data, error } = await supabase.functions.invoke(
+        `fullyear_sync_barbers?user_id=${encodeURIComponent(profile.user_id)}`
       )
 
-      const data = await res.json().catch(() => null)
-
-      if (!res.ok) {
-        throw new Error(data?.error || 'Full Acuity sync failed')
+      if (error) {
+        throw new Error(error.message || 'Full Acuity sync failed')
       }
 
-      toast.success(`Successfully synced all appointments for ${year}!`, {
+      toast.success(`Successfully queued sync for ${year}! It will process in the background.`, {
         id: toastId,
       })
     } catch (err: any) {
       console.error(err)
-      toast.error(`Failed to sync appointments for ${year}`, {
+      toast.error(`Failed to queue sync for ${year}`, {
         id: toastId,
       })
     } finally {
