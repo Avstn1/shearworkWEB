@@ -20,7 +20,7 @@ export async function selectClientsForSMS_Mass(
 
   const query = supabase
   // acuity_clients_testing change for testing
-    .from('acuity_clients')
+    .from('acuity_clients_testing')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)

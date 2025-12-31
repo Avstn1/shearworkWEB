@@ -114,6 +114,7 @@ async function createQStashSchedule(messageId: string, cron: string) {
   }
 }
 
+
 async function deleteQStashSchedule(scheduleId: string) {
   if (!scheduleId) return
 
@@ -126,12 +127,104 @@ async function deleteQStashSchedule(scheduleId: string) {
   }
 }
 
+async function deleteQStashMessage(messageId: string) {
+  if (!messageId) return
+
+  try {
+    await qstashClient.messages.delete(messageId)
+    console.log('✅ QStash message deleted:', messageId)
+  } catch (error) {
+    console.error('❌ Failed to delete QStash message:', error)
+    throw error
+  }
+}
+
 async function deleteMultipleQStashSchedules(scheduleIds: string[]) {
   if (!scheduleIds || scheduleIds.length === 0) return
 
   const deletePromises = scheduleIds.map(id => deleteQStashSchedule(id))
   await Promise.all(deletePromises)
   console.log(`✅ Deleted ${scheduleIds.length} QStash schedules`)
+}
+
+async function deleteMultipleQStashMessages(messageIds: string[]) {
+  if (!messageIds || messageIds.length === 0) return
+
+  const deletePromises = messageIds.map(id => deleteQStashMessage(id))
+  await Promise.all(deletePromises)
+  console.log(`✅ Deleted ${messageIds.length} QStash messages`)
+}
+
+// Updated DELETE endpoint
+export async function DELETE(request: Request) {
+  try {
+    const { user, supabase } = await getAuthenticatedUser(request)
+    if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+
+    const { id, softDelete } = await request.json()
+
+    // Get message to check for QStash schedules and if it's finished
+    const { data: message } = await supabase
+      .from('sms_scheduled_messages')
+      .select('qstash_schedule_ids, is_finished, cron')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!message) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
+    // Delete QStash schedules/messages if exist
+    if (message.qstash_schedule_ids && message.qstash_schedule_ids.length > 0) {
+      // Determine if these are recurring schedules or one-time messages
+      // One-time messages have ISO date format in cron field (e.g., "2025-01-15T10:00:00Z")
+      const isOneTime = message.cron && /^\d{4}-\d{2}-\d{2}T/.test(message.cron)
+      
+      if (isOneTime) {
+        console.log('🗑️ Deleting one-time messages:', message.qstash_schedule_ids)
+        await deleteMultipleQStashMessages(message.qstash_schedule_ids)
+      } else {
+        console.log('🗑️ Deleting recurring schedules:', message.qstash_schedule_ids)
+        await deleteMultipleQStashSchedules(message.qstash_schedule_ids)
+      }
+    }
+
+    // Determine whether to soft delete or hard delete
+    const shouldSoftDelete = softDelete || message.is_finished;
+
+    if (shouldSoftDelete) {
+      // Soft delete - mark as deleted but keep in database
+      const { error } = await supabase
+        .from('sms_scheduled_messages')
+        .update({ 
+          is_deleted: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      console.log(`✅ Soft deleted message: ${id}`)
+      return NextResponse.json({ success: true, softDeleted: true })
+    } else {
+      // Hard delete - actually remove from database
+      const { error } = await supabase
+        .from('sms_scheduled_messages')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      console.log(`✅ Hard deleted message: ${id}`)
+      return NextResponse.json({ success: true, softDeleted: false })
+    }
+  } catch (err: any) {
+    console.error('❌ Delete error:', err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
 
 export async function POST(request: Request) {
@@ -322,9 +415,19 @@ export async function POST(request: Request) {
         if (existing) {
           // Update existing message
           if (msg.validationStatus !== 'ACCEPTED') {
-            // DRAFT - delete any existing schedules
+            // DRAFT - delete any existing schedules/messages
             if (existing.qstash_schedule_ids && existing.qstash_schedule_ids.length > 0) {
-              await deleteMultipleQStashSchedules(existing.qstash_schedule_ids)
+              // Determine if these are recurring schedules or one-time messages
+              // One-time messages have ISO date format in cron field (e.g., "2025-01-15T10:00:00Z")
+              const isOneTime = existing.cron && /^\d{4}-\d{2}-\d{2}T/.test(existing.cron)
+              
+              if (isOneTime) {
+                console.log('🗑️ Deleting one-time messages:', existing.qstash_schedule_ids)
+                await deleteMultipleQStashMessages(existing.qstash_schedule_ids)
+              } else {
+                console.log('🗑️ Deleting recurring schedules:', existing.qstash_schedule_ids)
+                await deleteMultipleQStashSchedules(existing.qstash_schedule_ids)
+              }
             }
             qstashScheduleIds = []
           }
@@ -348,6 +451,7 @@ export async function POST(request: Request) {
 
           if (error) throw error
           return { success: true, data }
+          
         } else {
           // Insert new message
           const { data, error } = await supabase
@@ -435,67 +539,5 @@ export async function GET(request: Request) {
       { success: false, error: err.message || 'Unknown error' },
       { status: 500 }
     )
-  }
-}
-
-// DELETE endpoint
-export async function DELETE(request: Request) {
-  try {
-    const { user, supabase } = await getAuthenticatedUser(request)
-    if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
-
-    const { id, softDelete } = await request.json()
-
-    // Get message to check for QStash schedules and if it's finished
-    const { data: message } = await supabase
-      .from('sms_scheduled_messages')
-      .select('qstash_schedule_ids, is_finished')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single()
-
-    if (!message) {
-      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
-    }
-
-    // Delete QStash schedules if exist
-    if (message.qstash_schedule_ids && message.qstash_schedule_ids.length > 0) {
-      await deleteMultipleQStashSchedules(message.qstash_schedule_ids)
-    }
-
-    // Determine whether to soft delete or hard delete
-    const shouldSoftDelete = softDelete || message.is_finished;
-
-    if (shouldSoftDelete) {
-      // Soft delete - mark as deleted but keep in database
-      const { error } = await supabase
-        .from('sms_scheduled_messages')
-        .update({ 
-          is_deleted: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('user_id', user.id)
-
-      if (error) throw error
-
-      console.log(`✅ Soft deleted message: ${id}`)
-      return NextResponse.json({ success: true, softDeleted: true })
-    } else {
-      // Hard delete - actually remove from database
-      const { error } = await supabase
-        .from('sms_scheduled_messages')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id)
-
-      if (error) throw error
-
-      console.log(`✅ Hard deleted message: ${id}`)
-      return NextResponse.json({ success: true, softDeleted: false })
-    }
-  } catch (err: any) {
-    console.error('❌ Delete error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

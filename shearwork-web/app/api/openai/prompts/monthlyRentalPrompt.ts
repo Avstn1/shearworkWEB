@@ -7,9 +7,13 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
   const funnels = dataset.marketing_funnels || []
   const topClients = dataset.top_clients || []
   const weeklyRows = dataset.weekly_rows || []
-  const totalRevenue = summary.total_revenue + summary.tips || 0 // changed
+
+  const tips = summary.tips.totalTips || 0
+  const tipsServiceType = summary.tips.tipsServiceType || {}
+
+  const totalRevenue = summary.total_revenue + tips || 0
   const expenses = summary.expenses || 0
-  const profit = totalRevenue - expenses + summary.tips // changed
+  const profit = totalRevenue - expenses + tips 
   const avgTicket =
     summary.num_appointments && summary.num_appointments > 0
       ? (summary.final_revenue || 0) / summary.num_appointments
@@ -39,6 +43,8 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
     if (!worstWeek || revenue < worstWeek.total_revenue) worstWeek = w
   })
 
+  console.log("From monthly rental: " + tips)
+
   const avgWeeklyRevenue = weeklyRows.length ? totalWeeklyRevenue / weeklyRows.length : 0
 
   return `
@@ -51,7 +57,7 @@ ANALYSIS AND DESCRIPTION!
 After each section generate an additional 3-4 sentence CREATIVE AND LIVELY
 ANALYSIS AND DESCRIPTION!
 
-YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
+YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!! DO NOT  REMOVE ANY KIND OF DATA.
 
 Dataset (JSON):
 ${JSON.stringify(dataset.weekly_rows, null, 2)}
@@ -69,7 +75,7 @@ Include:
      <tbody>
       <tr><td>Total Revenue</td><td>$${totalRevenue.toFixed(2)}</td></tr>
       <tr><td>Estimated Expenses</td><td>$${expenses.toFixed(2)}</td></tr>
-      <tr><td>Tips Generated</td><td>$${summary.tips}</td></tr>
+      <tr><td>Tips Generated</td><td>$${(tips || 0).toFixed(2)}</td></tr>
       <tr><td>Estimated Profit</td><td>$${profit.toFixed(2)}</td></tr>
       <tr><td>Date Range</td><td>${startDate} → ${endDate}</td></tr>
      </tbody>
@@ -90,16 +96,26 @@ Include:
 ${
   services.length
     ? `<table>
-         <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
+         <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Tips</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
          <tbody>
            ${services
              .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
              .map(
-               (s: any) =>
-                 `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${((s.price || 0) * s.bookings).toFixed(2)}</td><td>$${(s.price || 0).toFixed(2)}</td></tr>`
+               (s: any) => {
+                 const tips = tipsServiceType[s.service_name] || 0;
+                 const estRevenue = ((s.price || 0) * s.bookings) + tips;
+                 const avgPerBooking = s.bookings > 0 ? estRevenue / s.bookings : 0;
+                 return `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${tips.toFixed(2)}</td><td>$${estRevenue.toFixed(2)}</td><td>$${avgPerBooking.toFixed(2)}</td></tr>`
+               }
              )
              .join('')}
-           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.total_revenue||0),0).toFixed(2)}</td><td>$${(services.reduce((sum:any,s:any)=>sum+(s.price||0),0)/services.length).toFixed(2)}</td></tr>
+           <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${(Object.values(tipsServiceType) as number[]).reduce((sum: any, t: any) => sum + t, 0).toFixed(2)}</td><td>$${services.reduce((sum:any,s:any)=>{
+             const tips = tipsServiceType[s.service_name] || 0;
+             return sum + ((s.price || 0) * s.bookings) + tips;
+           },0).toFixed(2)}</td><td>$${(services.reduce((sum:any,s:any)=>{
+             const tips = tipsServiceType[s.service_name] || 0;
+             return sum + ((s.price || 0) * s.bookings) + tips;
+           },0)/services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)).toFixed(2)}</td></tr>
          </tbody>
        </table>
        Instructions: creative analysis/generation of above`

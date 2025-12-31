@@ -81,7 +81,6 @@ export default function UserEditorPage() {
 
   return (
     <>
-      <Navbar />
       <motion.div
         className="min-h-screen pt-[100px] px-4 sm:px-8 pb-8 bg-gradient-to-br from-[#0e100f] via-[#1a1e18] to-[#2b3a29] text-[var(--foreground)]"
         initial="hidden"

@@ -1109,9 +1109,11 @@ export async function GET(request: Request) {
   }
 
   if (weeklyFunnelUpserts.length > 0) {
-    await supabase
+    const { error: weeklyFunnelError } = await supabase
       .from('weekly_marketing_funnels_base')
       .upsert(weeklyFunnelUpserts, { onConflict: 'user_id,source,week_number,report_month,report_year' })
+    
+    if (weeklyFunnelError) throw weeklyFunnelError
   }
 
   const monthlyUpserts = await Promise.all(

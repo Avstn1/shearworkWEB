@@ -65,7 +65,6 @@ async function notifyUserAboutReport(
   })
 
   if (error) console.error('Error sending notification:', error)
-  else console.log('Notification sent:', data)
 }
 
 async function safeRpc(supabase: any, fn: string, args?: Record<string, any>) {
@@ -154,6 +153,7 @@ export async function POST(req: Request) {
       'November',
       'December',
     ]
+
     const monthIndex = monthNames.findIndex(
       (m) => m.toLowerCase() === String(month).toLowerCase(),
     )
@@ -181,6 +181,7 @@ export async function POST(req: Request) {
 
     let summaryData: any = null
     let weekly_rows: WeeklyRow[] | WeeklyRow | null = null
+    let totalTips: any = null
 
     // 🧮 Monthly summary
     if (type.startsWith('monthly')) {
@@ -193,12 +194,41 @@ export async function POST(req: Request) {
         .maybeSingle()
       if (error) throw error
 
+      const start_date = firstDayOfMonth.toISOString().split('T')[0]
+      const end_date = lastDayOfMonth.toISOString().split('T')[0]
+
+      const { data: tipsData, error: tipsError } = await supabase
+        .from('acuity_appointments')
+        .select('service_type, tip')
+        .eq('user_id', user_id)
+        .gte('appointment_date', start_date)
+        .lte('appointment_date', end_date)
+
+      if (tipsError) throw tipsError
+
+      const tipsServiceType = tipsData?.reduce((acc, appointment) => {
+        const serviceType = appointment.service_type || 'Unknown';
+        const tip = appointment.tip || 0;
+        acc[serviceType] = (acc[serviceType] || 0) + tip;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const totalTips = tipsData?.reduce((sum, appointment) => sum + (appointment.tip || 0), 0) || 0;
+
+      const tipsAggregatedData = {
+        totalTips,
+        tipsServiceType
+      };
+
       summaryData = {
         ...data,
+        tips: tipsAggregatedData,
         daily_points: dailyPoints,
         start_date: firstDayOfMonth.toISOString().split('T')[0],
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
+
+      console.log(summaryData.tips)
 
       const { data: weeklyData, error: weeklyError } = await supabase
         .from('weekly_data')
@@ -235,7 +265,6 @@ export async function POST(req: Request) {
 
       if (type.includes('comparison')) {
         weekly_rows = weeklyData as WeeklyRow[]
-        summaryData = null
         effectiveWeekNumber = null
 
         await supabase
@@ -245,6 +274,28 @@ export async function POST(req: Request) {
           .eq('month', month)
           .eq('year', normalizedYear)
           .eq('user_id', user_id)
+
+        // Get tips for each week in the comparison
+        const tipsForWeeks = await Promise.all(
+          weeklyData.map(async (week: any) => {
+            const { data: tipsData, error: tipsError } = await supabase
+              .from('acuity_appointments')
+              .select('tip')
+              .eq('user_id', user_id)
+              .gte('appointment_date', week.start_date)
+              .lte('appointment_date', week.end_date)
+            
+            if (tipsError) throw tipsError
+            
+            return tipsData?.reduce((sum, appointment) => sum + (appointment.tip || 0), 0) || 0
+          })
+        )
+        
+        totalTips = tipsForWeeks
+
+        summaryData = {
+          tips: totalTips
+        }
       } else {
         const selectedWeek =
           week_number != null
@@ -257,7 +308,33 @@ export async function POST(req: Request) {
         weekly_rows = selectedWeek
         summaryData = selectedWeek
         effectiveWeekNumber = selectedWeek.week_number
+
+        // Get tips for single week
+        const { data: tipsData, error: tipsError } = await supabase
+          .from('acuity_appointments')
+          .select('service_type, tip')
+          .eq('user_id', user_id)
+          .gte('appointment_date', selectedWeek.start_date)
+          .lte('appointment_date', selectedWeek.end_date)
+        
+        if (tipsError) throw tipsError
+        
+        const tipsServiceType = tipsData?.reduce((acc, appointment) => {
+          const serviceType = appointment.service_type || 'Unknown';
+          const tip = appointment.tip || 0;
+          acc[serviceType] = (acc[serviceType] || 0) + tip;
+          return acc;
+        }, {} as Record<string, number>) || {};
+
+        const totalTipsValue = tipsData?.reduce((sum, appointment) => sum + (appointment.tip || 0), 0) || 0;
+
+        summaryData.tips = {
+          totalTips: totalTipsValue,
+          tipsServiceType
+        }
       }
+
+      console.log(summaryData.tips)
 
       // best day (single-week only)
       const filteredDailyPoints = dailyPoints.filter((d) => {
@@ -372,19 +449,6 @@ export async function POST(req: Request) {
 
     funnels = await fetchFunnels()
 
-    console.log('=== FUNNELS FETCH DEBUG ===')
-    console.log('Report type:', type)
-    console.log('Effective week number:', effectiveWeekNumber)
-    console.log('Fetched funnels count:', funnels.length)
-    console.log('Fetched funnels:', JSON.stringify(funnels, null, 2))
-    console.log('Query params:', {
-      table: isWeekly ? 'weekly_marketing_funnels_base' : 'marketing_funnels',
-      user_id,
-      report_month: month,
-      report_year: normalizedYear,
-      week_number: effectiveWeekNumber
-    })
-
     // ✅ Extra visibility: confirm if ANY funnels exist for this user/month/year
     const { data: funnelAny, error: funnelAnyErr } = await supabase
       .from('weekly_marketing_funnels_base')  // ✅ CHANGED from weekly_marketing_funnels
@@ -412,8 +476,6 @@ export async function POST(req: Request) {
         .order('total_paid', { ascending: false })
       if (error) throw error
       topClients = data ?? []
-
-      // console.log(`Top Clients: ${JSON.stringify(topClients)}`)
 
     } else if (type === 'weekly_comparison') {
       let q = supabase
@@ -472,21 +534,6 @@ export async function POST(req: Request) {
         : type === 'weekly_comparison'
           ? week_number ?? null
           : null
-
-    console.log('DEBUG', {
-      type,
-      user_id,
-      month,
-      year: normalizedYear,
-      week_number,
-      effectiveWeekNumber,
-      datasetWeekNumber,
-      funnelsCount: funnels.length,
-      topClientsCount: topClients.length,
-      sampleTopClient: topClients[0] ?? null,
-      sampleFunnel: funnels[0] ?? null,
-      funnelAny: funnelAny ?? [],
-    })
 
     const dataset = {
       month,

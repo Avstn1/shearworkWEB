@@ -4,8 +4,11 @@ export const weeklyCommissionPrompt = (dataset: any, userName: string, month: st
   const funnels = dataset.marketing_funnels || []
   const bestDay = summary.best_day || null;
   const commissionRate = dataset.commission_rate || 0;
+
+  const tips = summary.tips.totalTips || 0
+  const tipsServiceType = summary.tips.tipsServiceType || {}
   
-  const personalEarnings = ((summary.total_revenue || 0) * commissionRate) + (summary.tips || 0);
+  const personalEarnings = ((summary.total_revenue || 0) * commissionRate) + (tips || 0);
   const avgTicket = summary.num_appointments > 0 
     ? (personalEarnings / summary.num_appointments).toFixed(2) 
     : '0.00';
@@ -33,7 +36,7 @@ Dataset (JSON):
 ${JSON.stringify(dataset, null, 2)}
 
 Generate a detailed weekly report in **HTML** suitable for TinyMCE.
-Use the provided data and computed values. Do not invent numbers.
+Use the provided data and computed values. Do not invent numbers. DO NOT REMOVE ANY KIND OF DATA.
 
 <h1>Weekly Report - Week ${summary.week_number || 'N/A'} (${summary.start_date || 'N/A'} → ${summary.end_date || 'N/A'}, ${year})</h1>
 
@@ -42,7 +45,7 @@ Use the provided data and computed values. Do not invent numbers.
   <li><strong>Total Clients:</strong> ${summary.num_appointments || 0}</li>
   <li><strong>New Clients:</strong> ${summary.new_clients || 0} | <strong>Returning:</strong> ${summary.returning_clients || 0}</li>
   <li><strong>Gross Revenue:</strong> $${(summary.total_revenue || 0).toFixed(2)}</li>
-  <li><strong>Tips:</strong> $${(summary.tips || 0).toFixed(2)}</li>
+  <li><strong>Tips:</strong> $${(tips || 0).toFixed(2)}</li>
   <li><strong>Commission Rate:</strong> ${(commissionRate * 100).toFixed(0)}%</li>
   <li><strong>Personal Earnings:</strong> $${personalEarnings.toFixed(2)} <em>(commission + tips)</em></li>
   <li><strong>Average Ticket:</strong> $${avgTicket} per client</li>
@@ -55,7 +58,7 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
   <li><strong>Revenue Performance:</strong> Gross revenue of $${(summary.total_revenue || 0).toFixed(2)} resulted in $${((summary.total_revenue || 0) * commissionRate).toFixed(2)} in commission earnings.</li>
   <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients joined this week (${summary.num_appointments > 0 ? (((summary.new_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of total).</li>
   ${bestDay ? `<li><strong>Best Day:</strong> ${bestDay.date} with $${(bestDay.total_revenue || 0).toFixed(2)} in gross revenue.</li>` : ''}
-  <li><strong>Tips:</strong> Earned $${(summary.tips || 0).toFixed(2)} in tips this week${summary.num_appointments > 0 ? ` (avg $${((summary.tips || 0) / summary.num_appointments).toFixed(2)} per client)` : ''}.</li>
+  <li><strong>Tips:</strong> Earned $${(tips || 0).toFixed(2)} in tips this week${summary.num_appointments > 0 ? ` (avg $${((tips || 0) / summary.num_appointments).toFixed(2)} per client)` : ''}.</li>
   <li><strong>Average Ticket Trend:</strong> $${avgTicket} personal earnings per client. ${parseFloat(avgTicket) > 30 ? 'Strong performance! 💪' : 'Consider upselling opportunities to boost average ticket.'}</li>
 </ul>
 
@@ -63,16 +66,20 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
    ${
      services.length
        ? `<table>
-            <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
+            <thead><tr><th>Service</th><th># of Bookings</th><th>% of Total</th><th>Tips</th><th>Est. Revenue</th><th>Avg/Booking</th></tr></thead>
             <tbody>
               ${services
                 .sort((a: any, b: any) => (b.bookings || 0) - (a.bookings || 0))
                 .map(
-                  (s: any) =>
-                    `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${(s.price || 0).toFixed(2)}</td><td>$${s.bookings > 0 ? (s.price / s.bookings).toFixed(2) : '0.00'}</td></tr>`
+                  (s: any) => {
+                    const serviceTips = tipsServiceType[s.service_name] || 0;
+                    const estRevenue = (s.price || 0) + serviceTips;
+                    const avgPerBooking = s.bookings > 0 ? estRevenue / s.bookings : 0;
+                    return `<tr><td>${s.service_name}</td><td>${s.bookings || 0}</td><td>${dataset.services_percentage?.find((sp:any)=>sp.name===s.service_name)?.percentage.toFixed(1) || 0}%</td><td>$${serviceTips.toFixed(2)}</td><td>$${estRevenue.toFixed(2)}</td><td>$${avgPerBooking.toFixed(2)}</td></tr>`
+                  }
                 )
                 .join('')}
-              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${services.reduce((sum:any,s:any)=>sum+(s.price||0),0).toFixed(2)}</td><td>$${(services.reduce((sum:any,s:any)=>sum+(s.bookings > 0 ? s.price / s.bookings : 0),0) / services.filter((s:any)=>s.bookings > 0).length).toFixed(2)}</td></tr>
+              <tr><td><strong>Total</strong></td><td>${services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)}</td><td>100%</td><td>$${tips.toFixed(2)}</td><td>$${(services.reduce((sum:any,s:any)=>sum+(s.price||0),0) + tips).toFixed(2)}</td><td>$${((services.reduce((sum:any,s:any)=>sum+(s.price||0),0) + tips) / services.reduce((sum:any,s:any)=>sum+(s.bookings||0),0)).toFixed(2)}</td></tr>
             </tbody>
           </table>
           <p>💇‍♂️ ${userName}'s most popular service this month was <strong>${services.sort((a:any,b:any)=>(b.bookings||0)-(a.bookings||0))[0]?.service_name || 'N/A'}</strong>, showing consistent client demand and service value.</p>`
