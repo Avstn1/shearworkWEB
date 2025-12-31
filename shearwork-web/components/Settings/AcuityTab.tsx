@@ -118,53 +118,6 @@ export default function AcuityTab() {
     })
   }
 
-  /**
-   * Sync clients & client stats for the whole year
-   * using the NEW /api/acuity/pull?month=...&year=... route.
-   * This is what fixes first_appt / last_appt in acuity_clients.
-   */
-  const syncYear = async () => {
-    if (!profile) return
-
-    setSyncingClients(true)
-    const toastId = toast.loading(`Syncing clients for ${year}...`)
-
-    try {
-      for (const month of MONTHS) {
-        const res = await fetch(
-          `/api/acuity/pull?month=${encodeURIComponent(
-            month
-          )}&year=${encodeURIComponent(year)}`,
-          { method: 'GET' }
-        )
-
-        const body = await res.json().catch(() => ({}))
-
-        if (!res.ok) {
-          throw new Error(
-            body.error || `Sync failed for ${month} ${year}`
-          )
-        }
-      }
-
-      toast.success(`Synced clients + visits for all of ${year}`, {
-        id: toastId,
-      })
-    } catch (err: any) {
-      console.error(err)
-      toast.error(
-        `Failed to sync clients for ${year}: ${
-          err.message || 'Unknown error'
-        }`,
-        { id: toastId }
-      )
-    } finally {
-      setSyncingClients(false)
-    }
-  }
-
-  // Existing "Sync All Appointments" button – still hits /pull-all
-  // for any extra revenue/weekly/monthly aggregates you’re using.
   const syncFullYear = async () => {
     if (!profile) return
 
@@ -177,30 +130,27 @@ export default function AcuityTab() {
     const toastId = toast.loading(`Syncing appointments for ${year}...`)
 
     try {
-      const res = await fetch(
-        `/api/acuity/pull-all?year=${encodeURIComponent(year)}`,
-        { method: 'POST' }
+      const { data, error } = await supabase.functions.invoke(
+        `fullyear_sync_barbers?user_id=${encodeURIComponent(profile.user_id)}`
       )
 
-      const data = await res.json().catch(() => null)
-
-      if (!res.ok) {
-        throw new Error(data?.error || 'Full Acuity sync failed')
+      if (error) {
+        throw new Error(error.message || 'Full Acuity sync failed')
       }
 
-      toast.success(`Successfully synced all appointments for ${year}!`, {
+      toast.success(`Successfully queued sync for ${year}! It will process in the background.`, {
         id: toastId,
       })
     } catch (err: any) {
       console.error(err)
-      toast.error(`Failed to sync appointments for ${year}`, {
+      toast.error(`Failed to queue sync for ${year}`, {
         id: toastId,
       })
     } finally {
       setSyncingAppointments(false)
     }
   }
-
+  
   if (loading) return <p className="text-white">Loading Acuity data...</p>
 
   // Button styles
@@ -305,20 +255,6 @@ export default function AcuityTab() {
           />
 
           <button
-            onClick={syncYear}
-            disabled={syncingClients}
-            className={
-              syncingClients
-                ? 'px-4 py-2 bg-white/20 text-white cursor-not-allowed rounded-xl'
-                : primaryBtn
-            }
-          >
-            {syncingClients
-              ? `Syncing clients ${year}...`
-              : `Sync Clients`}
-          </button>
-
-          <button
             onClick={syncFullYear}
             disabled={syncingAppointments}
             className={
@@ -328,8 +264,8 @@ export default function AcuityTab() {
             }
           >
             {syncingAppointments
-              ? `Syncing appointments ${year}...`
-              : `Sync All Appointments`}
+              ? `Syncing appointments and clients ${year}...`
+              : `Sync All Appointments and Clients`}
           </button>
         </div>
       </section>
