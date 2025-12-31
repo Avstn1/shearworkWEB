@@ -291,7 +291,7 @@ async function findOrCreateClient(
   return newClient.client_id
 }
 
-export async function GET(request: Request) {
+async function handleSync(request: Request) {
   // Create Supabase client with service role key (bypasses RLS)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -726,4 +726,12 @@ export async function GET(request: Request) {
     totalAppointments: appointments.length,
     totalClients: clientDataMap.size,
   })
+}
+
+export async function GET(request: Request) {
+  return handleSync(request)
+}
+
+export async function POST(request: Request) {
+  return handleSync(request)
 }
