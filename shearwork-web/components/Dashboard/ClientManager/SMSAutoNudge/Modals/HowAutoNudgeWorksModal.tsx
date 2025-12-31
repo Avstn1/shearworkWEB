@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Info, Plus, FileText, Sparkles, Shield, Send, Users, Zap } from 'lucide-react';
+import { X, Info, Phone, FileText, Sparkles, Shield, Send, Users, Zap } from 'lucide-react';
 
 interface HowAutoNudgeWorksModalProps {
   isOpen: boolean;
@@ -47,6 +47,22 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
               <div className="space-y-3 sm:space-y-6">
+                <div className="p-3 sm:p-5 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-xl">
+                  <div className="flex items-start gap-2 sm:gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
+                      <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white mb-2 text-sm sm:text-base">
+                        Register Your Phone Number
+                      </h4>
+                      <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                        Before you can use Auto Nudge, you need to register your phone number. Click your profile icon in the top right corner, select <span className="text-white font-semibold">Settings</span>, and update your phone number in the Profile tab. This is required to receive test messages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Step 1 */}
                 <div className="p-3 sm:p-5 bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 rounded-xl">
                   <div className="flex items-start gap-2 sm:gap-4">

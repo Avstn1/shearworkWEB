@@ -346,6 +346,28 @@ async function findOrCreateClient(
           .eq('client_id', client.client_id)
       }
       
+      // Recalculate date range after merging
+      const { data: allAppts } = await supabase
+        .from('acuity_appointments')
+        .select('appointment_date')
+        .eq('user_id', userId)
+        .eq('client_id', primary.client_id)
+        .order('appointment_date', { ascending: true })
+      
+      if (allAppts && allAppts.length > 0) {
+        const newFirstAppt = allAppts[0].appointment_date
+        const newLastAppt = allAppts[allAppts.length - 1].appointment_date
+        
+        await supabase
+          .from('acuity_clients')
+          .update({
+            first_appt: newFirstAppt,
+            last_appt: newLastAppt,
+            updated_at: new Date().toISOString()
+          })
+          .eq('client_id', primary.client_id)
+      }
+      
       matchedClients.splice(0, matchedClients.length, primary)
     }
   }
@@ -938,8 +960,35 @@ export async function GET(request: Request) {
     }
     dailyServiceCounts[dailySvcKey].count++
   }
-
+  
   if (appointmentsToUpsert.length > 0) {
+<<<<<<< HEAD
+  const acuityTips: Record<string, number> = {}
+  const cleanedAppointments = appointmentsToUpsert.map(appt => {
+    const { _acuity_tip, ...rest } = appt
+    acuityTips[appt.acuity_appointment_id] = _acuity_tip || 0
+    return rest
+  })
+  
+  const { data: upsertedAppts, error } = await supabase
+    .from('acuity_appointments')
+    .upsert(cleanedAppointments, { onConflict: 'user_id,acuity_appointment_id' })
+    .select('id, acuity_appointment_id, tip')
+    .limit(100000)
+  
+  if (error) {
+    console.error('!!! APPOINTMENT UPSERT ERROR !!!:', error)
+  } else if (upsertedAppts && upsertedAppts.length > 0) {
+    const newApptsNeedingTips = upsertedAppts.filter(appt => appt.tip === null)
+    
+    if (newApptsNeedingTips.length > 0) {
+      for (const appt of newApptsNeedingTips) {
+        const acuityTip = acuityTips[appt.acuity_appointment_id] || 0
+        await supabase
+          .from('acuity_appointments')
+          .update({ tip: acuityTip })
+          .eq('id', appt.id)
+=======
     const acuityTips: Record<string, number> = {}
     const acuityRevenue: Record<string, number> = {}
     
@@ -984,15 +1033,14 @@ export async function GET(request: Request) {
               .update(updates)
               .eq('id', appt.id)
           }
+>>>>>>> 9d6f1ba1905160b2c78e5083f8223391fbe9fe3d
         }
       }
     }
   }
 
-  const { data: clientAggregates } = await supabase
-    .from('acuity_appointments')
-    .select('client_id, appointment_date, revenue, tip')
-    .eq('user_id', user.id)
+  const { data: clientTotalsData } = await supabase
+    .rpc('calculate_client_appointment_stats', { p_user_id: user.id })
 
   const clientTotals: Record<string, {
     total_appointments: number
@@ -1001,38 +1049,64 @@ export async function GET(request: Request) {
     last_appt: string
   }> = {}
 
-  if (clientAggregates) {
-    for (const row of clientAggregates) {
-      if (!clientTotals[row.client_id]) {
-        clientTotals[row.client_id] = {
-          total_appointments: 0,
-          total_tips_all_time: 0,
-          first_appt: row.appointment_date,
-          last_appt: row.appointment_date,
-        }
+  if (clientTotalsData) {
+    for (const row of clientTotalsData) {
+      clientTotals[row.client_id] = {
+        total_appointments: row.total_appointments,
+        total_tips_all_time: row.total_tips_all_time,
+        first_appt: row.first_appt,
+        last_appt: row.last_appt,
       }
-      const totals = clientTotals[row.client_id]
-      totals.total_appointments += 1
-      totals.total_tips_all_time += row.tip || 0
-      if (row.appointment_date < totals.first_appt) totals.first_appt = row.appointment_date
-      if (row.appointment_date > totals.last_appt) totals.last_appt = row.appointment_date
     }
   }
 
-  const clientUpserts = Array.from(clientDataMap.values()).map(client => ({
-    user_id: user.id,
-    client_id: client.client_id,
-    email: client.email,
-    phone_normalized: client.phone_normalized,
-    phone: client.phone_normalized,
-    first_name: client.first_name,
-    last_name: client.last_name,
-    first_appt: clientTotals[client.client_id]?.first_appt || client.first_appt,
-    last_appt: clientTotals[client.client_id]?.last_appt || client.last_appt,
-    total_appointments: clientTotals[client.client_id]?.total_appointments || 0,
-    total_tips_all_time: Math.min(clientTotals[client.client_id]?.total_tips_all_time || 0, 999.99),
-    updated_at: new Date().toISOString(),
-  }))
+  const clientUpserts = await Promise.all(
+    Array.from(clientDataMap.values()).map(async (client) => {
+      let totals = clientTotals[client.client_id]
+      
+      // If totals missing, fetch them
+      if (!totals) {
+        const { data: appts } = await supabase
+          .from('acuity_appointments')
+          .select('appointment_date, tip')
+          .eq('user_id', user.id)
+          .eq('client_id', client.client_id)
+          .order('appointment_date', { ascending: true })
+        
+        if (appts && appts.length > 0) {
+          totals = {
+            total_appointments: appts.length,
+            total_tips_all_time: appts.reduce((sum, a) => sum + (a.tip || 0), 0),
+            first_appt: appts[0].appointment_date,
+            last_appt: appts[appts.length - 1].appointment_date,
+          }
+        } else {
+          // New client - use clientDataMap values
+          totals = {
+            total_appointments: 0,
+            total_tips_all_time: 0,
+            first_appt: client.first_appt,
+            last_appt: client.last_appt,
+          }
+        }
+      }
+      
+      return {
+        user_id: user.id,
+        client_id: client.client_id,
+        email: client.email,
+        phone_normalized: client.phone_normalized,
+        phone: client.phone_normalized,
+        first_name: client.first_name,
+        last_name: client.last_name,
+        first_appt: totals.first_appt,
+        last_appt: totals.last_appt,
+        total_appointments: totals.total_appointments,
+        total_tips_all_time: Math.min(totals.total_tips_all_time, 999.99),
+        updated_at: new Date().toISOString(),
+      }
+    })
+  )
 
   // Also update any existing clients that weren't in this sync but have updated totals
   // This ensures last_appt and total_appointments stay accurate

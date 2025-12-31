@@ -1,9 +1,38 @@
-// SMS Campaigns Message Schedule
+// SMS Campaigns Message Schedule - Updated with 7-day scheduling limits
 
 import { motion } from 'framer-motion';
-import { Calendar, Clock, FileText, Zap, Users, Hash, Info } from 'lucide-react';
-import { SMSMessage, HOURS_12, MINUTES, PERIODS, CLIENT_LIMITS, CAMPAIGN_TYPES } from './types';
+import { Calendar, Clock, FileText, Zap, Users, Hash, Info, AlertCircle } from 'lucide-react';
+import { SMSMessage, CAMPAIGN_TYPES } from './types';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
+
+// 15-minute intervals
+const MINUTES_15 = [
+  { value: 0, label: '00' },
+  { value: 15, label: '15' },
+  { value: 30, label: '30' },
+  { value: 45, label: '45' },
+];
+
+const HOURS_12 = [
+  { value: 0, label: '12' },
+  { value: 1, label: '1' },
+  { value: 2, label: '2' },
+  { value: 3, label: '3' },
+  { value: 4, label: '4' },
+  { value: 5, label: '5' },
+  { value: 6, label: '6' },
+  { value: 7, label: '7' },
+  { value: 8, label: '8' },
+  { value: 9, label: '9' },
+  { value: 10, label: '10' },
+  { value: 11, label: '11' },
+];
+
+const PERIODS = [
+  { value: 'AM', label: 'AM' },
+  { value: 'PM', label: 'PM' },
+];
 
 interface MessageScheduleProps {
   maxClients: number;
@@ -18,7 +47,6 @@ interface MessageScheduleProps {
   availableCredits?: number; 
 }
 
-// Right side of the MessageCard
 export function MessageSchedule({
   maxClients,
   setAlgorithmType,
@@ -38,22 +66,78 @@ export function MessageSchedule({
     msg.clientLimit > 1000 ? msg.clientLimit.toString() : ''
   );
   
-  // Check if it's a predefined limit or special case
   const isPredefinedLimit = [100, 250, 500, 750, 1000, 1500, 2000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
   const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
 
-  // Get minimum date (tomorrow)
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const now = new Date();
 
-  const minDate = tomorrow.toLocaleDateString('en-CA', {
+  const maxDateTime = new Date(now);
+  maxDateTime.setDate(now.getDate() + 7);
+
+  const minDate = now.toLocaleDateString('en-CA', {
     timeZone: 'America/Toronto',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   });
-  
-  // Get max limit based on campaign type
+
+  const maxDate = maxDateTime.toLocaleDateString('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  // Validate scheduled time is within 7 days
+  const validateScheduledTime = (): boolean => {
+    if (!msg.scheduleDate) return false;
+
+    // Convert 12-hour to 24-hour
+    let hour24 = msg.hour;
+    if (msg.period === 'PM') {
+      hour24 = msg.hour + 12;
+    }
+
+    const scheduledDateTime = new Date(msg.scheduleDate);
+    scheduledDateTime.setHours(hour24, msg.minute, 0, 0);
+
+    const nowWithBuffer = new Date();
+    
+    // Need at least 5 minutes buffer - round up to next 15-min interval if needed
+    const currentMinute = nowWithBuffer.getMinutes();
+    const minutesUntilNext15 = 15 - (currentMinute % 15);
+    
+    // If we're within 5 minutes of the next interval, we need to go to the one after
+    if (minutesUntilNext15 <= 5) {
+      nowWithBuffer.setMinutes(currentMinute + minutesUntilNext15 + 15);
+    } else {
+      nowWithBuffer.setMinutes(currentMinute + minutesUntilNext15);
+    }
+    nowWithBuffer.setSeconds(0, 0);
+
+    const maxAllowedTime = new Date();
+    maxAllowedTime.setDate(maxAllowedTime.getDate() + 7);
+
+    if (scheduledDateTime < nowWithBuffer) {
+      toast.error('Please select a time at least 5 minutes from now (rounded to 15-minute intervals)');
+      return false;
+    }
+
+    if (scheduledDateTime > maxAllowedTime) {
+      toast.error('Please select a time within 7 days from now');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleActivate = () => {
+    if (!validateScheduledTime()) {
+      return;
+    }
+    onSave(msg.id, 'activate');
+  };
+    
   const getMaxLimit = () => {
     return Math.min(availableCredits, maxClients);
   };
@@ -62,21 +146,18 @@ export function MessageSchedule({
     const maxLimit = getMaxLimit();
     
     if (value === -1) {
-      // Custom selected
       setShowCustomInput(true);
       const newLimit = customLimit && parseInt(customLimit) >= 100 ? parseInt(customLimit) : 100;
       setCustomLimit(newLimit.toString());
       onUpdate(msg.id, { clientLimit: Math.min(newLimit, maxLimit) });
     } else if (value === -2) {
-      // Max selected - use all available credits (or max for mass)
       setShowCustomInput(false);
       setCustomLimit('');
       onUpdate(msg.id, { clientLimit: maxLimit });
     } else {
-      // Predefined limit selected - just use the value directly
       setShowCustomInput(false);
       setCustomLimit('');
-      onUpdate(msg.id, { clientLimit: value }); // Remove Math.min here
+      onUpdate(msg.id, { clientLimit: value });
     }
   };
 
@@ -91,10 +172,7 @@ export function MessageSchedule({
   };
 
   const handlepurposeChange = (type: 'mass' | 'campaign') => {
-    // Both use available credits as max
     const maxLimit = availableCredits;
-    
-    // Adjust client limit if it exceeds new max
     const newLimit = Math.min(msg.clientLimit, maxLimit);
 
     setAlgorithmType(type);
@@ -129,7 +207,6 @@ export function MessageSchedule({
                 {type.label}
                 <div className="relative">
                   <Info className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                  {/* Tooltip */}
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-64 sm:w-72">
                     <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                       <p className="whitespace-normal break-words">{type.description}</p>
@@ -171,11 +248,8 @@ export function MessageSchedule({
             !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
           }`}
         >
-          {/* Dynamic predefined limits */}
           {[100, 250, 500, 750, 1000, 1500, 2000].map((limit) => {
             const effectiveMax = Math.min(getMaxLimit(), maxClients);
-            
-            // Only show limits that are less than effective max
             if (limit > effectiveMax) return null;
             
             return (
@@ -185,18 +259,15 @@ export function MessageSchedule({
             );
           })}
 
-          {/* Max option - show credits or max clients, whichever is lower */}
           <option value={-2} className="bg-[#1a1a1a]">
             Max ({Math.min(getMaxLimit(), maxClients).toLocaleString()} {Math.min(getMaxLimit(), maxClients) === maxClients ? 'clients' : 'credits'})
           </option>
 
-          {/* Custom option - always show last */}
           <option value={-1} className="bg-[#1a1a1a]">
             Custom
           </option>
         </select>
 
-        {/* Custom Input */}
         {showCustomInput && (
           <div className="mt-2">
             <div className="relative">
@@ -242,7 +313,6 @@ export function MessageSchedule({
           </p>
         )}
 
-        {/* Credit/Limit warnings */}
         {msg.clientLimit > availableCredits && (
           <p className="text-[10px] sm:text-xs text-rose-400 mt-2">
             ⚠️ You only have {availableCredits} credits available
@@ -252,14 +322,30 @@ export function MessageSchedule({
 
       {/* Schedule Date */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd] mb-1.5 sm:mb-2">
-          <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
-          Send Date
-        </label>
+        <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd]">
+            <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
+            Send Date
+          </label>
+          <div className="relative group">
+            <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300/70" />
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-56 sm:w-64">
+              <div className="bg-[#0a0a0a] border border-amber-300/30 rounded-lg px-3 py-2 text-xs text-amber-200 shadow-xl">
+                <p className="whitespace-normal break-words">
+                  Messages can only be scheduled up to 7 days from now with at least 5 minutes buffer (15-min intervals)
+                </p>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                  <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <input
           type="date"
           value={msg.scheduleDate || minDate}
           min={minDate}
+          max={maxDate}
           onChange={(e) => onUpdate(msg.id, { scheduleDate: e.target.value })}
           disabled={!msg.isEditing}
           className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all appearance-none cursor-pointer ${
@@ -277,7 +363,7 @@ export function MessageSchedule({
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {/* Hour */}
           <select
-            value={msg.hour === 0 ? 12 : msg.hour > 12 ? msg.hour - 12 : msg.hour}
+            value={msg.hour}
             onChange={(e) => {
               const newHour = parseInt(e.target.value);
               onUpdate(msg.id, { hour: newHour });
@@ -311,7 +397,7 @@ export function MessageSchedule({
               !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
             }`}
           >
-            {MINUTES.map((minute) => (
+            {MINUTES_15.map((minute) => (
               <option
                 key={minute.value}
                 value={minute.value}
@@ -351,7 +437,6 @@ export function MessageSchedule({
       {/* Action Buttons */}
       {msg.isEditing && (
         <div className="mt-auto">
-          {/* Two Choice Buttons */}
           <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
             {/* Save as Draft */}
             <button
@@ -385,7 +470,7 @@ export function MessageSchedule({
 
             {/* Activate Schedule */}
             <button
-              onClick={() => onSave(msg.id, 'activate')}
+              onClick={handleActivate}
               disabled={
                 isSaving ||
                 msg.message.length < 100 ||
@@ -420,7 +505,6 @@ export function MessageSchedule({
             </button>
           </div>
 
-          {/* Cancel Button */}
           {msg.isSaved && (
             <button
               onClick={() => onCancelEdit(msg.id)}

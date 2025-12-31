@@ -338,20 +338,14 @@ export default function SMSAutoNudge() {
           let hour12 = hour24;
           let period: 'AM' | 'PM' = 'AM';
           
-          if (hour24 === 0) {
-            hour12 = 12;
-            period = 'AM';
-          } else if (hour24 < 12) {
-            hour12 = hour24;
-            period = 'AM';
-          } else if (hour24 === 12) {
-            hour12 = 12;
-            period = 'PM';
-          } else {
+          if (hour24 >= 12) {
             hour12 = hour24 - 12;
             period = 'PM';
+          } else {
+            hour12 = hour24;
+            period = 'AM';
           }
-
+          
           // Get day of month
           const dayOfMonthCron = cronParts[2];
           const dayOfMonth = dayOfMonthCron !== '*' ? parseInt(dayOfMonthCron) : 1;
@@ -577,6 +571,30 @@ export default function SMSAutoNudge() {
       return;
     }
 
+    // Validate 5-minute buffer for current day of month
+    const now = new Date();
+    const currentDayOfMonth = now.getDate();
+    
+    if (scheduleDayOfMonth === currentDayOfMonth) {
+      // Convert selected time to 24-hour
+      let hour24 = scheduleHour;
+      if (schedulePeriod === 'PM') {
+        hour24 = scheduleHour + 12;
+      }
+      
+      // Create scheduled time for today
+      const scheduledTime = new Date();
+      scheduledTime.setHours(hour24, scheduleMinute, 0, 0);
+      
+      // Check if scheduled time is within 5 minutes from now
+      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+      
+      if (scheduledTime <= fiveMinutesFromNow) {
+        toast.error('Schedule time must be at least 5 minutes from now. Please choose a different time or day.');
+        return;
+      }
+    }
+
     try {
       // Get user session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -588,10 +606,8 @@ export default function SMSAutoNudge() {
 
       // Convert hour to 24-hour format
       let hour24 = scheduleHour;
-      if (schedulePeriod === 'PM' && scheduleHour !== 12) {
+      if (schedulePeriod === 'PM') {
         hour24 = scheduleHour + 12;
-      } else if (schedulePeriod === 'AM' && scheduleHour === 12) {
-        hour24 = 0;
       }
 
       // Build cron expression: minute hour day-of-month * *
@@ -1148,9 +1164,22 @@ export default function SMSAutoNudge() {
                       onChange={(e) => setScheduleHour(parseInt(e.target.value))}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
-                      {Array.from({ length: 12 }, (_, i) => i === 0 ? 12 : i).map((hour) => (
-                        <option key={hour} value={hour} className="bg-[#1a1a1a]">
-                          {hour.toString().padStart(2, '0')}
+                      {[
+                        { value: 0, label: '12' },
+                        { value: 1, label: '1' },
+                        { value: 2, label: '2' },
+                        { value: 3, label: '3' },
+                        { value: 4, label: '4' },
+                        { value: 5, label: '5' },
+                        { value: 6, label: '6' },
+                        { value: 7, label: '7' },
+                        { value: 8, label: '8' },
+                        { value: 9, label: '9' },
+                        { value: 10, label: '10' },
+                        { value: 11, label: '11' },
+                      ].map((hour) => (
+                        <option key={hour.value} value={hour.value} className="bg-[#1a1a1a]">
+                          {hour.label}
                         </option>
                       ))}
                     </select>
@@ -1161,7 +1190,7 @@ export default function SMSAutoNudge() {
                       onChange={(e) => setScheduleMinute(parseInt(e.target.value))}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
-                      {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
+                      {[0, 15, 30, 45].map((minute) => (
                         <option key={minute} value={minute} className="bg-[#1a1a1a]">
                           {minute.toString().padStart(2, '0')}
                         </option>
