@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import ConnectAcuityButton from '../ConnectAcuityButton'
 import Select from '@/components/UI/Select'
+import { Calendar, RefreshCw, Database } from 'lucide-react'
 
 interface CalendarItem {
   id: number | string
@@ -13,18 +14,8 @@ interface CalendarItem {
 }
 
 const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
 export default function AcuityTab() {
@@ -65,7 +56,6 @@ export default function AcuityTab() {
       const data = await res.json()
       setCalendars(data.calendars || [])
     } catch (err: any) {
-      // ignore
       console.error(err)
     } finally {
       setLoading(false)
@@ -118,6 +108,46 @@ export default function AcuityTab() {
     })
   }
 
+  const syncYear = async () => {
+    if (!profile) return
+
+    setSyncingClients(true)
+    const toastId = toast.loading(`Syncing clients for ${year}...`)
+
+    try {
+      for (const month of MONTHS) {
+        const res = await fetch(
+          `/api/acuity/pull?month=${encodeURIComponent(
+            month
+          )}&year=${encodeURIComponent(year)}`,
+          { method: 'GET' }
+        )
+
+        const body = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+          throw new Error(
+            body.error || `Sync failed for ${month} ${year}`
+          )
+        }
+      }
+
+      toast.success(`Synced clients + visits for all of ${year}`, {
+        id: toastId,
+      })
+    } catch (err: any) {
+      console.error(err)
+      toast.error(
+        `Failed to sync clients for ${year}: ${
+          err.message || 'Unknown error'
+        }`,
+        { id: toastId }
+      )
+    } finally {
+      setSyncingClients(false)
+    }
+  }
+
   const syncFullYear = async () => {
     if (!profile) return
 
@@ -150,125 +180,151 @@ export default function AcuityTab() {
       setSyncingAppointments(false)
     }
   }
-  
-  if (loading) return <p className="text-white">Loading Acuity data...</p>
 
-  // Button styles
-  const primaryBtn =
-    'px-4 py-2 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold rounded-xl hover:shadow-[0_0_15px_#3af1f7] transition-all'
-  const secondaryBtn =
-    'px-4 py-2 bg-white/10 border border-[var(--accent-2)] rounded-xl hover:bg-white/20 transition-all'
-  const smallPrimaryBtn =
-    'px-3 py-2 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold rounded-xl hover:shadow-[0_0_12px_#3af1f7] transition-all'
-  const smallSecondaryBtn =
-    'px-3 py-2 bg-white/10 border border-[var(--accent-2)] rounded-xl hover:bg-white/20 transition-all'
+  if (loading) return (
+    <div className="flex items-center justify-center py-12">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
+    </div>
+  )
 
   return (
     <div className="space-y-8">
-      <h2 className="text-xl font-bold">Acuity Integration</h2>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Acuity Integration</h2>
+        <p className="text-sm text-gray-400">Connect and sync your Acuity Scheduling data</p>
+      </div>
 
       <ConnectAcuityButton onConnectSuccess={loadData} />
 
       {/* Calendar Selection */}
-      <section className="space-y-4">
-        <h3 className="text-lg font-semibold">Calendar</h3>
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Calendar className="w-5 h-5" />
+          Calendar
+        </h3>
 
-        <div className="flex gap-2 items-center">
-          <Select
-            options={[
-              { value: '', label: 'Select calendar' },
-              ...calendars.map((c) => ({ value: c.name, label: c.name })),
-            ]}
-            value={selectedCalendar}
-            onChange={(val) => handleCalendarChangeRequest(val as string)}
-            disabled={!isEditingCalendar}
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <Select
+              options={[
+                { value: '', label: 'Select calendar' },
+                ...calendars.map((c) => ({ value: c.name, label: c.name })),
+              ]}
+              value={selectedCalendar}
+              onChange={(val) => handleCalendarChangeRequest(val as string)}
+              disabled={!isEditingCalendar}
+            />
+          </div>
 
           {!isEditingCalendar ? (
             <button
               onClick={() => setIsEditingCalendar(true)}
-              className={secondaryBtn}
+              className="px-6 py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium whitespace-nowrap"
             >
               Change
             </button>
           ) : (
-            <>
+            <div className="flex gap-2">
               <button
                 onClick={() => {
                   setSelectedCalendar(profile?.calendar || '')
                   setIsEditingCalendar(false)
                   setConfirmingChange(false)
                 }}
-                className={secondaryBtn}
+                className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={() => saveCalendar(selectedCalendar)}
-                className={primaryBtn}
+                className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all"
               >
                 Save
               </button>
-            </>
+            </div>
           )}
         </div>
 
         {confirmingChange && (
-          <div className="mt-3 bg-white/5 border border-[var(--accent-2)] rounded-lg p-3">
-            <p className="text-sm">
-              Changing your calendar will sync all data for this calendar.
-              Confirm if you want to continue.
+          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-3">
+            <p className="text-sm text-amber-200">
+              Changing your calendar will sync all data for this calendar. Confirm if you want to continue.
             </p>
 
-            <div className="mt-3 flex gap-3">
+            <div className="flex gap-3">
               <button
                 onClick={() => {
                   setConfirmingChange(false)
                   setIsEditingCalendar(false)
                   setSelectedCalendar(profile?.calendar || '')
                 }}
-                className={smallSecondaryBtn}
+                className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
               >
                 Cancel
               </button>
 
               <button
                 onClick={() => saveCalendar(selectedCalendar)}
-                className={smallPrimaryBtn}
+                className="px-6 py-2 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all"
               >
-                Confirm
+                Confirm Change
               </button>
             </div>
           </div>
         )}
-      </section>
+      </div>
 
       {/* Sync Section */}
-      <section className="space-y-4">
-        <h3 className="text-lg font-semibold">Sync & Import</h3>
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Database className="w-5 h-5" />
+          Sync & Import
+        </h3>
 
-        <div className="flex gap-4 flex-wrap items-center">
-          <Select
-            options={generateYearOptions()}
-            value={year}
-            onChange={(val) => setYear(val as string)}
-          />
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="w-full sm:w-32">
+              <Select
+                options={generateYearOptions()}
+                value={year}
+                onChange={(val) => setYear(val as string)}
+              />
+            </div>
 
-          <button
-            onClick={syncFullYear}
-            disabled={syncingAppointments}
-            className={
-              syncingAppointments
-                ? 'px-4 py-2 bg-white/20 text-white cursor-not-allowed rounded-xl'
-                : secondaryBtn
-            }
-          >
-            {syncingAppointments
-              ? `Syncing appointments and clients ${year}...`
-              : `Sync All Appointments and Clients`}
-          </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <button
+                onClick={syncYear}
+                disabled={syncingClients}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  syncingClients
+                    ? 'bg-white/10 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
+                }`}
+              >
+                <RefreshCw className={`w-4 h-4 ${syncingClients ? 'animate-spin' : ''}`} />
+                {syncingClients ? `Syncing ${year}...` : `Sync Clients`}
+              </button>
+
+              <button
+                onClick={syncFullYear}
+                disabled={syncingAppointments}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  syncingAppointments
+                    ? 'bg-white/10 text-gray-400 cursor-not-allowed'
+                    : 'bg-white/10 border border-white/20 hover:bg-white/15'
+                }`}
+              >
+                <Database className={`w-4 h-4 ${syncingAppointments ? 'animate-pulse' : ''}`} />
+                {syncingAppointments ? `Syncing ${year}...` : `Sync All Appointments`}
+              </button>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            Sync clients to update customer data and appointment history. Sync all appointments for comprehensive revenue reports.
+          </p>
         </div>
-      </section>
+      </div>
     </div>
   )
 }

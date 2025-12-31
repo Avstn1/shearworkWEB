@@ -18,7 +18,7 @@ export default function SidebarTabs({ activeTab, setActiveTab }: Props) {
   ]
 
   return (
-    <div className="w-52 bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-xl sticky top-[100px]">
+    <nav className="w-full lg:w-64 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col gap-2 shadow-xl lg:sticky lg:top-[100px] h-fit">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
@@ -27,18 +27,18 @@ export default function SidebarTabs({ activeTab, setActiveTab }: Props) {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-all duration-200
+              flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
               ${isActive 
-                ? 'bg-lime-300 text-black shadow-[0_0_10px_#c4ff85] scale-[1.03]'
-                : 'hover:bg-white/5 hover:scale-[1.02]'
+                ? 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black shadow-lg shadow-lime-400/20'
+                : 'text-gray-300 hover:bg-white/10 hover:text-white'
               }
             `}
           >
-            <Icon className="w-5 h-5" />
-            {tab.label}
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            <span>{tab.label}</span>
           </button>
         )
       })}
-    </div>
+    </nav>
   )
 }

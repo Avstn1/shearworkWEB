@@ -70,7 +70,7 @@ export default function SettingsPage() {
           >
             {/* overlay */}
             <div
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setMobileMenuOpen(false)}
             />
             {/* slide-over sidebar */}
@@ -79,13 +79,13 @@ export default function SettingsPage() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.3 }}
-              className="relative w-64 bg-[var(--card-bg)] p-4 rounded-r-2xl shadow-xl z-50 flex flex-col min-h-full"
+              className="relative w-64 bg-[#1a1f1b] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
             >
               <div className="flex justify-between items-center mb-6">
-                <span className="text-[var(--highlight)] text-2xl font-bold">Settings</span>
+                <span className="text-lime-300 text-2xl font-bold">Settings</span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-[var(--text-bright)] text-xl"
+                  className="text-gray-400 hover:text-white text-xl transition-colors"
                 >
                   ✕
                 </button>
@@ -104,36 +104,38 @@ export default function SettingsPage() {
 
       {/* Page Content */}
       <div
-        className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] text-[var(--foreground)]"
-        style={{ paddingTop: '100px' }} // <-- fixed padding to avoid overlap
+        className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] text-white"
+        style={{ paddingTop: 'calc(80px + 1.5rem)' }} // Navbar height + spacing
       >
-        <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-          {/* Desktop Sidebar */}
-          <div className="hidden md:flex w-52 flex-shrink-0">
-            <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-          </div>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:flex w-64 flex-shrink-0">
+              <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+            </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex md:hidden mb-4">
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="px-4 py-2 bg-[var(--highlight)] text-black rounded-full font-semibold shadow-md"
+            {/* Mobile Menu Button */}
+            <div className="flex lg:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="px-6 py-2.5 bg-gradient-to-r from-lime-400 to-emerald-400 text-black rounded-full font-semibold shadow-lg hover:shadow-lime-400/20 transition-all"
+              >
+                Menu
+              </button>
+            </div>
+
+            {/* Main Content */}
+            <motion.div
+              key={activeTab}
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-xl min-h-[600px]"
             >
-              Menu
-            </button>
+              <AnimatePresence mode="wait">{renderTab()}</AnimatePresence>
+            </motion.div>
           </div>
-
-          {/* Main Content */}
-          <motion.div
-            key={activeTab}
-            variants={fadeInUp}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="flex-1 bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl p-6 md:p-8 shadow-xl min-h-[500px]"
-          >
-            <AnimatePresence mode="wait">{renderTab()}</AnimatePresence>
-          </motion.div>
         </div>
       </div>
     </>
