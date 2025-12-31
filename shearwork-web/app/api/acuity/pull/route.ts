@@ -962,33 +962,6 @@ export async function GET(request: Request) {
   }
   
   if (appointmentsToUpsert.length > 0) {
-<<<<<<< HEAD
-  const acuityTips: Record<string, number> = {}
-  const cleanedAppointments = appointmentsToUpsert.map(appt => {
-    const { _acuity_tip, ...rest } = appt
-    acuityTips[appt.acuity_appointment_id] = _acuity_tip || 0
-    return rest
-  })
-  
-  const { data: upsertedAppts, error } = await supabase
-    .from('acuity_appointments')
-    .upsert(cleanedAppointments, { onConflict: 'user_id,acuity_appointment_id' })
-    .select('id, acuity_appointment_id, tip')
-    .limit(100000)
-  
-  if (error) {
-    console.error('!!! APPOINTMENT UPSERT ERROR !!!:', error)
-  } else if (upsertedAppts && upsertedAppts.length > 0) {
-    const newApptsNeedingTips = upsertedAppts.filter(appt => appt.tip === null)
-    
-    if (newApptsNeedingTips.length > 0) {
-      for (const appt of newApptsNeedingTips) {
-        const acuityTip = acuityTips[appt.acuity_appointment_id] || 0
-        await supabase
-          .from('acuity_appointments')
-          .update({ tip: acuityTip })
-          .eq('id', appt.id)
-=======
     const acuityTips: Record<string, number> = {}
     const acuityRevenue: Record<string, number> = {}
     
@@ -1033,7 +1006,6 @@ export async function GET(request: Request) {
               .update(updates)
               .eq('id', appt.id)
           }
->>>>>>> 9d6f1ba1905160b2c78e5083f8223391fbe9fe3d
         }
       }
     }
