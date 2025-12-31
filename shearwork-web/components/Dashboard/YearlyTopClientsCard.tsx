@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { supabase } from '@/utils/supabaseClient'
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
 
@@ -12,33 +11,10 @@ interface YearlyTopClientsCardProps {
 }
 
 interface TopClient {
-  client_id: string | null
-  client_name: string | null
-  total_paid: number | null
-  num_visits: number | null
-}
-
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
-
-const QUARTER_MONTHS: Record<Timeframe, string[]> = {
-  year: MONTHS,
-  Q1: ['January', 'February', 'March'],
-  Q2: ['April', 'May', 'June'],
-  Q3: ['July', 'August', 'September'],
-  Q4: ['October', 'November', 'December'],
+  client_id: string
+  client_name: string
+  total_spent: number
+  num_visits: number
 }
 
 export default function YearlyTopClientsCard({
@@ -56,147 +32,19 @@ export default function YearlyTopClientsCard({
       try {
         setLoading(true)
 
-        // YEAR: Fetch all 4 quarters and combine them
-        if (timeframe === 'year') {
-          const { data: weeklyRowsYear, error: yearError } = await supabase
-          .from('weekly_top_clients')
-          .select('client_id, client_name, total_paid, num_visits, month, year')
-          .eq('user_id', userId)
-          .eq('year', year)
-          .in('month', MONTHS)
+        // Use API route to fetch top clients (handles large datasets properly)
+        const res = await fetch(
+          `/api/dashboard/yearly-top-clients?year=${year}&timeframe=${timeframe}&limit=5`
+        )
 
-          // Fetch Q1
-          const { data: q1Rows, error: q1Error } = await supabase
-            .from('weekly_top_clients')
-            .select('client_id, client_name, total_paid, num_visits, month, year')
-            .eq('user_id', userId)
-            .eq('year', year)
-            .in('month', QUARTER_MONTHS['Q1'])
-
-          if (q1Error) throw q1Error
-
-          // Fetch Q2
-          const { data: q2Rows, error: q2Error } = await supabase
-            .from('weekly_top_clients')
-            .select('client_id, client_name, total_paid, num_visits, month, year')
-            .eq('user_id', userId)
-            .eq('year', year)
-            .in('month', QUARTER_MONTHS['Q2'])
-
-          if (q2Error) throw q2Error
-
-          // Fetch Q3
-          const { data: q3Rows, error: q3Error } = await supabase
-            .from('weekly_top_clients')
-            .select('client_id, client_name, total_paid, num_visits, month, year')
-            .eq('user_id', userId)
-            .eq('year', year)
-            .in('month', QUARTER_MONTHS['Q3'])
-
-          if (q3Error) throw q3Error
-
-          // Fetch Q4
-          const { data: q4Rows, error: q4Error } = await supabase
-            .from('weekly_top_clients')
-            .select('client_id, client_name, total_paid, num_visits, month, year')
-            .eq('user_id', userId)
-            .eq('year', year)
-            .in('month', QUARTER_MONTHS['Q4'])
-
-          if (q4Error) throw q4Error
-
-          // Combine all quarters
-          const allData = [
-            ...(q1Rows ?? []),
-            ...(q2Rows ?? []),
-            ...(q3Rows ?? []),
-            ...(q4Rows ?? [])
-          ]
-
-          // Aggregate by client_name
-          const map = new Map<string, TopClient>()
-
-          allData.forEach((row: any) => {
-            const key = row.client_name?.toLowerCase().trim() || 'unknown'
-            
-            const existing = map.get(key) || {
-              client_id: null,
-              client_name: row.client_name,
-              total_paid: 0,
-              num_visits: 0,
-            }
-
-            existing.total_paid = (existing.total_paid ?? 0) + (Number(row.total_paid) || 0)
-            existing.num_visits = (existing.num_visits ?? 0) + (Number(row.num_visits) || 0)
-
-            map.set(key, existing)
-          })
-
-          const aggregated = Array.from(map.values())
-
-          const filtered = aggregated.filter(
-            (f) =>
-              f.client_name &&
-              f.client_name !== 'Unknown' &&
-              f.client_name !== 'Returning Client' &&
-              !/walk/i.test(f.client_name)
-          )
-
-          // Sort by total_paid desc
-          filtered.sort((a, b) => (b.total_paid ?? 0) - (a.total_paid ?? 0))
-
-          setClients(filtered)
-          return
+        if (!res.ok) {
+          throw new Error('Failed to fetch top clients')
         }
 
-        // QUARTERS: aggregate from weekly_top_clients
-        const months = QUARTER_MONTHS[timeframe]
-
-        const { data: weeklyRows, error } = await supabase
-          .from('weekly_top_clients')
-          .select('client_id, client_name, total_paid, num_visits, month, year')
-          .eq('user_id', userId)
-          .eq('year', year)
-          .in('month', months)
-
-        if (error) throw error
-
-        // aggregate totals per client
-        const map = new Map<string, TopClient>();
-
-        (weeklyRows ?? []).forEach((row: any) => {
-          const key = row.client_name?.toLowerCase().trim() || 'unknown'
-          const existing = map.get(key) || {
-            client_id: row.client_id ?? null,
-            client_name: row.client_name ?? null,
-            total_paid: 0,
-            num_visits: 0,
-          }
-
-          existing.total_paid = (existing.total_paid ?? 0) + (Number(row.total_paid) || 0)
-          existing.num_visits = (existing.num_visits ?? 0) + (Number(row.num_visits) || 0)
-
-          map.set(key, existing)
-        })
-
-        const aggregated = Array.from(map.values())
-
-        const filtered = aggregated.filter(
-          (f) =>
-            f.client_name &&
-            f.client_name !== 'Unknown' &&
-            f.client_name !== 'Returning Client' &&
-            !/walk/i.test(f.client_name)
-        )
-
-        // sort by total_paid desc
-        filtered.sort(
-          (a, b) => (b.total_paid ?? 0) - (a.total_paid ?? 0)
-        )
-
-        console.log('Filtered Top Clients:', filtered)
-
-        setClients(filtered)
+        const data = await res.json()
+        console.log('YearlyTopClientsCard API response:', data)
+        
+        setClients(data.clients || [])
       } catch (err) {
         console.error('Error fetching yearly/quarterly top clients:', err)
         setClients([])
@@ -239,14 +87,14 @@ export default function YearlyTopClientsCard({
               <tr className="text-left border-b border-[#444]">
                 <th className="py-2 px-3 min-w-[30px]">#</th>
                 <th className="py-2 px-3 min-w-[120px]">Client</th>
-                <th className="py-2 px-3 min-w-[80px]">Service Totals</th>
+                <th className="py-2 px-3 min-w-[80px]">Total</th>
                 <th className="py-2 px-3 min-w-[60px]">Visits</th>
               </tr>
             </thead>
             <tbody>
-              {clients.slice(0, 5).map((client, idx) => (
+              {clients.map((client, idx) => (
                 <tr
-                  key={client.client_id ?? client.client_name ?? idx}
+                  key={client.client_id ?? idx}
                   className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
                     idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
                   }`}
@@ -254,13 +102,13 @@ export default function YearlyTopClientsCard({
                 >
                   <td className="py-2 px-3 font-medium">{idx + 1}</td>
                   <td className="py-2 px-3 font-semibold truncate">
-                    {client.client_name ?? 'N/A'}
+                    {client.client_name}
                   </td>
                   <td className="py-2 px-3 font-semibold text-green-400">
-                    ${client.total_paid?.toFixed(2) ?? '-'}
+                    ${client.total_spent.toFixed(2)}
                   </td>
                   <td className="py-2 px-3 font-semibold text-yellow-400">
-                    {client.num_visits ?? '-'}
+                    {client.num_visits}
                   </td>
                 </tr>
               ))}

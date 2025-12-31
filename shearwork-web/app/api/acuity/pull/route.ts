@@ -722,11 +722,11 @@ export async function GET(request: Request) {
     }
   }
 
+  // Fetch existing appointments for phone cache
   const { data: existingAppointments } = await supabase
     .from('acuity_appointments')
-    .select('client_id, phone_normalized')
+    .select('acuity_appointment_id, client_id, phone_normalized')
     .eq('user_id', user.id)
-    .not('phone_normalized', 'is', null)
 
   if (existingAppointments) {
     for (const appt of existingAppointments) {
@@ -844,17 +844,19 @@ export async function GET(request: Request) {
       if (referralSource && !existing.first_source) existing.first_source = referralSource
     }
 
+    // Don't include revenue in upsert - we'll set it only for NEW appointments
+    // This preserves any manual edits to revenue
     appointmentsToUpsert.push({
       user_id: user.id,
       acuity_appointment_id: appt.id,
       client_id: clientKey,
       phone_normalized: phoneNormalized,
       appointment_date: dayKey,
-      revenue: price,
       datetime: appt.datetime,
       service_type: appt.type || null,
       created_at: new Date().toISOString(),
       _acuity_tip: tip,
+      _acuity_revenue: price,
     })
 
     const weekMeta = getWeekMetaForDate(apptDate)
@@ -960,6 +962,7 @@ export async function GET(request: Request) {
   }
   
   if (appointmentsToUpsert.length > 0) {
+<<<<<<< HEAD
   const acuityTips: Record<string, number> = {}
   const cleanedAppointments = appointmentsToUpsert.map(appt => {
     const { _acuity_tip, ...rest } = appt
@@ -985,6 +988,52 @@ export async function GET(request: Request) {
           .from('acuity_appointments')
           .update({ tip: acuityTip })
           .eq('id', appt.id)
+=======
+    const acuityTips: Record<string, number> = {}
+    const acuityRevenue: Record<string, number> = {}
+    
+    const cleanedAppointments = appointmentsToUpsert.map(appt => {
+      const { _acuity_tip, _acuity_revenue, ...rest } = appt
+      acuityTips[appt.acuity_appointment_id] = _acuity_tip || 0
+      acuityRevenue[appt.acuity_appointment_id] = _acuity_revenue || 0
+      return rest
+    })
+    
+    console.log('Upserting appointments count:', cleanedAppointments.length)
+    
+    const { data: upsertedAppts, error } = await supabase
+      .from('acuity_appointments')
+      .upsert(cleanedAppointments, { onConflict: 'user_id,acuity_appointment_id' })
+      .select('id, acuity_appointment_id, tip, revenue')
+    
+    if (error) {
+      console.error('Appointment upsert error:', error)
+    } else if (upsertedAppts && upsertedAppts.length > 0) {
+      // Only set revenue and tip for NEW appointments (where they are null)
+      // This preserves any manual edits to existing appointments
+      const newApptsNeedingValues = upsertedAppts.filter(appt => 
+        appt.revenue === null || appt.tip === null
+      )
+      
+      if (newApptsNeedingValues.length > 0) {
+        console.log('Setting revenue/tip for new appointments:', newApptsNeedingValues.length)
+        for (const appt of newApptsNeedingValues) {
+          const updates: { tip?: number; revenue?: number } = {}
+          
+          if (appt.tip === null) {
+            updates.tip = acuityTips[appt.acuity_appointment_id] || 0
+          }
+          if (appt.revenue === null) {
+            updates.revenue = acuityRevenue[appt.acuity_appointment_id] || 0
+          }
+          
+          if (Object.keys(updates).length > 0) {
+            await supabase
+              .from('acuity_appointments')
+              .update(updates)
+              .eq('id', appt.id)
+          }
+>>>>>>> 9d6f1ba1905160b2c78e5083f8223391fbe9fe3d
         }
       }
     }
@@ -1058,6 +1107,28 @@ export async function GET(request: Request) {
       }
     })
   )
+
+  // Also update any existing clients that weren't in this sync but have updated totals
+  // This ensures last_appt and total_appointments stay accurate
+  const existingClientIds = new Set(clientUpserts.map(c => c.client_id))
+  
+  for (const [clientId, totals] of Object.entries(clientTotals)) {
+    if (!existingClientIds.has(clientId)) {
+      // This client exists in appointments but wasn't in this sync batch
+      // Update their totals directly
+      await supabase
+        .from('acuity_clients')
+        .update({
+          first_appt: totals.first_appt,
+          last_appt: totals.last_appt,
+          total_appointments: totals.total_appointments,
+          total_tips_all_time: Math.min(totals.total_tips_all_time || 0, 999.99),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+        .eq('client_id', clientId)
+    }
+  }
 
   if (clientUpserts.length > 0) {
     await supabase

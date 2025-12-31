@@ -35,30 +35,13 @@ const WEEKDAY_ORDER = [
   'Sunday',
 ]
 
-const JS_WEEKDAY = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-]
-
-function getDateRange(timeframe: Timeframe, year: number) {
-  switch (timeframe) {
-    case 'Q1':
-      return { start: `${year}-01-01`, end: `${year}-03-31` }
-    case 'Q2':
-      return { start: `${year}-04-01`, end: `${year}-06-30` }
-    case 'Q3':
-      return { start: `${year}-07-01`, end: `${year}-09-30` }
-    case 'Q4':
-      return { start: `${year}-10-01`, end: `${year}-12-31` }
-    case 'year':
-    default:
-      return { start: `${year}-01-01`, end: `${year}-12-31` }
-  }
+// Month ranges for quarters
+const QUARTER_MONTHS: Record<Timeframe, { startMonth: number; endMonth: number }> = {
+  year: { startMonth: 1, endMonth: 12 },
+  Q1: { startMonth: 1, endMonth: 3 },
+  Q2: { startMonth: 4, endMonth: 6 },
+  Q3: { startMonth: 7, endMonth: 9 },
+  Q4: { startMonth: 10, endMonth: 12 },
 }
 
 export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props) {
@@ -71,36 +54,32 @@ export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props
     const fetchData = async () => {
       setLoading(true)
       try {
-        const { start, end } = getDateRange(timeframe, year)
+        const { startMonth, endMonth } = QUARTER_MONTHS[timeframe]
 
-        const { data: rows, error } = await supabase
-          .from('daily_data')
-          .select('date, final_revenue')
-          .eq('user_id', userId)
-          .gte('date', start)
-          .lte('date', end)
+        // Call RPC function to get revenue by weekday (includes tips)
+        const { data: rows, error } = await supabase.rpc('get_revenue_by_weekday', {
+          p_user_id: userId,
+          p_year: year,
+          p_start_month: startMonth,
+          p_end_month: endMonth,
+        })
 
         if (error) throw error
 
-        // init totals
+        // Build map from RPC results (weekday names come with padding from TO_CHAR)
         const totals: Record<string, number> = {}
         WEEKDAY_ORDER.forEach((d) => (totals[d] = 0))
 
         ;(rows ?? []).forEach((r: any) => {
-          const d = new Date(`${r.date}T00:00:00`)
-          const jsName = JS_WEEKDAY[d.getDay()] // Sunday..Saturday
-          const weekday =
-            jsName === 'Sunday'
-              ? 'Sunday'
-              : WEEKDAY_ORDER.find((w) => w === jsName) ?? jsName
-
-          if (!totals[weekday]) totals[weekday] = 0
-          totals[weekday] += Number(r.final_revenue) || 0
+          const weekday = r.weekday.trim() // Remove padding from TO_CHAR
+          if (totals[weekday] !== undefined) {
+            totals[weekday] = r.total_revenue || 0
+          }
         })
 
         const mapped: DayData[] = WEEKDAY_ORDER.map((weekday) => ({
           weekday,
-          total_revenue: totals[weekday] || 0,
+          total_revenue: Math.round((totals[weekday] || 0) * 100) / 100,
         }))
 
         setData(mapped)
