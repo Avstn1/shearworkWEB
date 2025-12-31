@@ -670,6 +670,26 @@ export default function SMSCampaigns() {
 
       const data = await response.json();
 
+      // Check for QStash scheduling errors
+      if (data.results && Array.isArray(data.results)) {
+        const failedResult = data.results.find((r: any) => !r.success);
+        if (failedResult?.error) {
+          try {
+            const errorObj = JSON.parse(failedResult.error);
+            if (errorObj.error?.includes('maxDelay exceeded')) {
+              toast.error('Schedule is over the 7-day limit. Please adjust your scheduled time to be within 7 days from now, including the send time.');
+              return;
+            }
+          } catch {
+            // If error parsing fails, check the raw string
+            if (failedResult.error.includes('maxDelay exceeded')) {
+              toast.error('Schedule is over the 7-day limit. Please adjust your scheduled time to be within 7 days from now.');
+              return;
+            }
+          }
+        }
+      }
+
       if (data.success) {
         // Only deduct credits on activation (not when saving as draft)
         if (mode === 'activate' && previewCounts[msgId]) {

@@ -609,14 +609,6 @@ export default function Navbar() {
       isOpen={showCreditsModal}
       onClose={() => setShowCreditsModal(false)}
     />
-
-    <NewFeaturesModal
-      isOpen={showFeaturesModal}
-      onClose={() => setShowFeaturesModal(false)}
-      initialViewMode="barberView"
-      userId={user?.id}
-    />
-
     </>
   )
 }
