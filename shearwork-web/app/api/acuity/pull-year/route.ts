@@ -3,7 +3,6 @@
 'use server'
 
 import { NextResponse } from 'next/server'
-import { getAuthenticatedUser } from '@/utils/api-auth'
 import crypto from 'crypto'
 import {
   extractSourceFromForms,
@@ -293,27 +292,42 @@ async function findOrCreateClient(
 }
 
 export async function GET(request: Request) {
-  const { user, supabase } = await getAuthenticatedUser(request)
+  // Create Supabase client with service role key (bypasses RLS)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!user || !supabase) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+  if (!supabaseUrl || !serviceRoleKey) {
+    return NextResponse.json({ error: 'Missing Supabase configuration' }, { status: 500 })
   }
+
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
 
   const { searchParams } = new URL(request.url)
   const requestedYear = searchParams.get('year')
     ? parseInt(searchParams.get('year') as string, 10)
     : null
+  const userId = searchParams.get('user_id')
 
   if (!requestedYear) {
     return NextResponse.json({ error: 'Year parameter required' }, { status: 400 })
   }
 
-  console.log(`\n=== STARTING YEAR SYNC: ${requestedYear} for user ${user.id} ===`)
+  if (!userId) {
+    return NextResponse.json({ error: 'user_id parameter required' }, { status: 400 })
+  }
+
+  console.log(`\n=== STARTING YEAR SYNC: ${requestedYear} for user ${userId} ===`)
 
   const { data: tokenRow } = await supabase
     .from('acuity_tokens')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .single()
 
   if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
@@ -344,7 +358,7 @@ export async function GET(request: Request) {
             expires_at: nowSec + newTokens.expires_in,
             updated_at: new Date().toISOString(),
           })
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
       } else {
         return NextResponse.json({ error: 'Token refresh failed' }, { status: 500 })
       }
@@ -356,7 +370,7 @@ export async function GET(request: Request) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('calendar')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .single()
 
   if (!profile) {
@@ -442,7 +456,7 @@ export async function GET(request: Request) {
   const { data: existingClients } = await supabase
     .from('acuity_clients')
     .select('client_id, email, phone_normalized, first_name, last_name')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
 
   const clientCache = new Map<string, string>()
 
@@ -539,7 +553,7 @@ export async function GET(request: Request) {
     }
 
     appointmentsToUpsert.push({
-      user_id: user.id,
+      user_id: userId,
       acuity_appointment_id: appt.id,
       client_id: clientKey,
       phone_normalized: phoneNormalized,
@@ -607,7 +621,7 @@ export async function GET(request: Request) {
   // Use RPC function for efficient client totals calculation
   console.log('Calculating client totals...')
   const { data: clientTotalsData } = await supabase
-    .rpc('calculate_client_appointment_stats', { p_user_id: user.id })
+    .rpc('calculate_client_appointment_stats', { p_user_id: userId })
 
   const clientTotals: Record<string, {
     total_appointments: number
@@ -637,7 +651,7 @@ export async function GET(request: Request) {
         const { data: appts } = await supabase
           .from('acuity_appointments')
           .select('appointment_date, tip')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('client_id', client.client_id)
           .order('appointment_date', { ascending: true })
         
@@ -659,7 +673,7 @@ export async function GET(request: Request) {
       }
       
       return {
-        user_id: user.id,
+        user_id: userId,
         client_id: client.client_id,
         email: client.email,
         phone_normalized: client.phone_normalized,
@@ -689,7 +703,7 @@ export async function GET(request: Request) {
           total_tips_all_time: Math.min(totals.total_tips_all_time || 0, 999.99),
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('client_id', clientId)
     }
   }
