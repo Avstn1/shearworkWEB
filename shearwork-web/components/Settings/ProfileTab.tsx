@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import EditableAvatar from '@/components/EditableAvatar'
+import { Mail, Phone, Upload, Check, X } from 'lucide-react'
 
 export default function ProfileTab() {
   const [profile, setProfile] = useState<any>(null)
@@ -16,7 +17,7 @@ export default function ProfileTab() {
   const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [editedEmail, setEditedEmail] = useState('')
   const [editedPhone, setEditedPhone] = useState('')
-  const [originalPhone, setOriginalPhone] = useState('') // NEW: Track original phone
+  const [originalPhone, setOriginalPhone] = useState('')
   const [isSendingEmailCode, setIsSendingEmailCode] = useState(false)
   const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -43,10 +44,9 @@ export default function ProfileTab() {
   }
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+    const input = e.target.value.replace(/\D/g, '');
     
     if (input.length <= 10) {
-      // Format as (XXX) XXX-XXXX
       let formatted = input;
       if (input.length > 6) {
         formatted = `(${input.slice(0, 3)}) ${input.slice(3, 6)}-${input.slice(6, 10)}`;
@@ -62,46 +62,33 @@ export default function ProfileTab() {
 
   const getRawPhoneNumber = (phone: string) => {
     const digits = phone.replace(/\D/g, '');
-    // Always return with +1 prefix if we have 10 digits, otherwise return empty string
     if (digits.length === 10) {
       return `+1${digits}`;
     }
-    return ''; // Return empty string instead of raw digits
+    return '';
   };
 
-  // Convert raw phone to E.164 format for Twilio
   const getE164PhoneNumber = (formatted: string) => {
     const digits = formatted.replace(/\D/g, '');
-    
-    // Must have exactly 10 digits for North American numbers
     if (digits.length !== 10) {
       return '';
     }
-    
     return `+1${digits}`;
   }
 
-  // When opening the modal or initializing editedPhone
   const initializeEditedPhone = (phone: string) => {
     if (!phone) return '';
-    
-    // Remove all non-digits
     const digits = phone.replace(/\D/g, '');
-    
-    // Strip leading "1" if it exists and we have 11 digits
     const phoneDigits = digits.length === 11 && digits.startsWith('1') 
       ? digits.slice(1) 
       : digits;
     
-    // Format as (XXX) XXX-XXXX (only the 10 digits)
     if (phoneDigits.length === 10) {
       return `(${phoneDigits.slice(0, 3)}) ${phoneDigits.slice(3, 6)}-${phoneDigits.slice(6, 10)}`;
     }
-    
     return phoneDigits;
   };
 
-  // NEW: Check if phone number has changed
   const hasPhoneChanged = () => {
     const currentRaw = getRawPhoneNumber(editedPhone);
     const originalRaw = getRawPhoneNumber(originalPhone);
@@ -134,7 +121,7 @@ export default function ProfileTab() {
         setEditedEmail(data.email || user.email || '')
         const formattedPhone = initializeEditedPhone(data.phone || '');
         setEditedPhone(formattedPhone);
-        setOriginalPhone(formattedPhone); // NEW: Store original phone
+        setOriginalPhone(formattedPhone);
       }
     } catch (err) {
       console.error(err)
@@ -172,7 +159,6 @@ export default function ProfileTab() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Generate and send OTP code
       const response = await fetch('/api/otp/generate-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -208,7 +194,6 @@ export default function ProfileTab() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Verify the OTP code
       const response = await fetch('/api/otp/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -225,7 +210,6 @@ export default function ProfileTab() {
         throw new Error(data.error || 'Invalid verification code')
       }
 
-      // Now save the email to database as verified
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
@@ -260,15 +244,12 @@ export default function ProfileTab() {
       }
 
       const e164Phone = getE164PhoneNumber(editedPhone)
-
-      // Validate phone number has enough digits
       const rawPhone = getRawPhoneNumber(editedPhone)
       if (rawPhone.length < 10) {
         toast.error('Please enter a valid phone number')
         return
       }
 
-      // Generate and send SMS OTP code
       const response = await fetch('/api/otp/generate-sms-otp', {
         method: 'POST',
         headers: { 
@@ -311,7 +292,6 @@ export default function ProfileTab() {
 
       const e164Phone = getE164PhoneNumber(editedPhone)
 
-      // Verify the SMS OTP code
       const response = await fetch('/api/otp/verify-sms-otp', {
         method: 'POST',
         headers: { 
@@ -387,98 +367,112 @@ export default function ProfileTab() {
     }
   }
 
-  if (!profile || !authUser) return <p>Loading...</p>
+  if (!profile || !authUser) return (
+    <div className="flex items-center justify-center py-12">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
+    </div>
+  )
 
   return (
-    <div className="relative space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Profile Information</h2>
-      </div>
+    <div className="space-y-8">
+      <h2 className="text-2xl font-bold">Profile Information</h2>
 
-      {/* Avatar + User Info */}
-      <div className="flex gap-6 items-center">
-        <div className="relative">
-          <EditableAvatar
-            avatarUrl={profile.avatar_url || '/default-avatar.png'}
-            fullName={profile.full_name}
-            size={96}
-            onClick={() => fileInputRef.current?.click()}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-lg font-semibold">{profile.full_name}</p>
-          <p className="text-sm text-gray-400 capitalize">
-            {profile.role === "Barber" 
-              ? profile.barber_type === "rental" 
-                ? "Rental Barber" 
-                : "Commission Barber"
-              : profile.role
-            }
-          </p>
-          
-          {/* Email with verification status */}
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-gray-400">{profile.email || authUser.email}</p>
-            {profile.email_verified ? (
-              <span className="px-2 py-0.5 text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-full">
-                Verified
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full">
-                Not Verified
-              </span>
-            )}
+      {/* Avatar + User Info Card */}
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+          <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <EditableAvatar
+              avatarUrl={profile.avatar_url || '/default-avatar.png'}
+              fullName={profile.full_name}
+              size={96}
+            />
+            <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Upload className="w-6 h-6 text-white" />
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
 
-          {/* Phone with verification status */}
-          {profile.phone ? (
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-gray-400">{formatPhoneNumber(profile.phone)}</p>
-              {profile.phone_verified ? (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-full">
+          <div className="space-y-2 flex-1">
+            <h3 className="text-xl font-semibold">{profile.full_name}</h3>
+            <p className="text-sm text-gray-400 capitalize">
+              {profile.role === "Barber" 
+                ? profile.barber_type === "rental" 
+                  ? "Rental Barber" 
+                  : "Commission Barber"
+                : profile.role
+              }
+            </p>
+            
+            {/* Email with verification status */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Mail className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-300">{profile.email || authUser.email}</span>
+              {profile.email_verified ? (
+                <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
+                  <Check className="w-3 h-3" />
                   Verified
                 </span>
               ) : (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-rose-300/20 text-rose-300 border border-rose-300/30 rounded-full">
+                <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full flex items-center gap-1">
+                  <X className="w-3 h-3" />
                   Not Verified
                 </span>
               )}
             </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-gray-400 italic">No phone number</p>
-              <span className="px-2 py-0.5 text-xs font-semibold bg-rose-300/20 text-rose-300 border border-rose-300/30 rounded-full">
-                Required for SMS
-              </span>
+
+            {/* Phone with verification status */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Phone className="w-4 h-4 text-gray-400" />
+              {profile.phone ? (
+                <>
+                  <span className="text-sm text-gray-300">{formatPhoneNumber(profile.phone)}</span>
+                  {profile.phone_verified ? (
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full flex items-center gap-1">
+                      <X className="w-3 h-3" />
+                      Not Verified
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="text-sm text-gray-400 italic">No phone number</span>
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full">
+                    Required for SMS
+                  </span>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
       {/* Email Section */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <label className="text-sm font-medium text-gray-300">Email Address</label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="email"
             value={profile.email || authUser.email}
             disabled
-            className="flex-1 text-sm px-3 py-2 rounded-lg border bg-black/10 border-[var(--accent-2)] text-gray-400 cursor-default"
+            className="flex-1 px-4 py-3 rounded-xl border bg-white/5 border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:cursor-not-allowed"
           />
           <button
             onClick={() => {
               setEditedEmail(profile.email || authUser.email)
               setShowEmailModal(true)
             }}
-            className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-lime-300/20 to-lime-400/20 text-lime-300 border border-lime-300/30 rounded-lg hover:from-lime-300/30 hover:to-lime-400/30 transition-all"
+            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
           >
             Update
           </button>
@@ -486,24 +480,24 @@ export default function ProfileTab() {
       </div>
 
       {/* Phone Section */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <label className="text-sm font-medium text-gray-300">Phone Number</label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="tel"
             value={profile.phone ? formatPhoneNumber(profile.phone) : ''}
             disabled
             placeholder="No phone number set"
-            className="flex-1 text-sm px-3 py-2 rounded-lg border bg-black/10 border-[var(--accent-2)] text-gray-400 cursor-default"
+            className="flex-1 px-4 py-3 rounded-xl border bg-white/5 border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:cursor-not-allowed"
           />
           <button
             onClick={() => {
               const formattedPhone = initializeEditedPhone(profile.phone || '');
               setEditedPhone(formattedPhone);
-              setOriginalPhone(formattedPhone); // NEW: Store original when opening modal
+              setOriginalPhone(formattedPhone);
               setShowPhoneModal(true)
             }}
-            className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-lime-300/20 to-lime-400/20 text-lime-300 border border-lime-300/30 rounded-lg hover:from-lime-300/30 hover:to-lime-400/30 transition-all"
+            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
           >
             Update
           </button>
@@ -512,20 +506,21 @@ export default function ProfileTab() {
 
       {/* Commission */}
       {profile.barber_type === 'commission' && (
-        <div>
-          <label className="text-sm font-medium">Commission Rate (%)</label>
-          <div className="flex items-center mt-1">
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-gray-300">Commission Rate (%)</label>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <input
               value={commission}
               onChange={e => setCommission(e.target.value)}
               type="number"
-              className="bg-black/10 border border-[var(--accent-2)] p-3 rounded-xl w-40"
+              placeholder="Enter commission rate"
+              className="w-full sm:w-40 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
             />
             <button
               onClick={updateCommission}
-              className="ml-4 bg-[var(--highlight)] px-4 py-2 rounded-xl"
+              className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
             >
-              Save
+              Save Rate
             </button>
           </div>
         </div>
@@ -533,22 +528,18 @@ export default function ProfileTab() {
 
       {/* Email Modal */}
       {showEmailModal && (
-        <div 
-          className="fixed inset-0 bg-black/70 rounded-2xl flex items-center justify-center p-4 z-[9999]"
-        >
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Update Email</h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold">Update Email</h3>
               <button
                 onClick={() => {
                   setShowEmailModal(false)
                   setEmailVerificationCode('')
                 }}
-                className="text-gray-400 hover:text-white transition-all"
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-6 h-6" />
               </button>
             </div>
 
@@ -561,7 +552,7 @@ export default function ProfileTab() {
                   type="email"
                   value={editedEmail}
                   onChange={(e) => setEditedEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-300/50"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
                   placeholder="Enter email address"
                 />
               </div>
@@ -569,18 +560,18 @@ export default function ProfileTab() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-400">Current Status:</span>
                 {profile.email_verified ? (
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-full">
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
                     Verified
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full">
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full">
                     Not Verified
                   </span>
                 )}
               </div>
 
               {!profile.email_verified && (
-                <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-lg">
+                <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-xl">
                   <label className="block text-sm font-medium text-gray-300">
                     Verification Code
                   </label>
@@ -588,7 +579,7 @@ export default function ProfileTab() {
                     type="text"
                     value={emailVerificationCode}
                     onChange={(e) => setEmailVerificationCode(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-300/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                     placeholder="Enter 6-digit code"
                     maxLength={6}
                   />
@@ -596,14 +587,14 @@ export default function ProfileTab() {
                     <button
                       onClick={handleSendEmailCode}
                       disabled={isSendingEmailCode}
-                      className="flex-1 px-3 py-2 text-sm bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-lg font-semibold hover:bg-amber-300/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-3 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl font-semibold hover:bg-amber-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSendingEmailCode ? 'Sending...' : 'Send Code'}
                     </button>
                     <button
                       onClick={handleVerifyEmail}
                       disabled={isVerifyingEmail || !emailVerificationCode.trim()}
-                      className="flex-1 px-3 py-2 text-sm bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-lg font-semibold hover:bg-lime-300/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isVerifyingEmail ? 'Verifying...' : 'Verify'}
                     </button>
@@ -617,22 +608,18 @@ export default function ProfileTab() {
 
       {/* Phone Modal */}
       {showPhoneModal && (
-        <div 
-          className="fixed inset-0 bg-black/70 rounded-2xl flex items-center justify-center p-4 z-[9999]"
-        >
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Update Phone Number</h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold">Update Phone Number</h3>
               <button
                 onClick={() => {
                   setShowPhoneModal(false)
                   setPhoneVerificationCode('')
                 }}
-                className="text-gray-400 hover:text-white transition-all"
+                className="text-gray-400 hover:text-white transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-6 h-6" />
               </button>
             </div>
 
@@ -642,21 +629,19 @@ export default function ProfileTab() {
                   Phone Number
                 </label>
                 <div className="flex items-center gap-2">
-                  {/* Fixed country code */}
-                  <div className="px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-white font-medium">
+                  <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium">
                     +1
                   </div>
-                  {/* Phone number input */}
                   <input
                     type="tel"
                     value={editedPhone}
                     onChange={handlePhoneInput}
-                    className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-300/50"
+                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
                     placeholder="(647) 111-2222"
                     maxLength={14}
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 mt-2">
                   Enter your 10-digit phone number
                 </p>
               </div>
@@ -665,11 +650,11 @@ export default function ProfileTab() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-400">Current Status:</span>
                   {profile.phone_verified ? (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
                       Verified
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-rose-300/20 text-rose-300 border border-rose-300/30 rounded-full">
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full">
                       Not Verified
                     </span>
                   )}
@@ -677,14 +662,14 @@ export default function ProfileTab() {
               )}
 
               {!profile.phone && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg">
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
                   <p className="text-sm text-rose-300">
                     Phone number is required for SMS marketing features
                   </p>
                 </div>
               )}
 
-              <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-lg">
+              <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-xl">
                 <label className="block text-sm font-medium text-gray-300">
                   Verification Code
                 </label>
@@ -692,7 +677,7 @@ export default function ProfileTab() {
                   type="text"
                   value={phoneVerificationCode}
                   onChange={(e) => setPhoneVerificationCode(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-300/50"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
                   placeholder="Enter 6-digit code"
                   maxLength={6}
                 />
@@ -700,14 +685,14 @@ export default function ProfileTab() {
                   <button
                     onClick={handleSendPhoneCode}
                     disabled={isSendingPhoneCode || editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
-                    className="flex-1 px-3 py-2 text-sm bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-lg font-semibold hover:bg-lime-300/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-3 bg-lime-500/20 text-lime-300 border border-lime-500/30 rounded-xl font-semibold hover:bg-lime-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingPhoneCode ? 'Sending...' : 'Send Code'}
                   </button>
                   <button
                     onClick={handleVerifyPhone}
                     disabled={isVerifyingPhone || !phoneVerificationCode.trim()}
-                    className="flex-1 px-3 py-2 text-sm bg-lime-300/20 text-lime-300 border border-lime-300/30 rounded-lg font-semibold hover:bg-lime-300/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isVerifyingPhone ? 'Verifying...' : 'Verify'}
                   </button>

@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
+import { Lock, Key } from 'lucide-react'
 
 export default function SecurityTab() {
   const [oldPassword, setOldPassword] = useState('')
@@ -55,35 +56,51 @@ export default function SecurityTab() {
     setLoading(false)
   }
 
-  const primaryBtn = 'px-6 py-2 bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold rounded-xl hover:shadow-[0_0_15px_#3af1f7] transition-all disabled:opacity-50 disabled:cursor-not-allowed'
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Security</h2>
-
+    <div className="space-y-8">
       <div>
-        <label className="text-sm">Current Password</label>
-        <input
-          type="password"
-          className="w-full p-3 mt-2 bg-black/10 border border-[var(--accent-2)] rounded-xl"
-          value={oldPassword}
-          onChange={e => setOldPassword(e.target.value)}
-        />
+        <h2 className="text-2xl font-bold mb-2">Security</h2>
+        <p className="text-sm text-gray-400">Update your password to keep your account secure</p>
       </div>
 
-      <div>
-        <label className="text-sm">New Password</label>
-        <input
-          type="password"
-          className="w-full p-3 mt-2 bg-black/10 border border-[var(--accent-2)] rounded-xl"
-          value={newPassword}
-          onChange={e => setNewPassword(e.target.value)}
-        />
-      </div>
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+            <Lock className="w-4 h-4" />
+            Current Password
+          </label>
+          <input
+            type="password"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50 transition-all"
+            value={oldPassword}
+            onChange={e => setOldPassword(e.target.value)}
+            placeholder="Enter current password"
+          />
+        </div>
 
-      <button className={primaryBtn} onClick={updatePassword} disabled={loading}>
-        {loading ? 'Updating...' : 'Update Password'}
-      </button>
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+            <Key className="w-4 h-4" />
+            New Password
+          </label>
+          <input
+            type="password"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50 transition-all"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            placeholder="Enter new password (min. 6 characters)"
+          />
+          <p className="text-xs text-gray-500">Password must be at least 6 characters long</p>
+        </div>
+
+        <button 
+          className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+          onClick={updatePassword} 
+          disabled={loading}
+        >
+          {loading ? 'Updating Password...' : 'Update Password'}
+        </button>
+      </div>
     </div>
   )
 }

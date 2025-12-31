@@ -245,12 +245,12 @@ export default function AppointmentSheets() {
               <ChevronDown className={`w-4 h-4 text-amber-300 transition-transform ${isCalendarOpen ? 'rotate-180' : ''}`} />
             </motion.button>
 
-            {/* Calendar Dropdown */}
+            {/* Calendar Dropdown - Fixed positioning for mobile */}
             {isCalendarOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="absolute right-0 mt-2 bg-[#1a1e18]/95 border border-white/10 rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl"
+                className="absolute left-0 sm:left-auto sm:right-0 mt-2 bg-[#1a1e18]/95 border border-white/10 rounded-2xl shadow-2xl p-4 z-50 backdrop-blur-xl min-w-[340px]"
               >
                 <DayPicker
                   mode="single"
@@ -272,7 +272,7 @@ export default function AppointmentSheets() {
                   }}
                   className="
                     bg-transparent text-xs
-                    [&_.rdp-day]:text-white [&_.rdp-day]:px-0.5 [&_.rdp-day]:py-0.25 [&_.rdp-day]:min-w-[1.5rem] [&_.rdp-day]:min-h-[1.5rem]
+                    [&_.rdp-day]:text-white [&_.rdp-day]:px-1 [&_.rdp-day]:py-1 [&_.rdp-day]:min-w-[2rem] [&_.rdp-day]:min-h-[2rem]
                     [&_.rdp-day--outside]:text-gray-500 [&_.rdp-day--outside]:opacity-50
                     [&_.rdp-day_today-custom]:!bg-amber-400/20 [&_.rdp-day_today-custom]:!text-amber-400 [&_.rdp-day_today-custom]:!font-bold [&_.rdp-day_today-custom]:!ring-2 [&_.rdp-day_today-custom]:!ring-amber-400 [&_.rdp-day_today-custom]:!rounded-full
                     [&_.rdp-day--disabled]:!text-gray-800 [&_.rdp-day--disabled]:!bg-[#101210] [&_.rdp-day--disabled]:!cursor-not-allowed [&_.rdp-day--disabled]:!opacity-100
@@ -281,6 +281,8 @@ export default function AppointmentSheets() {
                     [&_.rdp-nav-button]:bg-transparent [&_.rdp-nav-button]:hover:bg-white/10 [&_.rdp-nav-button]:text-white [&_.rdp-nav-button]:p-1 [&_.rdp-nav-button]:rounded-full
                     [&_.rdp-nav-icon]:stroke-white
                     [&_.rdp-day:hover]:bg-white/10
+                    [&_.rdp-head_cell]:min-w-[2rem] [&_.rdp-head_cell]:text-center
+                    [&_.rdp-table]:w-full
                   "
                   style={{ ['--rdp-accent-color' as any]: '#f59e0b' }}
                 />
@@ -292,7 +294,7 @@ export default function AppointmentSheets() {
                       setSelectedDate(new Date());
                       setIsCalendarOpen(false);
                     }}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition"
+                    className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition text-center"
                   >
                     Today
                   </button>
@@ -303,7 +305,7 @@ export default function AppointmentSheets() {
                       setSelectedDate(yesterday);
                       setIsCalendarOpen(false);
                     }}
-                    className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/10 text-white hover:bg-white/20 transition"
+                    className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-white/10 text-white hover:bg-white/20 transition text-center"
                   >
                     Yesterday
                   </button>
