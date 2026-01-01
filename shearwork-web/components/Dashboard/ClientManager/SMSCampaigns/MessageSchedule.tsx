@@ -561,6 +561,10 @@ export function MessageSchedule({
                     <span className="text-white mt-1">•</span>
                     <span>For mass messages, the cut-off is at 1 year and 6 months of not visiting.</span>
                   </li>
+                  <li className="flex gap-2">
+                    <span className="text-white mt-1">•</span>
+                    <span>Your Maximum Number of Clients to Message is determined by whichever is higher: your available credits or the total number of eligible clients.</span>
+                  </li>
                 </ul>
               </div>
                           
