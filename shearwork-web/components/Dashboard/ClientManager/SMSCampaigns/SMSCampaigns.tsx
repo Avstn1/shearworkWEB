@@ -414,6 +414,67 @@ export default function SMSCampaigns() {
         });
 
         if (!response.ok) throw new Error('Failed to delete message');
+
+        // if (msg.validationStatus === 'ACCEPTED' && previewCounts[id] && !msg.is_finished && !msg.is_running) {
+        //   try {
+        //     const { data: { user } } = await supabase.auth.getUser();
+        //     if (!user) return;
+
+        //     // Get current credits
+        //     const { data: profile } = await supabase
+        //       .from('profiles')
+        //       .select('available_credits, reserved_credits')
+        //       .eq('user_id', user.id)
+        //       .single();
+
+        //     if (!profile) return;
+
+        //     // Refund: move from reserved back to available
+        //     const refundAmount = Math.min(previewCounts[id], profile.reserved_credits || 0);
+
+        //     const oldAvailable = profile.available_credits || 0;
+        //     const newAvailable = oldAvailable + refundAmount;
+        //     const oldReserved = profile.reserved_credits || 0;
+        //     const newReserved = Math.max(0, oldReserved - refundAmount);
+            
+        //     const { error } = await supabase
+        //       .from('profiles')
+        //       .update({
+        //         available_credits: (profile.available_credits || 0) + refundAmount,
+        //         reserved_credits: Math.max(0, (profile.reserved_credits || 0) - refundAmount),
+        //         updated_at: new Date().toISOString()
+        //       })
+        //       .eq('user_id', user.id);
+
+        //     if (error) {
+        //       console.error('Failed to refund credits:', error);
+        //       toast.error('Failed to refund credits');
+        //       return;
+        //     }
+
+        //     // Update local state
+        //     setAvailableCredits(prev => prev + refundAmount);
+        //     toast.success(`${refundAmount} credits refunded - message set to draft`);
+
+        //     await supabase
+        //     .from('credit_transactions')
+        //     .insert({
+        //       user_id: user.id,
+        //       action: `Campaign deactivated - ${msg.title}`,
+        //       old_available: oldAvailable,
+        //       new_available: newAvailable,
+        //       old_reserved: oldReserved,
+        //       new_reserved: newReserved,
+        //       reference_id: msg.id, 
+        //       created_at: new Date().toISOString()
+        //     });
+
+        //   } catch (error) {
+        //     console.error('Failed to refund credits:', error);
+        //     toast.error('Failed to refund credits');
+        //     return;
+        //   }
+        // }
         
         toast.success('Message deleted successfully');
       } catch (error) {
