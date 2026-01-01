@@ -72,7 +72,7 @@ export default function SMSCampaigns() {
   const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<'soft' | 'hard'>('hard');
 
-  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'auto-nudge'>('auto-nudge');
+  const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'auto-nudge'>('campaign');
   const [maxClients, setMaxClients] = useState<number>(0);
 
   const [profile, setProfile] = useState<any>(null);
@@ -268,7 +268,7 @@ export default function SMSCampaigns() {
             validationStatus: dbMsg.status,
             validationReason: undefined,
             isEditing: false,
-            algorithm: dbMsg.purpose,
+            purpose: dbMsg.purpose,
           };
           
           return message;
@@ -332,7 +332,12 @@ export default function SMSCampaigns() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || '';
-      const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${algorithmType}`);
+      
+      // Get the message's purpose
+      const message = messages.find(m => m.id === messageId);
+      const messagePurpose = message?.purpose || algorithmType;
+      
+      const response = await fetch(`/api/client-messaging/preview-recipients?limit=${limit}&userId=${userId}&algorithm=${messagePurpose}`);
       
       if (!response.ok) {
         throw new Error('Failed to load preview');
@@ -577,7 +582,7 @@ export default function SMSCampaigns() {
       }
     }
 
-    // If saving as draft and message was previously activated, refund credits
+    // REFUND SECTION: If saving as draft and message was previously activated, refund credits
     if (mode === 'draft' && msg.validationStatus === 'ACCEPTED' && previewCounts[msgId]) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -656,7 +661,7 @@ export default function SMSCampaigns() {
         scheduledFor, // ISO timestamp
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
         isValidated: msg.isValidated,
-        purpose: algorithmType,
+        purpose: msg.purpose || algorithmType,
         previewCount: mode === 'activate' ? previewCounts[msgId] : undefined,
       };
 
