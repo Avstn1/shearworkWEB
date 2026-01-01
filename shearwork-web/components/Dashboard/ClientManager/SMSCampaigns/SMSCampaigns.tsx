@@ -82,9 +82,11 @@ export default function SMSCampaigns() {
 
   const [previewModalKey, setPreviewModalKey] = useState(0);
 
-  const [previewLimit, setPreviewLimit] = useState(250);
+  const [previewLimit, setPreviewLimit] = useState(50);
 
   const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
+
+  const [limitMode, setLimitMode] = useState('predefined')
 
   // Progress tracking state
   const [campaignProgress, setCampaignProgress] = useState<Record<string, {
@@ -259,7 +261,7 @@ export default function SMSCampaigns() {
             hour: hour12,
             minute,
             period,
-            clientLimit: dbMsg.message_limit || 100,
+            clientLimit: dbMsg.message_limit || 50,
             enabled: true,
             isSaved: true,
             isValidated: isValidated, 
@@ -370,7 +372,7 @@ export default function SMSCampaigns() {
         hour: 10,
         minute: 0,
         period: 'AM',
-        clientLimit: 100,
+        clientLimit: 50,
         enabled: true,
         isSaved: false,
         isValidated: false,
@@ -1012,6 +1014,7 @@ export default function SMSCampaigns() {
           <div className="space-y-3 sm:space-y-4">
             {messages.map((msg, index) => (
               <MessageCard
+                setLimitMode={setLimitMode}
                 maxClients={maxClients}
                 testMessagesUsed={testMessagesUsed}
                 profile={profile}

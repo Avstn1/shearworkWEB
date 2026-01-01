@@ -28,6 +28,7 @@ interface CampaignProgress {
 }
 
 interface MessageCardProps {
+  setLimitMode: any;
   maxClients: number;
   profile: any; 
   setAlgorithmType: (type: 'campaign' | 'mass') => void;
@@ -59,6 +60,7 @@ interface MessageCardProps {
 }
 
 export function MessageCard({
+  setLimitMode,
   maxClients,
   profile,
   setAlgorithmType,

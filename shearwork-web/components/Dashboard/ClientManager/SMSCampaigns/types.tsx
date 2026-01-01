@@ -46,12 +46,12 @@ export const CAMPAIGN_TYPES = [
   { 
     value: 'campaign' as const, 
     label: 'Campaign',
-    description: 'Uses an algorithm that carefully selects clients who has the most need for a message. Good for call-to-action campaigns.'
+    description: 'Selects clients who has the most need for a message. Good for call-to-action campaigns.'
   },
   { 
     value: 'mass' as const, 
     label: 'Mass',
-    description: 'Selects your clients sorted by most recent visit - the more recent their visit, the more likely they\'ll be included. Good for absence messages'
+    description: 'The more recent a client\'s visit, the more likely they\'ll be included. Good for absence messages'
   },
 ];
 
