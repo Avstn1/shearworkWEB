@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Calendar, Clock, FileText, Zap, Users, Hash, Info, AlertCircle } from 'lucide-react';
 import { SMSMessage, CAMPAIGN_TYPES } from './types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 // 15-minute intervals
@@ -62,12 +62,33 @@ export function MessageSchedule({
 
   const [showLimitModal, setShowLimitModal] = useState(false);
 
-  const [customLimit, setCustomLimit] = useState<string>(
-    msg.clientLimit > 1000 ? msg.clientLimit.toString() : ''
-  );
+  const getMaxLimit = () => {
+    return Math.min(availableCredits, maxClients);
+  };
+
+  // Determine if current limit is a predefined value
+  const isPredefinedLimit = () => {
+    const predefinedLimits = [50, 100, 250, 500, 750, 1000, 1500, 2000];
+    return predefinedLimits.includes(msg.clientLimit) || msg.clientLimit === getMaxLimit();
+  };
+
+  const [customLimit, setCustomLimit] = useState<string>(() => {
+    // Initialize with current limit if it's not predefined
+    return !isPredefinedLimit() ? msg.clientLimit.toString() : '';
+  });
   
-  const isPredefinedLimit = [50, 100, 250, 500, 750, 1000, 1500, 2000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
-  const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
+  const [showCustomInput, setShowCustomInput] = useState(() => !isPredefinedLimit());
+
+  // Update when message changes (e.g., switching between messages)
+  useEffect(() => {
+    const isPredef = isPredefinedLimit();
+    setShowCustomInput(!isPredef);
+    if (!isPredef) {
+      setCustomLimit(msg.clientLimit.toString());
+    } else {
+      setCustomLimit('');
+    }
+  }, [msg.id, msg.clientLimit]);
 
   const now = new Date();
 
@@ -138,9 +159,9 @@ export function MessageSchedule({
     onSave(msg.id, 'activate');
   };
     
-  const getMaxLimit = () => {
-    return Math.min(availableCredits, maxClients);
-  };
+  // const getMaxLimit = () => {
+  //   return Math.min(availableCredits, maxClients);
+  // };
 
   const handleLimitChange = (value: number) => {
     const maxLimit = getMaxLimit();
@@ -167,7 +188,7 @@ export function MessageSchedule({
     const numValue = parseInt(value);
     const maxLimit = getMaxLimit();
     
-    if (!isNaN(numValue) && numValue >= 100) {
+    if (!isNaN(numValue) && numValue >= 1) {
       onUpdate(msg.id, { clientLimit: Math.min(numValue, maxLimit) });
     }
   };
@@ -176,6 +197,7 @@ export function MessageSchedule({
     const maxLimit = availableCredits;
     const newLimit = Math.min(msg.clientLimit, maxLimit);
 
+    // Update parent state AND message purpose
     setAlgorithmType(type);
     
     onUpdate(msg.id, { 
@@ -183,6 +205,14 @@ export function MessageSchedule({
       clientLimit: newLimit
     });
   };
+
+  // Sync parent algorithmType with message purpose when message loads or changes
+  useEffect(() => {
+    if (msg.purpose && (msg.purpose === 'mass' || msg.purpose === 'campaign')) {
+      console.log("Purpose: " + msg.purpose)
+      setAlgorithmType(msg.purpose);
+    }
+  }, [msg.id, msg.purpose]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -282,6 +312,15 @@ export function MessageSchedule({
                 max={getMaxLimit()}
                 value={customLimit}
                 onChange={(e) => handleCustomLimitChange(e.target.value)}
+                onBlur={(e) => {
+                  // Enforce max on blur
+                  const numValue = parseInt(e.target.value);
+                  const maxLimit = getMaxLimit();
+                  if (!isNaN(numValue) && numValue > maxLimit) {
+                    setCustomLimit(maxLimit.toString());
+                    onUpdate(msg.id, { clientLimit: maxLimit });
+                  }
+                }}
                 disabled={!msg.isEditing}
                 placeholder={`Enter custom limit (Min: 1, Max: ${getMaxLimit().toLocaleString()})`}
                 className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
@@ -291,7 +330,7 @@ export function MessageSchedule({
             </div>
             {previewCount > 0 && (
               <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-2">
-                {previewCount} clients will receive this message.
+                {Math.min(previewCount, availableCredits)} clients will receive this message.
                 <button
                   type="button"
                   onClick={() => setShowLimitModal(true)}
@@ -303,10 +342,10 @@ export function MessageSchedule({
             )}
           </div>
         )}
-        
+
         {!showCustomInput && previewCount > 0 && (
           <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-2">
-            {previewCount} clients will receive this message.
+            {Math.min(previewCount, availableCredits)} clients will receive this message.
             <button
               type="button"
               onClick={() => setShowLimitModal(true)}
