@@ -246,7 +246,7 @@ export default function SMSAutoNudge() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, available_credits')
+        .select('full_name, email, phone, available_credits, auto_nudge_schedule')
         .eq('user_id', user.id)
         .single();
 
@@ -632,6 +632,17 @@ export default function SMSAutoNudge() {
         return;
       }
 
+      const { error: smsScheduleError } = await supabase
+       .from('sms_scheduled_messages')
+       .update( { start_date: startDateStr, end_date: endDateStr } )
+       .eq('user_id', session.user.id);
+
+      if (smsScheduleError) {
+        console.error('Error updating sms_scheduled_messages:', smsScheduleError);
+        toast.error('Failed to save schedule');
+        return;
+      }
+
       // Apply schedule to all messages
       setMessages(messages.map(msg => ({
         ...msg,
@@ -724,8 +735,21 @@ export default function SMSAutoNudge() {
     setIsSaving(true);
     setSavingMode(mode);
     try {
-      // Use the schedule values directly since they come from the schedule modal
-      // The schedule modal sets hour/minute/period correctly
+      let startDate = null;
+      let endDate = null;
+      
+      if (profile?.auto_nudge_schedule) {
+        const parts = profile.auto_nudge_schedule.split('|').map((p: any) => p.trim());
+        if (parts.length === 3) {
+          startDate = parts[1]; 
+          endDate = parts[2];  
+        }
+        console.log(parts)
+      }
+
+      console.log(startDate)
+      console.log(endDate)
+
       const messageToSave = {
         id: msg.id,
         title: msg.title,
@@ -733,11 +757,13 @@ export default function SMSAutoNudge() {
         visitingType: msg.visitingType,
         frequency: 'monthly',
         dayOfMonth: scheduleDayOfMonth,
-        hour: scheduleHour,  // ← Use scheduleHour directly (already in 12hr format)
-        minute: scheduleMinute,  // ← Use scheduleMinute directly
-        period: schedulePeriod,  // ← Use schedulePeriod directly
+        hour: scheduleHour, 
+        minute: scheduleMinute, 
+        period: schedulePeriod,
         validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
-        purpose: 'auto-nudge'
+        purpose: 'auto-nudge',
+        start_date: startDate,
+        end_date: endDate
       };
 
       const response = await fetch('/api/client-messaging/save-sms-schedule', {
@@ -758,7 +784,6 @@ export default function SMSAutoNudge() {
                 isEditing: false, 
                 validationStatus: mode === 'draft' ? 'DRAFT' : 'ACCEPTED',
                 enabled: mode === 'activate',
-                // Update the message with the schedule values
                 dayOfMonth: scheduleDayOfMonth,
                 hour: scheduleHour,
                 minute: scheduleMinute,

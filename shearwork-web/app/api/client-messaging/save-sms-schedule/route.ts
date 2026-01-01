@@ -453,6 +453,8 @@ export async function POST(request: Request) {
           return { success: true, data }
           
         } else {
+          console.log(msg.startDate)
+          console.log(msg.endDate)
           // Insert new message
           const { data, error } = await supabase
             .from('sms_scheduled_messages')
@@ -468,6 +470,8 @@ export async function POST(request: Request) {
               visiting_type: msg.visitingType,
               purpose: msg.purpose,
               message_limit: msg.clientLimit,
+              start_date: msg.start_date,
+              end_date: msg.end_date
             })
             .select()
             .single()

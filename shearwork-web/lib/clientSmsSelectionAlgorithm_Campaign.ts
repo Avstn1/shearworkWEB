@@ -1,4 +1,4 @@
-// lib/sms/holidayMassCampaignAlgorithm.ts
+// lib/clientSmsSelectionAlgorithm_Campaign.ts
 import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface AcuityClient {

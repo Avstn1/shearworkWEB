@@ -684,14 +684,15 @@ export default function CreditsModal({
                                         <div className={`text-xs md:text-sm font-semibold ${
                                           availableDiff > 0 ? 'text-lime-300' : 'text-red-400'
                                         }`}>
-                                          {availableDiff > 0 ? '+' : ''}{availableDiff.toLocaleString()}
+                                          Available {availableDiff > 0 ? '+' : ''}{availableDiff.toLocaleString()}
                                         </div>
                                       )}
                                       {reservedDiff !== 0 && (
                                         <div className={`text-[10px] md:text-xs font-medium ${
                                           reservedDiff > 0 ? 'text-amber-300' : 'text-sky-300'
                                         }`}>
-                                          {reservedDiff > 0 ? 'Reserved' : 'Released'} {Math.abs(reservedDiff).toLocaleString()}
+                                          {/* {reservedDiff > 0 ? 'Reserved' : 'Released'} {Math.abs(reservedDiff).toLocaleString()} */}
+                                          Reserved {reservedDiff > 0 ? '+' : ''}{reservedDiff.toLocaleString()}
                                         </div>
                                       )}
                                     </div>
