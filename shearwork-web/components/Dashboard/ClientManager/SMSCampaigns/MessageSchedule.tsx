@@ -66,7 +66,7 @@ export function MessageSchedule({
     msg.clientLimit > 1000 ? msg.clientLimit.toString() : ''
   );
   
-  const isPredefinedLimit = [100, 250, 500, 750, 1000, 1500, 2000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
+  const isPredefinedLimit = [50, 100, 250, 500, 750, 1000, 1500, 2000].includes(msg.clientLimit) || msg.clientLimit === availableCredits;
   const [showCustomInput, setShowCustomInput] = useState(!isPredefinedLimit);
 
   const now = new Date();
@@ -163,6 +163,7 @@ export function MessageSchedule({
 
   const handleCustomLimitChange = (value: string) => {
     setCustomLimit(value);
+    console.log("Custom limit changed to:" + value)
     const numValue = parseInt(value);
     const maxLimit = getMaxLimit();
     
@@ -211,7 +212,7 @@ export function MessageSchedule({
                     <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                       <p className="whitespace-normal break-words">{type.description}</p>
                       <div className="mt-1 text-amber-300 font-semibold">
-                        Max: {availableCredits.toLocaleString()} clients (your available credits)
+                        Max: {availableCredits.toLocaleString()} credits (available credits)
                       </div>
                       <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                         <div className="border-4 border-transparent border-t-[#0a0a0a]" />
@@ -248,7 +249,7 @@ export function MessageSchedule({
             !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
           }`}
         >
-          {[100, 250, 500, 750, 1000, 1500, 2000].map((limit) => {
+          {[50, 100, 250, 500, 750, 1000, 1500, 2000].map((limit) => {
             const effectiveMax = Math.min(getMaxLimit(), maxClients);
             if (limit > effectiveMax) return null;
             
@@ -260,7 +261,10 @@ export function MessageSchedule({
           })}
 
           <option value={-2} className="bg-[#1a1a1a]">
-            Max ({Math.min(getMaxLimit(), maxClients).toLocaleString()} {Math.min(getMaxLimit(), maxClients) === maxClients ? 'clients' : 'credits'})
+            Max (
+            {Math.min(getMaxLimit(), maxClients).toLocaleString()}{' '}
+            {getMaxLimit() < maxClients ? 'credits' : 'clients'}
+            )
           </option>
 
           <option value={-1} className="bg-[#1a1a1a]">
@@ -279,7 +283,7 @@ export function MessageSchedule({
                 value={customLimit}
                 onChange={(e) => handleCustomLimitChange(e.target.value)}
                 disabled={!msg.isEditing}
-                placeholder={`Enter custom limit (min 100, max ${getMaxLimit().toLocaleString()})`}
+                placeholder={`Enter custom limit (Min: 1, Max: ${getMaxLimit().toLocaleString()})`}
                 className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
                   !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
                 }`}
