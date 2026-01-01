@@ -311,7 +311,7 @@ export default function SMSAutoNudge() {
       ];
 
       const titles = {
-        'consistent': 'Consistent (Once every week)',
+        'consistent': 'Consistent (Highly-frequent visitor)',
         'semi-consistent': 'Semi-Consistent (Once every 2-3 weeks)',
         'easy-going': 'Easy-Going (Once every 3-8 weeks)',
         'rare': 'Rare (Less than once every 2 months)',
@@ -433,10 +433,10 @@ export default function SMSAutoNudge() {
     ];
 
     const titles = {
-      'consistent': 'Consistent (Once every week)',
-      'semi-consistent': 'Semi-Consistent (Once every 2-3 weeks)',
-      'easy-going': 'Easy-Going (Once every 3-8 weeks)',
-      'rare': 'Rare (Less than once every 2 months)',
+      'consistent': 'Consistent (Highly Frequent visitor)',
+      'semi-consistent': 'Semi-Consistent (Bi-weekly visitor)',
+      'easy-going': 'Easy-Going (Visits every 3-8 weeks)',
+      'rare': 'Rare (Visits less than once every 2 months)',
       'new': 'New (Has only gone once)'
     };
 

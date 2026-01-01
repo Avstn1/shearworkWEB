@@ -301,7 +301,7 @@ export function MessageCard({
             {!isLocked && (
               <div className="relative group">
                 <button
-                  onClick={() => onLoadPreview(msg.clientLimit)}
+                  onClick={() => onLoadPreview(Math.min(previewCount || msg.clientLimit, availableCredits || msg.clientLimit))}
                   disabled={loadingPreview}
                   className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >

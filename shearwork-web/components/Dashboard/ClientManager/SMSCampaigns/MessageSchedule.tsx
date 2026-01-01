@@ -61,6 +61,7 @@ export function MessageSchedule({
 }: MessageScheduleProps) {
 
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const getMaxLimit = () => {
     return Math.min(availableCredits, maxClients);
@@ -308,7 +309,7 @@ export function MessageSchedule({
               <Hash className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bdbdbd]" />
               <input
                 type="number"
-                min="1"
+                min="0"
                 max={getMaxLimit()}
                 value={customLimit}
                 onChange={(e) => handleCustomLimitChange(e.target.value)}
@@ -371,17 +372,35 @@ export function MessageSchedule({
             Send Date
           </label>
           <div className="relative group">
-            <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300/70" />
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-56 sm:w-64">
+            <button
+              type="button"
+              onClick={() => setShowTooltip(!showTooltip)}
+              className="flex items-center justify-center"
+            >
+              <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300/70" />
+            </button>
+
+            {/* Tooltip - centered on desktop, offset right on mobile */}
+            <div className={`absolute bottom-full mb-2 z-20 w-56 sm:w-64 
+              -right-30 sm:left-1/2 sm:-translate-x-1/2
+              ${showTooltip ? 'block' : 'hidden group-hover:block'}`}>
               <div className="bg-[#0a0a0a] border border-amber-300/30 rounded-lg px-3 py-2 text-xs text-amber-200 shadow-xl">
                 <p className="whitespace-normal break-words">
                   Messages can only be scheduled up to 7 days from now with at least 5 minutes buffer (15-min intervals)
                 </p>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                <div className="absolute top-full sm:left-1/2 sm:-translate-x-1/2 -mt-1">
                   <div className="border-4 border-transparent border-t-[#0a0a0a]" />
                 </div>
               </div>
             </div>
+
+            {/* Backdrop for mobile - only shows when clicked */}
+            {showTooltip && (
+              <div 
+                className="fixed inset-0 z-10" 
+                onClick={() => setShowTooltip(false)}
+              />
+            )}
           </div>
         </div>
         <input

@@ -116,6 +116,12 @@ export default function RecipientPreviewModal({
   const [clientListTotalPages, setClientListTotalPages] = useState(1);
   const CLIENT_LIST_PER_PAGE = 100;
 
+  // One-time sms client
+  const [showAddCustomModal, setShowAddCustomModal] = useState(false);
+  const [customFirstName, setCustomFirstName] = useState('');
+  const [customLastName, setCustomLastName] = useState('');
+  const [customPhone, setCustomPhone] = useState('');
+
   // const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
 
   const [otherClientsPage, setOtherClientsPage] = useState(1);
@@ -489,35 +495,51 @@ export default function RecipientPreviewModal({
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Add to deselected list
-      const updatedDeselected = [...deselectedClients, pendingDeselectPhone];
-
-      // ALSO remove from selected list if they're there
-      const updatedSelected = selectedClients.filter(
-        (c) => c.phone_normalized !== pendingDeselectPhone
+      // Check if this is a custom client
+      const clientToDeselect = selectedClients.find(
+        c => c.phone_normalized === pendingDeselectPhone
       );
+      const isCustomClient = clientToDeselect?.is_custom;
+
+      // If custom, delete from selected_clients entirely
+      // If not custom, add to deselected_clients
+      let updatedDeselected = deselectedClients;
+      let updatedSelected = selectedClients;
+
+      if (isCustomClient) {
+        // Just remove from selected list
+        updatedSelected = selectedClients.filter(
+          c => c.phone_normalized !== pendingDeselectPhone
+        );
+      } else {
+        // Add to deselected list and remove from selected
+        updatedDeselected = [...deselectedClients, pendingDeselectPhone];
+        updatedSelected = selectedClients.filter(
+          c => c.phone_normalized !== pendingDeselectPhone
+        );
+      }
 
       const { error } = await supabase
-        .from("sms_scheduled_messages")
+        .from('sms_scheduled_messages')
         .update({ 
           deselected_clients: updatedDeselected,
-          selected_clients: updatedSelected // Update both at once
+          selected_clients: updatedSelected
         })
-        .eq("id", messageId)
-        .eq("user_id", user.id);
+        .eq('id', messageId)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
       setDeselectedClients(updatedDeselected);
-      setSelectedClients(updatedSelected); // Update local state too
-      toast.success("Client moved to deselected list");
+      setSelectedClients(updatedSelected);
+      toast.success(isCustomClient ? 'One-time recipient removed' : 'Client moved to deselected list');
     } catch (error) {
-      console.error("Failed to deselect client:", error);
-      toast.error("Failed to deselect client");
+      console.error('Failed to deselect client:', error);
+      toast.error('Failed to deselect client');
     } finally {
       setShowDeselectModal(false);
       setPendingDeselectPhone(null);
-      setPendingDeselectName("");
+      setPendingDeselectName('');
     }
   };
 
@@ -776,6 +798,96 @@ const confirmReselect = async () => {
     }
   };
 
+  const validateCustomPhone = (phone: string): boolean => {
+    // Remove all non-digits
+    const digitsOnly = phone.replace(/\D/g, '');
+    return digitsOnly.length === 10;
+  };
+
+  const handleAddCustomClient = async () => {
+    // Validation
+    if (!customFirstName.trim() || !customLastName.trim()) {
+      toast.error('Please enter both first and last name');
+      return;
+    }
+
+    if (!validateCustomPhone(customPhone)) {
+      toast.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    const phoneNormalized = '+1' + customPhone.replace(/\D/g, '');
+
+    // Check for duplicates in selected clients
+    const isDuplicateSelected = selectedClients.some(
+      c => c.phone_normalized === phoneNormalized
+    );
+
+    if (isDuplicateSelected) {
+      toast.error('This phone number is already in your selected clients');
+      return;
+    }
+
+    // Check for duplicates in preview clients (algorithm list)
+    const isDuplicatePreview = previewClients.some(
+      c => c.phone_normalized === phoneNormalized
+    );
+
+    if (isDuplicatePreview) {
+      toast.error('This client is already in your client list');
+      return;
+    }
+
+    if (!messageId) {
+      toast.error('Please save this message as a draft first');
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const customClient = {
+        client_id: `custom_${Date.now()}`,
+        first_name: customFirstName.trim(),
+        last_name: customLastName.trim(),
+        phone_normalized: phoneNormalized,
+        is_custom: true, // Flag to identify one-time recipients
+      };
+
+      const updatedSelected = [...selectedClients, customClient];
+
+      const { error } = await supabase
+        .from('sms_scheduled_messages')
+        .update({ selected_clients: updatedSelected })
+        .eq('id', messageId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setSelectedClients(updatedSelected);
+      toast.success('One-time recipient added successfully');
+
+      // Reset form and close modal
+      setCustomFirstName('');
+      setCustomLastName('');
+      setCustomPhone('');
+      setShowAddCustomModal(false);
+
+      // Refresh preview
+      onClose();
+      setTimeout(() => {
+        if (onRefresh) {
+          onRefresh();
+        }
+      }, 100);
+
+    } catch (error) {
+      console.error('Failed to add custom client:', error);
+      toast.error('Failed to add recipient');
+    }
+  };
+
   const filteredClients = getFilteredClients();
   const activeClientCount = previewClients.length;
 
@@ -1016,8 +1128,16 @@ return (
                         {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}
                       </p>
                     </div>
-
                     <div className="flex gap-1.5 md:gap-2 flex-shrink-0">
+
+                      <button
+                        onClick={() => setShowAddCustomModal(true)}
+                        className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30 transition-all duration-300"
+                      >
+                        <span className="hidden sm:inline">Add One-time sms recipient</span>
+                        <span className="sm:hidden">Add</span>
+                      </button>
+
                       <button
                         onClick={handleResetSelections}
                         className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
@@ -1189,6 +1309,12 @@ return (
                                 {isDeselected && (
                                   <span className="px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-amber-300/20 text-amber-300 border border-amber-300/30 flex-shrink-0">
                                     Deselected
+                                  </span>
+                                )}
+                                {/* ADD THIS */}
+                                {selectedClients.find(c => c.phone_normalized === client.phone_normalized)?.is_custom && (
+                                  <span className="px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 flex-shrink-0">
+                                    One-time 
                                   </span>
                                 )}
                                 <span
@@ -1704,6 +1830,140 @@ return (
                       className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all duration-300"
                     >
                       Reset All
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Add Custom Client Modal */}
+          <AnimatePresence>
+            {showAddCustomModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+                onClick={() => setShowAddCustomModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
+                        Add One-time Recipient
+                      </h3>
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
+                        This client will receive this message once, regardless of the algorithm.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowAddCustomModal(false)}
+                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5 text-[#bdbdbd]" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 mb-6">
+                    {/* First Name */}
+                    <div>
+                      <label className="block text-xs md:text-sm font-medium text-[#bdbdbd] mb-1.5">
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        value={customFirstName}
+                        onChange={(e) => setCustomFirstName(e.target.value)}
+                        placeholder="John"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
+                      />
+                    </div>
+
+                    {/* Last Name */}
+                    <div>
+                      <label className="block text-xs md:text-sm font-medium text-[#bdbdbd] mb-1.5">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={customLastName}
+                        onChange={(e) => setCustomLastName(e.target.value)}
+                        placeholder="Doe"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
+                      />
+                    </div>
+
+                    {/* Phone Number */}
+                    <div>
+                      <label className="block text-xs md:text-sm font-medium text-[#bdbdbd] mb-1.5">
+                        Phone Number
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-sm md:text-base text-white font-medium">
+                          +1
+                        </span>
+                        <input
+                          type="tel"
+                          value={customPhone}
+                          onChange={(e) => {
+                            // Only allow digits and format as (XXX) XXX-XXXX
+                            const value = e.target.value.replace(/\D/g, '');
+                            if (value.length <= 10) {
+                              let formatted = value;
+                              if (value.length > 6) {
+                                formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
+                              } else if (value.length > 3) {
+                                formatted = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+                              } else if (value.length > 0) {
+                                formatted = `(${value}`;
+                              }
+                              setCustomPhone(formatted);
+                            }
+                          }}
+                          placeholder="(123) 456-7890"
+                          maxLength={14}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 md:pl-12 pr-3 md:pr-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
+                        />
+                      </div>
+                      <p className="text-[10px] md:text-xs text-[#bdbdbd] mt-1">
+                        Enter 10-digit phone number
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 md:p-3 bg-lime-500/10 border border-lime-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-xs md:text-sm text-lime-300">
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
+                      <p>
+                        This recipient will not appear in your regular client list and will only receive this specific message.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 md:gap-3">
+                    <button
+                      onClick={() => {
+                        setShowAddCustomModal(false);
+                        setCustomFirstName('');
+                        setCustomLastName('');
+                        setCustomPhone('');
+                      }}
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddCustomClient}
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30 transition-all duration-300"
+                    >
+                      Add Recipient
                     </button>
                   </div>
                 </motion.div>
