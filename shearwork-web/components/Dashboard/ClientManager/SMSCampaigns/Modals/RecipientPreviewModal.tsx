@@ -1619,7 +1619,7 @@ return (
                       <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
                       <p>
                         {batchActionType === 'select'
-                          ? 'These clients will not appear on the Client List page but they will receive your message.'
+                          ? 'Your selected clients will replace the lowest-scored clients on the algorithm, keeping your max the same.'
                           : 'These clients will be excluded from all future sends of this campaign.'
                         }
                       </p>
