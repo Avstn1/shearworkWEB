@@ -59,24 +59,25 @@ export default function UserExpensesPage() {
     fetchUser()
   }, [router])
 
+
+    // Helper to parse date strings as local dates (not UTC)
+  const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+
   // Fetch data
   const fetchData = async () => {
     if (!user) return
+
     try {
       const monthIndex = MONTHS.indexOf(selectedMonth)
       const today = new Date()
+      today.setHours(0, 0, 0, 0) // Normalize to start of day for comparison
       const isCurrentMonth = today.getMonth() === monthIndex && today.getFullYear() === selectedYear
       const endDay = isCurrentMonth ? today.getDate() : new Date(selectedYear, monthIndex + 1, 0).getDate()
 
-      // Monthly expense
-      const { data: expenseData } = await supabase
-        .from('monthly_data')
-        .select('expenses')
-        .eq('user_id', user.id)
-        .eq('month', selectedMonth)
-        .eq('year', selectedYear)
-        .maybeSingle()
-      let totalExpense = expenseData?.expenses || 0
+      let totalExpense = 0 // Start from 0, no monthly_data
 
       // Add recurring expenses that have occurred up to endDay
       const { data: recurringData } = await supabase
@@ -85,57 +86,68 @@ export default function UserExpensesPage() {
         .eq('user_id', user.id)
       
       if (recurringData) {
+        const monthStart = new Date(selectedYear, monthIndex, 1)
+        const monthEnd = new Date(selectedYear, monthIndex + 1, 0)
+        
         recurringData.forEach((rec: any) => {
-          const start = new Date(rec.start_date)
-          const end = rec.end_date ? new Date(rec.end_date) : null
-          const monthStart = new Date(selectedYear, monthIndex, 1)
-          const monthEnd = new Date(selectedYear, monthIndex + 1, 0)
+          const start = parseLocalDate(rec.start_date)
+          const end = rec.end_date ? parseLocalDate(rec.end_date) : null
+                  
+          // Apply same filtering as ExpensesViewer
+          let shouldInclude = false
+          if (rec.frequency === 'once') {
+            // For 'once', only include if start_date is in the selected month
+            shouldInclude = start.getMonth() === monthIndex && start.getFullYear() === selectedYear
+          } else {
+            // For recurring, check if active period overlaps with selected month
+            shouldInclude = start <= monthEnd && (!end || end >= monthStart)
+          }
           
-          // Check if expense is active during selected month
-          if (start <= monthEnd && (!end || end >= monthStart)) {
-            switch (rec.frequency) {
-              case 'once':
-                const expDate = new Date(rec.start_date)
-                if (expDate.getMonth() === monthIndex && 
-                    expDate.getFullYear() === selectedYear && 
-                    expDate.getDate() <= endDay) {
+          if (!shouldInclude) return // Skip this expense
+          
+          // Now calculate occurrences up to endDay (only count if date has passed)
+          switch (rec.frequency) {
+            case 'once':
+              const expDate = parseLocalDate(rec.start_date)
+              if (expDate.getDate() <= endDay && expDate <= today) {
+                totalExpense += rec.amount
+              }
+              break
+            case 'weekly':
+              const daysOfWeek = rec.weekly_days || []
+              if (daysOfWeek.length === 0) break
+              
+              for (let d = 1; d <= endDay; d++) {
+                const date = new Date(selectedYear, monthIndex, d)
+                if (date >= start && (!end || date <= end) && date <= today) {
+                  const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]
+                  if (daysOfWeek.includes(dayName)) totalExpense += rec.amount
+                }
+              }
+              break
+            case 'monthly':
+              if (rec.monthly_day && rec.monthly_day <= endDay && rec.monthly_day <= monthEnd.getDate()) {
+                const occurrenceDate = new Date(selectedYear, monthIndex, rec.monthly_day)
+                if (occurrenceDate >= start && (!end || occurrenceDate <= end) && occurrenceDate <= today) {
                   totalExpense += rec.amount
                 }
-                break
-              case 'weekly':
-                const daysOfWeek = rec.weekly_days || []
-                for (let d = 1; d <= endDay; d++) {
-                  const date = new Date(selectedYear, monthIndex, d)
-                  if (date >= start && (!end || date <= end)) {
-                    const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]
-                    if (daysOfWeek.includes(dayName)) totalExpense += rec.amount
-                  }
+              }
+              break
+            case 'yearly':
+              if (rec.yearly_month === monthIndex && rec.yearly_day <= endDay && rec.yearly_day <= monthEnd.getDate()) {
+                const occurrenceDate = new Date(selectedYear, monthIndex, rec.yearly_day)
+                if (occurrenceDate >= start && (!end || occurrenceDate <= end) && occurrenceDate <= today) {
+                  totalExpense += rec.amount
                 }
-                break
-              case 'monthly':
-                if (rec.monthly_day && rec.monthly_day <= endDay && rec.monthly_day <= monthEnd.getDate()) {
-                  const occurrenceDate = new Date(selectedYear, monthIndex, rec.monthly_day)
-                  if (occurrenceDate >= start && (!end || occurrenceDate <= end)) {
-                    totalExpense += rec.amount
-                  }
-                }
-                break
-              case 'yearly':
-                if (rec.yearly_month === monthIndex && rec.yearly_day <= endDay && rec.yearly_day <= monthEnd.getDate()) {
-                  const occurrenceDate = new Date(selectedYear, monthIndex, rec.yearly_day)
-                  if (occurrenceDate >= start && (!end || occurrenceDate <= end)) {
-                    totalExpense += rec.amount
-                  }
-                }
-                break
-            }
+              }
+              break
           }
         })
       }
 
       setCurrentExpense(totalExpense)
 
-      // Receipts (same as before)
+      // Receipts
       const { data: receiptData, error: receiptError } = await supabase
         .from('monthly_receipts')
         .select('id,image_url,label')

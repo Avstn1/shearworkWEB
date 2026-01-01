@@ -231,20 +231,34 @@ export default function AdminRecurringExpenses({ barberId, month, year, onUpdate
 
       {/* Start / End Dates */}
       <div className="flex gap-2 flex-wrap mt-1 items-center">
-        <label className="text-white text-sm">Start:</label>
-        <input
-          type="date"
-          value={startDate}
-          onChange={e => setStartDate(e.target.value)}
-          className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
-        />
-        <label className="text-white text-sm">End (optional):</label>
-        <input
-          type="date"
-          value={endDate}
-          onChange={e => setEndDate(e.target.value)}
-          className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
-        />
+        {frequency === 'once' ? (
+          <>
+            <label className="text-white text-sm">Date:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
+            />
+          </>
+        ) : (
+          <>
+            <label className="text-white text-sm">Start:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => setStartDate(e.target.value)}
+              className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
+            />
+            <label className="text-white text-sm">End (optional):</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => setEndDate(e.target.value)}
+              className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
+            />
+          </>
+        )}
       </div>
 
       {/* Save Button */}
