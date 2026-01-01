@@ -402,7 +402,6 @@ async function findOrCreateClient(
         last_appt: existing.last_appt && existing.last_appt > lastAppt
           ? existing.last_appt
           : lastAppt,
-        first_source: existing.first_source || firstSource,
         updated_at: new Date().toISOString(),
       })
       .eq('client_id', existing.client_id)
@@ -421,7 +420,6 @@ async function findOrCreateClient(
       last_name: lastNorm,
       first_appt: firstAppt,
       last_appt: lastAppt,
-      first_source: firstSource,
       total_appointments: 0,
       total_tips_all_time: 0,
       updated_at: new Date().toISOString(),
@@ -1230,7 +1228,7 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString(),
         },
       ])
-    }
+    }``
   }
 
   const weeklyUpserts = Object.values(weeklyAgg)
