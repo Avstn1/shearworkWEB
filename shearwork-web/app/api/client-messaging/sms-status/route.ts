@@ -106,8 +106,8 @@ export async function POST(req: NextRequest) {
     // Only update client record for non-test messages
     if (purpose !== 'test_message') {
       await supabase
-        // acuity_clients_testing change for testing
-        .from('acuity_clients_testing')
+        // acuity_clients change for testing
+        .from('acuity_clients')
         .update({
           date_last_sms_sent: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -169,8 +169,8 @@ export async function POST(req: NextRequest) {
 async function getClientId(phoneNormalized: string): Promise<string | null> {
   try {
     const { data } = await supabase
-      // acuity_clients_testing change for testing
-      .from('acuity_clients_testing')
+      // acuity_clients change for testing
+      .from('acuity_clients')
       .select('client_id')
       .eq('phone_normalized', phoneNormalized)
       .single()
