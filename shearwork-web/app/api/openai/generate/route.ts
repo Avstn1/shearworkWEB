@@ -428,6 +428,7 @@ export async function POST(req: Request) {
           .eq('report_month', month)
           .eq('report_year', normalizedYear)
           .eq('week_number', effectiveWeekNumber)
+          .neq('source', 'No Source')
         if (error) throw error
         return data ?? []
       }

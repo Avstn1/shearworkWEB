@@ -54,7 +54,6 @@ Use the provided data and computed values. Do not invent numbers. DO NOT REMOVE 
 <h2>Highlights & Notes 📝</h2>
 <ul>
 THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
-  <li><strong>Retention Rate:</strong> ${retentionRate}% of clients were returning customers (${summary.returning_clients || 0} out of ${summary.num_appointments || 0}).</li>
   <li><strong>Revenue Performance:</strong> Gross revenue of $${(summary.total_revenue || 0).toFixed(2)} resulted in $${((summary.total_revenue || 0) * commissionRate).toFixed(2)} in commission earnings.</li>
   <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients joined this week (${summary.num_appointments > 0 ? (((summary.new_clients || 0) / summary.num_appointments) * 100).toFixed(1) : '0.0'}% of total).</li>
   ${bestDay ? `<li><strong>Best Day:</strong> ${bestDay.date} with $${(bestDay.total_revenue || 0).toFixed(2)} in gross revenue.</li>` : ''}

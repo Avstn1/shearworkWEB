@@ -42,7 +42,6 @@ export default function YearlyTopClientsCard({
         }
 
         const data = await res.json()
-        console.log('YearlyTopClientsCard API response:', data)
         
         setClients(data.clients || [])
       } catch (err) {

@@ -272,51 +272,9 @@ export function MessageCard({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              {/* Editable Title */}
-              {editingTitleId === msg.id ? (
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <input
-                    type="text"
-                    value={tempTitle}
-                    onChange={(e) => onTempTitleChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') onSaveTitle(msg.id);
-                      if (e.key === 'Escape') onCancelEditTitle();
-                    }}
-                    className="bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-300/50 w-full"
-                    maxLength={50}
-                    autoFocus
-                    disabled={!msg.isEditing || isFullLock}
-                  />
-                  <button
-                    onClick={() => onSaveTitle(msg.id)}
-                    className="p-1 rounded hover:bg-lime-300/20 text-lime-300 transition-all flex-shrink-0"
-                    disabled={!msg.isEditing || isFullLock}
-                  >
-                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                  <button
-                    onClick={onCancelEditTitle}
-                    className="p-1 rounded hover:bg-rose-300/20 text-rose-300 transition-all flex-shrink-0"
-                  >
-                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <h3 className="text-white font-semibold text-sm sm:text-base truncate">
-                    {msg.title}
-                  </h3>
-                  {msg.isEditing && !isFullLock && (
-                    <button
-                      onClick={() => onStartEditingTitle(msg.id, msg.title)}
-                      className="p-1 rounded hover:bg-white/10 text-[#bdbdbd] hover:text-white transition-all flex-shrink-0"
-                    >
-                      <Pencil className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    </button>
-                  )}
-                </div>
-              )}
+              <h3 className="text-white font-semibold text-sm sm:text-base truncate">
+                {msg.title}
+              </h3>
               <p className="text-[10px] sm:text-xs text-[#bdbdbd] flex items-center gap-1 mt-0.5">
                 <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                 <span className="truncate">{getSchedulePreview()}</span>

@@ -64,7 +64,6 @@ Use the provided data and computed values. Pull values directly from the dataset
 <h2>Notes & Highlights 📝</h2>
 THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
 <ul>
-  <li><strong>Retention Rate:</strong> ${totalUniqueClients > 0 ? (((summary.returning_clients || 0) / totalUniqueClients) * 100).toFixed(1) : '0.0'}% of clients were returning customers.</li>
   <li><strong>Revenue Performance:</strong> Analyze whether $${(summary.total_revenue || 0).toFixed(2)} is strong or weak for the week. Compare to previous weeks if possible.</li>
   <li><strong>New Client Acquisition:</strong> ${summary.new_clients || 0} new clients (${totalUniqueClients > 0 ? (((summary.new_clients || 0) / totalUniqueClients) * 100).toFixed(1) : '0.0'}% of total).</li>
   ${bestDay ? `<li><strong>Best Day:</strong> ${bestDay.date} with $${(bestDay.total_revenue || 0).toFixed(2)} in revenue.</li>` : ''}

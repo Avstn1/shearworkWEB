@@ -1,31 +1,83 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useState, useRef } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { createBrowserClient } from '@supabase/ssr'
 
 export default function LayoutWrapper({ children }: { children: ReactNode }) {
   const [hasSession, setHasSession] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const hasCompletedInitialAuth = useRef(false)
+  const router = useRouter()
+  const pathname = usePathname()
   
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setHasSession(!!session)
+  // Public routes that don't need authentication
+  const publicRoutes = ['/', '/login', '/signup']
+  const isPublicRoute = publicRoutes.includes(pathname)
 
-      if (session?.user) {
-        const { data: profile } = await supabase
+  useEffect(() => {
+    let mounted = true
+
+    const checkUserRole = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (!mounted) return
+
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          setIsInitialLoad(false)
+          setHasSession(false)
+          hasCompletedInitialAuth.current = true
+          if (!isPublicRoute) {
+            router.push('/')
+          }
+          return
+        }
+        
+        if (!session) {
+          setHasSession(false)
+          setIsInitialLoad(false)
+          hasCompletedInitialAuth.current = true
+          if (!isPublicRoute) {
+            router.push('/')
+          }
+          return
+        }
+
+        setHasSession(true)
+
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('user_id', session.user.id)
           .single()
 
-        setIsAdmin(profile?.role === 'Admin')
+        if (!mounted) return
+
+        if (profileError) {
+          console.error('Profile error:', profileError)
+          setIsAdmin(false)
+        } else {
+          setIsAdmin(profile?.role === 'Admin')
+        }
+        
+        setIsInitialLoad(false)
+        hasCompletedInitialAuth.current = true
+      } catch (err) {
+        console.error('Auth check error:', err)
+        if (mounted) {
+          setIsInitialLoad(false)
+          setHasSession(false)
+          hasCompletedInitialAuth.current = true
+        }
       }
     }
 
@@ -33,24 +85,43 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setHasSession(!!session)
-
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .single()
-
-        setIsAdmin(profile?.role === 'Admin')
-      } else {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+      
+      // Only handle actual logout events
+      if (event === 'SIGNED_OUT') {
+        setHasSession(false)
         setIsAdmin(false)
+        router.push('/')
+        return
       }
+      
+      // Ignore all other events to prevent unnecessary re-renders
+      // The initial auth check is sufficient
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
+
+  // Show loading only for protected routes
+  if (isInitialLoad && !isPublicRoute) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#73aa57] mb-4"></div>
+          <p className="text-sm text-[#bdbdbd]">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render protected content on public routes if not logged in
+  if (!hasSession && !isPublicRoute) {
+    return null
+  }
 
   const showSidebar = hasSession && !isAdmin
 
