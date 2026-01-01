@@ -15,21 +15,32 @@ export default function UnderConstructionWrapper({ children }: UnderConstruction
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      const TEST_ACCOUNTS = new Set([
-        '39d5d08d-2deb-4b92-a650-ee10e70b7af1',
-        'f4d28cd0-37e9-4117-a67c-0e3c91c1eac7',
-      ]);
 
-      if (session?.user?.id && TEST_ACCOUNTS.has(session.user.id)) {
-        setIsTestAccount(true);
+      if (!session?.user?.id) {
+        setIsTestAccount(false);
+        setLoading(false);
+        return;
       }
-      
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('special_access')
+        .eq('user_id', session.user.id)
+        .single();
+
+      if (error) {
+        console.error('Failed to fetch special_access:', error);
+        setIsTestAccount(false);
+      } else {
+        setIsTestAccount(Boolean(data?.special_access));
+      }
+
       setLoading(false);
     };
 
     checkSession();
   }, []);
+
 
   if (loading) {
     return <div className="flex items-center justify-center h-full">{children}</div>;
