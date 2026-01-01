@@ -71,6 +71,11 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
         
         setIsInitialLoad(false)
         hasCompletedInitialAuth.current = true
+
+        // If we just logged in on a public route, redirect to dashboard
+        if (isPublicRoute && pathname !== '/') {
+          router.push('/dashboard')
+        }
       } catch (err) {
         console.error('Auth check error:', err)
         if (mounted) {
@@ -88,16 +93,20 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
       
-      // Only handle actual logout events
+      if (event === 'SIGNED_IN') {
+        setHasSession(true)
+        // Redirect to dashboard after sign in
+        if (isPublicRoute) {
+          router.push('/dashboard')
+        }
+      }
+      
       if (event === 'SIGNED_OUT') {
         setHasSession(false)
         setIsAdmin(false)
         router.push('/')
         return
       }
-      
-      // Ignore all other events to prevent unnecessary re-renders
-      // The initial auth check is sufficient
     })
 
     return () => {
