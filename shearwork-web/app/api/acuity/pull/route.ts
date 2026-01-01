@@ -135,6 +135,15 @@ function normName(firstName?: string | null, lastName?: string | null) {
   return n || null
 }
 
+// Normalize a display name (first + last) into a stable cache/lookup key
+function normDisplayName(nameDisplay?: string | null) {
+  const n = (nameDisplay ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+  return n || null
+}
+
 function makeClientIdentityResolver(userId: string) {
   const identifierToCanonical = new Map<string, string>()
 
@@ -259,9 +268,9 @@ function addUniqueClient(list: any[], appt: any) {
 
 function normalizePhoneE164(phone?: string | null): string | null {
   if (!phone) return null
-  
+
   const cleaned = phone.replace(/[^0-9]/g, '')
-  
+
   if (/^1[0-9]{10}$/.test(cleaned)) {
     return '+' + cleaned
   } else if (/^[0-9]{10}$/.test(cleaned)) {
@@ -272,7 +281,7 @@ function normalizePhoneE164(phone?: string | null): string | null {
       return '+1' + without_first
     }
   }
-  
+
   return null
 }
 
@@ -287,12 +296,14 @@ async function findOrCreateClient(
   lastAppt: string,
   firstSource: string | null
 ): Promise<string> {
-  const nameKey = firstName && lastName 
-    ? `${firstName.toLowerCase().trim()} ${lastName.toLowerCase().trim()}`.trim()
-    : null
+  // Normalize names for deterministic matching + storage
+  const firstNorm = firstName ? firstName.trim().toLowerCase() : null
+  const lastNorm = lastName ? lastName.trim().toLowerCase() : null
+  const nameKey = firstNorm && lastNorm ? `${firstNorm} ${lastNorm}` : null
 
   const matchedClients: any[] = []
-  
+
+  // 1) Phone match (strongest)
   if (phoneNormalized) {
     const { data } = await supabase
       .from('acuity_clients')
@@ -302,7 +313,8 @@ async function findOrCreateClient(
       .limit(1)
     if (data && data.length > 0) matchedClients.push(...data)
   }
-  
+
+  // 2) Email match
   if (email && matchedClients.length === 0) {
     const { data } = await supabase
       .from('acuity_clients')
@@ -312,52 +324,54 @@ async function findOrCreateClient(
       .limit(1)
     if (data && data.length > 0) matchedClients.push(...data)
   }
-  
-  if (nameKey && matchedClients.length === 0 && firstName && lastName) {
+
+  // 3) Name match (normalized)
+  if (nameKey && matchedClients.length === 0 && firstNorm && lastNorm) {
     const { data } = await supabase
       .from('acuity_clients')
       .select('*')
       .eq('user_id', userId)
-      .eq('first_name', firstName)
-      .eq('last_name', lastName)
+      .eq('first_name', firstNorm)
+      .eq('last_name', lastNorm)
       .limit(1)
     if (data && data.length > 0) matchedClients.push(...data)
   }
 
+  // NOTE: This block is mostly redundant given each query is limited to 1,
+  // but kept in case future changes remove limits or add OR-queries.
   if (matchedClients.length > 1) {
     const uniqueMatches = Array.from(
       new Map(matchedClients.map(c => [c.client_id, c])).values()
     )
-    
+
     if (uniqueMatches.length > 1) {
       const primary = uniqueMatches[0]
       const toMerge = uniqueMatches.slice(1)
-      
+
       for (const client of toMerge) {
         await supabase
           .from('acuity_appointments')
           .update({ client_id: primary.client_id })
           .eq('user_id', userId)
           .eq('client_id', client.client_id)
-        
+
         await supabase
           .from('acuity_clients')
           .delete()
           .eq('client_id', client.client_id)
       }
-      
-      // Recalculate date range after merging
+
       const { data: allAppts } = await supabase
         .from('acuity_appointments')
         .select('appointment_date')
         .eq('user_id', userId)
         .eq('client_id', primary.client_id)
         .order('appointment_date', { ascending: true })
-      
+
       if (allAppts && allAppts.length > 0) {
         const newFirstAppt = allAppts[0].appointment_date
         const newLastAppt = allAppts[allAppts.length - 1].appointment_date
-        
+
         await supabase
           .from('acuity_clients')
           .update({
@@ -367,7 +381,7 @@ async function findOrCreateClient(
           })
           .eq('client_id', primary.client_id)
       }
-      
+
       matchedClients.splice(0, matchedClients.length, primary)
     }
   }
@@ -380,10 +394,10 @@ async function findOrCreateClient(
         email: email || existing.email,
         phone_normalized: phoneNormalized || existing.phone_normalized,
         phone: phoneNormalized || existing.phone,
-        first_name: firstName || existing.first_name,
-        last_name: lastName || existing.last_name,
-        first_appt: existing.first_appt && existing.first_appt < firstAppt 
-          ? existing.first_appt 
+        first_name: firstNorm || existing.first_name,
+        last_name: lastNorm || existing.last_name,
+        first_appt: existing.first_appt && existing.first_appt < firstAppt
+          ? existing.first_appt
           : firstAppt,
         last_appt: existing.last_appt && existing.last_appt > lastAppt
           ? existing.last_appt
@@ -392,7 +406,7 @@ async function findOrCreateClient(
         updated_at: new Date().toISOString(),
       })
       .eq('client_id', existing.client_id)
-    
+
     return existing.client_id
   }
 
@@ -403,8 +417,8 @@ async function findOrCreateClient(
       email,
       phone_normalized: phoneNormalized,
       phone: phoneNormalized,
-      first_name: firstName,
-      last_name: lastName,
+      first_name: firstNorm,
+      last_name: lastNorm,
       first_appt: firstAppt,
       last_appt: lastAppt,
       first_source: firstSource,
@@ -591,17 +605,20 @@ export async function GET(request: Request) {
         clientFirstAppts[row.client_id] = row.appointment_date
       }
     }
-    
+
     for (const row of firstAppts) {
       const client = Array.isArray(row.acuity_clients) ? row.acuity_clients[0] : row.acuity_clients
       if (!client) continue
-      
+
       const firstDate = clientFirstAppts[row.client_id]
-      
-      if (client.email) firstApptLookup[client.email] = firstDate
+
+      const eKey = normEmail(client.email)
+      if (eKey) firstApptLookup[eKey] = firstDate
+
       if (client.phone_normalized) firstApptLookup[client.phone_normalized] = firstDate
-      const nameKey = `${client.first_name || ''} ${client.last_name || ''}`.trim().toLowerCase()
-      if (nameKey) firstApptLookup[nameKey] = firstDate
+
+      const nKey = normDisplayName(`${client.first_name || ''} ${client.last_name || ''}`)
+      if (nKey) firstApptLookup[nKey] = firstDate
     }
   }
 
@@ -611,18 +628,18 @@ export async function GET(request: Request) {
 
   const weekTimeframes: TimeframeDef[] = []
   const weekMetaMap: Record<string, any> = {}
-  
+
   for (let d = new Date(requestedMonthStart); d <= requestedMonthEnd; d.setDate(d.getDate() + 1)) {
     const weekMeta = getWeekMetaForDate(d)
     const weekStart = new Date(weekMeta.weekStartISO)
-    
+
     const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate())
     const monthStartDay = Date.UTC(requestedMonthStart.getUTCFullYear(), requestedMonthStart.getUTCMonth(), requestedMonthStart.getUTCDate())
     const monthEndDay = Date.UTC(requestedMonthEnd.getUTCFullYear(), requestedMonthEnd.getUTCMonth(), requestedMonthEnd.getUTCDate())
-    
+
     if (weekStartDay >= monthStartDay && weekStartDay <= monthEndDay) {
       const weekKey = `week-${weekMeta.weekNumber}`
-      
+
       if (!weekMetaMap[weekKey]) {
         weekMetaMap[weekKey] = weekMeta
         weekTimeframes.push({
@@ -711,14 +728,19 @@ export async function GET(request: Request) {
 
   const clientCache = new Map<string, string>()
 
+  // Preload cache with normalized keys
   if (existingClients) {
     for (const client of existingClients) {
-      if (client.phone_normalized) clientCache.set(`phone:${client.phone_normalized}`, client.client_id)
-      if (client.email) clientCache.set(`email:${client.email}`, client.client_id)
-      const nameKey = client.first_name && client.last_name
-        ? `name:${client.first_name.toLowerCase()} ${client.last_name.toLowerCase()}`.trim()
-        : null
-      if (nameKey) clientCache.set(nameKey, client.client_id)
+      const emailKey = normEmail(client.email)
+      const phoneKey = client.phone_normalized ?? null
+      const nameKey =
+        client.first_name && client.last_name
+          ? normDisplayName(`${client.first_name} ${client.last_name}`)
+          : null
+
+      if (phoneKey) clientCache.set(`phone:${phoneKey}`, client.client_id)
+      if (emailKey) clientCache.set(`email:${emailKey}`, client.client_id)
+      if (nameKey) clientCache.set(`name:${nameKey}`, client.client_id)
     }
   }
 
@@ -758,7 +780,7 @@ export async function GET(request: Request) {
     if (!appt.id) continue
     if (processedApptIds.has(appt.id)) continue
     processedApptIds.add(appt.id)
-    
+
     addUniqueClient(uniqueClients, appt)
 
     const parsed = parseDateStringSafe(appt.datetime)
@@ -771,7 +793,7 @@ export async function GET(request: Request) {
     const price = parseFloat(appt.priceSold || '0')
     const tip = parseFloat(appt.tip || '0')
 
-    const email = normEmail(appt.email)
+    const email = normEmail(appt.email) // already normalized
     const phoneNormalized = normalizePhoneE164(appt.phone)
     const firstName = appt.firstName || null
     const lastName = appt.lastName || null
@@ -781,51 +803,41 @@ export async function GET(request: Request) {
 
     const referralSource = extractSourceFromForms(appt.forms)
 
+    // -------------------- Client identity resolution (Option 2 + 3) --------------------
     let clientKey: string | undefined
 
-    if (phoneNormalized && clientCache.has(`phone:${phoneNormalized}`)) {
-      clientKey = clientCache.get(`phone:${phoneNormalized}`)
-    }
+    const emailKey = email // already normEmail
+    const nameKey = normDisplayName(nameDisplay)
 
-    if (!clientKey && email && clientCache.has(`email:${email}`)) {
-      clientKey = clientCache.get(`email:${email}`)
-    }
+    if (phoneNormalized) clientKey = clientCache.get(`phone:${phoneNormalized}`)
+    if (!clientKey && emailKey) clientKey = clientCache.get(`email:${emailKey}`)
+    if (!clientKey && nameKey) clientKey = clientCache.get(`name:${nameKey}`)
 
-    if (!clientKey && nameDisplay) {
-      const nameKey = `name:${nameDisplay.toLowerCase()}`
-      if (clientCache.has(nameKey)) {
-        clientKey = clientCache.get(nameKey)
-      }
-    }
-
+    // If cache missed, resolve via DB-backed matching (prevents duplicates across runs)
     if (!clientKey) {
-      clientKey = crypto.randomUUID()
-      
-      if (phoneNormalized) {
-        clientCache.set(`phone:${phoneNormalized}`, clientKey)
-      }
-      if (email) {
-        clientCache.set(`email:${email}`, clientKey)
-      }
-      if (nameDisplay) {
-        clientCache.set(`name:${nameDisplay.toLowerCase()}`, clientKey)
-      }
-    } else {
-      if (phoneNormalized && !clientCache.has(`phone:${phoneNormalized}`)) {
-        clientCache.set(`phone:${phoneNormalized}`, clientKey)
-      }
-      if (email && !clientCache.has(`email:${email}`)) {
-        clientCache.set(`email:${email}`, clientKey)
-      }
-      if (nameDisplay && !clientCache.has(`name:${nameDisplay.toLowerCase()}`)) {
-        clientCache.set(`name:${nameDisplay.toLowerCase()}`, clientKey)
-      }
+      clientKey = await findOrCreateClient(
+        supabase,
+        user.id,
+        emailKey,
+        phoneNormalized,
+        firstName,
+        lastName,
+        dayKey,
+        dayKey,
+        referralSource
+      )
     }
+
+    // Backfill cache for this run
+    if (phoneNormalized) clientCache.set(`phone:${phoneNormalized}`, clientKey)
+    if (emailKey) clientCache.set(`email:${emailKey}`, clientKey)
+    if (nameKey) clientCache.set(`name:${nameKey}`, clientKey)
+    // -------------------------------------------------------------------------------
 
     if (!clientDataMap.has(clientKey)) {
       clientDataMap.set(clientKey, {
         client_id: clientKey,
-        email,
+        email: emailKey,
         phone_normalized: phoneNormalized,
         first_name: firstName,
         last_name: lastName,
@@ -835,7 +847,7 @@ export async function GET(request: Request) {
       })
     } else {
       const existing = clientDataMap.get(clientKey)!
-      if (email && !existing.email) existing.email = email
+      if (emailKey && !existing.email) existing.email = emailKey
       if (phoneNormalized && !existing.phone_normalized) existing.phone_normalized = phoneNormalized
       if (firstName && !existing.first_name) existing.first_name = firstName
       if (lastName && !existing.last_name) existing.last_name = lastName
@@ -884,7 +896,7 @@ export async function GET(request: Request) {
     const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate())
     const monthStartDay = Date.UTC(requestedMonthStart.getUTCFullYear(), requestedMonthStart.getUTCMonth(), requestedMonthStart.getUTCDate())
     const monthEndDay = Date.UTC(requestedMonthEnd.getUTCFullYear(), requestedMonthEnd.getUTCMonth(), requestedMonthEnd.getUTCDate())
-    
+
     const weekBelongsToRequestedMonth = weekStartDay >= monthStartDay && weekStartDay <= monthEndDay
 
     if (weekBelongsToRequestedMonth) {
@@ -895,14 +907,14 @@ export async function GET(request: Request) {
           visits: 0,
           sampleFirstName: firstName,
           sampleLastName: lastName,
-          sampleEmail: email,
+          sampleEmail: emailKey,
           samplePhone: phoneNormalized,
           sampleNotes: appt.notes ?? null,
         }
       }
       weeklyClientTotals[weekKey][clientKey].totalPaid += price
       weeklyClientTotals[weekKey][clientKey].visits += 1
-      if (!weeklyClientTotals[weekKey][clientKey].sampleEmail && email) weeklyClientTotals[weekKey][clientKey].sampleEmail = email
+      if (!weeklyClientTotals[weekKey][clientKey].sampleEmail && emailKey) weeklyClientTotals[weekKey][clientKey].sampleEmail = emailKey
       if (!weeklyClientTotals[weekKey][clientKey].samplePhone && phoneNormalized) weeklyClientTotals[weekKey][clientKey].samplePhone = phoneNormalized
       if (!weeklyClientTotals[weekKey][clientKey].sampleFirstName && firstName) weeklyClientTotals[weekKey][clientKey].sampleFirstName = firstName
       if (!weeklyClientTotals[weekKey][clientKey].sampleLastName && lastName) weeklyClientTotals[weekKey][clientKey].sampleLastName = lastName
@@ -960,46 +972,44 @@ export async function GET(request: Request) {
     }
     dailyServiceCounts[dailySvcKey].count++
   }
-  
+
   if (appointmentsToUpsert.length > 0) {
     const acuityTips: Record<string, number> = {}
     const acuityRevenue: Record<string, number> = {}
-    
+
     const cleanedAppointments = appointmentsToUpsert.map(appt => {
       const { _acuity_tip, _acuity_revenue, ...rest } = appt
       acuityTips[appt.acuity_appointment_id] = _acuity_tip || 0
       acuityRevenue[appt.acuity_appointment_id] = _acuity_revenue || 0
       return rest
     })
-    
+
     console.log('Upserting appointments count:', cleanedAppointments.length)
-    
+
     const { data: upsertedAppts, error } = await supabase
       .from('acuity_appointments')
       .upsert(cleanedAppointments, { onConflict: 'user_id,acuity_appointment_id' })
       .select('id, acuity_appointment_id, tip, revenue')
-    
+
     if (error) {
       console.error('Appointment upsert error:', error)
     } else if (upsertedAppts && upsertedAppts.length > 0) {
-      // Only set revenue and tip for NEW appointments (where they are null)
-      // This preserves any manual edits to existing appointments
-      const newApptsNeedingValues = upsertedAppts.filter(appt => 
+      const newApptsNeedingValues = upsertedAppts.filter(appt =>
         appt.revenue === null || appt.tip === null
       )
-      
+
       if (newApptsNeedingValues.length > 0) {
         console.log('Setting revenue/tip for new appointments:', newApptsNeedingValues.length)
         for (const appt of newApptsNeedingValues) {
           const updates: { tip?: number; revenue?: number } = {}
-          
+
           if (appt.tip === null) {
             updates.tip = acuityTips[appt.acuity_appointment_id] || 0
           }
           if (appt.revenue === null) {
             updates.revenue = acuityRevenue[appt.acuity_appointment_id] || 0
           }
-          
+
           if (Object.keys(updates).length > 0) {
             await supabase
               .from('acuity_appointments')
@@ -1035,8 +1045,7 @@ export async function GET(request: Request) {
   const clientUpserts = await Promise.all(
     Array.from(clientDataMap.values()).map(async (client) => {
       let totals = clientTotals[client.client_id]
-      
-      // If totals missing, fetch them
+
       if (!totals) {
         const { data: appts } = await supabase
           .from('acuity_appointments')
@@ -1044,7 +1053,7 @@ export async function GET(request: Request) {
           .eq('user_id', user.id)
           .eq('client_id', client.client_id)
           .order('appointment_date', { ascending: true })
-        
+
         if (appts && appts.length > 0) {
           totals = {
             total_appointments: appts.length,
@@ -1053,7 +1062,6 @@ export async function GET(request: Request) {
             last_appt: appts[appts.length - 1].appointment_date,
           }
         } else {
-          // New client - use clientDataMap values
           totals = {
             total_appointments: 0,
             total_tips_all_time: 0,
@@ -1062,7 +1070,7 @@ export async function GET(request: Request) {
           }
         }
       }
-      
+
       return {
         user_id: user.id,
         client_id: client.client_id,
@@ -1080,14 +1088,10 @@ export async function GET(request: Request) {
     })
   )
 
-  // Also update any existing clients that weren't in this sync but have updated totals
-  // This ensures last_appt and total_appointments stay accurate
   const existingClientIds = new Set(clientUpserts.map(c => c.client_id))
-  
+
   for (const [clientId, totals] of Object.entries(clientTotals)) {
     if (!existingClientIds.has(clientId)) {
-      // This client exists in appointments but wasn't in this sync batch
-      // Update their totals directly
       await supabase
         .from('acuity_clients')
         .update({
@@ -1121,7 +1125,7 @@ export async function GET(request: Request) {
       report_year: requestedYear,
     }))
   })
-  
+
   if (funnelUpserts.length > 0) {
     await supabase
       .from('marketing_funnels')
@@ -1129,14 +1133,14 @@ export async function GET(request: Request) {
   }
 
   const weeklyFunnelUpserts: any[] = []
-  
+
   for (const [timeframeId, sources] of Object.entries(weeklyFunnelsComputed)) {
     const weekKey = timeframeId
     const weekNumber = parseInt(weekKey.split('-')[1])
     const meta = weekMetaMap[weekKey]
-    
+
     if (!meta) continue
-    
+
     for (const [source, stats] of Object.entries(sources)) {
       weeklyFunnelUpserts.push({
         user_id: user.id,
@@ -1158,7 +1162,7 @@ export async function GET(request: Request) {
     const { error: weeklyFunnelError } = await supabase
       .from('weekly_marketing_funnels_base')
       .upsert(weeklyFunnelUpserts, { onConflict: 'user_id,source,week_number,report_month,report_year' })
-    
+
     if (weeklyFunnelError) throw weeklyFunnelError
   }
 
@@ -1167,10 +1171,10 @@ export async function GET(request: Request) {
       const [yearStr, month] = key.split('||')
       const monthKey = month
       const funnelDataForMonth = monthlyFunnelsComputed[monthKey] || {}
-      
+
       let totalNewClients = 0
       let totalReturningClients = 0
-      
+
       for (const [source, stats] of Object.entries(funnelDataForMonth)) {
         totalNewClients += (stats as FunnelStats).new_clients || 0
         totalReturningClients += (stats as FunnelStats).returning_clients || 0
@@ -1251,10 +1255,10 @@ export async function GET(request: Request) {
 
       const weekKey = `week-${w.meta.weekNumber}`
       const funnelDataForWeek = weeklyFunnelsComputed[weekKey] || {}
-      
+
       let totalNewClients = 0
       let totalReturningClients = 0
-      
+
       for (const [source, stats] of Object.entries(funnelDataForWeek)) {
         totalNewClients += (stats as FunnelStats).new_clients || 0
         totalReturningClients += (stats as FunnelStats).returning_clients || 0
@@ -1329,7 +1333,7 @@ export async function GET(request: Request) {
         .upsert(weeklyClientUpserts, {
           onConflict: 'user_id,week_number,month,year,client_key',
         })
-      
+
       if (error) {
         console.error('Weekly top clients upsert error:', error)
       }
@@ -1344,7 +1348,7 @@ export async function GET(request: Request) {
     .lte('appointment_date', requestedMonthEnd.toISOString().split('T')[0])
 
   const clientIds = [...new Set(monthlyAppointments?.map(a => a.client_id) || [])]
-  
+
   const { data: clientDetails } = await supabase
     .from('acuity_clients')
     .select('client_id, first_name, last_name, email, phone_normalized, phone')
@@ -1411,7 +1415,7 @@ export async function GET(request: Request) {
     const { error } = await supabase
       .from('report_top_clients')
       .upsert(reportTopClientsUpserts, { onConflict: 'user_id,month,year,client_key' })
-    
+
     if (error) {
       console.error('Report top clients upsert error:', error)
     }

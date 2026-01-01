@@ -35,16 +35,40 @@ export interface AcuityAppointment {
 
 // -------------------- Identity helpers --------------------
 
+/**
+ * Normalize phone into the SAME format used by acuity/pull:
+ * - If 10 digits: +1XXXXXXXXXX
+ * - If 11 digits starting with 1: +1XXXXXXXXXX
+ * - If 11 digits not starting with 1 but last 10 look valid: +1(last10)
+ * Otherwise: '' (unknown/invalid)
+ */
 export function normalizePhone(phone?: string | null) {
-  return phone ? phone.replace(/\D/g, '') : ''
+  if (!phone) return ''
+  const cleaned = phone.replace(/[^0-9]/g, '')
+
+  if (/^1[0-9]{10}$/.test(cleaned)) return `+${cleaned}`
+  if (/^[0-9]{10}$/.test(cleaned)) return `+1${cleaned}`
+
+  if (cleaned.length === 11 && cleaned[0] !== '1') {
+    const withoutFirst = cleaned.substring(1)
+    if (/^[0-9]{10}$/.test(withoutFirst)) return `+1${withoutFirst}`
+  }
+
+  return ''
+}
+
+function normalizeNameKey(firstName?: string | null, lastName?: string | null) {
+  return `${firstName || ''} ${lastName || ''}`
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
 }
 
 export function buildClientKey(client: AcuityAppointment & { id?: string }, userId: string) {
   const email = (client.email || '').toLowerCase().trim()
   const phone = normalizePhone(client.phone || '')
-  const name = `${client.firstName || ''} ${client.lastName || ''}`
-    .trim()
-    .toLowerCase()
+  const name = normalizeNameKey(client.firstName, client.lastName)
+
   const raw = email || phone || name
   if (raw) return `${userId}_${raw}`
 
@@ -102,18 +126,18 @@ export function extractSourceFromForms(forms: AcuityAppointment['forms']): strin
 
       // Must match a referral keyword in the field name
       if (!REFERRAL_KEYWORDS.some((k) => fieldName.includes(k))) continue
-      
+
       // Skip empty or multi-select values (comma-separated)
       if (!fieldValue || fieldValue.includes(',')) continue
 
       const valueLower = fieldValue.toLowerCase()
-      
+
       // Return "Returning Client" as the actual source
       // We'll handle the classification logic in the computation phase
       if (valueLower.includes('returning') || valueLower.includes('return')) {
         return 'Returning Client'
       }
-      
+
       // Filter out "unknown" only
       if (REFERRAL_FILTER.some((k) => valueLower.includes(k))) continue
 
@@ -203,7 +227,7 @@ export function computeFunnelsFromAppointments(
 
     const email = (appt.email || '').toLowerCase().trim()
     const phone = normalizePhone(appt.phone || '')
-    const nameKey = `${appt.firstName || ''} ${appt.lastName || ''}`.trim().toLowerCase()
+    const nameKey = normalizeNameKey(appt.firstName, appt.lastName)
 
     if (!email && !phone && !nameKey) continue
 
@@ -228,13 +252,11 @@ export function computeFunnelsFromAppointments(
 
   for (const [clientKey, visits] of Object.entries(clientVisits)) {
     const identity = clientIdentity[clientKey]
-    
+
     // Build lookup keys (must match acuity/pull logic EXACTLY)
-    const lookupKeys = [
-      identity?.email,
-      identity?.phone,
-      identity?.nameKey
-    ].filter(Boolean) as string[]
+    const lookupKeys = [identity?.email, identity?.phone, identity?.nameKey].filter(
+      Boolean
+    ) as string[]
 
     // Find earliest first_appt from database lookup
     let firstAppt: string | null = null
@@ -263,19 +285,17 @@ export function computeFunnelsFromAppointments(
     for (const [clientKey, visits] of Object.entries(clientVisits)) {
       let source = clientSource[clientKey] || 'No Source'
       const firstAppt = clientFirstAppt[clientKey]
-      
+
       if (!firstAppt) continue
 
       // Get all visits within this timeframe
-      const visitsInTimeframe = visits.filter(
-        v => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO
-      )
+      const visitsInTimeframe = visits.filter((v) => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO)
 
       if (visitsInTimeframe.length === 0) continue
 
       // ✅ NEW LOGIC: Reclassify "Returning Client" as "No Source" if they're actually NEW
       const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
-      
+
       if (source === 'Returning Client' && isFirstApptInTimeframe) {
         // This person selected "Returning Client" but it's their FIRST appointment
         // They're confused/mistaken - treat them as "No Source" (unknown marketing source)
@@ -307,12 +327,12 @@ export function computeFunnelsFromAppointments(
       if (isFirstApptInTimeframe) {
         // This client's FIRST EVER appointment is in this timeframe = NEW CLIENT
         stats.new_clients += 1
-        
+
         // Special case: If they also had ADDITIONAL visits in this same timeframe,
         // they are ALSO a returning client within this timeframe
         if (visitsInTimeframe.length > 1) {
           stats.returning_clients += 1
-          stats.new_clients_retained += 1  // ✅ NEW: Track new clients who came back same timeframe
+          stats.new_clients_retained += 1 // ✅ NEW: Track new clients who came back same timeframe
         }
       } else if (isFirstApptBeforeTimeframe) {
         // First appointment was BEFORE this timeframe started
