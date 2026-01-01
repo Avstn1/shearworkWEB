@@ -57,6 +57,12 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
   const PAGE_SIZE = 4
   const [totalCount, setTotalCount] = useState(0)
 
+  // Helper to parse date strings as local dates (not UTC)
+  const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+
   // Fetch expenses with pagination
   const fetchExpenses = async () => {
     setLoading(true)
@@ -77,12 +83,12 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
 
       // Filter client-side based on frequency and activity
       const filteredExpenses = (allExpenses || []).filter((exp: RecurringExpense) => {
-        const start = new Date(exp.start_date)
-        const end = exp.end_date ? new Date(exp.end_date) : null
+        const start = parseLocalDate(exp.start_date)
+        const end = exp.end_date ? parseLocalDate(exp.end_date) : null
 
         if (exp.frequency === 'once') {
-          // For 'once', only show if start_date is in the selected month
-          return start.getMonth() === monthIndex && start.getFullYear() === yearNum
+          const matches = start.getMonth() === monthIndex && start.getFullYear() === yearNum
+          return matches
         } else {
           // For recurring, show if active period overlaps with selected month
           if (start > monthEnd || (end && end < monthStart)) {
@@ -161,7 +167,7 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [barberId, page])
+  }, [barberId, page, month, year])
 
   // Add this useEffect to handle automatic page navigation
   useEffect(() => {
@@ -261,10 +267,11 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
   const getExpenseStatus = (exp: RecurringExpense, month: string, year: number): ExpenseStatus => {
     const monthIndex = MONTHS.indexOf(month)
     const today = new Date()
-    const start = new Date(exp.start_date)
-    const end = exp.end_date ? new Date(exp.end_date) : null
+    const start = parseLocalDate(exp.start_date)
+    const end = exp.end_date ? parseLocalDate(exp.end_date) : null
     const monthStart = new Date(year, monthIndex, 1)
     const monthEnd = new Date(year, monthIndex + 1, 0)
+    
     
     let lastAdded: string | null = null
     let nextPending: string | null = null
@@ -278,13 +285,16 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
     
     switch (exp.frequency) {
       case 'once':
-        const expDate = new Date(exp.start_date)
+        const expDate = parseLocalDate(exp.start_date)
         if (expDate.getMonth() === monthIndex && expDate.getFullYear() === year) {
           occurrences.push(expDate)
         }
         break
       case 'weekly':
         const daysOfWeek = exp.weekly_days || []
+        // Skip if no days selected
+        if (daysOfWeek.length === 0) break
+        
         const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
         for (let d = 1; d <= daysInMonth; d++) {
           const date = new Date(year, monthIndex, d)

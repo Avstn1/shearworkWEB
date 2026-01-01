@@ -22,6 +22,88 @@ export default function MonthlyProfitCard({ userId, selectedMonth, year }: Month
   const [barberType, setBarberType] = useState<'rental' | 'commission' | undefined>()
   const { label } = useBarberLabel(barberType)
 
+  // Helper to parse date strings as local dates (not UTC)
+  const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day)
+  }
+
+  // Calculate expenses from recurring_expenses for a given month/year
+  const calculateExpenses = async (month: string, year: number): Promise<number> => {
+    const monthIndex = MONTHS.indexOf(month)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const isCurrentMonth = today.getMonth() === monthIndex && today.getFullYear() === year
+    const endDay = isCurrentMonth ? today.getDate() : new Date(year, monthIndex + 1, 0).getDate()
+
+    let totalExpense = 0
+
+    const { data: recurringData } = await supabase
+      .from('recurring_expenses')
+      .select('*')
+      .eq('user_id', userId)
+    
+    if (recurringData) {
+      const monthStart = new Date(year, monthIndex, 1)
+      const monthEnd = new Date(year, monthIndex + 1, 0)
+      
+      recurringData.forEach((rec: any) => {
+        const start = parseLocalDate(rec.start_date)
+        const end = rec.end_date ? parseLocalDate(rec.end_date) : null
+                
+        // Apply same filtering as ExpensesViewer
+        let shouldInclude = false
+        if (rec.frequency === 'once') {
+          shouldInclude = start.getMonth() === monthIndex && start.getFullYear() === year
+        } else {
+          shouldInclude = start <= monthEnd && (!end || end >= monthStart)
+        }
+        
+        if (!shouldInclude) return
+        
+        // Calculate occurrences up to endDay (only count if date has passed)
+        switch (rec.frequency) {
+          case 'once':
+            const expDate = parseLocalDate(rec.start_date)
+            if (expDate.getDate() <= endDay && expDate <= today) {
+              totalExpense += rec.amount
+            }
+            break
+          case 'weekly':
+            const daysOfWeek = rec.weekly_days || []
+            if (daysOfWeek.length === 0) break
+            
+            for (let d = 1; d <= endDay; d++) {
+              const date = new Date(year, monthIndex, d)
+              if (date >= start && (!end || date <= end) && date <= today) {
+                const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]
+                if (daysOfWeek.includes(dayName)) totalExpense += rec.amount
+              }
+            }
+            break
+          case 'monthly':
+            if (rec.monthly_day && rec.monthly_day <= endDay && rec.monthly_day <= monthEnd.getDate()) {
+              const occurrenceDate = new Date(year, monthIndex, rec.monthly_day)
+              if (occurrenceDate >= start && (!end || occurrenceDate <= end) && occurrenceDate <= today) {
+                totalExpense += rec.amount
+              }
+            }
+            break
+          case 'yearly':
+            if (rec.yearly_month === monthIndex && rec.yearly_day && rec.yearly_day <= endDay && rec.yearly_day <= monthEnd.getDate()) {
+              const occurrenceDate = new Date(year, monthIndex, rec.yearly_day)
+              if (occurrenceDate >= start && (!end || occurrenceDate <= end) && occurrenceDate <= today) {
+                totalExpense += rec.amount
+              }
+            }
+            break
+        }
+      })
+    }
+
+    return totalExpense
+  }
+
   useEffect(() => {
     if (!userId || !selectedMonth) return
 
@@ -48,24 +130,27 @@ export default function MonthlyProfitCard({ userId, selectedMonth, year }: Month
     if (!userId || !selectedMonth) return
 
     const fetchProfit = async () => {
-    setLoading(true)
-    try {
+      setLoading(true)
+      try {
         const currentYear = year ?? new Date().getFullYear()
 
-        // ✅ Fetch current month revenue + expenses
+        // ✅ Fetch current month revenue
         const { data: currentData, error: currentError } = await supabase
-        .from('monthly_data')
-        .select('final_revenue, expenses')
-        .eq('user_id', userId)
-        .eq('month', selectedMonth)
-        .eq('year', currentYear)
-        .maybeSingle()
+          .from('monthly_data')
+          .select('final_revenue')
+          .eq('user_id', userId)
+          .eq('month', selectedMonth)
+          .eq('year', currentYear)
+          .maybeSingle()
 
         if (currentError) console.error('Error fetching current month data:', currentError)
 
+        // Calculate current expenses from recurring_expenses
+        const currentExpenses = await calculateExpenses(selectedMonth, currentYear)
+
         const currentProfit =
-        currentData?.final_revenue != null && currentData?.expenses != null
-            ? currentData.final_revenue - currentData.expenses
+          currentData?.final_revenue != null
+            ? currentData.final_revenue - currentExpenses
             : null
 
         setProfit(currentProfit)
@@ -75,35 +160,37 @@ export default function MonthlyProfitCard({ userId, selectedMonth, year }: Month
         let prevIndex = currentIndex - 1
         let prevYear = currentYear
         if (prevIndex < 0) {
-        prevIndex = 11
-        prevYear -= 1
+          prevIndex = 11
+          prevYear -= 1
         }
         const prevMonth = MONTHS[prevIndex]
 
-        // ✅ Fetch previous month revenue + expenses
+        // ✅ Fetch previous month revenue
         const { data: prevData, error: prevError } = await supabase
-        .from('monthly_data')
-        .select('final_revenue, expenses')
-        .eq('user_id', userId)
-        .eq('month', prevMonth)
-        .eq('year', prevYear)
-        .maybeSingle()
+          .from('monthly_data')
+          .select('final_revenue')
+          .eq('user_id', userId)
+          .eq('month', prevMonth)
+          .eq('year', prevYear)
+          .maybeSingle()
 
         if (prevError) console.error('Error fetching previous month data:', prevError)
 
+        // Calculate previous expenses from recurring_expenses
+        const prevExpenses = await calculateExpenses(prevMonth, prevYear)
+
         const prevProfit =
-        prevData?.final_revenue != null && prevData?.expenses != null
-            ? prevData.final_revenue - prevData.expenses
+          prevData?.final_revenue != null
+            ? prevData.final_revenue - prevExpenses
             : null
 
         setPrevProfit(prevProfit)
-    } catch (err) {
+      } catch (err) {
         console.error('Error fetching profits:', err)
-    } finally {
+      } finally {
         setLoading(false)
+      }
     }
-    }
-
 
     fetchProfit()
   }, [userId, selectedMonth, year])
