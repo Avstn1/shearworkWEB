@@ -63,8 +63,13 @@ export default function UserExpensesPage() {
   const fetchData = async () => {
     if (!user) return
     try {
+      const monthIndex = MONTHS.indexOf(selectedMonth)
+      const today = new Date()
+      const isCurrentMonth = today.getMonth() === monthIndex && today.getFullYear() === selectedYear
+      const endDay = isCurrentMonth ? today.getDate() : new Date(selectedYear, monthIndex + 1, 0).getDate()
+
       // Monthly expense
-      const { data: expenseData, error: expenseError } = await supabase
+      const { data: expenseData } = await supabase
         .from('monthly_data')
         .select('expenses')
         .eq('user_id', user.id)
@@ -73,37 +78,55 @@ export default function UserExpensesPage() {
         .maybeSingle()
       let totalExpense = expenseData?.expenses || 0
 
-      // Add recurring expenses due this month
-      const { data: recurringData, error: recurringError } = await supabase
+      // Add recurring expenses that have occurred up to endDay
+      const { data: recurringData } = await supabase
         .from('recurring_expenses')
         .select('*')
         .eq('user_id', user.id)
-      if (!recurringError && recurringData) {
-        const monthIndex = MONTHS.indexOf(selectedMonth)
-        const now = new Date(selectedYear, monthIndex, 1)
+      
+      if (recurringData) {
         recurringData.forEach((rec: any) => {
           const start = new Date(rec.start_date)
           const end = rec.end_date ? new Date(rec.end_date) : null
-          if (now >= start && (!end || now <= end)) {
+          const monthStart = new Date(selectedYear, monthIndex, 1)
+          const monthEnd = new Date(selectedYear, monthIndex + 1, 0)
+          
+          // Check if expense is active during selected month
+          if (start <= monthEnd && (!end || end >= monthStart)) {
             switch (rec.frequency) {
               case 'once':
                 const expDate = new Date(rec.start_date)
-                if (expDate.getMonth() === monthIndex && expDate.getFullYear() === selectedYear) totalExpense += rec.amount
+                if (expDate.getMonth() === monthIndex && 
+                    expDate.getFullYear() === selectedYear && 
+                    expDate.getDate() <= endDay) {
+                  totalExpense += rec.amount
+                }
                 break
               case 'weekly':
                 const daysOfWeek = rec.weekly_days || []
-                const daysInMonth = new Date(selectedYear, monthIndex + 1, 0).getDate()
-                for (let d = 1; d <= daysInMonth; d++) {
+                for (let d = 1; d <= endDay; d++) {
                   const date = new Date(selectedYear, monthIndex, d)
-                  const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]
-                  if (daysOfWeek.includes(dayName)) totalExpense += rec.amount
+                  if (date >= start && (!end || date <= end)) {
+                    const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]
+                    if (daysOfWeek.includes(dayName)) totalExpense += rec.amount
+                  }
                 }
                 break
               case 'monthly':
-                if (rec.monthly_day && rec.monthly_day <= new Date(selectedYear, monthIndex + 1, 0).getDate()) totalExpense += rec.amount
+                if (rec.monthly_day && rec.monthly_day <= endDay && rec.monthly_day <= monthEnd.getDate()) {
+                  const occurrenceDate = new Date(selectedYear, monthIndex, rec.monthly_day)
+                  if (occurrenceDate >= start && (!end || occurrenceDate <= end)) {
+                    totalExpense += rec.amount
+                  }
+                }
                 break
               case 'yearly':
-                if (rec.yearly_month === monthIndex && rec.yearly_day <= new Date(selectedYear, monthIndex + 1, 0).getDate()) totalExpense += rec.amount
+                if (rec.yearly_month === monthIndex && rec.yearly_day <= endDay && rec.yearly_day <= monthEnd.getDate()) {
+                  const occurrenceDate = new Date(selectedYear, monthIndex, rec.yearly_day)
+                  if (occurrenceDate >= start && (!end || occurrenceDate <= end)) {
+                    totalExpense += rec.amount
+                  }
+                }
                 break
             }
           }
@@ -112,7 +135,7 @@ export default function UserExpensesPage() {
 
       setCurrentExpense(totalExpense)
 
-      // Receipts
+      // Receipts (same as before)
       const { data: receiptData, error: receiptError } = await supabase
         .from('monthly_receipts')
         .select('id,image_url,label')
@@ -198,7 +221,16 @@ export default function UserExpensesPage() {
 
         {/* Current Expense */}
         <motion.div variants={fadeInUp} className="mb-6">
-          <p className="text-white font-semibold text-lg">Current Total: <span className="text-lime-300 font-bold">${currentExpense.toFixed(2)}</span></p>
+          <p className="text-white font-semibold text-lg">Total Expenses to Date: <span className="text-lime-300 font-bold">${currentExpense.toFixed(2)}</span></p>
+          <p className="text-xs text-[#bdbdbd] mt-1">
+            {(() => {
+              const monthIndex = MONTHS.indexOf(selectedMonth)
+              const today = new Date()
+              const isCurrentMonth = today.getMonth() === monthIndex && today.getFullYear() === selectedYear
+              const endDay = isCurrentMonth ? today.getDate() : new Date(selectedYear, monthIndex + 1, 0).getDate()
+              return `Showing expenses from ${selectedMonth} 1 to ${selectedMonth} ${endDay}, ${selectedYear}`
+            })()}
+          </p>
         </motion.div>
 
         {/* Expenses + Recurring Editors */}

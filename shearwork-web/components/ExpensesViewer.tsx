@@ -6,6 +6,11 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 
+interface ExpenseStatus {
+  lastAdded: string | null
+  nextPending: string | null
+}
+
 interface ExpensesViewerProps {
   barberId: string
   month: string
@@ -56,32 +61,54 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
   const fetchExpenses = async () => {
     setLoading(true)
     try {
-      // Total count
-      const { count, error: countError } = await supabase
-        .from('recurring_expenses')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', barberId)
-      if (countError) throw countError
-      setTotalCount(count || 0)
+      const monthIndex = MONTHS.indexOf(month)
+      const yearNum = parseInt(year)
+      const monthStart = new Date(yearNum, monthIndex, 1)
+      const monthEnd = new Date(yearNum, monthIndex + 1, 0)
 
-      // Calculate valid page range
-      const maxPage = Math.max(1, Math.ceil((count || 0) / PAGE_SIZE)) // max page depending on how many expenses there are 
-      const validPage = Math.min(page, maxPage) // 
-
-      // Page data
-      const from = (validPage - 1) * PAGE_SIZE // get data from the page that is valid
-      const to = from + PAGE_SIZE - 1
-
-      const { data, error } = await supabase
+      // First get all expenses for this user
+      const { data: allExpenses, error } = await supabase
         .from('recurring_expenses')
         .select('*')
         .eq('user_id', barberId)
         .order('created_at', { ascending: false })
-        .range(from, to)
+
       if (error) throw error
-      setExpenses(data || [])
-      
-      // Update page if it was adjusted
+
+      // Filter client-side based on frequency and activity
+      const filteredExpenses = (allExpenses || []).filter((exp: RecurringExpense) => {
+        const start = new Date(exp.start_date)
+        const end = exp.end_date ? new Date(exp.end_date) : null
+
+        if (exp.frequency === 'once') {
+          // For 'once', only show if start_date is in the selected month
+          return start.getMonth() === monthIndex && start.getFullYear() === yearNum
+        } else {
+          // For recurring, show if active period overlaps with selected month
+          if (start > monthEnd || (end && end < monthStart)) {
+            return false // Not active this month, don't show
+          }
+          
+          // Additional check: verify it actually has occurrences in this month
+          const status = getExpenseStatus(exp, month, yearNum)
+          return status.lastAdded !== null || status.nextPending !== null
+        }
+      })
+
+      // Apply pagination to filtered results
+      const totalFiltered = filteredExpenses.length
+      setTotalCount(totalFiltered)
+
+      const maxPage = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE))
+      const validPage = Math.min(page, maxPage)
+
+      const paginatedData = filteredExpenses.slice(
+        (validPage - 1) * PAGE_SIZE,
+        validPage * PAGE_SIZE
+      )
+
+      setExpenses(paginatedData)
+
       if (validPage !== page) {
         setPage(validPage)
       }
@@ -230,6 +257,79 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
     }
   }
 
+  // Helper to get expense status for selected month
+  const getExpenseStatus = (exp: RecurringExpense, month: string, year: number): ExpenseStatus => {
+    const monthIndex = MONTHS.indexOf(month)
+    const today = new Date()
+    const start = new Date(exp.start_date)
+    const end = exp.end_date ? new Date(exp.end_date) : null
+    const monthStart = new Date(year, monthIndex, 1)
+    const monthEnd = new Date(year, monthIndex + 1, 0)
+    
+    let lastAdded: string | null = null
+    let nextPending: string | null = null
+    
+    // Check if expense is active during selected month
+    if (start > monthEnd || (end && end < monthStart)) {
+      return { lastAdded: null, nextPending: null }
+    }
+
+    const occurrences: Date[] = []
+    
+    switch (exp.frequency) {
+      case 'once':
+        const expDate = new Date(exp.start_date)
+        if (expDate.getMonth() === monthIndex && expDate.getFullYear() === year) {
+          occurrences.push(expDate)
+        }
+        break
+      case 'weekly':
+        const daysOfWeek = exp.weekly_days || []
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
+        for (let d = 1; d <= daysInMonth; d++) {
+          const date = new Date(year, monthIndex, d)
+          if (date >= start && (!end || date <= end)) {
+            const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]
+            if (daysOfWeek.includes(dayName)) occurrences.push(date)
+          }
+        }
+        break
+      case 'monthly':
+        if (exp.monthly_day && exp.monthly_day <= monthEnd.getDate()) {
+          const occurrenceDate = new Date(year, monthIndex, exp.monthly_day)
+          if (occurrenceDate >= start && (!end || occurrenceDate <= end)) {
+            occurrences.push(occurrenceDate)
+          }
+        }
+        break
+      case 'yearly':
+        if (exp.yearly_month === monthIndex && exp.yearly_day && exp.yearly_day <= monthEnd.getDate()) {
+          const occurrenceDate = new Date(year, monthIndex, exp.yearly_day)
+          if (occurrenceDate >= start && (!end || occurrenceDate <= end)) {
+            occurrences.push(occurrenceDate)
+          }
+        }
+        break
+    }
+
+    // Find last added and next pending
+    occurrences.forEach(occ => {
+      if (occ <= today) {
+        if (!lastAdded || occ > new Date(lastAdded)) {
+          lastAdded = occ.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        }
+      } else {
+        if (!nextPending || occ < new Date(nextPending)) {
+          nextPending = occ.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        }
+      }
+    })
+
+    return { lastAdded, nextPending }
+  }
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
   if (loading) return <p className="text-sm text-gray-400">Loading recurring expenses...</p>
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
@@ -369,6 +469,32 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
                       <p className="text-xs text-gray-500">
                         {exp.start_date} {exp.end_date ? `→ ${exp.end_date}` : ''}
                       </p>
+                      
+                      {/* Status badges */}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {(() => {
+                          const status = getExpenseStatus(exp, month, parseInt(year))
+                          return (
+                            <>
+                              {status.lastAdded && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-green-600/30 text-green-200 border border-green-500/30">
+                                  Added on {status.lastAdded}
+                                </span>
+                              )}
+                              {status.nextPending && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-amber-600/30 text-amber-200 border border-amber-500/30">
+                                  Next: {status.nextPending}
+                                </span>
+                              )}
+                              {!status.lastAdded && !status.nextPending && (
+                                <span className="text-xs px-2 py-1 rounded-full bg-gray-600/30 text-gray-300 border border-gray-500/30">
+                                  Not active this month
+                                </span>
+                              )}
+                            </>
+                          )
+                        })()}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <button
