@@ -424,7 +424,6 @@ async function findOrCreateClient(
       first_source: firstSource,
       total_appointments: 0,
       total_tips_all_time: 0,
-      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .select('client_id')
