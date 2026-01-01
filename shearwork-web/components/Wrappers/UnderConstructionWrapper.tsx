@@ -16,7 +16,12 @@ export default function UnderConstructionWrapper({ children }: UnderConstruction
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session?.user?.id === '39d5d08d-2deb-4b92-a650-ee10e70b7af1') {
+      const TEST_ACCOUNTS = new Set([
+        '39d5d08d-2deb-4b92-a650-ee10e70b7af1',
+        'f4d28cd0-37e9-4117-a67c-0e3c91c1eac7',
+      ]);
+
+      if (session?.user?.id && TEST_ACCOUNTS.has(session.user.id)) {
         setIsTestAccount(true);
       }
       
