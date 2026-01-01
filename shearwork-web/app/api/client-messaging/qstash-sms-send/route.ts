@@ -73,6 +73,35 @@ async function handler(request: Request) {
       )
     }
 
+  const torontoNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
+  const todayToronto = new Date(torontoNow.getFullYear(), torontoNow.getMonth(), torontoNow.getDate())
+
+  if (scheduledMessage.start_date) {
+    const startDate = new Date(scheduledMessage.start_date + 'T00:00:00')
+    if (startDate > todayToronto) {
+      console.log('⏭️ Skipping: Campaign has not started yet (start_date is in the future)')
+      return NextResponse.json({
+        success: true,
+        message: 'Skipped: Campaign has not started yet',
+        messageId,
+        timestamp: new Date().toISOString(),
+      })
+    }
+  }
+
+  if (scheduledMessage.end_date) {
+    const endDate = new Date(scheduledMessage.end_date + 'T00:00:00')
+    if (endDate < todayToronto) {
+      console.log('⏭️ Skipping: Campaign has ended (end_date is in the past)')
+      return NextResponse.json({
+        success: true,
+        message: 'Skipped: Campaign has ended',
+        messageId,
+        timestamp: new Date().toISOString(),
+      })
+    }
+  }
+
     // Fetch recipients based on mode
     let recipients: Recipients[] = []
 
@@ -99,7 +128,6 @@ async function handler(request: Request) {
       }]
       
     } else { 
-      // Production mode: Determine algorithm based on message purpose
       purpose = 'client_sms'
 
       const algorithm = scheduledMessage.purpose === 'mass' 

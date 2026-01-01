@@ -118,14 +118,22 @@ async function getCampaignRecipients(
   });
 }
 
-// MODE 2: Get all auto-nudge campaign history grouped by message_id, message, and cron
+// MODE 2: Get all auto-nudge campaign history grouped by message_id, message, and cron - UPDATED. USE LATER
 async function getAutoNudgeHistory(supabase: any, userId: string) {
-  // Fetch all sms_sent records for this user
+  // Fetch all sms_sent records for this user WHERE the parent campaign has purpose = 'auto-nudge'
   const { data: sentMessages, error } = await supabase
     .from('sms_sent')
-    .select('message_id, message, cron, is_sent, created_at')
+    .select(`
+      message_id, 
+      message, 
+      cron, 
+      is_sent, 
+      created_at,
+      sms_scheduled_messages!inner(purpose)
+    `)
     .eq('user_id', userId)
     .eq('purpose', 'client_sms')
+    .eq('sms_scheduled_messages.purpose', 'auto-nudge')
     .not('message_id', 'is', null)
     .not('message', 'is', null)
     .not('cron', 'is', null)
@@ -139,6 +147,7 @@ async function getAutoNudgeHistory(supabase: any, userId: string) {
     );
   }
 
+  // Rest of the function remains the same...
   // Group by message_id + message + cron
   const groupedCampaigns = new Map<string, {
     message_id: string;
@@ -160,11 +169,11 @@ async function getAutoNudgeHistory(supabase: any, userId: string) {
         message_id: msg.message_id,
         message: msg.message,
         cron: msg.cron,
-        title: '', // Will fetch from sms_scheduled_messages
+        title: '',
         success: 0,
         fail: 0,
         total: 0,
-        final_clients_to_message: 0, // Will fetch from sms_scheduled_messages
+        final_clients_to_message: 0,
         last_sent: msg.created_at,
       });
     }
@@ -178,13 +187,12 @@ async function getAutoNudgeHistory(supabase: any, userId: string) {
       campaign.fail += 1;
     }
 
-    // Update last_sent to the most recent
     if (new Date(msg.created_at) > new Date(campaign.last_sent)) {
       campaign.last_sent = msg.created_at;
     }
   });
 
-  // Fetch titles from sms_scheduled_messages
+  // Fetch titles from sms_scheduled_messages (with auto-nudge filter for safety)
   const messageIds = Array.from(new Set(
     Array.from(groupedCampaigns.values()).map(c => c.message_id)
   ));
@@ -193,7 +201,8 @@ async function getAutoNudgeHistory(supabase: any, userId: string) {
     const { data: scheduledMessages } = await supabase
       .from('sms_scheduled_messages')
       .select('id, title, final_clients_to_message')
-      .in('id', messageIds);
+      .in('id', messageIds)
+      .eq('purpose', 'auto-nudge'); // Additional safety filter
 
     const messageDataMap = new Map<string, { title: string; final_clients_to_message: number }>(
       scheduledMessages?.map((sm: any) => [sm.id, { 
@@ -209,7 +218,6 @@ async function getAutoNudgeHistory(supabase: any, userId: string) {
     });
   }
 
-  // Convert to array and sort by last_sent (most recent first)
   const campaigns = Array.from(groupedCampaigns.values())
     .sort((a, b) => new Date(b.last_sent).getTime() - new Date(a.last_sent).getTime())
     .map(campaign => ({
