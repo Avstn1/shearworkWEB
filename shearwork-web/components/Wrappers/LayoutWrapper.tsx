@@ -9,7 +9,6 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
   const [hasSession, setHasSession] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const hasCompletedInitialAuth = useRef(false)
   const router = useRouter()
   const pathname = usePathname()
   
@@ -35,7 +34,6 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
           console.error('Session error:', sessionError)
           setIsInitialLoad(false)
           setHasSession(false)
-          hasCompletedInitialAuth.current = true
           if (!isPublicRoute) {
             router.push('/')
           }
@@ -45,7 +43,6 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
         if (!session) {
           setHasSession(false)
           setIsInitialLoad(false)
-          hasCompletedInitialAuth.current = true
           if (!isPublicRoute) {
             router.push('/')
           }
@@ -70,32 +67,24 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
         }
         
         setIsInitialLoad(false)
-        hasCompletedInitialAuth.current = true
-
-        // If we just logged in on a public route, redirect to dashboard
-        if (isPublicRoute && pathname !== '/') {
-          router.push('/dashboard')
-        }
       } catch (err) {
         console.error('Auth check error:', err)
         if (mounted) {
           setIsInitialLoad(false)
           setHasSession(false)
-          hasCompletedInitialAuth.current = true
         }
       }
     }
 
     checkUserRole()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription }, } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
       
       if (event === 'SIGNED_IN') {
         setHasSession(true)
-        // Redirect to dashboard after sign in
+        // Only redirect if we're on a public route (actual login flow)
+        // Don't redirect if already on a protected route (session refresh)
         if (isPublicRoute) {
           router.push('/dashboard')
         }
@@ -113,7 +102,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [pathname, isPublicRoute, router, supabase])
 
   // Show loading only for protected routes
   if (isInitialLoad && !isPublicRoute) {
