@@ -44,9 +44,8 @@ export default function Sidebar() {
           .single()
         
         setSpecialAccess(profile?.special_access || false)
-      }      
-      
-      checkUnreadFeatures(session.user.id)
+        checkUnreadFeatures(session.user.id)
+      }
     }
     checkSession()
 
