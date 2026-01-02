@@ -775,6 +775,7 @@ export async function GET(request: Request) {
   const appointmentsToUpsert: any[] = []
   const processedApptIds = new Set<string>()
   let uniqueClients: any[] = []
+  const newClients: any[] = [] 
 
   for (const appt of appointments) {
     if (!appt.id) continue
@@ -833,6 +834,15 @@ export async function GET(request: Request) {
     if (emailKey) clientCache.set(`email:${emailKey}`, clientKey)
     if (nameKey) clientCache.set(`name:${nameKey}`, clientKey)
     // -------------------------------------------------------------------------------
+
+    // const isReturning = await isReturningClient(
+    //   supabase,
+    //   user.id,
+    //   emailKey,
+    //   phoneNormalized,
+    //   firstName,
+    //   lastName
+    // )
 
     if (!clientDataMap.has(clientKey)) {
       clientDataMap.set(clientKey, {
@@ -1486,6 +1496,14 @@ export async function GET(request: Request) {
   await supabase
     .from('monthly_appointments_summary')
     .upsert(weekdayUpserts, { onConflict: 'user_id,year,month,weekday' })
+
+  console.log('='.repeat(80))
+  console.log('NEW CLIENTS SUMMARY')
+  console.log('='.repeat(80))
+  console.log('Total new clients found:', newClients.length)
+  console.log('\nDetailed breakdown:')
+  console.log(JSON.stringify(newClients, null, 2))
+  console.log('='.repeat(80))
 
   return NextResponse.json({
     endpoint: 'appointments',
