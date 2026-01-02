@@ -268,7 +268,6 @@ ${dataset.special_access
    <ul>
      <li>👥 Total Clients: ${summary.total_clients || 0} — strong base of loyal and new clients.</li>
      <li>💵 Approx. Take Home: $${profit.toFixed(2)} net profit.</li>
-     <li>🎯 Best Marketing Funnel: ${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'N/A'} performed best for new leads.</li>
      <li>💳 Average Ticket: $${avgTicket.toFixed(2)} showing stable revenue per client.</li>
      <li>💈 Multi-visit Clients: ${topClients.filter((c:any)=>(c.num_visits||0)>1).length} returned more than once — great loyalty!</li>
      <li>🚀 Keep growing by leveraging top-performing services and funnels next month!</li>
@@ -276,3 +275,15 @@ ${dataset.special_access
   `;
 };
 
+
+// 9. <h2>✨ Key Takeaways</h2> (The following is just an example, ai instructions: make it more creative and change it up but use the same data)
+//    <ul>
+//      <li>👥 Total Clients: ${summary.total_clients || 0} — strong base of loyal and new clients.</li>
+//      <li>💵 Approx. Take Home: $${profit.toFixed(2)} net profit.</li>
+//      <li>🎯 Best Marketing Funnel: ${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'N/A'} performed best for new leads.</li>
+//      <li>💳 Average Ticket: $${avgTicket.toFixed(2)} showing stable revenue per client.</li>
+//      <li>💈 Multi-visit Clients: ${topClients.filter((c:any)=>(c.num_visits||0)>1).length} returned more than once — great loyalty!</li>
+//      <li>🚀 Keep growing by leveraging top-performing services and funnels next month!</li>
+//    </ul>
+//   `;
+// };
