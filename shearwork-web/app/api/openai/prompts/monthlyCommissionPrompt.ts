@@ -261,10 +261,11 @@ ${
 <ul>
   <li>👥 Total Clients: ${summary.total_clients || 0} — strong base of loyal and new clients.</li>
   <li>💵 Approx. Take Home: $${personalEarnings.toFixed(2)} net profit.</li>
-  <li>🎯 Best Marketing Funnel: ${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.funnel_name || 'N/A'} performed best for new leads.</li>
   <li>💳 Average Ticket: $${avgTicket.toFixed(2)} showing stable revenue per client.</li>
   <li>💈 Multi-visit Clients: ${topClients.filter((c:any)=>(c.visits||0)>1).length} returned more than once — great loyalty!</li>
   <li>🚀 Keep growing by leveraging top-performing services and funnels next month!</li>
 </ul>
 `
 }
+
+  // <li>🎯 Best Marketing Funnel: ${funnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.funnel_name || 'N/A'} performed best for new leads.</li>

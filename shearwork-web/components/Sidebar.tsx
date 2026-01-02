@@ -26,6 +26,7 @@ export default function Sidebar() {
   const [userId, setUserId] = useState<string | null>(null)
   const [hasUnreadFeatures, setHasUnreadFeatures] = useState(false)
   const [showFeaturesModal, setShowFeaturesModal] = useState(false)
+  const [specialAccess, setSpecialAccess] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -34,10 +35,18 @@ export default function Sidebar() {
       setHasSession(!!session)
       setUserId(session?.user?.id || null)
       
-      // Check for unread features if user is Gavin
-      if (session?.user?.id === '39d5d08d-2deb-4b92-a650-ee10e70b7af1') {
-        checkUnreadFeatures(session.user.id)
-      }
+      // Check for special access
+      if (session?.user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('special_access')
+          .eq('user_id', session.user.id)
+          .single()
+        
+        setSpecialAccess(profile?.special_access || false)
+      }      
+      
+      checkUnreadFeatures(session.user.id)
     }
     checkSession()
 
@@ -259,14 +268,12 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {userId === '39d5d08d-2deb-4b92-a650-ee10e70b7af1' && (
-        <NewFeaturesModal
-          isOpen={showFeaturesModal}
-          onClose={() => setShowFeaturesModal(false)}
-          initialViewMode="barberView"
-          userId={userId || undefined}
-        />
-      )}
+      <NewFeaturesModal
+        isOpen={showFeaturesModal}
+        onClose={() => setShowFeaturesModal(false)}
+        initialViewMode="barberView"
+        userId={userId || undefined}
+      />
     </>
   )
 }
