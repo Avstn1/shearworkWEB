@@ -10,7 +10,9 @@ export const weeklyRentalPrompt = (dataset: any, userName: string, month: string
   const tips = summary.tips.totalTips || 0
   const tipsServiceType = summary.tips.tipsServiceType || {}
 
-  const netProfit = (summary.total_revenue || 0) - (summary.expenses || 0) + (tips || 0);
+  console.log(dataset.weeklyExpensesData)
+
+  const netProfit = (summary.total_revenue || 0) - (dataset.weeklyExpensesData || 0) + (tips || 0);
   
   // ✅ FIX 1: Calculate total unique clients correctly
   const totalUniqueClients = (summary.new_clients || 0) + (summary.returning_clients || 0);
@@ -53,7 +55,7 @@ Use the provided data and computed values. Pull values directly from the dataset
   <li>Total Revenue: $${(summary.total_revenue || 0).toFixed(2)}</li>
   <li>Tips: $${(tips || 0).toFixed(2)}</li>
   <li>Average Ticket: $${avgTicket}</li>
-  <li>Expenses: $${(summary.expenses || 0).toFixed(2)}</li>
+  <li>weeklyExpensesData: $${(dataset.weeklyExpensesData || 0).toFixed(2)}</li>
   <li>Net Profit: $${netProfit.toFixed(2)}</li>
 </ul>
 
