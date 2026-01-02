@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     if (purpose !== 'test_message') {
       await supabase
         // acuity_clients change for testing
-        .from('acuity_clients_testing')
+        .from('acuity_clients')
         .update({
           date_last_sms_sent: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -170,7 +170,7 @@ async function getClientId(phoneNormalized: string): Promise<string | null> {
   try {
     const { data } = await supabase
       // acuity_clients change for testing
-      .from('acuity_clients_testing')
+      .from('acuity_clients')
       .select('client_id')
       .eq('phone_normalized', phoneNormalized)
       .single()
