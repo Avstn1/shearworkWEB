@@ -7,8 +7,10 @@ export const weeklyCommissionPrompt = (dataset: any, userName: string, month: st
 
   const tips = summary.tips.totalTips || 0
   const tipsServiceType = summary.tips.tipsServiceType || {}
+
+  const expenses = dataset.weeklyExpensesData
   
-  const personalEarnings = ((summary.total_revenue || 0) * commissionRate) + (tips || 0);
+  const personalEarnings = ((summary.total_revenue || 0) * commissionRate) + (tips || 0) - expenses;
   const avgTicket = summary.num_appointments > 0 
     ? (personalEarnings / summary.num_appointments).toFixed(2) 
     : '0.00';
@@ -48,8 +50,9 @@ Use the provided data and computed values. Do not invent numbers. DO NOT REMOVE 
   <li><strong>New Clients:</strong> ${totalNewClients || 0} | <strong>Returning:</strong> ${totalReturningClients || 0}</li>
   <li><strong>Gross Revenue:</strong> $${(summary.total_revenue || 0).toFixed(2)}</li>
   <li><strong>Tips:</strong> $${(tips || 0).toFixed(2)}</li>
+  <li><strong>Expenses:</strong> $${(expenses || 0).toFixed(2)}</li>
   <li><strong>Commission Rate:</strong> ${(commissionRate * 100).toFixed(0)}%</li>
-  <li><strong>Personal Earnings:</strong> $${personalEarnings.toFixed(2)} <em>(commission + tips)</em></li>
+  <li><strong>Personal Earnings:</strong> $${personalEarnings.toFixed(2)} <em>(commission + tips - expenses)</em></li>
   <li><strong>Average Ticket:</strong> $${avgTicket} per client</li>
 </ul>
 

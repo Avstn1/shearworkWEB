@@ -525,7 +525,23 @@ export async function POST(req: Request) {
       } else {
         weeklyExpensesData = getWeeklyBreakdown(data, normalizedYear, numericMonth)
       }
+    } else if (type === 'weekly') {
+      const { data, error } = await supabase
+        .from('recurring_expenses')
+        .select('*')
+        .eq('user_id', user_id)
+        .lte('start_date', endOfMonth.toISOString())
+        .or(`end_date.is.null,end_date.gte.${startOfMonth.toISOString()}`)
+
+      if (error) {
+        console.error('Error fetching recurring expenses:', error)
+        weeklyExpensesData = undefined
+      } else {
+        const allWeeks = getWeeklyBreakdown(data, normalizedYear, numericMonth)
+        weeklyExpensesData = (week_number && allWeeks[week_number]?.total) || 0
+      }
     }
+    console.log(weeklyExpensesData)
 
     // ✅ FIX: week_number in dataset must be correct + consistent
     const datasetWeekNumber =
