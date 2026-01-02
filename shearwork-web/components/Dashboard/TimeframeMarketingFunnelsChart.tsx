@@ -14,6 +14,9 @@ import {
 } from 'recharts'
 import { supabase } from '@/utils/supabaseClient'
 
+import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
+
+
 const COLORS = ['#E8EDC7', '#9AC8CD', '#B19470', '#748E63', '#F1EEDC']
 
 export interface MarketingFunnel {
@@ -162,127 +165,129 @@ export default function TimeframeMarketingFunnelsChart({
     )
 
   return (
-    <div
-      className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
-      style={{
-        borderColor: 'var(--card-revenue-border)',
-        background: 'var(--card-revenue-bg)',
-        minHeight: '400px',
-        maxHeight: '440px',
-        overflow: 'visible',
-      }}
-    >
-      <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
-        📣 {timeframeLabel(timeframe, year)}
-      </h2>
+    <UnderConstructionWrapper>
+      <div
+        className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
+        style={{
+          borderColor: 'var(--card-revenue-border)',
+          background: 'var(--card-revenue-bg)',
+          minHeight: '400px',
+          maxHeight: '440px',
+          overflow: 'visible',
+        }}
+      >
+        <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
+          📣 {timeframeLabel(timeframe, year)}
+        </h2>
 
-      <div className="flex-1 flex items-center justify-center overflow-visible">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 20, right: 20, left: 0, bottom: 60 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
-
-            <XAxis
-              dataKey="source"
-              stroke="#E8EDC7"
-              angle={-35}
-              textAnchor="end"
-              interval={0}
-              height={60}
-              style={{ fontSize: '12px' }}
-            />
-            <YAxis stroke="#E8EDC7" />
-
-            <Tooltip
-              formatter={(value: any, name: string) => {
-                if (name === 'Retention')
-                  return [`${Number(value).toFixed(2)}%`, name]
-                return [value, name]
-              }}
-              contentStyle={{
-                backgroundColor: '#2b2b2b',
-                border: '1px solid #E8EDC7',
-                borderRadius: '8px',
-                color: '#E8EDC7',
-              }}
-              itemStyle={{ color: '#E8EDC7' }}
-              labelStyle={{ color: '#E8EDC7' }}
-            />
-
-            <Legend
-              formatter={(value) =>
-                value === 'Retention' ? 'Retention (%)' : value
-              }
-              iconType="circle"
-              wrapperStyle={{
-                color: '#E8EDC7',
-                paddingTop: '10px',
-              }}
-            />
-
-            {/* New Clients Bar */}
-            <Bar
-              dataKey="new_clients"
-              name="New Clients"
-              fill={COLORS[1]}
-              radius={[8, 8, 0, 0]}
+        <div className="flex-1 flex items-center justify-center overflow-visible">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{ top: 20, right: 20, left: 0, bottom: 60 }}
             >
-              <LabelList
+              <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
+
+              <XAxis
+                dataKey="source"
+                stroke="#E8EDC7"
+                angle={-35}
+                textAnchor="end"
+                interval={0}
+                height={60}
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis stroke="#E8EDC7" />
+
+              <Tooltip
+                formatter={(value: any, name: string) => {
+                  if (name === 'Retention')
+                    return [`${Number(value).toFixed(2)}%`, name]
+                  return [value, name]
+                }}
+                contentStyle={{
+                  backgroundColor: '#2b2b2b',
+                  border: '1px solid #E8EDC7',
+                  borderRadius: '8px',
+                  color: '#E8EDC7',
+                }}
+                itemStyle={{ color: '#E8EDC7' }}
+                labelStyle={{ color: '#E8EDC7' }}
+              />
+
+              <Legend
+                formatter={(value) =>
+                  value === 'Retention' ? 'Retention (%)' : value
+                }
+                iconType="circle"
+                wrapperStyle={{
+                  color: '#E8EDC7',
+                  paddingTop: '10px',
+                }}
+              />
+
+              {/* New Clients Bar */}
+              <Bar
                 dataKey="new_clients"
-                position="top"
-                style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
-              />
-            </Bar>
+                name="New Clients"
+                fill={COLORS[1]}
+                radius={[8, 8, 0, 0]}
+              >
+                <LabelList
+                  dataKey="new_clients"
+                  position="top"
+                  style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+                />
+              </Bar>
 
-            {/* Returning Clients Bar */}
-            <Bar
-              dataKey="returning_clients"
-              name="Returning Clients"
-              fill={COLORS[3]}
-              radius={[8, 8, 0, 0]}
-            >
-              <LabelList
+              {/* Returning Clients Bar */}
+              <Bar
                 dataKey="returning_clients"
+                name="Returning Clients"
+                fill={COLORS[3]}
+                radius={[8, 8, 0, 0]}
+              >
+                <LabelList
+                  dataKey="returning_clients"
+                  position="top"
+                  style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+                  dy={-15}
+                />
+              </Bar>
+
+              {/* Retention Bar (2 decimals) */}
+              <Bar
+                dataKey="retention"
+                name="Retention"
+                fill={COLORS[2]}
+                radius={[8, 8, 0, 0]}
+              >
+              <LabelList
+                dataKey="retention"
                 position="top"
-                style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
-                dy={-15}
+                content={(props) => {
+                  const { x, y, value } = props;
+
+                  if (x == null || y == null || value == null) return null;
+
+                  return (
+                    <text
+                      x={Number(x)}
+                      y={Number(y) - 5}
+                      fill="#E8EDC7"
+                      fontSize={10}
+                      fontWeight="bold"
+                    >
+                      {`${Number(value).toFixed(2)}%`}
+                    </text>
+                  );
+                }}
               />
-            </Bar>
-
-            {/* Retention Bar (2 decimals) */}
-            <Bar
-              dataKey="retention"
-              name="Retention"
-              fill={COLORS[2]}
-              radius={[8, 8, 0, 0]}
-            >
-            <LabelList
-              dataKey="retention"
-              position="top"
-              content={(props) => {
-                const { x, y, value } = props;
-
-                if (x == null || y == null || value == null) return null;
-
-                return (
-                  <text
-                    x={Number(x)}
-                    y={Number(y) - 5}
-                    fill="#E8EDC7"
-                    fontSize={10}
-                    fontWeight="bold"
-                  >
-                    {`${Number(value).toFixed(2)}%`}
-                  </text>
-                );
-              }}
-            />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
-    </div>
+    </UnderConstructionWrapper>
   )
 }

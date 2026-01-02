@@ -31,6 +31,8 @@ import MarketingFunnelsChart from '@/components/Dashboard/MarketingFunnelsChart'
 import ProfitLossDashboard from '@/components/Dashboard/ProfitLossDashboard'
 import YearlyDashboard from '@/components/Dashboard/YearlyDashboard'
 
+import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
+
 import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
