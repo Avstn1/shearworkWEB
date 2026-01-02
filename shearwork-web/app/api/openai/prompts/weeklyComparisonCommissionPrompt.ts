@@ -9,17 +9,32 @@ export const weeklyComparisonCommissionPrompt = (dataset: any, userName: string,
 
   const services = dataset.services || []
   const funnels = dataset.marketing_funnels || []
-  const totalNewClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.new_clients||0),0);
-  const totalReturningClients = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.returning_clients||0),0);
-  // const totalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0); // NOT USED
-  const finalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0);
-  // const totalRevenue = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.total_revenue||0),0);
-  const totalAppointments = dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0);
+  console.log(JSON.stringify(funnels))
+
+  // Calculate new, returning, and total clients for each week from funnels
+  const weeklyClientMetrics = dataset.weekly_rows.map((w: any) => {
+    const newFromFunnels = funnels
+      .filter((f: any) => f.week_number === w.week_number && f.source !== "Returning Client")
+      .reduce((sum: any, f: any) => sum + (f.new_clients || 0), 0);
+    const total = w.num_appointments || 0;
+    const returning = total - newFromFunnels;
+    
+    return {
+      week_number: w.week_number,
+      new: newFromFunnels,
+      returning: returning,
+      total: total
+    };
+  });
+
+  const totalNewClients = weeklyClientMetrics.reduce((sum: number, m: any) => sum + m.new, 0);
+  const totalReturningClients = weeklyClientMetrics.reduce((sum: number, m: any) => sum + m.returning, 0);
+  const finalRevenue = dataset.weekly_rows.reduce((sum: number, w: any) => sum + (w.final_revenue || 0), 0);
+  const totalAppointments = weeklyClientMetrics.reduce((sum: number, m: any) => sum + m.total, 0);
   const retentionRate = totalAppointments > 0 ? ((totalReturningClients / totalAppointments) * 100).toFixed(1) : '0.0';
-  const bestWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue>a.total_revenue?b:a),dataset.weekly_rows[0]);
-  // const worstWeekRevenue = dataset.weekly_rows.reduce((a:any,b:any)=>(b.total_revenue<a.total_revenue?b:a),dataset.weekly_rows[0]); // NOT USED
+  const bestWeekRevenue = dataset.weekly_rows.reduce((a: any, b: any) => (b.total_revenue > a.total_revenue ? b : a), dataset.weekly_rows[0]);
   const averageRevenue = finalRevenue / (dataset.weekly_rows?.length || 1);
-  const tips = dataset.weekly_rows.reduce((sum:number,w:any)=> sum+(w.tips||0),0)
+  const tips = dataset.weekly_rows.reduce((sum: number, w: any) => sum + (w.tips || 0), 0)
 
   const allExpenses = Object.values(dataset.weeklyExpensesData)
     .flatMap((week: any, index: number) =>
@@ -53,7 +68,6 @@ export const weeklyComparisonCommissionPrompt = (dataset: any, userName: string,
     commission_rate: dataset.commission_rate,
     tips: dataset.summary.tips
   };
-
 
   const formatDate = (d: string) =>
     new Date(d).toISOString().split("T")[0];
@@ -202,21 +216,21 @@ ${JSON.stringify(minimalDataset, null, 2)}
   <tbody>
     <tr>
       <td>Total Clients</td>
-      ${minimalDataset.weekly_rows.map((w: any) => `<td>${(w.new_clients || 0) + (w.returning_clients || 0)}</td>`).join('')}
-      <td>${minimalDataset.weekly_rows.length > 1 ? ((minimalDataset.weekly_rows.at(-1).num_appointments || 0) - (minimalDataset.weekly_rows.at(-2).num_appointments || 0)) : '--'}</td>
-      <td>${minimalDataset.weekly_rows.length > 1 ? ((((minimalDataset.weekly_rows.at(-1).num_appointments || 0) - (minimalDataset.weekly_rows.at(-2).num_appointments || 0)) / (minimalDataset.weekly_rows.at(-2).num_appointments || 1)) * 100).toFixed(1) + '%' : '--'}</td>
+      ${weeklyClientMetrics.map((m: any) => `<td>${m.total}</td>`).join('')}
+      <td>${weeklyClientMetrics.length > 1 ? (weeklyClientMetrics.at(-1).total - weeklyClientMetrics.at(-2).total) : '--'}</td>
+      <td>${weeklyClientMetrics.length > 1 ? ((((weeklyClientMetrics.at(-1).total - weeklyClientMetrics.at(-2).total) / (weeklyClientMetrics.at(-2).total || 1)) * 100).toFixed(1) + '%') : '--'}</td>
     </tr>
     <tr>
       <td>New Clients</td>
-      ${minimalDataset.weekly_rows.map((w: any) => `<td>${w.new_clients || 0}</td>`).join('')}
-      <td>${minimalDataset.weekly_rows.length > 1 ? ((minimalDataset.weekly_rows.at(-1).new_clients || 0) - (minimalDataset.weekly_rows.at(-2).new_clients || 0)) : '--'}</td>
-      <td>${minimalDataset.weekly_rows.length > 1 ? ((((minimalDataset.weekly_rows.at(-1).new_clients || 0) - (minimalDataset.weekly_rows.at(-2).new_clients || 0)) / (minimalDataset.weekly_rows.at(-2).new_clients || 1)) * 100).toFixed(1) + '%' : '--'}</td>
+      ${weeklyClientMetrics.map((m: any) => `<td>${m.new}</td>`).join('')}
+      <td>${weeklyClientMetrics.length > 1 ? (weeklyClientMetrics.at(-1).new - weeklyClientMetrics.at(-2).new) : '--'}</td>
+      <td>${weeklyClientMetrics.length > 1 ? ((((weeklyClientMetrics.at(-1).new - weeklyClientMetrics.at(-2).new) / (weeklyClientMetrics.at(-2).new || 1)) * 100).toFixed(1) + '%') : '--'}</td>
     </tr>
     <tr>
       <td>Returning Clients</td>
-      ${minimalDataset.weekly_rows.map((w: any) => `<td>${w.returning_clients || 0}</td>`).join('')}
-      <td>${minimalDataset.weekly_rows.length > 1 ? ((minimalDataset.weekly_rows.at(-1).returning_clients || 0) - (minimalDataset.weekly_rows.at(-2).returning_clients || 0)) : '--'}</td>
-      <td>${minimalDataset.weekly_rows.length > 1 ? ((((minimalDataset.weekly_rows.at(-1).returning_clients || 0) - (minimalDataset.weekly_rows.at(-2).returning_clients || 0)) / (minimalDataset.weekly_rows.at(-2).returning_clients || 1)) * 100).toFixed(1) + '%' : '--'}</td>
+      ${weeklyClientMetrics.map((m: any) => `<td>${m.returning}</td>`).join('')}
+      <td>${weeklyClientMetrics.length > 1 ? (weeklyClientMetrics.at(-1).returning - weeklyClientMetrics.at(-2).returning) : '--'}</td>
+      <td>${weeklyClientMetrics.length > 1 ? ((((weeklyClientMetrics.at(-1).returning - weeklyClientMetrics.at(-2).returning) / (weeklyClientMetrics.at(-2).returning || 1)) * 100).toFixed(1) + '%') : '--'}</td>
     </tr>
     <tr>
       <td>Average Ticket</td>
@@ -234,7 +248,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
             })()
           : '<td>--</td><td>--</td>'
       }
-    </tr
+    </tr>
   </tbody>
 </table>
 

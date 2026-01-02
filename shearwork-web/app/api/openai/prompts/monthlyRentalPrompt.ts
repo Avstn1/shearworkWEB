@@ -19,10 +19,11 @@ export const monthlyRentalPrompt = (dataset: any, userName: string, month: strin
       ? (summary.final_revenue || 0) / summary.num_appointments
       : 0
 
-  const totalNewClients = funnels.reduce(
-    (sum: number, f: any) => sum + (f.new_clients || 0),
-    0
-  )
+  const totalNewClients = funnels
+    .filter((f: any) => f.source !== 'Returning Client')
+    .reduce((sum: any, f: any) => sum + (f.new_clients || 0), 0);
+
+  const totalReturningClients = summary.num_appointments - totalNewClients
 
   // Weekly snapshot calculations
   let totalClients = 0
@@ -86,7 +87,7 @@ Include:
      <tbody>
       <tr><td>Total Appointments</td><td>${summary.num_appointments}</td></tr>
       <tr><td>New Clients</td><td>${totalNewClients || 0}</td></tr>
-      <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
+      <tr><td>Returning Clients</td><td>${totalReturningClients || 0}</td></tr>
       <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
      </tbody>
    </table>

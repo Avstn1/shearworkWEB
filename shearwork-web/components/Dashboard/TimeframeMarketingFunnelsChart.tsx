@@ -48,10 +48,10 @@ const MONTHS_BY_QUARTER: Record<Exclude<Timeframe, 'year'>, string[]> = {
 const timeframeLabel = (timeframe: Timeframe, year: number) => {
   if (timeframe === 'year') return `Marketing Funnels (${year})`
   switch (timeframe) {
-    case 'Q1': return `Marketing Funnels (Q1 • Jan–Mar ${year})`
-    case 'Q2': return `Marketing Funnels (Q2 • Apr–Jun ${year})`
-    case 'Q3': return `Marketing Funnels (Q3 • Jul–Sep ${year})`
-    case 'Q4': return `Marketing Funnels (Q4 • Oct–Dec ${year})`
+    case 'Q1': return `Marketing Funnels (Q1 • Jan-Mar ${year})`
+    case 'Q2': return `Marketing Funnels (Q2 • Apr-Jun ${year})`
+    case 'Q3': return `Marketing Funnels (Q3 • Jul-Sep ${year})`
+    case 'Q4': return `Marketing Funnels (Q4 • Oct-Dec ${year})`
   }
 }
 

@@ -500,7 +500,7 @@ export default function Navbar() {
         >
           <img 
             src="/images/corvalogo.png" 
-            alt="ShearWork Logo" 
+            alt="Corva Logo" 
             className="h-12 w-auto"
           />
           <span 
@@ -571,7 +571,7 @@ export default function Navbar() {
               <div className="flex items-center gap-0">
                 <img 
                   src="/images/corvalogo.png" 
-                  alt="ShearWork Logo" 
+                  alt="Corva Logo" 
                   className="h-10 w-auto"
                 />
                 <span className="text-xl -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent">

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
             }
           }
         ],
-        "subject": "Your Verification Code - ShearWork",
+        "subject": "Your Verification Code - Corva",
         "htmlbody": `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h1 style="color: #333; margin-bottom: 20px;">Verify Your Email</h1>

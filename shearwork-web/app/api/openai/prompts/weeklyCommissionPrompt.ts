@@ -16,6 +16,12 @@ export const weeklyCommissionPrompt = (dataset: any, userName: string, month: st
     ? (((summary.returning_clients || 0) / summary.num_appointments) * 100).toFixed(1) 
     : '0.0';
 
+  const totalNewClients = funnels
+    .filter((f: any) => f.source !== 'Returning Client')
+    .reduce((sum: any, f: any) => sum + (f.new_clients || 0), 0);
+
+  const totalReturningClients = summary.num_appointments - totalNewClients
+
   return `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional on commission named ${userName}.
 Be a little fun and use some emojis, especially in section headers. Keep tone encouraging but analytical. 
@@ -38,8 +44,8 @@ Use the provided data and computed values. Do not invent numbers. DO NOT REMOVE 
 
 <h2>Weekly Summary 💰</h2>
 <ul>
-  <li><strong>Total Clients:</strong> ${summary.num_appointments || 0}</li>
-  <li><strong>New Clients:</strong> ${summary.new_clients || 0} | <strong>Returning:</strong> ${summary.returning_clients || 0}</li>
+  <li><strong>Total Clients:</strong> ${totalNewClients + totalReturningClients || 0}</li>
+  <li><strong>New Clients:</strong> ${totalNewClients || 0} | <strong>Returning:</strong> ${totalReturningClients || 0}</li>
   <li><strong>Gross Revenue:</strong> $${(summary.total_revenue || 0).toFixed(2)}</li>
   <li><strong>Tips:</strong> $${(tips || 0).toFixed(2)}</li>
   <li><strong>Commission Rate:</strong> ${(commissionRate * 100).toFixed(0)}%</li>
