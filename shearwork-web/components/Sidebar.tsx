@@ -35,7 +35,6 @@ export default function Sidebar() {
       setHasSession(!!session)
       setUserId(session?.user?.id || null)
       
-      // Check for special access
       if (session?.user?.id) {
         const { data: profile } = await supabase
           .from('profiles')

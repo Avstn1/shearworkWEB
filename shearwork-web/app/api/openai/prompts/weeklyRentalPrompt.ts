@@ -144,7 +144,6 @@ AI INSTRUCTIONS: Based on the data provided, generate 2-3 insightful observation
   <li>Client flow patterns (busiest days, new vs. returning trends)</li>
   <li>Revenue trends and average ticket performance</li>
   <li>Service popularity and potential upsell opportunities</li>
-  <li>Marketing effectiveness based on funnel data</li>
 </ul>
 
 <h2>Action Steps 🚀</h2>
@@ -156,3 +155,12 @@ Suggest 2-3 actionable improvements for next week:
 </ul>
 `;
 };
+
+// <h2>Insights 🔍</h2>
+// AI INSTRUCTIONS: Based on the data provided, generate 2-3 insightful observations about:
+// <ul>
+//   <li>Client flow patterns (busiest days, new vs. returning trends)</li>
+//   <li>Revenue trends and average ticket performance</li>
+//   <li>Service popularity and potential upsell opportunities</li>
+//   <li>Marketing effectiveness based on funnel data</li>
+// </ul>
