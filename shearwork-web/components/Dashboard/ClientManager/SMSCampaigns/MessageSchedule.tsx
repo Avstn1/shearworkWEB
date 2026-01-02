@@ -238,14 +238,14 @@ export function MessageSchedule({
                 {type.label}
                 <div className="relative">
                   <Info className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none w-64 sm:w-72">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block z-10 pointer-events-none w-64 sm:w-72">
                     <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                       <p className="whitespace-normal break-words">{type.description}</p>
                       <div className="mt-1 text-amber-300 font-semibold">
                         Max: {availableCredits.toLocaleString()} credits (available credits)
                       </div>
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                        <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1">
+                        <div className="border-4 border-transparent border-b-[#0a0a0a]" />
                       </div>
                     </div>
                   </div>
