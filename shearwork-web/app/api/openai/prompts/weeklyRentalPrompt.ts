@@ -27,7 +27,11 @@ export const weeklyRentalPrompt = (dataset: any, userName: string, month: string
       source: f.source === 'Unknown' ? 'No Source' : f.source
     }));
 
-  // const totalNewClients: number = activeFunnels.reduce((sum: any, item: any) => sum + item.new_clients, 0);
+  const totalNewClients = funnels
+  .filter((f: any) => f.source !== 'Returning Client')
+  .reduce((sum: any, f: any) => sum + (f.new_clients || 0), 0);
+
+  const totalReturningClients = summary.num_appointments - totalNewClients
 
   return `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional named ${userName}.
@@ -44,8 +48,8 @@ Use the provided data and computed values. Pull values directly from the dataset
 
 <h2>Weekly Summary 📊</h2>
 <ul>
-  <li>Total Clients: ${totalUniqueClients}</li>
-  <li>New Clients: ${summary.new_clients || 0} | Returning: ${summary.returning_clients || 0}</li>
+  <li>Total Clients: ${totalNewClients + totalReturningClients}</li>
+  <li>New Clients: ${totalNewClients || 0} | Returning: ${totalReturningClients || 0}</li>
   <li>Total Revenue: $${(summary.total_revenue || 0).toFixed(2)}</li>
   <li>Tips: $${(tips || 0).toFixed(2)}</li>
   <li>Average Ticket: $${avgTicket}</li>

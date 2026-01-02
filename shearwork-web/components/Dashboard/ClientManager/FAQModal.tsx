@@ -429,7 +429,7 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
   const [activeSection, setActiveSection] = useState<string>('overview');
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
 
-  const filteredFaqs = faqs.filter(faq => faq.section === activeSection);
+  const filteredFaqs = faqs.filter((f: any) => f.section === activeSection);
 
   return (
     <AnimatePresence>

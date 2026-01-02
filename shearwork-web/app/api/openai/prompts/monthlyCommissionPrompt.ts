@@ -11,10 +11,11 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   const tipsServiceType = summary.tips.tipsServiceType || {}
   const personalEarnings = (totalRevenue * summary.commission_rate) + tips || 0
   
-  const totalNewClients = funnels.reduce(
-    (sum: number, f: any) => sum + (f.new_clients || 0),
-    0
-  )
+  const totalNewClients = funnels
+  .filter((f: any) => f.source !== 'Returning Client')
+  .reduce((sum: any, f: any) => sum + (f.new_clients || 0), 0);
+
+  const totalReturningClients = summary.num_appointments - totalNewClients
 
   const expenses = summary.expenses || 0
   const avgTicket =
@@ -27,7 +28,7 @@ export const monthlyCommissionPrompt = (dataset: any, userName: string, month: s
   let totalWeeklyRevenue = 0
   let bestWeek: any = null
   let worstWeek: any = null
-  let weeklyAvgTickets: number[] = []
+  const weeklyAvgTickets: number[] = []
 
   weeklyRows.forEach((w: any) => {
     const clients = w.num_appointments || 0
@@ -82,7 +83,7 @@ Include:
   <tbody>
     <tr><td>Total Appointments</td><td>${summary.num_appointments}</td></tr>
     <tr><td>New Clients</td><td>${totalNewClients || 0}</td></tr>
-    <tr><td>Returning Clients</td><td>${summary.returning_clients || 0}</td></tr>
+    <tr><td>Returning Clients</td><td>${totalReturningClients || 0}</td></tr>
     <tr><td>Average Ticket</td><td>$${avgTicket.toFixed(2)}</td></tr>
   </tbody>
 </table>

@@ -48,10 +48,10 @@ const MONTHS_BY_QUARTER: Record<Exclude<Timeframe, 'year'>, string[]> = {
 const timeframeLabel = (timeframe: Timeframe, year: number) => {
   if (timeframe === 'year') return `Marketing Funnels (${year})`
   switch (timeframe) {
-    case 'Q1': return `Marketing Funnels (Q1 • Jan–Mar ${year})`
-    case 'Q2': return `Marketing Funnels (Q2 • Apr–Jun ${year})`
-    case 'Q3': return `Marketing Funnels (Q3 • Jul–Sep ${year})`
-    case 'Q4': return `Marketing Funnels (Q4 • Oct–Dec ${year})`
+    case 'Q1': return `Marketing Funnels (Q1 • Jan-Mar ${year})`
+    case 'Q2': return `Marketing Funnels (Q2 • Apr-Jun ${year})`
+    case 'Q3': return `Marketing Funnels (Q3 • Jul-Sep ${year})`
+    case 'Q4': return `Marketing Funnels (Q4 • Oct-Dec ${year})`
   }
 }
 
@@ -69,23 +69,59 @@ export default function TimeframeMarketingFunnelsChart({
     const fetchData = async () => {
       setLoading(true)
       try {
+        // Determine which months to query based on timeframe
+        const monthsToQuery = timeframe === 'year' 
+          ? ALL_MONTHS 
+          : MONTHS_BY_QUARTER[timeframe as Exclude<Timeframe, 'year'>]
 
         const { data: funnels, error } = await supabase
-          .from('yearly_marketing_funnels')
-          .select('source, new_clients, returning_clients, retention, timeframe, report_year')
+          .from('marketing_funnels')
+          .select('source, new_clients, returning_clients, retention')
           .eq('user_id', barberId)
           .eq('report_year', year)
-          .eq('timeframe', timeframe)
-          .gt('new_clients', 0)   // 👈 only show sources with at least 1 new client
-
-
+          .in('report_month', monthsToQuery)
+          .neq('source', 'Returning Client')
+          .neq('source', 'No Source')
 
         if (error) {
           console.error('Error fetching marketing funnels:', error)
           setData([])
           return
         }
-        setData(funnels)
+
+        // Aggregate data by source
+        const aggregated = funnels.reduce((acc, row) => {
+          const source = row.source
+          if (!acc[source]) {
+            acc[source] = {
+              source,
+              new_clients: 0,
+              returning_clients: 0,
+              retention: 0,
+              timeframe,
+              count: 0, // for averaging retention
+            }
+          }
+          acc[source].new_clients += row.new_clients || 0
+          acc[source].returning_clients += row.returning_clients || 0
+          acc[source].retention += row.retention || 0
+          acc[source].count += 1
+          return acc
+        }, {} as Record<string, MarketingFunnel & { count: number }>)
+
+        // Calculate average retention and remove count
+        const result = Object.values(aggregated).map(item => {
+          const { count, ...rest } = item
+          return {
+            ...rest,
+            retention: count > 0 ? rest.retention / count : 0,
+          }
+        })
+
+        console.log(barberId, year, timeframe)
+        console.log(JSON.stringify(result))
+
+        setData(result)
 
       } catch (err) {
         console.error('Error preparing timeframe marketing funnels:', err)

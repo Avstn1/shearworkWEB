@@ -263,7 +263,7 @@ export default function FeatureMakerPage() {
   }
 
   const filterMinorUpdates = (majorVersion: string) => {
-    const filtered = allFeatures.filter(f => 
+    const filtered = allFeatures.filter((f: any) => 
       f.version && f.version.startsWith(`${majorVersion}.`)
     )
     setDisplayedFeatures(filtered)

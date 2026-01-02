@@ -37,30 +37,32 @@ export default function YearlyDashboard({
   const isMobile = useIsMobile(768)
   const [timeframe, setTimeframe] = useState<Timeframe>('year')
 
-  const cardClass =
-    'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
-  const syncMarketingFunnels = async () => {
-    if (!userId) return
-    //setIsRefreshing(true)
-    const toastId = toast.loading(`Syncing data for ${timeframe} of ${selectedYear}...`)
-    try {
-      const res = await fetch(`/api/acuity/pull-marketing-funnels?endpoint=appointments&month=${encodeURIComponent(timeframe)}&year=${selectedYear}`)
-      // if (!res.ok) throw new Error('Acuity data fetch failed')
-      await res.json()
-      //setRefreshKey(prev => prev + 1)
-      toast.success(`Data updated for ${timeframe} of ${selectedYear}`, { id: toastId })
-    } catch (err) {
-      console.error(err)
-      toast.error('Error fetching Acuity data.', { id: toastId })
-    } finally {
-      //setIsRefreshing(false)
-    }
-  }
+  const cardClass = 'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
+  
+  // const syncMarketingFunnels = async () => {
+  //   console.log("Sync Marketing funnels")
+  //   if (!userId) return
+  //   //setIsRefreshing(true)
+  //   const toastId = toast.loading(`Syncing data for ${timeframe} of ${selectedYear}...`)
+  //   try {
+  //     console.log("Pulling marketing funnels now at yearly dashboard")
+  //     const res = await fetch(`/api/acuity/pull-marketing-funnels?endpoint=appointments&month=${encodeURIComponent(timeframe)}&year=${selectedYear}`)
+  //     // if (!res.ok) throw new Error('Acuity data fetch failed')
+  //     await res.json()
+  //     //setRefreshKey(prev => prev + 1)
+  //     toast.success(`Data updated for ${timeframe} of ${selectedYear}`, { id: toastId })
+  //   } catch (err) {
+  //     console.error(err)
+  //     toast.error('Error fetching Acuity data.', { id: toastId })
+  //   } finally {
+  //     //setIsRefreshing(false)
+  //   }
+  // }
 
   useEffect(() => {
     if (!userId) return
-    syncMarketingFunnels()
-  },[selectedYear])
+    // syncMarketingFunnels()
+  },[selectedYear, timeframe])
 
     return (
     <motion.div className="flex flex-col gap-4 flex-1">

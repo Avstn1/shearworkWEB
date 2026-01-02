@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     // Send SMS via Twilio
     try {
       const message = await client.messages.create({
-        body: `Your ShearWork verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this message.`,
+        body: `Your Corva verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this message.`,
         messagingServiceSid: messagingServiceSid,
         to: phoneNumber
       });
