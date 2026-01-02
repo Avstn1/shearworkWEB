@@ -92,29 +92,29 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
 
 
 <h2>📣 Marketing Funnels</h2>
-(extra instructions: do not include a row if source is literally called "Returning Client")
-${
-  funnels.length
-    ? `<table>
-        <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
-        <tbody>
-          ${funnels
-            .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
-            .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
-            .map(
-                (f: any) =>
-                `<tr>
-                    <td>${f.source}</td>
-                    <td>${f.new_clients || 0}</td>
-                    <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
-                </tr>`
-            )
-            .join('')}
-        </tbody>
-      </table>
-      <p>PROMPT: State which channels did the well and Encourage exposing more of their work publicly. DO NOT mention any other channels</p>
-      Instructions: creative analysis/generation`
-    : `<p>No data available for this section.</p>`
+${dataset.special_access 
+  ? (funnels.length
+      ? `<table>
+          <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
+          <tbody>
+            ${funnels
+              .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
+              .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
+              .map(
+                  (f: any) =>
+                  `<tr>
+                      <td>${f.source}</td>
+                      <td>${f.new_clients || 0}</td>
+                      <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
+                  </tr>`
+              )
+              .join('')}
+          </tbody>
+        </table>
+        <p>PROMPT: State which channels did the well and Encourage exposing more of their work publicly. DO NOT mention any other channels</p>
+        Instructions: creative analysis/generation`
+      : `<p>No data available for this section.</p>`)
+  : `<p>This area is under construction. We appreciate your understanding.</p>`
 }
 
 

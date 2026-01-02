@@ -129,7 +129,7 @@ export async function POST(req: Request) {
     // 🧲 Fetch barber's full name & commission rate
     const { data: userData, error: nameError } = await supabase
       .from('profiles')
-      .select('full_name, commission_rate')
+      .select('full_name, commission_rate, special_access')
       .eq('user_id', user_id)
       .single()
     if (nameError) throw nameError
@@ -551,6 +551,8 @@ export async function POST(req: Request) {
           ? week_number ?? null
           : null
 
+    console.log(userData.special_access)
+
     const dataset = {
       month,
       year: normalizedYear,
@@ -563,6 +565,7 @@ export async function POST(req: Request) {
       marketing_funnels: funnels,
       top_clients: topClients,
       weeklyExpensesData,
+      special_access: userData.special_access,
       ...(barber_type === 'commission' && { commission_rate: commissionRate }),
     }
 

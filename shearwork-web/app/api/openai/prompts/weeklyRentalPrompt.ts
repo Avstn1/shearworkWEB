@@ -93,27 +93,28 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
   }
   
 <h2>📣 Marketing Funnels</h2>
-   ${
-     activeFunnels.length
-       ? `<table>
-            <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
-            <tbody>
-              ${activeFunnels
-                .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
-                .map(
-                    (f: any) =>
-                    `<tr>
-                        <td>${f.source}</td>
-                        <td>${f.new_clients || 0}</td>
-                        <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
-                    </tr>`
-                )
-                .join('')}
-            </tbody>
-          </table>
-          <p>Your top-performing channel this week was <strong>${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'No Source'}</strong>, bringing in ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.new_clients || 0} new clients. ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'No Source' && activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'Walking By' ? 'Consider showcasing more of your work publicly to attract even more potential clients!' : 'Consider asking satisfied clients how they heard about you to better track your marketing channels.'}</p>`
-       : `<p>No new client acquisition data available for this week.</p>`
-   }
+${dataset.special_access 
+  ? (activeFunnels.length
+      ? `<table>
+           <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
+           <tbody>
+             ${activeFunnels
+               .sort((a: any, b: any) => (b.new_clients || 0) - (a.new_clients || 0))
+               .map(
+                   (f: any) =>
+                   `<tr>
+                       <td>${f.source}</td>
+                       <td>${f.new_clients || 0}</td>
+                       <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
+                   </tr>`
+               )
+               .join('')}
+           </tbody>
+         </table>
+         <p>Your top-performing channel this week was <strong>${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'No Source'}</strong>, bringing in ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.new_clients || 0} new clients. ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'No Source' && activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'Walking By' ? 'Consider showcasing more of your work publicly to attract even more potential clients!' : 'Consider asking satisfied clients how they heard about you to better track your marketing channels.'}</p>`
+      : `<p>No new client acquisition data available for this week.</p>`)
+  : `<p>This area is under construction. We appreciate your understanding.</p>`
+}
 
 <h2>Top Clients 💈</h2>
 ${dataset.top_clients && dataset.top_clients.length > 0 ? `
