@@ -31,10 +31,6 @@ You are given a JSON dataset that includes:
 - commission_rate: the barber's commission split percentage
 
 YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!!
-
-Dataset (JSON):
-${JSON.stringify(dataset, null, 2)}
-
 Generate a detailed weekly report in **HTML** suitable for TinyMCE.
 Use the provided data and computed values. Do not invent numbers. DO NOT REMOVE ANY KIND OF DATA.
 
