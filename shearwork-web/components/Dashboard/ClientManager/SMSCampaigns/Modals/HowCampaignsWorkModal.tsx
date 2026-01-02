@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Info, Plus, FileText, Sparkles, Shield, Send, Users, Zap, Phone } from 'lucide-react';
+import { X, Info, Plus, FileText, Sparkles, Shield, Send, Users, Zap, Phone, AlertCircle } from 'lucide-react';
 
 interface HowCampaignsWorkModalProps {
   isOpen: boolean;
@@ -224,7 +224,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                         <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs bg-gradient-to-r from-sky-300 to-lime-300 text-black pointer-events-none">
                           <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                           <span className="hidden xs:inline">Activate</span>
-                          <span className="xs:hidden">Go</span>
+                          <span className="xs:hidden">Activate</span>
                         </button>
                       </h4>
                       <p className="text-xs sm:text-sm text-[#bdbdbd] mb-2 sm:mb-3">
@@ -243,6 +243,45 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           Inactive
                         </span>
                         <span className="text-[10px] sm:text-xs text-rose-300">← No messages will be sent</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* One-time sms recipient */}
+                <div className="p-3 sm:p-5 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-lg sm:rounded-xl">
+                  <div className="flex items-start gap-2 sm:gap-4">
+                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-purple-300/20 rounded-full flex items-center justify-center">
+                      <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-purple-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <span>One-time Recipients</span>
+                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs bg-lime-300/20 text-lime-300 border border-lime-300/30 pointer-events-none">
+                          <span className="hidden xs:inline">Add One-time sms recipient</span>
+                          <span className="xs:hidden">Add One-time sms recipient</span>
+                        </button>
+                      </h4>
+                      <p className="text-xs sm:text-sm text-[#bdbdbd] mb-2 sm:mb-3">
+                        Add clients who should receive this specific message, regardless of the algorithm. These recipients count toward your max clients limit.
+                      </p>
+                      <div className="p-2 sm:p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-2 sm:mb-3">
+                        <div className="flex items-start gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-amber-300">
+                          <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 mt-0.5" />
+                          <p>
+                            <span className="font-semibold">Important:</span> Your max clients setting determines how many people you're willing to message. If max is set to 0, you won't be able to see one-time recipients in your client list.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <span className="text-[10px] sm:text-xs text-[#bdbdbd]">Example:</span>
+                          <span className="text-[10px] sm:text-xs text-white">Max = 50 → See up to 50 total clients (algorithm + one-time)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <span className="text-[10px] sm:text-xs text-[#bdbdbd]">Example:</span>
+                          <span className="text-[10px] sm:text-xs text-rose-300">Max = 0 → No clients visible, no messages sent</span>
+                        </div>
                       </div>
                     </div>
                   </div>

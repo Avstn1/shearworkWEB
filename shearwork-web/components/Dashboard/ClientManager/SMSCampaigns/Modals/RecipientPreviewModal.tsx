@@ -124,6 +124,8 @@ export default function RecipientPreviewModal({
   const [customLastName, setCustomLastName] = useState('');
   const [customPhone, setCustomPhone] = useState('');
 
+  const [showIncreaseLimitModal, setShowIncreaseLimitModal] = useState(false);
+
   // const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
 
   const [otherClientsPage, setOtherClientsPage] = useState(1);
@@ -849,8 +851,15 @@ const confirmReselect = async () => {
       return;
     }
 
-    // NEW: Check if we need to increase the limit from 0 to 1
-    if (clientLimit === 0) {
+    // MOVED: Check if there are already selected clients when limit is 0
+    if (clientLimit === 0 && selectedClients.length > 0) {
+      setShowAddCustomModal(false); // Close the add modal first
+      setShowIncreaseLimitModal(true);
+      return;
+    }
+
+    // Check if we need to increase the limit from 0 to 1
+    if (clientLimit === 0 && selectedClients.length === 0) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
@@ -896,7 +905,7 @@ const confirmReselect = async () => {
         first_name: customFirstName.trim(),
         last_name: customLastName.trim(),
         phone_normalized: phoneNormalized,
-        is_custom: true, // Flag to identify one-time recipients
+        is_custom: true,
       };
 
       const updatedSelected = [...selectedClients, customClient];
@@ -931,8 +940,6 @@ const confirmReselect = async () => {
       toast.error('Failed to add recipient');
     }
   };
-
-  
 
   const filteredClients = getFilteredClients();
   const activeClientCount = previewClients.length;
@@ -2020,8 +2027,65 @@ return (
               </motion.div>
             )}
           </AnimatePresence>
+
+          <AnimatePresence>
+            {showIncreaseLimitModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+                onClick={() => setShowIncreaseLimitModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                >
+                  <div className="flex items-start gap-3 md:gap-4 mb-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">
+                        Increase Max Clients
+                      </h3>
+                      <p className="text-xs md:text-sm text-[#bdbdbd]">
+                        You currently have {selectedClients.length} one-time recipient{selectedClients.length !== 1 ? 's' : ''} selected, 
+                        but your max clients is set to 0.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 md:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-xs md:text-sm text-amber-300">
+                      <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5" />
+                      <p>
+                        To see your selected one-time recipients in the client list and add more, 
+                        please increase your max clients to at least {selectedClients.length + 1}.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 md:gap-3">
+                    <button
+                      onClick={() => setShowIncreaseLimitModal(false)}
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30 transition-all duration-300"
+                    >
+                      Got it
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          
         </motion.div>
       )}
     </AnimatePresence>
+    
   );
 }
