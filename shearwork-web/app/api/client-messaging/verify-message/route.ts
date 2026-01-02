@@ -37,8 +37,8 @@ export async function POST(req: Request) {
       )
     }
 
-    const promptTemplate = `Your goal is to verify whether this message is appropriate as a barber's marketing message. Make sure that it is not harmful or out of scope. This message will be sent as an SMS.
-                            Allow funny or informal tones as we are trying to build a relationship with clients. Only reject if it is harmful or inappropriate.
+    const promptTemplate = `Your goal is to verify whether this message is appropriate as a message. Make sure that it is not harmful. This message will be sent as an SMS.
+                            Allow funny or informal tones as we are trying to build a relationship with clients. Only reject if it is truly harmful.
                             Otherwise, accept it. One thing to never allow are emojis in the message because they may not render properly on all devices.
                             Beware of spelling errors of single words that are not links or proper nouns.
 
@@ -46,7 +46,7 @@ Your response format:
 - If ACCEPTED: Reply with "ACCEPTED | Your message has been verified and accepted"
 - If DENIED: Reply with "DENIED | [concise and specific reason for denial]"
 
-Be specific but very concise about why a message is denied (e.g., inappropriate tone, off-topic, unprofessional language, harmful content, etc.)
+Be specific but very concise about why a message is denied (e.g., harmful content)
 
 Message: ${message}`
 
