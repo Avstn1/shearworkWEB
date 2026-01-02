@@ -131,57 +131,55 @@ export default function Sidebar() {
         {/* Content */}
         <div className="flex flex-col h-full py-6">
           {/* Feature Updates (Gavin only) */}
-          {userId === '39d5d08d-2deb-4b92-a650-ee10e70b7af1' && (
-            <div className="px-3 mb-6 flex justify-center">
-              <button
-                onClick={() => {
-                  setShowFeaturesModal(true)
-                  setHasUnreadFeatures(false)
-                }}
-                className="relative w-full rounded-lg font-semibold text-sm transition-all overflow-hidden"
+          <div className="px-3 mb-6 flex justify-center">
+            <button
+              onClick={() => {
+                setShowFeaturesModal(true)
+                setHasUnreadFeatures(false)
+              }}
+              className="relative w-full rounded-lg font-semibold text-sm transition-all overflow-hidden"
+              style={{
+                background: hasUnreadFeatures 
+                  ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
+                  : 'rgba(115, 170, 87, 0.15)',
+                color: hasUnreadFeatures ? '#000000' : COLORS.green,
+                border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
+                boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
+                padding: '12px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.02)'
+                e.currentTarget.style.boxShadow = hasUnreadFeatures 
+                  ? '0 0 25px rgba(115, 170, 87, 0.6)' 
+                  : '0 0 10px rgba(115, 170, 87, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)'
+                e.currentTarget.style.boxShadow = hasUnreadFeatures 
+                  ? '0 0 20px rgba(115, 170, 87, 0.4)' 
+                  : 'none'
+              }}
+            >
+              {hasUnreadFeatures && (
+                <span 
+                  className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
+                  style={{ backgroundColor: '#ff4444' }}
+                />
+              )}
+              <div className="group-hover:hidden flex justify-center">
+                <Megaphone className="w-5 h-5" />
+              </div>
+              <div 
+                className="hidden group-hover:flex items-center gap-2"
                 style={{
-                  background: hasUnreadFeatures 
-                    ? 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)'
-                    : 'rgba(115, 170, 87, 0.15)',
-                  color: hasUnreadFeatures ? '#000000' : COLORS.green,
-                  border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
-                  boxShadow: hasUnreadFeatures ? '0 0 20px rgba(115, 170, 87, 0.4)' : 'none',
-                  padding: '12px',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.02)'
-                  e.currentTarget.style.boxShadow = hasUnreadFeatures 
-                    ? '0 0 25px rgba(115, 170, 87, 0.6)' 
-                    : '0 0 10px rgba(115, 170, 87, 0.3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)'
-                  e.currentTarget.style.boxShadow = hasUnreadFeatures 
-                    ? '0 0 20px rgba(115, 170, 87, 0.4)' 
-                    : 'none'
+                  transition: 'opacity 0.15s ease-in-out 0.15s',
                 }}
               >
-                {hasUnreadFeatures && (
-                  <span 
-                    className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
-                    style={{ backgroundColor: '#ff4444' }}
-                  />
-                )}
-                <div className="group-hover:hidden flex justify-center">
-                  <Megaphone className="w-5 h-5" />
-                </div>
-                <div 
-                  className="hidden group-hover:flex items-center gap-2"
-                  style={{
-                    transition: 'opacity 0.15s ease-in-out 0.15s',
-                  }}
-                >
-                  <Megaphone className="w-5 h-5 flex-shrink-0" />
-                  <span className="whitespace-nowrap">Feature Updates</span>
-                </div>
-              </button>
-            </div>
-          )}
+                <Megaphone className="w-5 h-5 flex-shrink-0" />
+                <span className="whitespace-nowrap">Feature Updates</span>
+              </div>
+            </button>
+          </div>
 
           {/* Navigation Items */}
           <nav className="flex-1 px-3 space-y-1">
