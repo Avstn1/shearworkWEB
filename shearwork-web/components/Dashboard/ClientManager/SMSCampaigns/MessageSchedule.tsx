@@ -116,28 +116,27 @@ export function MessageSchedule({
 
     // Convert 12-hour to 24-hour
     let hour24 = msg.hour;
-    if (msg.period === 'PM') {
+    if (msg.period === 'PM' && msg.hour !== 12) {
       hour24 = msg.hour + 12;
+    } else if (msg.period === 'AM' && msg.hour === 12) {
+      hour24 = 0;
     }
 
-    const scheduledDateTime = new Date(msg.scheduleDate);
-    scheduledDateTime.setHours(hour24, msg.minute, 0, 0);
+    // Create scheduled time in Toronto timezone
+    const scheduledDateTime = new Date(`${msg.scheduleDate}T${hour24.toString().padStart(2, '0')}:${msg.minute.toString().padStart(2, '0')}:00-05:00`);
 
-    const nowWithBuffer = new Date();
+    // Get current time in Toronto timezone
+    const nowInToronto = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }));
     
-    // Need at least 5 minutes buffer - round up to next 15-min interval if needed
-    const currentMinute = nowWithBuffer.getMinutes();
-    const minutesUntilNext15 = 15 - (currentMinute % 15);
-    
-    // If we're within 5 minutes of the next interval, we need to go to the one after
-    if (minutesUntilNext15 <= 5) {
-      nowWithBuffer.setMinutes(currentMinute + minutesUntilNext15 + 15);
-    } else {
-      nowWithBuffer.setMinutes(currentMinute + minutesUntilNext15);
-    }
+    // Add 5 minute buffer and round to next 15-min interval
+    const nowWithBuffer = new Date(nowInToronto);
+    nowWithBuffer.setMinutes(nowWithBuffer.getMinutes() + 5);
+    const minutes = nowWithBuffer.getMinutes();
+    const roundedMinutes = Math.ceil(minutes / 15) * 15;
+    nowWithBuffer.setMinutes(roundedMinutes);
     nowWithBuffer.setSeconds(0, 0);
 
-    const maxAllowedTime = new Date();
+    const maxAllowedTime = new Date(nowInToronto);
     maxAllowedTime.setDate(maxAllowedTime.getDate() + 7);
 
     if (scheduledDateTime < nowWithBuffer) {
@@ -189,7 +188,7 @@ export function MessageSchedule({
     const numValue = parseInt(value);
     const maxLimit = getMaxLimit();
     
-    if (!isNaN(numValue) && numValue >= 1) {
+    if (!isNaN(numValue) && numValue >= 0) {
       onUpdate(msg.id, { clientLimit: Math.min(numValue, maxLimit) });
     }
   };
@@ -314,7 +313,6 @@ export function MessageSchedule({
                 value={customLimit}
                 onChange={(e) => handleCustomLimitChange(e.target.value)}
                 onBlur={(e) => {
-                  // Enforce max on blur
                   const numValue = parseInt(e.target.value);
                   const maxLimit = getMaxLimit();
                   if (!isNaN(numValue) && numValue > maxLimit) {
@@ -323,15 +321,18 @@ export function MessageSchedule({
                   }
                 }}
                 disabled={!msg.isEditing}
-                placeholder={`Enter custom limit (Min: 1, Max: ${getMaxLimit().toLocaleString()})`}
+                placeholder={`Enter custom limit (Min: 0, Max: ${getMaxLimit().toLocaleString()})`}
                 className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
                   !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
                 }`}
               />
             </div>
-            {previewCount > 0 && (
+            {previewCount >= 0 && (
               <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-2">
-                {Math.min(previewCount, availableCredits)} clients will receive this message.
+                {msg.clientLimit === 0 
+                  ? 0 
+                  : Math.min(previewCount, availableCredits, msg.clientLimit)
+                } clients will receive this message.
                 <button
                   type="button"
                   onClick={() => setShowLimitModal(true)}
@@ -344,9 +345,12 @@ export function MessageSchedule({
           </div>
         )}
 
-        {!showCustomInput && previewCount > 0 && (
+        {!showCustomInput && previewCount >= 0 && (
           <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-2">
-            {Math.min(previewCount, availableCredits)} clients will receive this message.
+            {msg.clientLimit === 0 
+              ? 0 
+              : Math.min(previewCount, availableCredits, msg.clientLimit)
+            } clients will receive this message.
             <button
               type="button"
               onClick={() => setShowLimitModal(true)}

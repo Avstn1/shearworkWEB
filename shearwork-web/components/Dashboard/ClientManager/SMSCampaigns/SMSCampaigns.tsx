@@ -313,7 +313,9 @@ export default function SMSCampaigns() {
       if (data.success) {
         const clients = data.clients;
         setMaxClients(data.maxClient || 0);
-        setPreviewCounts(prev => ({ ...prev, [messageId]: clients.length }));
+
+        const actualCount = limit === 0 ? 0 : clients.length;
+        setPreviewCounts(prev => ({ ...prev, [messageId]: actualCount }));
         setPreviewClients(clients);
         setDeselectedPreviewClients(data.deselectedClients || []);
         setTotalUnselectedClients(data.deselectedClients?.length || 0); 
@@ -346,7 +348,8 @@ export default function SMSCampaigns() {
       const data = await response.json();
       
       if (data.success && data.stats) {
-        setPreviewCounts(prev => ({ ...prev, [messageId]: data.clients.length }));
+        const actualCount = limit === 0 ? 0 : data.clients.length;
+        setPreviewCounts(prev => ({ ...prev, [messageId]: actualCount }));
       }
     } catch (error) {
       console.error('Failed to load message preview:', error);
@@ -977,6 +980,7 @@ export default function SMSCampaigns() {
         previewStats={previewStats}
         maxClients={maxClients}
         initialTotalUnselectedClients={totalUnselectedClients}
+        clientLimit={messages.find(m => m.id === activePreviewMessageId)?.clientLimit || 0}
       />
 
       <DeleteMessageConfirmModal
