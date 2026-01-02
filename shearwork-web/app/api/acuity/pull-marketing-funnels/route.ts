@@ -190,9 +190,6 @@ export async function GET(request: Request) {
       if (Array.isArray(monthAppointments)) {
         allAppointments.push(...monthAppointments)
       }
-      console.log(
-        `Month ${month + 1} processed: ${monthAppointments.length} appointments fetched`,
-      )
     } catch (err) {
       console.error(`Failed to fetch appointments for month ${month + 1}:`, err)
     }
@@ -226,9 +223,6 @@ export async function GET(request: Request) {
         if (Array.isArray(monthAppointments)) {
           allAppointments.push(...monthAppointments)
         }
-        console.log(
-          `Month ${month + 1} processed: ${monthAppointments.length} appointments fetched`,
-        )
       } catch (err) {
         console.error(`Failed to fetch appointments for month ${month + 1}:`, err)
       }
@@ -503,13 +497,17 @@ export async function GET(request: Request) {
   }
 
   // ------------ Build upserts for yearly_marketing_funnels ------------
+  // ------------ Build upserts for yearly_marketing_funnels ------------
   const upserts: any[] = []
 
-  if(requestedMonth){
+  if (requestedMonth){
     const tfStats = funnels[requestedMonth]
     if (tfStats){
 
       for (const [source, stats] of Object.entries(tfStats)) {
+        // Skip "Returning Client" source
+        if (source === 'Returning Client') continue
+
         const retention =
           stats.new_clients > 0
             ? (stats.new_clients_retained / stats.new_clients) * 100
@@ -522,7 +520,7 @@ export async function GET(request: Request) {
         upserts.push({
           user_id: user.id,
           source,
-          report_month: requestedMonth,
+          timeframe: requestedMonth,
           new_clients: stats.new_clients,
           returning_clients: stats.returning_clients,
           new_clients_retained: stats.new_clients_retained,
@@ -533,12 +531,15 @@ export async function GET(request: Request) {
         })
       }
     }
-  }else {
+  } else {
     for (const tf of tfDefs) {
       const tfStats = funnels[tf.id]
       if (!tfStats) continue
 
       for (const [source, stats] of Object.entries(tfStats)) {
+        // Skip "Returning Client" source
+        if (source === 'Returning Client') continue
+
         const retention =
           stats.new_clients > 0
             ? (stats.new_clients_retained / stats.new_clients) * 100
@@ -573,8 +574,10 @@ export async function GET(request: Request) {
   }
 
 
-  if (requestedMonth){
-        const { error: upsertErr } = await supabase
+  const isMonthlyRequest = requestedMonth && Object.keys(MONTH_INDEX).includes(requestedMonth)
+  
+  if (isMonthlyRequest) {
+    const { error: upsertErr } = await supabase
       .from('marketing_funnels')
       .upsert(upserts, {
         onConflict: 'user_id,source,report_year,report_month',
@@ -587,7 +590,7 @@ export async function GET(request: Request) {
         { status: 500 },
       )
     }
-  }else {
+  } else {
     const { error: upsertErr } = await supabase
       .from('yearly_marketing_funnels')
       .upsert(upserts, {
