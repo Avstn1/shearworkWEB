@@ -964,9 +964,13 @@ export default function SMSCampaigns() {
           // Wait for modal to close
           await new Promise(resolve => setTimeout(resolve, 50));
           
-          // Reload the preview data with the correct limit
+          // Get the current message to preserve the limit
+          const currentMessage = messages.find(m => m.id === activePreviewMessageId);
+          const currentLimit = currentMessage?.clientLimit || 50;
+          
+          // Reload the preview data with the CURRENT limit from the message
           if (activePreviewMessageId) {
-            await loadClientPreview(activePreviewMessageId, previewLimit);
+            await loadClientPreview(activePreviewMessageId, currentLimit);
           }
           
           // Increment key and reopen
