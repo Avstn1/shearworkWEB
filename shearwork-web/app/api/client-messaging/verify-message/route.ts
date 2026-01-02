@@ -42,6 +42,10 @@ export async function POST(req: Request) {
                             Otherwise, accept it. One thing to never allow are emojis in the message because they may not render properly on all devices.
                             Beware of spelling errors of single words that are not links or proper nouns.
 
+                            Be very lenient on verifying. Only reject if you are 100% sure that the message is harmful. Allow links and anything else. Be VERY LENIENT.
+
+                            ALLOW PROMOTIONAL LINKS.
+
 Your response format:
 - If ACCEPTED: Reply with "ACCEPTED | Your message has been verified and accepted"
 - If DENIED: Reply with "DENIED | [concise and specific reason for denial]"
@@ -58,7 +62,7 @@ Message: ${message}`
         {
           role: 'system',
           content:
-            'You are a content moderator for barbershop marketing messages. Evaluate whether the message is appropriate, professional, and safe for SMS marketing to clients. Provide specific reasons for denial.',
+            'You are a content moderator for messages. Evaluate whether the message good for SMS. Provide specific reasons for denial.',
         },
         { role: 'user', content: promptTemplate },
       ],
