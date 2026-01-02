@@ -57,6 +57,7 @@ interface RecipientPreviewModalProps {
   previewStats: PreviewStats | null;
   maxClients: number;
   initialTotalUnselectedClients: number;
+  clientLimit: number; 
 }
 
 type TabType = "client-list" | "deselected" | "selected";
@@ -72,6 +73,7 @@ export default function RecipientPreviewModal({
   previewStats,
   maxClients,
   initialTotalUnselectedClients,
+  clientLimit
 }: RecipientPreviewModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("client-list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -690,6 +692,10 @@ const confirmReselect = async () => {
 
   const getFilteredClients = () => {
     // For client list tab
+    if (clientLimit === 0) {
+      return [];
+    }
+
     if (activeTab === "client-list") {
       const filteredPreview = previewClients.filter((client) => {
         const isDeselected = deselectedClients.includes(
@@ -932,8 +938,12 @@ return (
                   </h3>
                   {previewStats && (
                     <p className="text-xs md:text-sm text-[#bdbdbd] mt-1">
-                      <span className="block sm:inline">{activeClientCount} active • {selectedClients.length} selected</span>
-                      <span className="block sm:inline sm:before:content-['_•_']">{totalUnselectedClients} deselected • Max: {maxClients}</span>
+                      <span className="block sm:inline">
+                        {clientLimit === 0 ? 0 : activeClientCount} active • {selectedClients.length} selected
+                      </span>
+                      <span className="block sm:inline sm:before:content-['_•_']">
+                        {totalUnselectedClients} deselected • Max: {maxClients}
+                      </span>
                     </p>
                   )}
                 </div>
@@ -1018,7 +1028,7 @@ return (
                           Total Selected
                         </p>
                         <p className="text-base md:text-xl font-bold text-white">
-                          {activeClientCount}
+                          {clientLimit === 0 ? 0 : activeClientCount}
                         </p>
                       </div>
                       <div>
