@@ -849,6 +849,44 @@ const confirmReselect = async () => {
       return;
     }
 
+    // NEW: Check if we need to increase the limit from 0 to 1
+    if (clientLimit === 0) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('available_credits')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!profile || profile.available_credits < 1) {
+          toast.error('You need at least 1 credit available to add a one-time recipient when max clients is 0');
+          return;
+        }
+
+        // Update the message limit to 1
+        const { error: updateError } = await supabase
+          .from('sms_scheduled_messages')
+          .update({ message_limit: 1 })
+          .eq('id', messageId)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          console.error('Failed to update message limit:', updateError);
+          toast.error('Failed to update message limit');
+          return;
+        }
+
+        toast.success('Message limit increased to 1 for one-time recipient');
+      } catch (error) {
+        console.error('Failed to check credits:', error);
+        toast.error('Failed to verify credits');
+        return;
+      }
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -893,6 +931,8 @@ const confirmReselect = async () => {
       toast.error('Failed to add recipient');
     }
   };
+
+  
 
   const filteredClients = getFilteredClients();
   const activeClientCount = previewClients.length;
