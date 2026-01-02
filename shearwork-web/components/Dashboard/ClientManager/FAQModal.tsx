@@ -40,10 +40,10 @@ const faqSections: FAQSection[] = [
 const faqs: FAQItem[] = [
   // OVERVIEW SECTION - General
   {
-    question: "What are the different messaging types in ShearWork?",
+    question: "What are the different messaging types in Corva?",
     answer: (
       <div className="space-y-3">
-        <p>ShearWork offers three ways to message your clients:</p>
+        <p>Corva offers three ways to message your clients:</p>
         <ul className="space-y-2 ml-4">
           <li className="flex items-start gap-2">
             <span className="text-sky-400/80 mt-1">•</span>
@@ -73,7 +73,7 @@ const faqs: FAQItem[] = [
     question: "What are the different Client Types?",
     answer: (
       <div className="space-y-3">
-        <p>ShearWork automatically categorizes your clients based on how often they visit. These categories help the messaging system find the right people to contact:</p>
+        <p>Corva automatically categorizes your clients based on how often they visit. These categories help the messaging system find the right people to contact:</p>
         <div className="bg-white/5 rounded-lg p-4 space-y-3">
           <div>
             <h4 className="text-lime-400/90 font-semibold mb-1">Consistent</h4>
@@ -120,7 +120,7 @@ const faqs: FAQItem[] = [
     answer: (
       <div className="space-y-3">
         <p className="text-orange-300/80">
-          <strong>ShearWork has built-in cooldowns to prevent annoying your clients with too many messages.</strong>
+          <strong>Corva has built-in cooldowns to prevent annoying your clients with too many messages.</strong>
         </p>
         <div className="bg-white/5 rounded-lg p-4 space-y-3">
           <div>
