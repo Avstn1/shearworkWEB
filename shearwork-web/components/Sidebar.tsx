@@ -91,7 +91,13 @@ export default function Sidebar() {
       const lastRead = profileData?.last_read_feature_updates
       const latestUpdate = latestFeature.updated_at
 
-      setHasUnreadFeatures(!lastRead || new Date(lastRead) < new Date(latestUpdate))
+      const hasUnread = !lastRead || new Date(lastRead) < new Date(latestUpdate)
+      setHasUnreadFeatures(hasUnread)
+      
+      // Auto-open modal if there are unread features
+      if (hasUnread) {
+        setShowFeaturesModal(true)
+      }
     } catch (error) {
       console.error('Error checking unread features:', error)
     }
