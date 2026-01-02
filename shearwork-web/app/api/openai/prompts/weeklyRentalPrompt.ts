@@ -27,23 +27,15 @@ export const weeklyRentalPrompt = (dataset: any, userName: string, month: string
       source: f.source === 'Unknown' ? 'No Source' : f.source
     }));
 
+  // const totalNewClients: number = activeFunnels.reduce((sum: any, item: any) => sum + item.new_clients, 0);
+
   return `
 You are a professional analytics assistant creating a weekly performance report for a barbershop professional named ${userName}.
 Be a little fun and use some emojis, especially in section headers. Keep the writing conversational but data-driven. DO NOT WRAP
 the document with '''html '''. Do NOT use Markdown (** or *) at all. The report will be displayed in TinyMCE.
 
-You are given a JSON dataset that includes:
-- summary: metrics for the current week (week_number, start_date, end_date, total_revenue, tips, expenses, num_appointments, new_clients, returning_clients)
-- daily_rows: daily breakdowns for this user across the month
-- services and services_percentage: service mix data
-- top_clients: top-performing or most loyal clients for the week
-- marketing_funnels: referral or acquisition data
-- best_day: the best performing day in the week (if available)
-
 YOU ARE TALKING TO A BARBER - NOT A BARBERSHOP!! DO NOT REMOVE ANY KIND OF DATA.
 
-Dataset (JSON):
-${JSON.stringify(dataset, null, 2)}
 
 Generate a detailed weekly report in **HTML** suitable for TinyMCE. 
 Use the provided data and computed values. Pull values directly from the dataset fields — do not make up numbers.

@@ -409,9 +409,12 @@ async function findOrCreateClient(
     return existing.client_id
   }
 
+  const clientId = crypto.randomUUID()
+
   const { data: newClient, error } = await supabase
     .from('acuity_clients')
     .insert({
+      client_id: clientId,  // Add this line
       user_id: userId,
       email,
       phone_normalized: phoneNormalized,

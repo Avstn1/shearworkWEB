@@ -228,8 +228,6 @@ export async function POST(req: Request) {
         end_date: lastDayOfMonth.toISOString().split('T')[0],
       }
 
-      console.log(summaryData.tips)
-
       const { data: weeklyData, error: weeklyError } = await supabase
         .from('weekly_data')
         .select('*')
@@ -334,8 +332,6 @@ export async function POST(req: Request) {
         }
       }
 
-      console.log(summaryData.tips)
-
       // best day (single-week only)
       const filteredDailyPoints = dailyPoints.filter((d) => {
         if (!summaryData || Array.isArray(weekly_rows)) return false
@@ -413,6 +409,7 @@ export async function POST(req: Request) {
           .eq('user_id', user_id)
           .eq('report_month', month)
           .eq('report_year', normalizedYear)
+          .neq('source', 'No Source') 
         if (error) throw error
         return data ?? []
       }
@@ -428,7 +425,7 @@ export async function POST(req: Request) {
           .eq('report_month', month)
           .eq('report_year', normalizedYear)
           .eq('week_number', effectiveWeekNumber)
-          .neq('source', 'No Source')
+          .neq('source', 'No Source') 
         if (error) throw error
         return data ?? []
       }
@@ -440,6 +437,8 @@ export async function POST(req: Request) {
         .eq('user_id', user_id)
         .eq('report_month', month)
         .eq('report_year', normalizedYear)
+        .neq('source', 'No Source') 
+
 
       if (week_number != null) q = q.lte('week_number', week_number)
 
