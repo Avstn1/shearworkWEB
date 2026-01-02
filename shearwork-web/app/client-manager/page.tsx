@@ -116,11 +116,13 @@ export default function ClientManagerPage() {
             transition={{ duration: 0.4, ease: 'easeInOut' }}
             className="flex-1"
           >
-            {activeView === 'sheets' && (
-              <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 h-full">
-                <ClientSheets />
-              </div>
-            )}
+              {activeView === 'sheets' && (
+                <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 h-full">
+                <UnderConstructionWrapper>
+                  <ClientSheets />
+                </UnderConstructionWrapper>
+                </div>
+              )}
 
             {activeView === 'sms' && (
               <SMSAutoNudge />
