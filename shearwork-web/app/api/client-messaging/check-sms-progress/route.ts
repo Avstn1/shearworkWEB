@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
     const { data: sentMessages, error: fetchError } = await supabase
       .from('sms_sent')
       .select('is_sent, user_id')
-      .eq('message_id', message_id);
+      .eq('message_id', message_id)
+      .neq('purpose', 'test_message');
 
     if (fetchError) {
       console.error('Error fetching sms_sent records:', fetchError);
@@ -41,9 +42,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const successCount = sentMessages.filter(msg => msg.is_sent === true).length;
-    const failCount = sentMessages.filter(msg => msg.is_sent === false).length;
-    const totalCount = successCount + failCount;
+    const successCount = sentMessages.filter(msg => msg.is_sent === true).length; 
+    const failCount = sentMessages.filter(msg => msg.is_sent === false).length; 
+    const totalCount = successCount + failCount; 
     const userId = sentMessages[0].user_id;
 
     // Step 2: Get the scheduled message to check final_clients_to_message and purpose
@@ -62,12 +63,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if all messages have been sent
-    const allSent = totalCount >= scheduledMessage.final_clients_to_message;
+    const allSent = totalCount >= scheduledMessage.final_clients_to_message; 
 
     // Step 3: Update sms_scheduled_messages with success and fail counts
     const updateData: any = {
-      success: successCount,
-      fail: failCount,
+      success: successCount, 
+      fail: failCount, 
     };
 
     // Mark as finished if all messages sent
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const { error: updateMessageError } = await supabase
       .from('sms_scheduled_messages')
-      .update(updateData)
+      .update(updateData) 
       .eq('id', message_id);
 
     if (updateMessageError) {
@@ -92,56 +93,56 @@ export async function POST(request: NextRequest) {
     let newReservedCredits = 0;
     let newAvailableCredits = 0;
 
-    // Only charge credits for campaign and mass messages, not auto-nudge
-    if (scheduledMessage.purpose !== 'auto-nudge') {
-      // Step 4: Get current user credits
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('reserved_credits, available_credits')
-        .eq('user_id', userId)
-        .single();
+    if (allSent) {
+      // Only charge credits for campaign and mass messages, not auto-nudge
+      if (scheduledMessage.purpose !== 'auto-nudge') {
+        // Step 4: Get current user credits
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('reserved_credits, available_credits')
+          .eq('user_id', userId)
+          .single();
 
-      if (profileError || !profile) {
-        console.error('Error fetching user profile:', profileError);
-        return NextResponse.json(
-          { error: 'Failed to fetch user profile' },
-          { status: 500 }
-        );
-      }
+        if (profileError || !profile) {
+          console.error('Error fetching user profile:', profileError);
+          return NextResponse.json(
+            { error: 'Failed to fetch user profile' },
+            { status: 500 }
+          );
+        }
 
-      // Step 5: Calculate new credit values
-      // Remove all attempts (success + fail) from reserved_credits
-      newReservedCredits = Math.max(0, profile.reserved_credits - totalCount);
-      
-      // Refund failed attempts to available_credits
-      newAvailableCredits = profile.available_credits + failCount;
+        // Step 5: Calculate new credit values
+        // Remove all attempts (success + fail) from reserved_credits
+        newReservedCredits = Math.max(0, profile.reserved_credits - totalCount); 
+        
+        // Refund failed attempts to available_credits
+        newAvailableCredits = profile.available_credits + failCount; 
 
-      // Step 6: Update user credits
-      const { error: updateCreditsError } = await supabase
-        .from('profiles')
-        .update({
-          reserved_credits: newReservedCredits,
-          available_credits: newAvailableCredits,
-        })
-        .eq('user_id', userId);
+        // Step 6: Update user credits
+        const { error: updateCreditsError } = await supabase
+          .from('profiles')
+          .update({
+            reserved_credits: newReservedCredits,
+            available_credits: newAvailableCredits,
+          })
+          .eq('user_id', userId);
 
-      if (updateCreditsError) {
-        console.error('Error updating user credits:', updateCreditsError);
-        return NextResponse.json(
-          { error: 'Failed to update user credits' },
-          { status: 500 }
-        );
-      }
+        if (updateCreditsError) {
+          console.error('Error updating user credits:', updateCreditsError);
+          return NextResponse.json(
+            { error: 'Failed to update user credits' },
+            { status: 500 }
+          );
+        }
 
-      // Log credit transaction for campaign completion
-      if (allSent) {
+        // Log credit transaction for campaign completion
         const { data: campaignTitle } = await supabase
           .from('sms_scheduled_messages')
           .select('title')
           .eq('id', message_id)
           .single();
 
-        const oldReserved = newReservedCredits + successCount;
+        const oldReserved = profile.reserved_credits; // This is fine because the profile object isnt updated when the table is.
 
         const { error: transactionError } = await supabase
           .from('credit_transactions')
@@ -160,10 +161,7 @@ export async function POST(request: NextRequest) {
           console.error('Error creating credit transaction:', transactionError);
         }
       }
-    }
-
-    // Step 7: Handle completion or reschedule
-    if (allSent) {
+      // Step 7: Handle completion or reschedule
       // All messages sent - create notification
       console.log('✅ All messages sent, creating completion notification');
       
