@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 interface FAQModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialSearchQuery?: string;
 }
 
 interface FAQItem {
@@ -108,6 +110,87 @@ const faqs: FAQItem[] = [
         </div>
         <p className="text-sm text-gray-400">
           These categories are calculated automatically based on your client's actual visit history, so they update as their patterns change.
+        </p>
+      </div>
+    ),
+    section: 'overview'
+  },
+
+  {
+    question: "Why are my Client Sheets total clients way bigger than my SMS clients?",
+    answer: (
+      <div className="space-y-3">
+        <p className="text-amber-300/80">
+          <strong>Client Sheets shows ALL your clients, but SMS features use smart algorithms to filter for the most relevant ones.</strong>
+        </p>
+        <p>Here's what each SMS feature filters for:</p>
+        <div className="bg-white/5 rounded-lg p-4 space-y-3">
+          <div>
+            <h4 className="text-sky-400/90 font-semibold mb-2">SMS Auto Nudge</h4>
+            <ul className="space-y-1 ml-4 text-sm">
+              <li className="flex items-start gap-2">
+                <span className="text-sky-400/80">•</span>
+                <span>Only includes clients who are at least 14 days overdue based on their visit pattern</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sky-400/80">•</span>
+                <span>Heavily prioritizes Consistent and Semi-Consistent clients (90% of selections)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sky-400/80">•</span>
+                <span>Excludes clients in the 14-day cooldown period</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sky-400/80">•</span>
+                <span>Skips clients who haven't visited in over 1.5 years</span>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-amber-400/90 font-semibold mb-2">SMS Campaigns</h4>
+            <ul className="space-y-1 ml-4 text-sm">
+              <li className="flex items-start gap-2">
+                <span className="text-amber-400/80">•</span>
+                <span>Targets clients who are slightly overdue but not gone forever</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-400/80">•</span>
+                <span>Uses a two-phase system: priority clients first, then fills gaps if needed</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-400/80">•</span>
+                <span>Excludes clients in the 7-day cooldown period</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-400/80">•</span>
+                <span>Focuses on clients who visited within the last 4 months</span>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-lime-400/90 font-semibold mb-2">Mass Messages</h4>
+            <ul className="space-y-1 ml-4 text-sm">
+              <li className="flex items-start gap-2">
+                <span className="text-lime-400/80">•</span>
+                <span>Includes ALL clients with valid phone numbers</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-lime-400/80">•</span>
+                <span>Only requires at least one visit in history</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-lime-400/80">•</span>
+                <span>Excludes clients in the 15-day cooldown period</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-lime-400/80">•</span>
+                <span>This is the closest to your total Client Sheets count</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <p className="text-sm bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mt-3">
+          <strong>Bottom line:</strong> The algorithms filter out clients who either don't have phone numbers, are in cooldown, unsubscribed, or don't fit the targeting criteria for that specific message type. This ensures you're messaging the right people at the right time!
         </p>
       </div>
     ),
@@ -425,13 +508,50 @@ const faqs: FAQItem[] = [
 ];
 
 
-export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
+export default function FAQModal({ isOpen, onClose, initialSearchQuery }: FAQModalProps) {
   const [activeSection, setActiveSection] = useState<string>('overview');
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
 
-  const filteredFaqs = faqs.filter((f: any) => f.section === activeSection);
+  // Set search query and expand first result when modal opens
+  useEffect(() => {
+    if (isOpen && initialSearchQuery) {
+      setSearchKeyword(initialSearchQuery);
+      setExpandedQuestion(0); // Expand the first search result
+    }
+  }, [isOpen, initialSearchQuery]);
 
-  return (
+  // Extract text from React elements for searching
+  const extractText = (content: string | React.ReactElement): string => {
+    if (typeof content === 'string') return content;
+    
+    const getText = (element: any): string => {
+      if (!element) return '';
+      if (typeof element === 'string') return element;
+      if (typeof element === 'number') return String(element);
+      if (Array.isArray(element)) return element.map(getText).join(' ');
+      if (element.props?.children) return getText(element.props.children);
+      return '';
+    };
+    
+    return getText(content);
+  };
+
+  // Filter by search keyword globally across ALL FAQs
+  const searchFilteredFaqs = searchKeyword.trim()
+    ? faqs.filter((faq) => {
+        const keyword = searchKeyword.toLowerCase();
+        const questionMatch = faq.question.toLowerCase().includes(keyword);
+        const answerText = extractText(faq.answer).toLowerCase();
+        const answerMatch = answerText.includes(keyword);
+        return questionMatch || answerMatch;
+      })
+    : null;
+
+  // Show search results if searching, otherwise filter by section
+  const displayedFaqs = searchFilteredFaqs || faqs.filter((f) => f.section === activeSection);
+
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -470,74 +590,121 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
                 </button>
               </div>
 
-              {/* Section Tabs */}
-              <div className="border-b border-white/10 bg-black/20 flex-shrink-0">
-                <div className="flex gap-1.5 sm:gap-2 p-2 sm:p-3">
-                  {faqSections.map((section) => (
+              {/* Search Bar */}
+              <div className="border-b border-white/10 bg-black/20 p-2 sm:p-3 flex-shrink-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchKeyword}
+                    onChange={(e) => {
+                      setSearchKeyword(e.target.value);
+                      setExpandedQuestion(null);
+                    }}
+                    placeholder="Search all questions and answers..."
+                    className="w-full pl-10 pr-10 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                  />
+                  {searchKeyword && (
                     <button
-                      key={section.id}
                       onClick={() => {
-                        setActiveSection(section.id);
+                        setSearchKeyword('');
                         setExpandedQuestion(null);
                       }}
-                      className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-lg text-[10px] sm:text-sm font-semibold transition-all ${
-                        activeSection === section.id
-                          ? `bg-gradient-to-r ${section.color} text-white shadow-lg`
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded transition-colors"
                     >
-                      <div className="text-center">
-                        <div className="font-bold leading-tight">{section.title}</div>
-                        <div className="text-[9px] sm:text-xs opacity-80 mt-0.5 hidden sm:block">
-                          {section.description}
-                        </div>
-                      </div>
+                      <X className="w-3 h-3 text-gray-400 hover:text-white" />
                     </button>
-                  ))}
+                  )}
                 </div>
+                {searchKeyword && (
+                  <p className="text-xs text-gray-400 mt-1.5 ml-1">
+                    Searching across all sections • Found {displayedFaqs.length} result{displayedFaqs.length !== 1 ? 's' : ''}
+                  </p>
+                )}
               </div>
+
+              {/* Section Tabs - Hidden when searching */}
+              {!searchKeyword && (
+                <div className="border-b border-white/10 bg-black/20 flex-shrink-0">
+                  <div className="flex gap-1.5 sm:gap-2 p-2 sm:p-3">
+                    {faqSections.map((section) => (
+                      <button
+                        key={section.id}
+                        onClick={() => {
+                          setActiveSection(section.id);
+                          setExpandedQuestion(null);
+                        }}
+                        className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-lg text-[10px] sm:text-sm font-semibold transition-all ${
+                          activeSection === section.id
+                            ? `bg-gradient-to-r ${section.color} text-white shadow-lg`
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="font-bold leading-tight">{section.title}</div>
+                          <div className="text-[9px] sm:text-xs opacity-80 mt-0.5 hidden sm:block">
+                            {section.description}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Content - Fixed Height with Hidden Scrollbar */}
               <div className="flex-1 overflow-y-auto overflow-x-hidden faq-scroll-container">
                 <div className="p-3 sm:p-6">
-                  <div className="space-y-2 sm:space-y-3">
-                    {filteredFaqs.map((faq, index) => (
-                      <div
-                        key={index}
-                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden"
+                  {displayedFaqs.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-400 text-sm">No questions found matching "{searchKeyword}"</p>
+                      <button
+                        onClick={() => setSearchKeyword('')}
+                        className="mt-3 text-xs text-emerald-400 hover:text-emerald-300 underline"
                       >
-                        <button
-                          onClick={() => setExpandedQuestion(expandedQuestion === index ? null : index)}
-                          className="w-full p-2.5 sm:p-4 flex items-start justify-between hover:bg-white/5 transition-colors text-left gap-2"
+                        Clear search
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 sm:space-y-3">
+                      {displayedFaqs.map((faq, index) => (
+                        <div
+                          key={index}
+                          className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden"
                         >
-                          <span className="font-semibold text-white text-xs sm:text-base leading-snug">
-                            {faq.question}
-                          </span>
-                          {expandedQuestion === index ? (
-                            <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                          )}
-                        </button>
+                          <button
+                            onClick={() => setExpandedQuestion(expandedQuestion === index ? null : index)}
+                            className="w-full p-2.5 sm:p-4 flex items-start justify-between hover:bg-white/5 transition-colors text-left gap-2"
+                          >
+                            <span className="font-semibold text-white text-xs sm:text-base leading-snug">
+                              {faq.question}
+                            </span>
+                            {expandedQuestion === index ? (
+                              <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                            )}
+                          </button>
 
-                        <AnimatePresence>
-                          {expandedQuestion === index && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="px-2.5 sm:px-4 pb-2.5 sm:pb-4 text-gray-300 text-[11px] sm:text-sm border-t border-white/10 pt-2.5 sm:pt-4">
-                                {faq.answer}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    ))}
-                  </div>
+                          <AnimatePresence>
+                            {expandedQuestion === index && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-2.5 sm:px-4 pb-2.5 sm:pb-4 text-gray-300 text-[11px] sm:text-sm border-t border-white/10 pt-2.5 sm:pt-4">
+                                  {faq.answer}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -564,4 +731,7 @@ export default function FAQModal({ isOpen, onClose }: FAQModalProps) {
       )}
     </AnimatePresence>
   );
+
+  // Render to document body using portal
+  return typeof window !== 'undefined' ? createPortal(modalContent, document.body) : null;
 }
