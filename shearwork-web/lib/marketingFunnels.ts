@@ -221,6 +221,8 @@ export function computeFunnelsFromAppointments(
   const clientSource: Record<string, string> = {}
 
   // ==================== PASS 1: Collect all visits and determine sources ====================
+  const appointmentsByClient: Record<string, Array<{ dateISO: string; price: number; source: string | null }>> = {}
+
   for (const appt of appointments) {
     const apptDateISO = appt.datetime.split('T')[0]
     const price = parseFloat((appt.priceSold as any) || '0')
@@ -233,17 +235,31 @@ export function computeFunnelsFromAppointments(
 
     const clientKey = buildClientKey(appt as any, userId)
 
-    // Store all visits for this client
+    // Store all visits for this client WITH their individual sources
+    if (!appointmentsByClient[clientKey]) appointmentsByClient[clientKey] = []
+    const extracted = extractSourceFromForms(appt.forms)
+    appointmentsByClient[clientKey].push({ dateISO: apptDateISO, price, source: extracted })
+
+    // Store all visits for this client (for backward compatibility)
     if (!clientVisits[clientKey]) clientVisits[clientKey] = []
     clientVisits[clientKey].push({ dateISO: apptDateISO, price })
 
     // Store identity info
     clientIdentity[clientKey] = { email, phone, nameKey }
+  }
 
-    // Determine canonical source for this client (only set once, first occurrence wins)
-    if (!clientSource[clientKey]) {
-      const extracted = extractSourceFromForms(appt.forms)
-      clientSource[clientKey] = extracted || 'No Source'
+  // Now determine the source based on the EARLIEST appointment WITH a source
+  for (const [clientKey, appts] of Object.entries(appointmentsByClient)) {
+    // Sort by date
+    const sorted = appts.sort((a, b) => a.dateISO.localeCompare(b.dateISO))
+    
+    // Find first appointment with a source
+    const firstWithSource = sorted.find(a => a.source !== null)
+    
+    if (firstWithSource && firstWithSource.source) {
+      clientSource[clientKey] = firstWithSource.source  // ✅ Just store the string
+    } else {
+      clientSource[clientKey] = 'No Source'
     }
   }
 
@@ -283,8 +299,9 @@ export function computeFunnelsFromAppointments(
     if (!funnels[tf.id]) funnels[tf.id] = {}
 
     for (const [clientKey, visits] of Object.entries(clientVisits)) {
-      let source = clientSource[clientKey] || 'No Source'
+      let source = clientSource[clientKey] || 'No Source' 
       const firstAppt = clientFirstAppt[clientKey]
+      const identity = clientIdentity[clientKey]
 
       if (!firstAppt) continue
 
@@ -312,6 +329,23 @@ export function computeFunnelsFromAppointments(
           total_visits: 0,
         }
       }
+
+      // for (const visit of visitsInTimeframe) {
+      //   if (source !== 'Returning Client' && source !== 'No Source') {
+      //     console.log(`${tf.id.padEnd(15)} | ${identity.nameKey.padEnd(30)} | ${source.padEnd(20)} | ${visit.dateISO} | Visits: ${visitsInTimeframe.length}`)
+      //   }
+      // }
+
+      // if (identity.nameKey.includes('andrew pires')) {
+      //   console.log(`
+      // 🔍 DEBUG - Andrew Pires:
+      //   - Timeframe: ${tf.id} (${tf.startISO} to ${tf.endISO})
+      //   - First Appt Ever (from DB): ${firstAppt}
+      //   - Source (from earliest appt with source): ${source}
+      //   - Visits in timeframe: ${visitsInTimeframe.length}
+      //   - First appt in timeframe? ${isFirstApptInTimeframe} (should be FALSE for Dec 2025)
+      //   `)
+      // }
 
       const stats = funnels[tf.id][source]
 

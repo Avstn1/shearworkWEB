@@ -835,6 +835,15 @@ export async function GET(request: Request) {
     if (nameKey) clientCache.set(`name:${nameKey}`, clientKey)
     // -------------------------------------------------------------------------------
 
+    // const isReturning = await isReturningClient(
+    //   supabase,
+    //   user.id,
+    //   emailKey,
+    //   phoneNormalized,
+    //   firstName,
+    //   lastName
+    // )
+
     if (!clientDataMap.has(clientKey)) {
       clientDataMap.set(clientKey, {
         client_id: clientKey,
@@ -857,29 +866,20 @@ export async function GET(request: Request) {
       if (referralSource && !existing.first_source) existing.first_source = referralSource
     }
 
-    // Only upsert appointments that are WITHIN the requested month
-    // This prevents overflow appointments (from week spillover into next month) from being counted
-    const apptMonthIndex = apptDate.getMonth()
-    const isWithinRequestedMonth = apptMonthIndex === requestedMonthIndex
-
-    if (isWithinRequestedMonth) {
-      // Don't include revenue in upsert - we'll set it only for NEW appointments
-      // This preserves any manual edits to revenue
-      appointmentsToUpsert.push({
-        user_id: user.id,
-        acuity_appointment_id: appt.id,
-        client_id: clientKey,
-        phone_normalized: phoneNormalized,
-        appointment_date: dayKey,
-        datetime: appt.datetime,
-        service_type: appt.type || null,
-        created_at: new Date().toISOString(),
-        _acuity_tip: tip,
-        _acuity_revenue: price,
-      })
-    } else{
-       console.log(`SKIPPED overflow appointment: ${dayKey} (requested month: ${requestedMonth})`)
-    }
+    // Don't include revenue in upsert - we'll set it only for NEW appointments
+    // This preserves any manual edits to revenue
+    appointmentsToUpsert.push({
+      user_id: user.id,
+      acuity_appointment_id: appt.id,
+      client_id: clientKey,
+      phone_normalized: phoneNormalized,
+      appointment_date: dayKey,
+      datetime: appt.datetime,
+      service_type: appt.type || null,
+      created_at: new Date().toISOString(),
+      _acuity_tip: tip,
+      _acuity_revenue: price,
+    })
 
     const weekMeta = getWeekMetaForDate(apptDate)
     const weekKey = `${requestedYear}||${requestedMonth}||${String(weekMeta.weekNumber).padStart(2, '0')}||${weekMeta.weekStartISO}`
@@ -1140,6 +1140,7 @@ export async function GET(request: Request) {
     await supabase
       .from('marketing_funnels')
       .upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+      
   }
 
   const weeklyFunnelUpserts: any[] = []
@@ -1241,7 +1242,7 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString(),
         },
       ])
-    }
+    }``
   }
 
   const weeklyUpserts = Object.values(weeklyAgg)

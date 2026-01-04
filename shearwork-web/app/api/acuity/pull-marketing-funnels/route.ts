@@ -520,7 +520,7 @@ export async function GET(request: Request) {
         upserts.push({
           user_id: user.id,
           source,
-          timeframe: requestedMonth,
+          report_month: requestedMonth,
           new_clients: stats.new_clients,
           returning_clients: stats.returning_clients,
           new_clients_retained: stats.new_clients_retained,
@@ -580,7 +580,7 @@ export async function GET(request: Request) {
     const { error: upsertErr } = await supabase
       .from('marketing_funnels')
       .upsert(upserts, {
-        onConflict: 'user_id,source,report_year,report_month',
+        onConflict: 'user_id, source, report_month, report_year',
       })
 
     if (upsertErr) {
