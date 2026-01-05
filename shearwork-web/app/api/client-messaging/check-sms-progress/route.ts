@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Step 2: Get the scheduled message to check final_clients_to_message and purpose
     const { data: scheduledMessage, error: scheduledMessageError } = await supabase
       .from('sms_scheduled_messages')
-      .select('final_clients_to_message, purpose')
+      .select('final_clients_to_message, purpose, message_limit')
       .eq('id', message_id)
       .single();
 
@@ -113,10 +113,14 @@ export async function POST(request: NextRequest) {
 
         // Step 5: Calculate new credit values
         // Remove all attempts (success + fail) from reserved_credits
-        newReservedCredits = Math.max(0, profile.reserved_credits - totalCount); 
+        newReservedCredits = Math.max(0, profile.reserved_credits - scheduledMessage.message_limit); 
         
-        // Refund failed attempts to available_credits
-        newAvailableCredits = profile.available_credits + failCount; 
+        // Refund underflow (final_clients_to_message didnt go up to message_limit) and failed attempts to available_credits
+        // If message_limit = 50 but the algorithim only ended up messaging 45 people (final_clients_to_message), then 5 credits should be refunded too
+        const underflow = scheduledMessage.message_limit - scheduledMessage.final_clients_to_message 
+
+        // In the example, this will be available_credits + 5 + 1 (assuming 1 msg failed) = 6 refunded
+        newAvailableCredits = profile.available_credits + underflow + failCount; 
 
         // Step 6: Update user credits
         const { error: updateCreditsError } = await supabase

@@ -496,8 +496,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // ------------ Build upserts for yearly_marketing_funnels ------------
-  // ------------ Build upserts for yearly_marketing_funnels ------------
+  // ------------ Build upserts for marketing_funnels and yearly_marketing_funnels ------------
   const upserts: any[] = []
 
   if (requestedMonth){
@@ -507,6 +506,9 @@ export async function GET(request: Request) {
       for (const [source, stats] of Object.entries(tfStats)) {
         // Skip "Returning Client" source
         if (source === 'Returning Client') continue
+        
+        // Skip if no new or returning clients
+        if (stats.new_clients === 0) continue
 
         const retention =
           stats.new_clients > 0
@@ -539,6 +541,9 @@ export async function GET(request: Request) {
       for (const [source, stats] of Object.entries(tfStats)) {
         // Skip "Returning Client" source
         if (source === 'Returning Client') continue
+        
+        // Skip if no new or returning clients
+        if (stats.new_clients === 0 && stats.returning_clients === 0) continue
 
         const retention =
           stats.new_clients > 0
