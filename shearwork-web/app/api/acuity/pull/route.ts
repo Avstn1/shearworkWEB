@@ -591,7 +591,7 @@ export async function GET(request: Request) {
     .select(`
       client_id,
       appointment_date,
-      acuity_clients!inner(email, phone_normalized, first_name, last_name)
+      acuity_clients!inner(email, phone_normalized, first_name, last_name, first_appt)
     `)
     .eq('user_id', user.id)
     .order('appointment_date', { ascending: true })
@@ -599,26 +599,17 @@ export async function GET(request: Request) {
   const firstApptLookup: Record<string, string> = {}
 
   if (firstAppts) {
-    const clientFirstAppts: Record<string, string> = {}
-    for (const row of firstAppts) {
-      if (!clientFirstAppts[row.client_id] || row.appointment_date < clientFirstAppts[row.client_id]) {
-        clientFirstAppts[row.client_id] = row.appointment_date
-      }
-    }
-
     for (const row of firstAppts) {
       const client = Array.isArray(row.acuity_clients) ? row.acuity_clients[0] : row.acuity_clients
-      if (!client) continue
-
-      const firstDate = clientFirstAppts[row.client_id]
+      if (!client || !client.first_appt) continue  // Skip if no first_appt from acuity_clients
 
       const eKey = normEmail(client.email)
-      if (eKey) firstApptLookup[eKey] = firstDate
+      if (eKey) firstApptLookup[eKey] = client.first_appt  // ✅ Use first_appt from acuity_clients
 
-      if (client.phone_normalized) firstApptLookup[client.phone_normalized] = firstDate
+      if (client.phone_normalized) firstApptLookup[client.phone_normalized] = client.first_appt
 
       const nKey = normDisplayName(`${client.first_name || ''} ${client.last_name || ''}`)
-      if (nKey) firstApptLookup[nKey] = firstDate
+      if (nKey) firstApptLookup[nKey] = client.first_appt
     }
   }
 
@@ -835,6 +826,15 @@ export async function GET(request: Request) {
     if (nameKey) clientCache.set(`name:${nameKey}`, clientKey)
     // -------------------------------------------------------------------------------
 
+    // const isReturning = await isReturningClient(
+    //   supabase,
+    //   user.id,
+    //   emailKey,
+    //   phoneNormalized,
+    //   firstName,
+    //   lastName
+    // )
+
     if (!clientDataMap.has(clientKey)) {
       clientDataMap.set(clientKey, {
         client_id: clientKey,
@@ -857,29 +857,20 @@ export async function GET(request: Request) {
       if (referralSource && !existing.first_source) existing.first_source = referralSource
     }
 
-    // Only upsert appointments that are WITHIN the requested month
-    // This prevents overflow appointments (from week spillover into next month) from being counted
-    const apptMonthIndex = apptDate.getMonth()
-    const isWithinRequestedMonth = apptMonthIndex === requestedMonthIndex
-
-    if (isWithinRequestedMonth) {
-      // Don't include revenue in upsert - we'll set it only for NEW appointments
-      // This preserves any manual edits to revenue
-      appointmentsToUpsert.push({
-        user_id: user.id,
-        acuity_appointment_id: appt.id,
-        client_id: clientKey,
-        phone_normalized: phoneNormalized,
-        appointment_date: dayKey,
-        datetime: appt.datetime,
-        service_type: appt.type || null,
-        created_at: new Date().toISOString(),
-        _acuity_tip: tip,
-        _acuity_revenue: price,
-      })
-    } else{
-       console.log(`SKIPPED overflow appointment: ${dayKey} (requested month: ${requestedMonth})`)
-    }
+    // Don't include revenue in upsert - we'll set it only for NEW appointments
+    // This preserves any manual edits to revenue
+    appointmentsToUpsert.push({
+      user_id: user.id,
+      acuity_appointment_id: appt.id,
+      client_id: clientKey,
+      phone_normalized: phoneNormalized,
+      appointment_date: dayKey,
+      datetime: appt.datetime,
+      service_type: appt.type || null,
+      created_at: new Date().toISOString(),
+      _acuity_tip: tip,
+      _acuity_revenue: price,
+    })
 
     const weekMeta = getWeekMetaForDate(apptDate)
     const weekKey = `${requestedYear}||${requestedMonth}||${String(weekMeta.weekNumber).padStart(2, '0')}||${weekMeta.weekStartISO}`
@@ -1122,25 +1113,32 @@ export async function GET(request: Request) {
       .upsert(clientUpserts, { onConflict: 'user_id,client_id' })
   }
 
-  const funnelUpserts = Object.entries(monthlyFunnelsComputed).flatMap(([timeframeId, sources]) => {
-    return Object.entries(sources).map(([source, stats]) => ({
-      user_id: user.id,
-      source,
-      new_clients: stats.new_clients,
-      returning_clients: stats.returning_clients,
-      new_clients_retained: stats.new_clients_retained,
-      retention: stats.new_clients > 0 ? (stats.new_clients_retained / stats.new_clients) * 100 : 0,
-      avg_ticket: stats.total_visits > 0 ? stats.total_revenue / stats.total_visits : 0,
-      report_month: requestedMonth,
-      report_year: requestedYear,
-    }))
-  })
+  // ============= Not getting used. Refer to /pull-marketing-funnels =============
+  // const funnelUpserts = Object.entries(monthlyFunnelsComputed).flatMap(([timeframeId, sources]) => {
+  //   return Object.entries(sources)
+  //     .filter(([source, stats]) => stats.new_clients > 0)
+  //     .map(([source, stats]) => ({
+  //       user_id: user.id,
+  //       source,
+  //       new_clients: stats.new_clients,
+  //       returning_clients: stats.returning_clients,
+  //       new_clients_retained: stats.new_clients_retained,
+  //       retention: stats.new_clients > 0 ? (stats.new_clients_retained / stats.new_clients) * 100 : 0,
+  //       avg_ticket: stats.total_visits > 0 ? stats.total_revenue / stats.total_visits : 0,
+  //       report_month: requestedMonth,
+  //       report_year: requestedYear,
+  //     }))
+  // })
 
-  if (funnelUpserts.length > 0) {
-    await supabase
-      .from('marketing_funnels')
-      .upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
-  }
+  // console.log("Funnel upserts:")
+  // console.log(JSON.stringify(funnelUpserts))
+
+  // if (funnelUpserts.length > 0) {
+  //   await supabase
+  //     .from('marketing_funnels')
+  //     .upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+      
+  // }
 
   const weeklyFunnelUpserts: any[] = []
 
@@ -1152,6 +1150,8 @@ export async function GET(request: Request) {
     if (!meta) continue
 
     for (const [source, stats] of Object.entries(sources)) {
+      if (stats.new_clients === 0) continue
+
       weeklyFunnelUpserts.push({
         user_id: user.id,
         source,
@@ -1241,7 +1241,7 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString(),
         },
       ])
-    }
+    }``
   }
 
   const weeklyUpserts = Object.values(weeklyAgg)

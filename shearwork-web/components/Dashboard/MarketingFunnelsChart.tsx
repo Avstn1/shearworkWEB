@@ -137,6 +137,7 @@ export default function MarketingFunnelsChart({
   // Adjust label font and bar size dynamically
   const labelFontSize = data.length > 10 ? 8 : 12
   const barSize = data.length > 15 ? 10 : 20
+  const filteredData = data.filter(d => d.new_clients > 0)
 
   return (
     <UnderConstructionWrapper>
@@ -157,9 +158,9 @@ export default function MarketingFunnelsChart({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               layout="vertical"
-              data={data.filter(d => d.new_clients > 0)}
+              data={filteredData}
               margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
-              barCategoryGap={data.filter(d => d.new_clients > 0).length > 10 ? '30%' : '15%'}
+              barCategoryGap={filteredData.length > 10 ? '30%' : '15%'}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
 
@@ -221,7 +222,6 @@ export default function MarketingFunnelsChart({
                   dataKey="new_clients"
                   content={(props: any) => {
                     const { x, y, width, height, value, index } = props;
-                    const filteredData = data.filter(d => d.new_clients > 0);
                     const entry = filteredData[index];
                     
                     if (!entry) return null; // Safety check
@@ -268,7 +268,6 @@ export default function MarketingFunnelsChart({
                   dataKey="source"
                   content={(props: any) => {
                     const { x, y, width, height, value, index } = props;
-                    const filteredData = data.filter(d => d.new_clients > 0);
                     const entry = filteredData[index];
                     
                     if (!entry) return null; // Safety check
@@ -324,7 +323,6 @@ export default function MarketingFunnelsChart({
                   dataKey="new_clients_retained"
                   content={(props: any) => {
                     const { x, y, width, height, value, index } = props;
-                    const filteredData = data.filter(d => d.new_clients > 0);
                     const entry = filteredData[index];
                     
                     if (!entry) return null; // Safety check
@@ -383,7 +381,6 @@ export default function MarketingFunnelsChart({
                   dataKey="retention"
                   content={(props: any) => {
                     const { x, y, width, height, value, index } = props;
-                    const filteredData = data.filter(d => d.new_clients > 0);
                     const entry = filteredData[index];
                     
                     if (!entry) return null; // Safety check

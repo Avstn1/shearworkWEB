@@ -221,6 +221,8 @@ export function computeFunnelsFromAppointments(
   const clientSource: Record<string, string> = {}
 
   // ==================== PASS 1: Collect all visits and determine sources ====================
+  const appointmentsByClient: Record<string, Array<{ dateISO: string; price: number; source: string | null }>> = {}
+
   for (const appt of appointments) {
     const apptDateISO = appt.datetime.split('T')[0]
     const price = parseFloat((appt.priceSold as any) || '0')
@@ -233,17 +235,31 @@ export function computeFunnelsFromAppointments(
 
     const clientKey = buildClientKey(appt as any, userId)
 
-    // Store all visits for this client
+    // Store all visits for this client WITH their individual sources
+    if (!appointmentsByClient[clientKey]) appointmentsByClient[clientKey] = []
+    const extracted = extractSourceFromForms(appt.forms)
+    appointmentsByClient[clientKey].push({ dateISO: apptDateISO, price, source: extracted })
+
+    // Store all visits for this client (for backward compatibility)
     if (!clientVisits[clientKey]) clientVisits[clientKey] = []
     clientVisits[clientKey].push({ dateISO: apptDateISO, price })
 
     // Store identity info
     clientIdentity[clientKey] = { email, phone, nameKey }
+  }
 
-    // Determine canonical source for this client (only set once, first occurrence wins)
-    if (!clientSource[clientKey]) {
-      const extracted = extractSourceFromForms(appt.forms)
-      clientSource[clientKey] = extracted || 'No Source'
+  // Now determine the source based on the EARLIEST appointment WITH a source
+  for (const [clientKey, appts] of Object.entries(appointmentsByClient)) {
+    // Sort by date
+    const sorted = appts.sort((a, b) => a.dateISO.localeCompare(b.dateISO))
+    
+    // Find first appointment with a source
+    const firstWithSource = sorted.find(a => a.source !== null)
+    
+    if (firstWithSource && firstWithSource.source) {
+      clientSource[clientKey] = firstWithSource.source  // ✅ Just store the string
+    } else {
+      clientSource[clientKey] = 'No Source'
     }
   }
 
@@ -254,11 +270,9 @@ export function computeFunnelsFromAppointments(
     const identity = clientIdentity[clientKey]
 
     // Build lookup keys (must match acuity/pull logic EXACTLY)
-    const lookupKeys = [identity?.email, identity?.phone, identity?.nameKey].filter(
-      Boolean
-    ) as string[]
+    const lookupKeys = [identity?.email, identity?.phone, identity?.nameKey].filter(Boolean)
 
-    // Find earliest first_appt from database lookup
+    // Find earliest first_appt from database lookup ONLY
     let firstAppt: string | null = null
     for (const key of lookupKeys) {
       const dbFirstAppt = firstApptLookup[key]
@@ -267,12 +281,7 @@ export function computeFunnelsFromAppointments(
       }
     }
 
-    // If not in DB, use earliest visit from current data
-    if (!firstAppt && visits.length > 0) {
-      const sortedVisits = [...visits].sort((a, b) => a.dateISO.localeCompare(b.dateISO))
-      firstAppt = sortedVisits[0].dateISO
-    }
-
+    // Only use database value - if not found, client will be skipped in PASS 3
     if (firstAppt) {
       clientFirstAppt[clientKey] = firstAppt
     }
@@ -283,8 +292,9 @@ export function computeFunnelsFromAppointments(
     if (!funnels[tf.id]) funnels[tf.id] = {}
 
     for (const [clientKey, visits] of Object.entries(clientVisits)) {
-      let source = clientSource[clientKey] || 'No Source'
+      let source = clientSource[clientKey] || 'No Source' 
       const firstAppt = clientFirstAppt[clientKey]
+      const identity = clientIdentity[clientKey]
 
       if (!firstAppt) continue
 
@@ -297,10 +307,17 @@ export function computeFunnelsFromAppointments(
       const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
 
       if (source === 'Returning Client' && isFirstApptInTimeframe) {
-        // This person selected "Returning Client" but it's their FIRST appointment
-        // They're confused/mistaken - treat them as "No Source" (unknown marketing source)
         source = 'No Source'
       }
+
+      // Classify new vs returning clients
+      const isFirstApptBeforeTimeframe = firstAppt < tf.startISO
+
+      // ✅ ONLY CREATE SOURCE ENTRY IF CLIENT IS NEW OR RETURNING
+      const isNew = isFirstApptInTimeframe
+      const isReturning = isFirstApptBeforeTimeframe
+      
+      if (!isNew && !isReturning) continue  // Skip if neither new nor returning
 
       // Initialize stats for this source if needed
       if (!funnels[tf.id][source]) {
@@ -315,31 +332,28 @@ export function computeFunnelsFromAppointments(
 
       const stats = funnels[tf.id][source]
 
-      // Add revenue and visit counts
-      for (const visit of visitsInTimeframe) {
-        stats.total_revenue += visit.price
-        stats.total_visits += 1
-      }
-
-      // Classify new vs returning clients
-      const isFirstApptBeforeTimeframe = firstAppt < tf.startISO
-
       if (isFirstApptInTimeframe) {
-        // This client's FIRST EVER appointment is in this timeframe = NEW CLIENT
         stats.new_clients += 1
+        
+        // Add revenue and visits for new client
+        for (const visit of visitsInTimeframe) {
+          stats.total_revenue += visit.price
+          stats.total_visits += 1
+        }
 
-        // Special case: If they also had ADDITIONAL visits in this same timeframe,
-        // they are ALSO a returning client within this timeframe
         if (visitsInTimeframe.length > 1) {
           stats.returning_clients += 1
-          stats.new_clients_retained += 1 // ✅ NEW: Track new clients who came back same timeframe
+          stats.new_clients_retained += 1
         }
       } else if (isFirstApptBeforeTimeframe) {
-        // First appointment was BEFORE this timeframe started
-        // Any visit in this timeframe makes them a RETURNING CLIENT
         stats.returning_clients += 1
+        
+        // Add revenue and visits for returning client
+        for (const visit of visitsInTimeframe) {
+          stats.total_revenue += visit.price
+          stats.total_visits += 1
+        }
       }
-      // Note: If firstAppt is AFTER tf.endISO, we already filtered out their visits above
     }
   }
 
