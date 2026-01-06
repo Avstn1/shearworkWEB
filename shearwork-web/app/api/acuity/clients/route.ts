@@ -950,7 +950,7 @@ export async function GET(request: Request) {
       return rest
     })
     
-    console.log('Upserting appointments count:', cleanedAppointments.length)
+    // console.log('Upserting appointments count:', cleanedAppointments.length)
     
     const { data: upsertedAppts, error } = await supabase
       .from('acuity_appointments')

@@ -158,11 +158,10 @@ export async function GET(request: Request) {
 
   const calendarID = calendarMatch.id
 
-  // ------------ Fetch appointments for the whole year ------------
+  // ------------ Fetch appointments ------------
   const allAppointments: any[] = []
 
-
-  if (!(requestedMonth == 'year' || requestedMonth == 'Q1' || requestedMonth == 'Q2' || requestedMonth == 'Q3' || requestedMonth == 'Q4')){
+  if (!(requestedMonth == 'year' || requestedMonth == 'Q1' || requestedMonth == 'Q2' || requestedMonth == 'Q3' || requestedMonth == 'Q4')) {
     const month = MONTH_INDEX[requestedMonth!]
     const start = new Date(requestedYear, month, 1)
       .toISOString()
@@ -193,9 +192,7 @@ export async function GET(request: Request) {
     } catch (err) {
       console.error(`Failed to fetch appointments for month ${month + 1}:`, err)
     }
-
-  }else {
-
+  } else {
     for (let month = 0; month < 12; month++) {
       const start = new Date(requestedYear, month, 1)
         .toISOString()
@@ -247,8 +244,7 @@ export async function GET(request: Request) {
   const firstApptLookup: Record<string, string> = {}
 
   clientRows?.forEach((row) => {
-    const emailKey =
-      (row.email || '').toLowerCase().trim() || null
+    const emailKey = (row.email || '').toLowerCase().trim() || null
     const phoneKey = normalizePhone(row.phone || '') || null
     const nameKey =
       `${(row.first_name || '').trim().toLowerCase()} ${(row.last_name || '')
@@ -264,108 +260,148 @@ export async function GET(request: Request) {
     }
   })
 
-  // ------------ Define timeframes (year + quarters) ------------
-  const tfDefs: TimeframeDef[] = [
-    {
-      id: 'year',
-      startISO: `${requestedYear}-01-01`,
-      endISO: `${requestedYear}-12-31`,
-    },
-    {
-      id: 'Q1',
-      startISO: `${requestedYear}-01-01`,
-      endISO: `${requestedYear}-03-31`,
-    },
-    {
-      id: 'Q2',
-      startISO: `${requestedYear}-04-01`,
-      endISO: `${requestedYear}-06-30`,
-    },
-    {
-      id: 'Q3',
-      startISO: `${requestedYear}-07-01`,
-      endISO: `${requestedYear}-09-30`,
-    },
-    {
-      id: 'Q4',
-      startISO: `${requestedYear}-10-01`,
-      endISO: `${requestedYear}-12-31`,
-    },
-    {
-      id: 'January',
-      startISO: `${requestedYear}-01-01`,
-      endISO: `${requestedYear}-01-31`,
-    },
-    {
-      id: 'February',
-      startISO: `${requestedYear}-02-01`,
-      endISO: `${requestedYear}-02-28`,
-    },
-    {
-      id: 'March',
-      startISO: `${requestedYear}-03-01`,
-      endISO: `${requestedYear}-03-31`,
-    },
-    {
-      id: 'April',
-      startISO: `${requestedYear}-04-01`,
-      endISO: `${requestedYear}-04-30`,
-    },
-    {
-      id: 'May',
-      startISO: `${requestedYear}-05-01`,
-      endISO: `${requestedYear}-05-31`,
-    },
-    {
-      id: 'June',
-      startISO: `${requestedYear}-06-01`,
-      endISO: `${requestedYear}-06-30`,
-    },
-    {
-      id: 'July',
-      startISO: `${requestedYear}-07-01`,
-      endISO: `${requestedYear}-07-31`,
-    },
-    {
-      id: 'August',
-      startISO: `${requestedYear}-08-01`,
-      endISO: `${requestedYear}-08-31`,
-    },
-    {
-      id: 'September',
-      startISO: `${requestedYear}-09-01`,
-      endISO: `${requestedYear}-09-30`,
-    },
-    {
-      id: 'October',
-      startISO: `${requestedYear}-10-01`,
-      endISO: `${requestedYear}-10-31`,
-    },
-    {
-      id: 'November',
-      startISO: `${requestedYear}-11-01`,
-      endISO: `${requestedYear}-11-30`,
-    },
-    {
-      id: 'December',
-      startISO: `${requestedYear}-12-01`,
-      endISO: `${requestedYear}-12-31`,
+  // ------------ Define timeframes (monthly + weekly if monthly request) ------------
+  const tfDefs: TimeframeDef[] = []
+  
+  // Add year and quarters for yearly requests
+  if (!requestedMonth || requestedMonth == 'year' || requestedMonth == 'Q1' || requestedMonth == 'Q2' || requestedMonth == 'Q3' || requestedMonth == 'Q4') {
+    tfDefs.push(
+      {
+        id: 'year',
+        startISO: `${requestedYear}-01-01`,
+        endISO: `${requestedYear}-12-31`,
+      },
+      {
+        id: 'Q1',
+        startISO: `${requestedYear}-01-01`,
+        endISO: `${requestedYear}-03-31`,
+      },
+      {
+        id: 'Q2',
+        startISO: `${requestedYear}-04-01`,
+        endISO: `${requestedYear}-06-30`,
+      },
+      {
+        id: 'Q3',
+        startISO: `${requestedYear}-07-01`,
+        endISO: `${requestedYear}-09-30`,
+      },
+      {
+        id: 'Q4',
+        startISO: `${requestedYear}-10-01`,
+        endISO: `${requestedYear}-12-31`,
+      }
+    )
+  }
+
+  // Add all months
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  for (let m = 0; m < 12; m++) {
+    const monthName = MONTHS[m]
+    const start = new Date(requestedYear, m, 1)
+    const end = new Date(requestedYear, m + 1, 0)
+    
+    tfDefs.push({
+      id: monthName,
+      startISO: start.toISOString().split('T')[0],
+      endISO: end.toISOString().split('T')[0],
+    })
+  }
+
+  // Add weeks if this is a monthly request
+  const weekTimeframes: TimeframeDef[] = []
+  if (requestedMonth && Object.keys(MONTH_INDEX).includes(requestedMonth)) {
+    const monthIndex = MONTH_INDEX[requestedMonth]
+    const monthStart = new Date(requestedYear, monthIndex, 1)
+    const monthEnd = new Date(requestedYear, monthIndex + 1, 0)
+
+    // Helper to get Monday of the week
+    const getMondayStart = (d: Date) => {
+      const date = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      const dayOfWeek = date.getDay()
+      const isoDay = dayOfWeek === 0 ? 7 : dayOfWeek
+      const daysToSubtract = isoDay - 1
+      const monday = new Date(date)
+      monday.setDate(date.getDate() - daysToSubtract)
+      monday.setHours(0, 0, 0, 0)
+      return monday
     }
-  ]
+
+    const toISODate = (d: Date) => {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+
+    const getFirstMondayOfMonth = (monthIndex: number, year: number) => {
+      const first = new Date(year, monthIndex, 1)
+      const day = first.getDay()
+      const diff = day === 0 ? 1 : (8 - day) % 7
+      const monday = new Date(first)
+      monday.setDate(first.getDate() + diff)
+      monday.setHours(0, 0, 0, 0)
+      return monday
+    }
+
+    const getWeekNumberForWeekStart = (weekStartDate: Date) => {
+      const monthIndex = weekStartDate.getMonth()
+      const year = weekStartDate.getFullYear()
+      let firstMonday = getFirstMondayOfMonth(monthIndex, year)
+      if (weekStartDate < firstMonday) {
+        const prevMonthDate = new Date(year, monthIndex - 1, 1)
+        firstMonday = getFirstMondayOfMonth(prevMonthDate.getMonth(), prevMonthDate.getFullYear())
+      }
+      const diffDays = Math.round(
+        (weekStartDate.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24)
+      )
+      const weekOffset = diffDays >= 0 ? Math.floor(diffDays / 7) : 0
+      return weekOffset + 1
+    }
+
+    const weekMetaMap: Record<string, any> = {}
+    
+    for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
+      const weekStart = getMondayStart(d)
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekStart.getDate() + 6)
+      
+      const weekStartDay = Date.UTC(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate())
+      const monthStartDay = Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), monthStart.getUTCDate())
+      const monthEndDay = Date.UTC(monthEnd.getUTCFullYear(), monthEnd.getUTCMonth(), monthEnd.getUTCDate())
+
+      if (weekStartDay >= monthStartDay && weekStartDay <= monthEndDay) {
+        const weekNumber = getWeekNumberForWeekStart(weekStart)
+        const weekKey = `week-${weekNumber}`
+
+        if (!weekMetaMap[weekKey]) {
+          weekMetaMap[weekKey] = {
+            weekStartISO: toISODate(weekStart),
+            weekEndISO: toISODate(weekEnd),
+            weekNumber,
+            month: requestedMonth,
+            year: requestedYear,
+          }
+          weekTimeframes.push({
+            id: weekKey,
+            startISO: toISODate(weekStart),
+            endISO: toISODate(weekEnd),
+          })
+        }
+      }
+    }
+
+    // Add week timeframes to tfDefs for computation
+    tfDefs.push(...weekTimeframes)
+  }
 
   // ------------ Aggregation structures ------------
   const funnels: Record<string, Record<string, FunnelStats>> = {}
-  const clientVisits: Record<
-    string,
-    { dateISO: string; price: number }[]
-  > = {}
-  const clientIdentity: Record<
-    string,
-    { email: string; phone: string; nameKey: string }
-  > = {}
+  const clientVisits: Record<string, { dateISO: string; price: number }[]> = {}
+  const clientIdentity: Record<string, { email: string; phone: string; nameKey: string }> = {}
   const clientSource: Record<string, string> = {}
 
-  // ------------ First pass: collect visits and revenue per timeframe ------------
+  // ------------ PASS 1: Collect visits, identity, and sources ------------
   for (const appt of appointments) {
     const apptDateISO = appt.datetime.split('T')[0]
     const price = parseFloat(appt.priceSold || '0')
@@ -387,40 +423,16 @@ export async function GET(request: Request) {
 
     clientIdentity[clientKey] = { email, phone, nameKey }
 
-    let source = clientSource[clientKey]
-    if (!source) {
+    // Only set source once per client (first occurrence)
+    if (!clientSource[clientKey]) {
       const extracted = extractSourceFromForms(appt.forms || [])
       if (extracted) {
         clientSource[clientKey] = extracted
-        source = extracted
-      }
-    }
-
-    if (!source) continue
-
-    for (const tf of tfDefs) {
-      if (requestedMonth && requestedMonth != tf.id) continue
-      if (apptDateISO >= tf.startISO && apptDateISO <= tf.endISO) {
-        if (!funnels[tf.id]) {
-          funnels[tf.id] = {}
-        }
-        if (!funnels[tf.id][source]) {
-          funnels[tf.id][source] = {
-            new_clients: 0,
-            returning_clients: 0,
-            new_clients_retained: 0,
-            total_revenue: 0,
-            total_visits: 0,
-          }
-        }
-        const stats = funnels[tf.id][source]
-        stats.total_revenue += price
-        stats.total_visits += 1
       }
     }
   }
 
-  // ------------ Second pass: compute new and returning per timeframe ------------
+  // ------------ PASS 2: Classify clients and compute stats per timeframe ------------
   for (const [clientKey, visits] of Object.entries(clientVisits)) {
     const source = clientSource[clientKey]
     if (!source) continue
@@ -432,8 +444,8 @@ export async function GET(request: Request) {
       identity?.nameKey || '',
     ].filter(Boolean) as string[]
 
+    // Look up first_appt from database
     let firstAppt: string | null = null
-
     for (const k of idKeys) {
       const fa = firstApptLookup[k]
       if (fa && (!firstAppt || fa < firstAppt)) {
@@ -441,21 +453,47 @@ export async function GET(request: Request) {
       }
     }
 
+    // Skip if not found in database
+    if (!firstAppt) continue
+
     const sortedVisits = [...visits].sort((a, b) =>
       a.dateISO.localeCompare(b.dateISO),
     )
 
-    if (!firstAppt && sortedVisits.length > 0) {
-      firstAppt = sortedVisits[0].dateISO
-    }
+    const secondAppt = sortedVisits.length > 1 ? sortedVisits[1].dateISO : null
 
-    const secondAppt =
-      sortedVisits.length > 1 ? sortedVisits[1].dateISO : null
-
-    if (!firstAppt) continue
-
+    // Prepare display name for client_names
+    const displayName = identity.nameKey.trim() || identity.email || identity.phone
+    
+    // Process each timeframe
     for (const tf of tfDefs) {
-      if (requestedMonth && requestedMonth != tf.id) continue
+      if (requestedMonth && requestedMonth != tf.id && !tf.id.startsWith('week-')) continue
+
+      const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
+      const isFirstApptBeforeTimeframe = firstAppt < tf.startISO
+
+      // Skip if neither new nor returning in this timeframe
+      if (!isFirstApptInTimeframe && !isFirstApptBeforeTimeframe) continue
+
+      // Skip returning clients for weekly breakdown
+      if (isFirstApptBeforeTimeframe && tf.id.startsWith('week-')) continue
+
+      // Get visits within this timeframe
+      const visitsInTimeframe = visits.filter(
+        v => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO
+      )
+
+      // Skip if no visits in this timeframe
+      if (visitsInTimeframe.length === 0) continue
+
+      // Log client info (except "Returning Client")
+      if (source !== 'Returning Client' && firstAppt.startsWith('2025-12') ) {
+        console.log(`${identity.nameKey.padEnd(30)} | First visit: ${firstAppt} | Source: ${source.padEnd(15)} | Timeframe: ${tf.id}`)
+      }
+
+      // (tf.id).startsWith('week')
+
+      // Initialize funnel structures
       if (!funnels[tf.id]) {
         funnels[tf.id] = {}
       }
@@ -471,43 +509,47 @@ export async function GET(request: Request) {
 
       const stats = funnels[tf.id][source]
 
-      const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
+      // Add revenue and visits for this timeframe
+      for (const visit of visitsInTimeframe) {
+        stats.total_revenue += visit.price
+        stats.total_visits += 1
+      }
 
+      // Classify as new or returning
       if (isFirstApptInTimeframe) {
         stats.new_clients += 1
-      }
 
-      // Check if new client returned within the same timeframe
-      let isNewClientRetained = false
-      if (secondAppt) {
-        if (
-          isFirstApptInTimeframe &&
-          secondAppt > firstAppt &&
-          secondAppt <= tf.endISO
-        ) {
-          isNewClientRetained = true
+        // Add client name and first visit to list
+        if (!stats.client_names) {
+          stats.client_names = []
         }
-      }
+        const clientExists = stats.client_names.some((c: any) => c.client_name === displayName)
+        if (displayName && !clientExists) {
+          stats.client_names.push({
+            client_name: displayName,
+            first_visit: firstAppt
+          })
+        }
 
-      if (isNewClientRetained) {
+        // Check if new client returned within the same timeframe
+        if (secondAppt && secondAppt > firstAppt && secondAppt <= tf.endISO) {
+          stats.new_clients_retained += 1
+        }
+      } else if (isFirstApptBeforeTimeframe) {
         stats.returning_clients += 1
-        stats.new_clients_retained += 1
       }
     }
   }
 
-  // ------------ Build upserts for marketing_funnels and yearly_marketing_funnels ------------
+  // ------------ Build upserts for monthly/yearly funnels ------------
   const upserts: any[] = []
 
-  if (requestedMonth){
+  if (requestedMonth && Object.keys(MONTH_INDEX).includes(requestedMonth)) {
+    // Monthly request
     const tfStats = funnels[requestedMonth]
-    if (tfStats){
-
+    if (tfStats) {
       for (const [source, stats] of Object.entries(tfStats)) {
-        // Skip "Returning Client" source
         if (source === 'Returning Client') continue
-        
-        // Skip if no new or returning clients
         if (stats.new_clients === 0) continue
 
         const retention =
@@ -530,20 +572,21 @@ export async function GET(request: Request) {
           avg_ticket,
           report_year: requestedYear,
           created_at: new Date().toISOString(),
+          client_names: stats.client_names || [],
         })
       }
     }
   } else {
+    // Yearly/Quarterly request
     for (const tf of tfDefs) {
+      if (tf.id.startsWith('week-')) continue // Skip weeks for yearly table
+      
       const tfStats = funnels[tf.id]
       if (!tfStats) continue
 
       for (const [source, stats] of Object.entries(tfStats)) {
-        // Skip "Returning Client" source
         if (source === 'Returning Client') continue
-        
-        // Skip if no new or returning clients
-        if (stats.new_clients === 0 && stats.returning_clients === 0) continue
+        if (stats.new_clients === 0) continue
 
         const retention =
           stats.new_clients > 0
@@ -570,51 +613,108 @@ export async function GET(request: Request) {
     }
   }
 
-  if (upserts.length === 0) {
-    return NextResponse.json({
-      success: true,
-      year: requestedYear,
-      message: 'No funnels to upsert (no attributed sources)',
-    })
+  // ------------ Build upserts for weekly funnels (if monthly request) ------------
+  const weeklyUpserts: any[] = []
+
+  if (requestedMonth && Object.keys(MONTH_INDEX).includes(requestedMonth)) {
+    for (const tf of weekTimeframes) {
+      const weekNumber = parseInt(tf.id.split('-')[1])
+      const tfStats = funnels[tf.id]
+      if (!tfStats) continue
+
+      for (const [source, stats] of Object.entries(tfStats)) {
+        if (source === 'Returning Client') continue
+        if (stats.new_clients === 0) continue
+
+        const retention =
+          stats.new_clients > 0
+            ? (stats.new_clients_retained / stats.new_clients) * 100
+            : 0
+        const avg_ticket =
+          stats.total_visits > 0
+            ? stats.total_revenue / stats.total_visits
+            : 0
+
+        weeklyUpserts.push({
+          user_id: user.id,
+          source,
+          week_number: weekNumber,
+          report_month: requestedMonth,
+          report_year: requestedYear,
+          new_clients: stats.new_clients,
+          returning_clients: stats.returning_clients,
+          new_clients_retained: stats.new_clients_retained,
+          retention,
+          avg_ticket,
+          updated_at: new Date().toISOString(),
+          client_names: stats.client_names || [],
+        })
+      }
+    }
   }
 
-
+  // ------------ Upsert to database ------------
   const isMonthlyRequest = requestedMonth && Object.keys(MONTH_INDEX).includes(requestedMonth)
   
   if (isMonthlyRequest) {
-    const { error: upsertErr } = await supabase
-      .from('marketing_funnels')
-      .upsert(upserts, {
-        onConflict: 'user_id, source, report_month, report_year',
-      })
+    // Upsert monthly funnels
+    if (upserts.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from('marketing_funnels')
+        .upsert(upserts, {
+          onConflict: 'user_id, source, report_month, report_year',
+        })
 
-    if (upsertErr) {
-      console.error('Error upserting marketing_funnels:', upsertErr)
-      return NextResponse.json(
-        { success: false, error: upsertErr.message },
-        { status: 500 },
-      )
+      if (upsertErr) {
+        console.error('Error upserting marketing_funnels:', upsertErr)
+        return NextResponse.json(
+          { success: false, error: upsertErr.message },
+          { status: 500 },
+        )
+      }
+    }
+
+    // Upsert weekly funnels
+    if (weeklyUpserts.length > 0) {
+      const { error: weeklyErr } = await supabase
+        .from('weekly_marketing_funnels_base')
+        .upsert(weeklyUpserts, {
+          onConflict: 'user_id,source,week_number,report_month,report_year',
+        })
+
+      if (weeklyErr) {
+        console.error('Error upserting weekly_marketing_funnels_base:', weeklyErr)
+        return NextResponse.json(
+          { success: false, error: weeklyErr.message },
+          { status: 500 },
+        )
+      }
     }
   } else {
-    const { error: upsertErr } = await supabase
-      .from('yearly_marketing_funnels')
-      .upsert(upserts, {
-        onConflict: 'user_id,source,report_year,timeframe',
-      })
+    // Upsert yearly funnels
+    if (upserts.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from('yearly_marketing_funnels')
+        .upsert(upserts, {
+          onConflict: 'user_id,source,report_year,timeframe',
+        })
 
-    if (upsertErr) {
-      console.error('Error upserting yearly_marketing_funnels:', upsertErr)
-      return NextResponse.json(
-        { success: false, error: upsertErr.message },
-        { status: 500 },
-      )
+      if (upsertErr) {
+        console.error('Error upserting yearly_marketing_funnels:', upsertErr)
+        return NextResponse.json(
+          { success: false, error: upsertErr.message },
+          { status: 500 },
+        )
+      }
     }
   }
 
   return NextResponse.json({
     success: true,
     year: requestedYear,
+    month: requestedMonth,
     totalAppointments: allAppointments.length,
-    totalRows: upserts.length,
+    totalMonthlyRows: upserts.length,
+    totalWeeklyRows: weeklyUpserts.length,
   })
 }

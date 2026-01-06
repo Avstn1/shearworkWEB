@@ -985,7 +985,7 @@ export async function GET(request: Request) {
       return rest
     })
 
-    console.log('Upserting appointments count:', cleanedAppointments.length)
+    // console.log('Upserting appointments count:', cleanedAppointments.length)
 
     const { data: upsertedAppts, error } = await supabase
       .from('acuity_appointments')
@@ -1113,68 +1113,68 @@ export async function GET(request: Request) {
       .upsert(clientUpserts, { onConflict: 'user_id,client_id' })
   }
 
-  // ============= Not getting used. Refer to /pull-marketing-funnels =============
-  // const funnelUpserts = Object.entries(monthlyFunnelsComputed).flatMap(([timeframeId, sources]) => {
-  //   return Object.entries(sources)
-  //     .filter(([source, stats]) => stats.new_clients > 0)
-  //     .map(([source, stats]) => ({
+  // // ============= Not getting used. Refer to /pull-marketing-funnels =============
+  // // const funnelUpserts = Object.entries(monthlyFunnelsComputed).flatMap(([timeframeId, sources]) => {
+  // //   return Object.entries(sources)
+  // //     .filter(([source, stats]) => stats.new_clients > 0)
+  // //     .map(([source, stats]) => ({
+  // //       user_id: user.id,
+  // //       source,
+  // //       new_clients: stats.new_clients,
+  // //       returning_clients: stats.returning_clients,
+  // //       new_clients_retained: stats.new_clients_retained,
+  // //       retention: stats.new_clients > 0 ? (stats.new_clients_retained / stats.new_clients) * 100 : 0,
+  // //       avg_ticket: stats.total_visits > 0 ? stats.total_revenue / stats.total_visits : 0,
+  // //       report_month: requestedMonth,
+  // //       report_year: requestedYear,
+  // //     }))
+  // // })
+
+  // // console.log("Funnel upserts:")
+  // // console.log(JSON.stringify(funnelUpserts))
+
+  // // if (funnelUpserts.length > 0) {
+  // //   await supabase
+  // //     .from('marketing_funnels')
+  // //     .upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
+      
+  // // }
+
+  // const weeklyFunnelUpserts: any[] = []
+
+  // for (const [timeframeId, sources] of Object.entries(weeklyFunnelsComputed)) {
+  //   const weekKey = timeframeId
+  //   const weekNumber = parseInt(weekKey.split('-')[1])
+  //   const meta = weekMetaMap[weekKey]
+
+  //   if (!meta) continue
+
+  //   for (const [source, stats] of Object.entries(sources)) {
+  //     if (stats.new_clients === 0) continue
+
+  //     weeklyFunnelUpserts.push({
   //       user_id: user.id,
   //       source,
+  //       week_number: weekNumber,
+  //       report_month: requestedMonth,
+  //       report_year: requestedYear,
   //       new_clients: stats.new_clients,
   //       returning_clients: stats.returning_clients,
   //       new_clients_retained: stats.new_clients_retained,
   //       retention: stats.new_clients > 0 ? (stats.new_clients_retained / stats.new_clients) * 100 : 0,
   //       avg_ticket: stats.total_visits > 0 ? stats.total_revenue / stats.total_visits : 0,
-  //       report_month: requestedMonth,
-  //       report_year: requestedYear,
-  //     }))
-  // })
-
-  // console.log("Funnel upserts:")
-  // console.log(JSON.stringify(funnelUpserts))
-
-  // if (funnelUpserts.length > 0) {
-  //   await supabase
-  //     .from('marketing_funnels')
-  //     .upsert(funnelUpserts, { onConflict: 'user_id,source,report_month,report_year' })
-      
+  //       updated_at: new Date().toISOString(),
+  //     })
+  //   }
   // }
 
-  const weeklyFunnelUpserts: any[] = []
+  // if (weeklyFunnelUpserts.length > 0) {
+  //   const { error: weeklyFunnelError } = await supabase
+  //     .from('weekly_marketing_funnels_base')
+  //     .upsert(weeklyFunnelUpserts, { onConflict: 'user_id,source,week_number,report_month,report_year' })
 
-  for (const [timeframeId, sources] of Object.entries(weeklyFunnelsComputed)) {
-    const weekKey = timeframeId
-    const weekNumber = parseInt(weekKey.split('-')[1])
-    const meta = weekMetaMap[weekKey]
-
-    if (!meta) continue
-
-    for (const [source, stats] of Object.entries(sources)) {
-      if (stats.new_clients === 0) continue
-
-      weeklyFunnelUpserts.push({
-        user_id: user.id,
-        source,
-        week_number: weekNumber,
-        report_month: requestedMonth,
-        report_year: requestedYear,
-        new_clients: stats.new_clients,
-        returning_clients: stats.returning_clients,
-        new_clients_retained: stats.new_clients_retained,
-        retention: stats.new_clients > 0 ? (stats.new_clients_retained / stats.new_clients) * 100 : 0,
-        avg_ticket: stats.total_visits > 0 ? stats.total_revenue / stats.total_visits : 0,
-        updated_at: new Date().toISOString(),
-      })
-    }
-  }
-
-  if (weeklyFunnelUpserts.length > 0) {
-    const { error: weeklyFunnelError } = await supabase
-      .from('weekly_marketing_funnels_base')
-      .upsert(weeklyFunnelUpserts, { onConflict: 'user_id,source,week_number,report_month,report_year' })
-
-    if (weeklyFunnelError) throw weeklyFunnelError
-  }
+  //   if (weeklyFunnelError) throw weeklyFunnelError
+  // }
 
   const monthlyUpserts = await Promise.all(
     Object.entries(monthlyAgg).map(async ([key, val]) => {
@@ -1497,13 +1497,13 @@ export async function GET(request: Request) {
     .from('monthly_appointments_summary')
     .upsert(weekdayUpserts, { onConflict: 'user_id,year,month,weekday' })
 
-  console.log('='.repeat(80))
-  console.log('NEW CLIENTS SUMMARY')
-  console.log('='.repeat(80))
-  console.log('Total new clients found:', newClients.length)
-  console.log('\nDetailed breakdown:')
-  console.log(JSON.stringify(newClients, null, 2))
-  console.log('='.repeat(80))
+  // console.log('='.repeat(80))
+  // console.log('NEW CLIENTS SUMMARY')
+  // console.log('='.repeat(80))
+  // console.log('Total new clients found:', newClients.length)
+  // console.log('\nDetailed breakdown:')
+  // console.log(JSON.stringify(newClients, null, 2))
+  // console.log('='.repeat(80))
 
   return NextResponse.json({
     endpoint: 'appointments',

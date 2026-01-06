@@ -16,9 +16,10 @@ export type TimeframeDef = {
 export type FunnelStats = {
   new_clients: number
   returning_clients: number
-  new_clients_retained: number  // NEW: new clients who came back within the same timeframe
+  new_clients_retained: number
   total_revenue: number
   total_visits: number
+  client_names?: { client_name: string; first_visit: string }[]
 }
 
 export interface AcuityAppointment {
@@ -220,9 +221,7 @@ export function computeFunnelsFromAppointments(
   const clientIdentity: Record<string, { email: string; phone: string; nameKey: string }> = {}
   const clientSource: Record<string, string> = {}
 
-  // ==================== PASS 1: Collect all visits and determine sources ====================
-  const appointmentsByClient: Record<string, Array<{ dateISO: string; price: number; source: string | null }>> = {}
-
+  // ==================== PASS 1: Collect visits, identity, and sources ====================
   for (const appt of appointments) {
     const apptDateISO = appt.datetime.split('T')[0]
     const price = parseFloat((appt.priceSold as any) || '0')
@@ -235,91 +234,75 @@ export function computeFunnelsFromAppointments(
 
     const clientKey = buildClientKey(appt as any, userId)
 
-    // Store all visits for this client WITH their individual sources
-    if (!appointmentsByClient[clientKey]) appointmentsByClient[clientKey] = []
-    const extracted = extractSourceFromForms(appt.forms)
-    appointmentsByClient[clientKey].push({ dateISO: apptDateISO, price, source: extracted })
-
-    // Store all visits for this client (for backward compatibility)
-    if (!clientVisits[clientKey]) clientVisits[clientKey] = []
+    if (!clientVisits[clientKey]) {
+      clientVisits[clientKey] = []
+    }
     clientVisits[clientKey].push({ dateISO: apptDateISO, price })
 
-    // Store identity info
     clientIdentity[clientKey] = { email, phone, nameKey }
-  }
 
-  // Now determine the source based on the EARLIEST appointment WITH a source
-  for (const [clientKey, appts] of Object.entries(appointmentsByClient)) {
-    // Sort by date
-    const sorted = appts.sort((a, b) => a.dateISO.localeCompare(b.dateISO))
-    
-    // Find first appointment with a source
-    const firstWithSource = sorted.find(a => a.source !== null)
-    
-    if (firstWithSource && firstWithSource.source) {
-      clientSource[clientKey] = firstWithSource.source  // ✅ Just store the string
-    } else {
-      clientSource[clientKey] = 'No Source'
+    // Only set source once per client (first occurrence)
+    if (!clientSource[clientKey]) {
+      const extracted = extractSourceFromForms(appt.forms)
+      if (extracted) {
+        clientSource[clientKey] = extracted
+      }
     }
   }
 
-  // ==================== PASS 2: Determine first appointment date for each client ====================
-  const clientFirstAppt: Record<string, string> = {}
-
+  // ==================== PASS 2: Classify clients and compute stats per timeframe ====================
   for (const [clientKey, visits] of Object.entries(clientVisits)) {
+    const source = clientSource[clientKey]
+    if (!source) continue
+
     const identity = clientIdentity[clientKey]
+    const idKeys = [
+      identity?.email || '',
+      identity?.phone || '',
+      identity?.nameKey || '',
+    ].filter(Boolean) as string[]
 
-    // Build lookup keys (must match acuity/pull logic EXACTLY)
-    const lookupKeys = [identity?.email, identity?.phone, identity?.nameKey].filter(Boolean)
-
-    // Find earliest first_appt from database lookup ONLY
+    // Look up first_appt from database
     let firstAppt: string | null = null
-    for (const key of lookupKeys) {
-      const dbFirstAppt = firstApptLookup[key]
-      if (dbFirstAppt && (!firstAppt || dbFirstAppt < firstAppt)) {
-        firstAppt = dbFirstAppt
+    for (const k of idKeys) {
+      const fa = firstApptLookup[k]
+      if (fa && (!firstAppt || fa < firstAppt)) {
+        firstAppt = fa
       }
     }
 
-    // Only use database value - if not found, client will be skipped in PASS 3
-    if (firstAppt) {
-      clientFirstAppt[clientKey] = firstAppt
-    }
-  }
+    // Skip if not found in database
+    if (!firstAppt) continue
 
-  // ==================== PASS 3: Process each timeframe and classify clients ====================
-  for (const tf of tfDefs) {
-    if (!funnels[tf.id]) funnels[tf.id] = {}
+    // Log client info
+    console.log(`${identity.nameKey.padEnd(30)} | First visit: ${firstAppt} | Source: ${source}`)
 
-    for (const [clientKey, visits] of Object.entries(clientVisits)) {
-      let source = clientSource[clientKey] || 'No Source' 
-      const firstAppt = clientFirstAppt[clientKey]
-      const identity = clientIdentity[clientKey]
+    const sortedVisits = [...visits].sort((a, b) =>
+      a.dateISO.localeCompare(b.dateISO),
+    )
 
-      if (!firstAppt) continue
+    const secondAppt = sortedVisits.length > 1 ? sortedVisits[1].dateISO : null
 
-      // Get all visits within this timeframe
-      const visitsInTimeframe = visits.filter((v) => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO)
-
-      if (visitsInTimeframe.length === 0) continue
-
-      // ✅ NEW LOGIC: Reclassify "Returning Client" as "No Source" if they're actually NEW
+    // Process each timeframe
+    for (const tf of tfDefs) {
       const isFirstApptInTimeframe = firstAppt >= tf.startISO && firstAppt <= tf.endISO
-
-      if (source === 'Returning Client' && isFirstApptInTimeframe) {
-        source = 'No Source'
-      }
-
-      // Classify new vs returning clients
       const isFirstApptBeforeTimeframe = firstAppt < tf.startISO
 
-      // ✅ ONLY CREATE SOURCE ENTRY IF CLIENT IS NEW OR RETURNING
-      const isNew = isFirstApptInTimeframe
-      const isReturning = isFirstApptBeforeTimeframe
-      
-      if (!isNew && !isReturning) continue  // Skip if neither new nor returning
+      // Skip if neither new nor returning in this timeframe
+      if (!isFirstApptInTimeframe && !isFirstApptBeforeTimeframe) continue
 
-      // Initialize stats for this source if needed
+      // Get visits within this timeframe
+      const visitsInTimeframe = visits.filter(
+        v => v.dateISO >= tf.startISO && v.dateISO <= tf.endISO
+      )
+
+      // Skip if no visits in this timeframe
+      if (visitsInTimeframe.length === 0) continue
+
+      // Initialize funnel structures
+      if (!funnels[tf.id]) {
+        funnels[tf.id] = {}
+      }
       if (!funnels[tf.id][source]) {
         funnels[tf.id][source] = {
           new_clients: 0,
@@ -332,27 +315,22 @@ export function computeFunnelsFromAppointments(
 
       const stats = funnels[tf.id][source]
 
+      // Add revenue and visits for this timeframe
+      for (const visit of visitsInTimeframe) {
+        stats.total_revenue += visit.price
+        stats.total_visits += 1
+      }
+
+      // Classify as new or returning
       if (isFirstApptInTimeframe) {
         stats.new_clients += 1
-        
-        // Add revenue and visits for new client
-        for (const visit of visitsInTimeframe) {
-          stats.total_revenue += visit.price
-          stats.total_visits += 1
-        }
 
-        if (visitsInTimeframe.length > 1) {
-          stats.returning_clients += 1
+        // Check if new client returned within the same timeframe
+        if (secondAppt && secondAppt > firstAppt && secondAppt <= tf.endISO) {
           stats.new_clients_retained += 1
         }
       } else if (isFirstApptBeforeTimeframe) {
         stats.returning_clients += 1
-        
-        // Add revenue and visits for returning client
-        for (const visit of visitsInTimeframe) {
-          stats.total_revenue += visit.price
-          stats.total_visits += 1
-        }
       }
     }
   }
