@@ -17,6 +17,23 @@ interface ClientCache {
   byName: Map<string, string>
 }
 
+/**
+ * Shape of a row to be upserted to acuity_clients table.
+ */
+export interface ClientUpsertRow {
+  user_id: string
+  client_id: string
+  email: string | null
+  phone_normalized: string | null
+  phone: string | null
+  first_name: string | null
+  last_name: string | null
+  first_appt: string
+  second_appt: string | null
+  last_appt: string
+  updated_at: string
+}
+
 // ======================== NORMALIZATION HELPERS ========================
 
 function normalizeEmail(email: string | null | undefined): string | null {
@@ -34,11 +51,51 @@ function normalizeString(value: string | null | undefined): string | null {
   return cleaned || null
 }
 
+/**
+ * Normalizes first + last name into a cache key.
+ * Returns null if either name part is less than 2 characters
+ * to prevent false matches on initials like "J S".
+ */
 function normalizeName(firstName: string | null, lastName: string | null): string | null {
   const first = firstName?.trim().toLowerCase() || ''
   const last = lastName?.trim().toLowerCase() || ''
+
+  // Require at least 2 characters each to use name matching
+  if (first.length < 2 || last.length < 2) return null
+
   const combined = `${first} ${last}`.trim()
   return combined || null
+}
+
+/**
+ * Checks if a name is "valid" (both parts >= 2 characters).
+ * Used to prevent overwriting good names with lazy entries like "Juan ."
+ */
+function isValidName(firstName: string | null, lastName: string | null): boolean {
+  return normalizeName(firstName, lastName) !== null
+}
+
+/**
+ * Updates date tracking (firstAppt, secondAppt, lastAppt) given a new appointment date.
+ * Returns updated dates object.
+ */
+function updateDateTracking(
+  currentFirst: string,
+  currentSecond: string | null,
+  currentLast: string,
+  newDate: string
+): { firstAppt: string; secondAppt: string | null; lastAppt: string } {
+  // Collect all unique dates
+  const allDates = new Set([currentFirst, currentSecond, currentLast, newDate].filter(Boolean) as string[])
+  
+  // Sort chronologically
+  const sortedDates = Array.from(allDates).sort()
+  
+  return {
+    firstAppt: sortedDates[0],
+    secondAppt: sortedDates.length > 1 ? sortedDates[1] : null,
+    lastAppt: sortedDates[sortedDates.length - 1],
+  }
 }
 
 // ======================== MAIN PROCESSOR ========================
@@ -59,14 +116,15 @@ export class ClientProcessor {
     private userId: string
   ) {}
 
+  // ======================== PUBLIC METHODS ========================
+
   /**
-   * Main entry point. Resolves all appointments to canonical client IDs.
+   * Resolves all appointments to canonical client IDs.
+   * Does NOT write to database.
    */
   async resolve(appointments: NormalizedAppointment[]): Promise<ClientResolutionResult> {
-    // Step 1: Load existing clients into cache
     await this.loadExistingClients()
 
-    // Step 2: Process each appointment
     const appointmentToClient = new Map<string, string>()
 
     for (const appt of appointments) {
@@ -84,10 +142,11 @@ export class ClientProcessor {
   }
 
   /**
-   * Upserts all resolved clients to the database.
+   * Returns the upsert payload without writing to database.
+   * Useful for testing, debugging, and dry runs.
    */
-  async upsert(): Promise<ClientProcessorResult> {
-    const upserts = Array.from(this.clients.values()).map((client) => ({
+  getUpsertPayload(): ClientUpsertRow[] {
+    return Array.from(this.clients.values()).map((client) => ({
       user_id: this.userId,
       client_id: client.clientId,
       email: client.email,
@@ -96,9 +155,18 @@ export class ClientProcessor {
       first_name: client.firstName?.toLowerCase() || null,
       last_name: client.lastName?.toLowerCase() || null,
       first_appt: client.firstAppt,
+      second_appt: client.secondAppt,
       last_appt: client.lastAppt,
       updated_at: new Date().toISOString(),
     }))
+  }
+
+  /**
+   * Upserts all resolved clients to the database.
+   * Call resolve() first.
+   */
+  async upsert(): Promise<ClientProcessorResult> {
+    const upserts = this.getUpsertPayload()
 
     if (upserts.length > 0) {
       const { error } = await this.supabase
@@ -159,23 +227,18 @@ export class ClientProcessor {
     const lastName = normalizeString(appt.lastName)
     const nameKey = normalizeName(firstName, lastName)
 
-    // Skip if no identifiers
     if (!email && !phone && !nameKey) {
       return null
     }
 
-    // Try cache lookup: phone → email → name
     let clientId = this.lookupInCache(phone, email, nameKey)
 
     if (clientId) {
-      // Existing client — update accumulator
       this.updateClient(clientId, appt)
     } else {
-      // New client — check database then create if needed
       clientId = await this.findOrCreateClient(appt)
     }
 
-    // Ensure all identifiers point to this client in cache
     this.updateCache(clientId, phone, email, nameKey)
 
     return clientId
@@ -198,6 +261,11 @@ export class ClientProcessor {
     return null
   }
 
+  /**
+   * Updates the cache with new identifiers.
+   * - Phone and email are always updated (stronger identifiers)
+   * - Name is only added if not already present (prevents mid-batch merge issues)
+   */
   private updateCache(
     clientId: string,
     phone: string | null,
@@ -206,7 +274,12 @@ export class ClientProcessor {
   ): void {
     if (phone) this.cache.byPhone.set(phone, clientId)
     if (email) this.cache.byEmail.set(email, clientId)
-    if (nameKey) this.cache.byName.set(nameKey, clientId)
+
+    // Only add to name cache if not already present
+    // This prevents mid-batch name changes from causing unexpected merges
+    if (nameKey && !this.cache.byName.has(nameKey)) {
+      this.cache.byName.set(nameKey, clientId)
+    }
   }
 
   private updateClient(clientId: string, appt: NormalizedAppointment): void {
@@ -225,6 +298,7 @@ export class ClientProcessor {
         firstName,
         lastName,
         firstAppt: appt.date,
+        secondAppt: null,
         lastAppt: appt.date,
         firstSource: appt.referralSource,
       }
@@ -232,23 +306,43 @@ export class ClientProcessor {
       return
     }
 
-    // Update date range first (needed for isNewest check)
-    if (appt.date < existing.firstAppt) existing.firstAppt = appt.date
-    if (appt.date > existing.lastAppt) existing.lastAppt = appt.date
+    // Update date tracking (firstAppt, secondAppt, lastAppt)
+    const updatedDates = updateDateTracking(
+      existing.firstAppt,
+      existing.secondAppt,
+      existing.lastAppt,
+      appt.date
+    )
+    existing.firstAppt = updatedDates.firstAppt
+    existing.secondAppt = updatedDates.secondAppt
+    existing.lastAppt = updatedDates.lastAppt
 
     // Only update contact info if this appointment is the newest
     const isNewest = appt.date >= existing.lastAppt
 
     if (isNewest) {
+      // Always update email and phone if newer
       if (email) existing.email = email
       if (phone) existing.phoneNormalized = phone
-      if (firstName) existing.firstName = firstName
-      if (lastName) existing.lastName = lastName
+
+      // Only update name if:
+      // 1. New name is valid, OR
+      // 2. Existing name is invalid (so any name is better)
+      // This prevents "Juan Lopez" from being overwritten by "Juan ."
+      const newNameValid = isValidName(firstName, lastName)
+      const existingNameValid = isValidName(existing.firstName, existing.lastName)
+
+      if (newNameValid || !existingNameValid) {
+        if (firstName) existing.firstName = firstName
+        if (lastName) existing.lastName = lastName
+      }
     }
 
-    // First source is always from the earliest appointment
-    if (appt.referralSource && !existing.firstSource) {
-      existing.firstSource = appt.referralSource
+    // firstSource should be from chronologically earliest appointment
+    if (appt.referralSource) {
+      if (!existing.firstSource || appt.date <= existing.firstAppt) {
+        existing.firstSource = appt.referralSource
+      }
     }
   }
 
@@ -260,8 +354,8 @@ export class ClientProcessor {
 
     const firstNorm = firstName?.toLowerCase() || null
     const lastNorm = lastName?.toLowerCase() || null
+    const nameKey = normalizeName(firstName, lastName)
 
-    // Try database lookups: phone → email → name
     let existingClientId: string | null = null
 
     if (phone) {
@@ -290,7 +384,8 @@ export class ClientProcessor {
       }
     }
 
-    if (!existingClientId && firstNorm && lastNorm) {
+    // Only match by name if both parts are at least 2 characters
+    if (!existingClientId && nameKey && firstNorm && lastNorm) {
       const { data } = await this.supabase
         .from('acuity_clients')
         .select('client_id')
@@ -305,12 +400,10 @@ export class ClientProcessor {
     }
 
     if (existingClientId) {
-      // Found in DB but wasn't in cache — add to clients map
       this.updateClient(existingClientId, appt)
       return existingClientId
     }
 
-    // Truly new client
     const newClientId = crypto.randomUUID()
     this.newClientIds.add(newClientId)
 
@@ -321,6 +414,7 @@ export class ClientProcessor {
       firstName,
       lastName,
       firstAppt: appt.date,
+      secondAppt: null,
       lastAppt: appt.date,
       firstSource: appt.referralSource,
     }
