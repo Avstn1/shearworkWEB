@@ -111,6 +111,7 @@ export interface NormalizedAppointment {
  *   firstName: 'John',
  *   lastName: 'Smith',
  *   firstAppt: '2024-06-15',
+ *   secondAppt: '2024-07-20',
  *   lastAppt: '2025-01-03',
  *   firstSource: 'Instagram'
  * }
@@ -121,8 +122,9 @@ export interface NormalizedClient {
   phoneNormalized: string | null        // e.g., '+14165551234' (E.164 format)
   firstName: string | null              // e.g., 'John' (trimmed)
   lastName: string | null               // e.g., 'Smith' (trimmed)
-  firstAppt: string                     // e.g., '2024-06-15' (YYYY-MM-DD)
-  lastAppt: string                      // e.g., '2025-01-03' (YYYY-MM-DD)
+  firstAppt: string                     // e.g., '2024-06-15' (YYYY-MM-DD, earliest appointment)
+  secondAppt: string | null             // e.g., '2024-07-20' (YYYY-MM-DD, second chronological appointment, used for marketing funnels)
+  lastAppt: string                      // e.g., '2025-01-03' (YYYY-MM-DD, most recent appointment)
   firstSource: string | null            // e.g., 'Instagram' (from first appointment)
 }
 
