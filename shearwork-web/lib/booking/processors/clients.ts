@@ -31,7 +31,16 @@ export interface ClientUpsertRow {
   first_appt: string
   second_appt: string | null
   last_appt: string
+  first_source: string | null
   updated_at: string
+}
+
+/**
+ * Options for ClientProcessor
+ */
+export interface ClientProcessorOptions {
+  /** Table prefix for testing (e.g., 'test_' uses 'test_acuity_clients') */
+  tablePrefix?: string
 }
 
 // ======================== NORMALIZATION HELPERS ========================
@@ -110,11 +119,16 @@ export class ClientProcessor {
   private clients: Map<string, NormalizedClient> = new Map()
   private newClientIds: Set<string> = new Set()
   private mergeCount: number = 0
+  private tableName: string
 
   constructor(
     private supabase: SupabaseClient,
-    private userId: string
-  ) {}
+    private userId: string,
+    options: ClientProcessorOptions = {}
+  ) {
+    const prefix = options.tablePrefix || ''
+    this.tableName = `${prefix}acuity_clients`
+  }
 
   // ======================== PUBLIC METHODS ========================
 
@@ -157,8 +171,16 @@ export class ClientProcessor {
       first_appt: client.firstAppt,
       second_appt: client.secondAppt,
       last_appt: client.lastAppt,
+      first_source: client.firstSource,
       updated_at: new Date().toISOString(),
     }))
+  }
+
+  /**
+   * Returns the table name being used (for debugging/testing).
+   */
+  getTableName(): string {
+    return this.tableName
   }
 
   /**
@@ -170,7 +192,7 @@ export class ClientProcessor {
 
     if (upserts.length > 0) {
       const { error } = await this.supabase
-        .from('acuity_clients')
+        .from(this.tableName)
         .upsert(upserts, { onConflict: 'user_id,client_id' })
 
       if (error) {
@@ -191,7 +213,7 @@ export class ClientProcessor {
 
   private async loadExistingClients(): Promise<void> {
     const { data: existingClients, error } = await this.supabase
-      .from('acuity_clients')
+      .from(this.tableName)
       .select('client_id, email, phone_normalized, first_name, last_name')
       .eq('user_id', this.userId)
 
@@ -360,7 +382,7 @@ export class ClientProcessor {
 
     if (phone) {
       const { data } = await this.supabase
-        .from('acuity_clients')
+        .from(this.tableName)
         .select('client_id')
         .eq('user_id', this.userId)
         .eq('phone_normalized', phone)
@@ -373,7 +395,7 @@ export class ClientProcessor {
 
     if (!existingClientId && email) {
       const { data } = await this.supabase
-        .from('acuity_clients')
+        .from(this.tableName)
         .select('client_id')
         .eq('user_id', this.userId)
         .eq('email', email)
@@ -387,7 +409,7 @@ export class ClientProcessor {
     // Only match by name if both parts are at least 2 characters
     if (!existingClientId && nameKey && firstNorm && lastNorm) {
       const { data } = await this.supabase
-        .from('acuity_clients')
+        .from(this.tableName)
         .select('client_id')
         .eq('user_id', this.userId)
         .eq('first_name', firstNorm)
