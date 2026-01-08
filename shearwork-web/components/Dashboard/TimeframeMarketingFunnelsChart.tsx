@@ -82,7 +82,7 @@ export default function TimeframeMarketingFunnelsChart({
 
         const { data: funnels, error } = await supabase
           .from('marketing_funnels')
-          .select('source, new_clients, returning_clients, new_clients_retained, retention, avg_ticket')
+          .select('source, new_clients, returning_clients, retention')
           .eq('user_id', barberId)
           .eq('report_year', year)
           .in('report_month', monthsToQuery)
@@ -107,14 +107,12 @@ export default function TimeframeMarketingFunnelsChart({
               retention: 0,
               avg_ticket: 0,
               timeframe,
-              count: 0,
+              count: 0, 
             }
           }
           acc[source].new_clients += row.new_clients || 0
           acc[source].returning_clients += row.returning_clients || 0
-          acc[source].new_clients_retained += row.new_clients_retained || 0
           acc[source].retention += row.retention || 0
-          acc[source].avg_ticket += row.avg_ticket || 0
           acc[source].count += 1
           return acc
         }, {} as Record<string, MarketingFunnel & { count: number }>)

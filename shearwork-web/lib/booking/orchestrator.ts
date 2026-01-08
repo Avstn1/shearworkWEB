@@ -12,6 +12,7 @@ import {
 import { getBookingAdapter } from './adapters'
 import { ClientProcessor } from './processors/clients'
 import { AppointmentProcessor } from './processors/appointments'
+import { runAggregations } from './processors/aggregations'
 
 // ======================== DATE RANGE HELPERS ========================
 
@@ -211,29 +212,12 @@ export async function pull(
 
     // ======================== STEP 5: RUN AGGREGATIONS ========================
 
-    if (!skipAggregations && !dryRun) {
-      // TODO: Aggregations will be implemented by teammate
-      // Example structure:
-      // try {
-      //   const dailyResult = await runDailyAggregation(supabase, userId, options, tablePrefix)
-      //   aggregations.push(dailyResult)
-      // } catch (err) {
-      //   errors.push(`Daily aggregation failed: ${err}`)
-      // }
-      //
-      // try {
-      //   const weeklyResult = await runWeeklyAggregation(supabase, userId, options, tablePrefix)
-      //   aggregations.push(weeklyResult)
-      // } catch (err) {
-      //   errors.push(`Weekly aggregation failed: ${err}`)
-      // }
-      //
-      // try {
-      //   const monthlyResult = await runMonthlyAggregation(supabase, userId, options, tablePrefix)
-      //   aggregations.push(monthlyResult)
-      // } catch (err) {
-      //   errors.push(`Monthly aggregation failed: ${err}`)
-      // }
+    if (!skipAggregations) {
+      const aggregationResults = await runAggregations(
+        { supabase, userId, options },
+        { tablePrefix, skipAggregations, dryRun }
+      )
+      aggregations.push(...aggregationResults)
     }
 
     // ======================== RETURN RESULT ========================

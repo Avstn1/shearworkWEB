@@ -90,6 +90,7 @@ export async function GET(request: Request) {
   // Run the pull
   try {
     const result = await pull(supabase, user.id, options, {
+      tablePrefix: dryRun ? 'test_' : '',
       dryRun,
       skipAggregations,
     })

@@ -19,7 +19,7 @@ export type FunnelStats = {
   new_clients_retained: number
   total_revenue: number
   total_visits: number
-  client_names?: { client_name: string; first_visit: string }[]
+  client_names?: { client_name: string; first_visit: string; second_visit: string | null }[]
 }
 
 export interface AcuityAppointment {

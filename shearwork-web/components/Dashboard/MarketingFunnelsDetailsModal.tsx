@@ -28,6 +28,7 @@ interface MarketingFunnelsDetailsModalProps {
 interface ClientDetail {
   client_name: string
   first_visit: string
+  second_visit: string | null
 }
 
 interface FunnelWithClients extends MarketingFunnel {
@@ -287,14 +288,28 @@ export default function MarketingFunnelsDetailsModal({
                                       {funnel.client_names.map((client, idx) => (
                                         <div 
                                           key={idx}
-                                          className="bg-gradient-to-r from-white/5 to-white/10 border border-white/10 p-2 rounded flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 hover:border-[#9AC8CD]/30 transition-colors"
+                                          className="bg-gradient-to-r from-white/5 to-white/10 border border-white/10 p-1.5 rounded hover:border-[#9AC8CD]/30 transition-colors flex items-center justify-between gap-2"
                                         >
-                                          <span className="text-[#E8EDC7] text-xs capitalize font-medium">
+                                          <span className="text-[#E8EDC7] text-[12px] capitalize font-medium truncate flex-shrink min-w-0">
                                             {client.client_name}
                                           </span>
-                                          <span className="text-[#9AC8CD] text-[10px] bg-[#9AC8CD]/10 px-1.5 py-0.5 rounded flex-shrink-0 w-fit">
-                                            {formatDate(client.first_visit)}
-                                          </span>
+                                          <div className="flex items-center gap-1.5 text-[9px] flex-shrink-0">
+                                            <div className="flex items-center gap-0.5">
+                                              <span className="text-[#E8EDC7]/50 font-semibold">1st:</span>
+                                              <span className="text-[#E8EDC7] bg-[#9AC8CD]/20 px-1 py-0.5 rounded whitespace-nowrap">
+                                                {new Date(client.first_visit + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-0.5">
+                                              <span className="text-[#E8EDC7]/50 font-semibold">2nd:</span>
+                                              <span className={`px-1 py-0.5 rounded whitespace-nowrap ${client.second_visit ? 'text-[#E8EDC7] bg-[#748E63]/20' : 'text-[#E8EDC7]/40 bg-white/5'}`}>
+                                                {client.second_visit 
+                                                  ? new Date(client.second_visit + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                  : 'N/A'
+                                                }
+                                              </span>
+                                            </div>
+                                          </div>
                                         </div>
                                       ))}
                                     </div>

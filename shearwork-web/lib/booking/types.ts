@@ -200,6 +200,7 @@ export interface AppointmentProcessorResult {
 export interface AggregationResult {
   table: string                         // e.g., 'daily_data', 'weekly_data', 'monthly_data'
   rowsUpserted: number                  // e.g., 31
+  error?: string
 }
 
 /**

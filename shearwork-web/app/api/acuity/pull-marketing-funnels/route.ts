@@ -461,6 +461,7 @@ export async function GET(request: Request) {
     )
 
     const secondAppt = sortedVisits.length > 1 ? sortedVisits[1].dateISO : null
+    const secondApptDate = secondAppt || null 
 
     // Prepare display name for client_names
     const displayName = identity.nameKey.trim() || identity.email || identity.phone
@@ -527,7 +528,8 @@ export async function GET(request: Request) {
         if (displayName && !clientExists) {
           stats.client_names.push({
             client_name: displayName,
-            first_visit: firstAppt
+            first_visit: firstAppt,
+            second_visit: secondApptDate
           })
         }
 
