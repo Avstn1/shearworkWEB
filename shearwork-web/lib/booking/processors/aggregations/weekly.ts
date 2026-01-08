@@ -8,13 +8,13 @@ export async function runWeeklyAggregation(
   context: PullContext,
   orchestratorOptions: OrchestratorOptions = {}
 ): Promise<AggregationResult[]> {
-  const results: AggregationResult[] = []
+  const [weeklyData, topClients, marketingFunnels] = await Promise.all([
+    aggregateWeeklyData(context, orchestratorOptions),
+    aggregateWeeklyTopClients(context, orchestratorOptions),
+    aggregateWeeklyMarketingFunnels(context, orchestratorOptions)
+  ])
   
-  results.push(await aggregateWeeklyData(context, orchestratorOptions))
-  results.push(await aggregateWeeklyTopClients(context, orchestratorOptions))
-  results.push(await aggregateWeeklyMarketingFunnels(context, orchestratorOptions))
-  
-  return results
+  return [weeklyData, topClients, marketingFunnels]
 }
 
 /**

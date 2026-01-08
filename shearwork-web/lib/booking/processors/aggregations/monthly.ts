@@ -8,14 +8,14 @@ export async function runMonthlyAggregation(
   context: PullContext,
   orchestratorOptions: OrchestratorOptions = {}
 ): Promise<AggregationResult[]> {
-  const results: AggregationResult[] = []
+  const [monthlyData, topClients, serviceBookings, marketingFunnels] = await Promise.all([
+    aggregateMonthlyData(context, orchestratorOptions),
+    aggregateReportTopClients(context, orchestratorOptions),
+    aggregateServiceBookings(context, orchestratorOptions),
+    aggregateMonthlyMarketingFunnels(context, orchestratorOptions)
+  ])
   
-  results.push(await aggregateMonthlyData(context, orchestratorOptions))
-  results.push(await aggregateReportTopClients(context, orchestratorOptions))
-  results.push(await aggregateServiceBookings(context, orchestratorOptions))
-  results.push(await aggregateMonthlyMarketingFunnels(context, orchestratorOptions))
-  
-  return results
+  return [monthlyData, topClients, serviceBookings, marketingFunnels]
 }
 
 /**
