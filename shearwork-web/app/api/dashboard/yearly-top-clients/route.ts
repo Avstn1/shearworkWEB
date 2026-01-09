@@ -33,8 +33,6 @@ export async function GET(request: NextRequest) {
     const quarterConfig = QUARTER_MONTHS[timeframe] || QUARTER_MONTHS['year']
     const { startMonth, endMonth } = quarterConfig
 
-    console.log('Yearly top clients RPC call:', { year, timeframe, startMonth, endMonth, limit })
-
     // Call RPC function
     const { data, error } = await supabase.rpc('get_yearly_top_clients', {
       p_user_id: user.id,
@@ -48,8 +46,6 @@ export async function GET(request: NextRequest) {
       console.error('RPC error:', error)
       return NextResponse.json({ error: 'Failed to fetch top clients' }, { status: 500 })
     }
-
-    console.log('Yearly top clients result:', data)
 
     // Format response
     const clients = (data || []).map((row: any) => ({

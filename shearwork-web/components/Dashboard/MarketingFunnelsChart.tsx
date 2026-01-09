@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/utils/supabaseClient'
 
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
+import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal';
 
 const COLORS = ['#E8EDC7', '#9AC8CD', '#B19470', '#748E63', '#F1EEDC']
 
@@ -42,6 +43,7 @@ export default function MarketingFunnelsChart({
   topN = 5,
 }: MarketingFunnelsChartProps) {
   const [data, setData] = useState<MarketingFunnel[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -140,291 +142,311 @@ export default function MarketingFunnelsChart({
   const filteredData = data.filter(d => d.new_clients > 0)
 
   return (
-    <UnderConstructionWrapper>
-      <div
-        className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
-        style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
-          minHeight: '400px',
-          maxHeight: '500px',
-        }}
-      >
-        <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
-          📣 Marketing Funnels
-        </h2>
-
-        <div className="flex-1 flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              layout="vertical"
-              data={filteredData}
-              margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
-              barCategoryGap={filteredData.length > 10 ? '30%' : '15%'}
+    <>
+      <UnderConstructionWrapper>
+        <div
+          className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
+          style={{
+            borderColor: 'var(--card-revenue-border)',
+            background: 'var(--card-revenue-bg)',
+            minHeight: '400px',
+            maxHeight: '500px',
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[#E8EDC7] text-xl font-semibold">
+              📣 Marketing Funnels
+            </h2>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-4 py-2 bg-[#748E63] hover:bg-[#9AC8CD] text-[#2a3612ff] hover:text-[#E8EDC7] rounded-lg transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
+              <span>Details</span>
+            </button>
+          </div>
 
-              <XAxis xAxisId="clients" type="number" stroke="#E8EDC7" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
-              <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#E8EDC7" hide />
-              
-              <YAxis
-                type="category"
-                dataKey="source"
-                stroke="#E8EDC7"
-                width={60}   
-                style={{ fontSize: labelFontSize }}
-              />
-
-              <Tooltip
-                labelFormatter={(value, payload) => {
-                  const row = payload?.[0]?.payload
-                  return row?.source || ''
-                }}
-                formatter={(value: any, name: string) =>
-                  name === 'Retention'
-                    ? [`${(Number(value)).toFixed(2)}%`, name]
-                    : [value, name]
-                }
-                contentStyle={{
-                  backgroundColor: '#2b2b2b',
-                  border: '1px solid #E8EDC7',
-                  borderRadius: '8px',
-                  color: '#E8EDC7',
-                }}
-                itemStyle={{ color: '#E8EDC7' }}
-                labelStyle={{ color: '#E8EDC7' }}
-              />
-
-              <Legend
-                formatter={(value) =>
-                  value === 'Retention' ? 'Retention (%)' : value
-                }
-                iconType="circle"
-                wrapperStyle={{ color: '#E8EDC7', paddingTop: '10px' }}
-              />
-
-              <YAxis
-                type="category"
-                axisLine={false}  
-                tick={false}      
-                width={0}      
-              />
-
-              <Bar
-                xAxisId="clients"
-                dataKey="new_clients"
-                name="New Clients"
-                fill={COLORS[1]}
-                radius={[8, 8, 0, 0]}
-                barSize={barSize}
+          <div className="flex-1 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={filteredData}
+                margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+                barCategoryGap={filteredData.length > 10 ? '30%' : '15%'}
               >
-                <LabelList
-                  dataKey="new_clients"
-                  content={(props: any) => {
-                    const { x, y, width, height, value, index } = props;
-                    const entry = filteredData[index];
-                    
-                    if (!entry) return null; // Safety check
-                    
-                    const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
-                    const percentage = (entry.new_clients / maxNewClients) * 100;
-                    
-                    if (percentage > 70) {
-                      // Position inside on the left, after the source text
-                      return (
-                        <text
-                          x={x + 5}
-                          y={y + height / 2}
-                          fill="#2a3612ff"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value}
-                        </text>
-                      );
-                    } else {
-                      // Position outside on the right
-                      return (
-                        <text
-                          x={x + width + 5}
-                          y={y + height / 2}
-                          fill="#E8EDC7"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value}
-                        </text>
-                      );
-                    }
-                  }}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
 
-                {/* Show source name - conditionally positioned based on % of max */}
-                <LabelList
+                <XAxis xAxisId="clients" type="number" stroke="#E8EDC7" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
+                <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#E8EDC7" hide />
+                
+                <YAxis
+                  type="category"
                   dataKey="source"
-                  content={(props: any) => {
-                    const { x, y, width, height, value, index } = props;
-                    const entry = filteredData[index];
-                    
-                    if (!entry) return null; // Safety check
-                    
-                    const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
-                    const percentage = (entry.new_clients / maxNewClients) * 100;
-                    
-                    if (percentage > 70) {
-                      // Position inside on the left
-                      return (
-                        <text
-                          x={x + 25}
-                          y={y + height / 2}
-                          fill="#2a3612ff"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value}
-                        </text>
-                      );
-                    } else {
-                      // Position outside on the right
-                      return (
-                        <text
-                          x={x + width + 25}
-                          y={y + height / 2}
-                          fill="#E8EDC7"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value}
-                        </text>
-                      );
-                    }
-                  }}
+                  stroke="#E8EDC7"
+                  width={60}   
+                  style={{ fontSize: labelFontSize }}
                 />
-              </Bar>
 
-              <Bar
-                xAxisId="clients"
-                dataKey="new_clients_retained"
-                name="New Clients Retained"
-                fill={COLORS[3]}
-                radius={[8, 8, 0, 0]}
-                barSize={barSize}
-              >
-                {/* Show new_clients_retained value - conditionally positioned based on % of max */}
-                <LabelList
+                <Tooltip
+                  labelFormatter={(value, payload) => {
+                    const row = payload?.[0]?.payload
+                    return row?.source || ''
+                  }}
+                  formatter={(value: any, name: string) =>
+                    name === 'Retention'
+                      ? [`${(Number(value)).toFixed(2)}%`, name]
+                      : [value, name]
+                  }
+                  contentStyle={{
+                    backgroundColor: '#2b2b2b',
+                    border: '1px solid #E8EDC7',
+                    borderRadius: '8px',
+                    color: '#E8EDC7',
+                  }}
+                  itemStyle={{ color: '#E8EDC7' }}
+                  labelStyle={{ color: '#E8EDC7' }}
+                />
+
+                <Legend
+                  formatter={(value) =>
+                    value === 'Retention' ? 'Retention (%)' : value
+                  }
+                  iconType="circle"
+                  wrapperStyle={{ color: '#E8EDC7', paddingTop: '10px' }}
+                />
+
+                <YAxis
+                  type="category"
+                  axisLine={false}  
+                  tick={false}      
+                  width={0}      
+                />
+
+                <Bar
+                  xAxisId="clients"
+                  dataKey="new_clients"
+                  name="New Clients"
+                  fill={COLORS[1]}
+                  radius={[8, 8, 0, 0]}
+                  barSize={barSize}
+                >
+                  <LabelList
+                    dataKey="new_clients"
+                    content={(props: any) => {
+                      const { x, y, width, height, value, index } = props;
+                      const entry = filteredData[index];
+                      
+                      if (!entry) return null; // Safety check
+                      
+                      const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
+                      const percentage = (entry.new_clients / maxNewClients) * 100;
+                      
+                      if (percentage > 70) {
+                        // Position inside on the left, after the source text
+                        return (
+                          <text
+                            x={x + 5}
+                            y={y + height / 2}
+                            fill="#2a3612ff"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value}
+                          </text>
+                        );
+                      } else {
+                        // Position outside on the right
+                        return (
+                          <text
+                            x={x + width + 5}
+                            y={y + height / 2}
+                            fill="#E8EDC7"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value}
+                          </text>
+                        );
+                      }
+                    }}
+                  />
+
+                  {/* Show source name - conditionally positioned based on % of max */}
+                  <LabelList
+                    dataKey="source"
+                    content={(props: any) => {
+                      const { x, y, width, height, value, index } = props;
+                      const entry = filteredData[index];
+                      
+                      if (!entry) return null; // Safety check
+                      
+                      const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
+                      const percentage = (entry.new_clients / maxNewClients) * 100;
+                      
+                      if (percentage > 70) {
+                        // Position inside on the left
+                        return (
+                          <text
+                            x={x + 25}
+                            y={y + height / 2}
+                            fill="#2a3612ff"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value}
+                          </text>
+                        );
+                      } else {
+                        // Position outside on the right
+                        return (
+                          <text
+                            x={x + width + 25}
+                            y={y + height / 2}
+                            fill="#E8EDC7"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value}
+                          </text>
+                        );
+                      }
+                    }}
+                  />
+                </Bar>
+
+                <Bar
+                  xAxisId="clients"
                   dataKey="new_clients_retained"
-                  content={(props: any) => {
-                    const { x, y, width, height, value, index } = props;
-                    const entry = filteredData[index];
-                    
-                    if (!entry) return null; // Safety check
-                    
-                    // Find max of both new and new_clients_retained for proper scaling
-                    const maxClients = Math.max(
-                      ...filteredData.map(d => Math.max(d.new_clients, d.new_clients_retained))
-                    );
-                    const percentage = (entry.new_clients_retained / maxClients) * 100;
-                    
-                    if (percentage > 70) {
-                      // Position inside on the left
-                      return (
-                        <text
-                          x={x + 5}
-                          y={y + height / 2}
-                          fill="#2a3612ff"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value}
-                        </text>
+                  name="New Clients Retained"
+                  fill={COLORS[3]}
+                  radius={[8, 8, 0, 0]}
+                  barSize={barSize}
+                >
+                  {/* Show new_clients_retained value - conditionally positioned based on % of max */}
+                  <LabelList
+                    dataKey="new_clients_retained"
+                    content={(props: any) => {
+                      const { x, y, width, height, value, index } = props;
+                      const entry = filteredData[index];
+                      
+                      if (!entry) return null; // Safety check
+                      
+                      // Find max of both new and new_clients_retained for proper scaling
+                      const maxClients = Math.max(
+                        ...filteredData.map(d => Math.max(d.new_clients, d.new_clients_retained))
                       );
-                    } else {
-                      // Position outside on the right
-                      return (
-                        <text
-                          x={x + width + 5}
-                          y={y + height / 2}
-                          fill="#E8EDC7"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value}
-                        </text>
-                      );
-                    }
-                  }}
-                />
-              </Bar>
+                      const percentage = (entry.new_clients_retained / maxClients) * 100;
+                      
+                      if (percentage > 70) {
+                        // Position inside on the left
+                        return (
+                          <text
+                            x={x + 5}
+                            y={y + height / 2}
+                            fill="#2a3612ff"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value}
+                          </text>
+                        );
+                      } else {
+                        // Position outside on the right
+                        return (
+                          <text
+                            x={x + width + 5}
+                            y={y + height / 2}
+                            fill="#E8EDC7"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value}
+                          </text>
+                        );
+                      }
+                    }}
+                  />
+                </Bar>
 
-              <Bar
-                xAxisId="retention"
-                dataKey="retention"
-                name="Retention"
-                fill={COLORS[2]}
-                radius={[8, 8, 0, 0]}
-                barSize={barSize}
-              >
-                {/* Show retention % value - conditionally positioned based on percentage */}
-                <LabelList
+                <Bar
+                  xAxisId="retention"
                   dataKey="retention"
-                  content={(props: any) => {
-                    const { x, y, width, height, value, index } = props;
-                    const entry = filteredData[index];
-                    
-                    if (!entry) return null; // Safety check
-                    
-                    const percentage = entry.retention; // retention is already a percentage
-                    
-                    if (percentage > 70) {
-                      // Position inside on the left
-                      return (
-                        <text
-                          x={x + 5}
-                          y={y + height / 2}
-                          fill="#2a3612ff"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
-                        </text>
-                      );
-                    } else {
-                      // Position outside on the right
-                      return (
-                        <text
-                          x={x + width + 5}
-                          y={y + height / 2}
-                          fill="#E8EDC7"
-                          fontSize={labelFontSize}
-                          fontWeight="bold"
-                          textAnchor="start"
-                          dominantBaseline="middle"
-                        >
-                          {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
-                        </text>
-                      );
-                    }
-                  }}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                  name="Retention"
+                  fill={COLORS[2]}
+                  radius={[8, 8, 0, 0]}
+                  barSize={barSize}
+                >
+                  {/* Show retention % value - conditionally positioned based on percentage */}
+                  <LabelList
+                    dataKey="retention"
+                    content={(props: any) => {
+                      const { x, y, width, height, value, index } = props;
+                      const entry = filteredData[index];
+                      
+                      if (!entry) return null; // Safety check
+                      
+                      const percentage = entry.retention; // retention is already a percentage
+                      
+                      if (percentage > 70) {
+                        // Position inside on the left
+                        return (
+                          <text
+                            x={x + 5}
+                            y={y + height / 2}
+                            fill="#2a3612ff"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
+                          </text>
+                        );
+                      } else {
+                        // Position outside on the right
+                        return (
+                          <text
+                            x={x + width + 5}
+                            y={y + height / 2}
+                            fill="#E8EDC7"
+                            fontSize={labelFontSize}
+                            fontWeight="bold"
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                          >
+                            {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
+                          </text>
+                        );
+                      }
+                    }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
-    </UnderConstructionWrapper>
+
+      </UnderConstructionWrapper>
+
+      <MarketingFunnelsDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        barberId={barberId}
+        months={[month]}
+        year={year}
+        data={data}
+      />
+    </>
   )
 }

@@ -60,7 +60,7 @@ export default function ProfitLossTrendChart({
 
       const formatted = daily
         .filter((d) => {
-          const dateObj = new Date(d.date + 'T00:00:00Z')
+          const dateObj = new Date(d.date + 'T00:00:00')
           // Only include dates up to today
           return dateObj <= today
         })
@@ -68,7 +68,7 @@ export default function ProfitLossTrendChart({
           const revenue = Number(d.final_revenue || 0)
           const expenses = Number(d.expenses || 0)
           const profit = revenue - expenses
-          const dateLabel = new Date(d.date + 'T00:00:00Z').getUTCDate().toString()
+          const dateLabel = new Date(d.date + 'T00:00:00').getUTCDate().toString()
 
           return {
             date: dateLabel,

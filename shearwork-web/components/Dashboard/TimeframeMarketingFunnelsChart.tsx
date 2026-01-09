@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { supabase } from '@/utils/supabaseClient'
 
+import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal';
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 
 
@@ -23,9 +24,10 @@ export interface MarketingFunnel {
   source: string
   new_clients: number
   returning_clients: number
+  new_clients_retained: number
   retention: number
+  avg_ticket: number
   timeframe: string
-  [key: string]: string | number | undefined
 }
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
@@ -65,7 +67,8 @@ export default function TimeframeMarketingFunnelsChart({
 }: TimeframeMarketingFunnelsChartProps) {
   const [data, setData] = useState<MarketingFunnel[]>([])
   const [loading, setLoading] = useState<boolean>(true)
-
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  
   useEffect(() => {
     if (!barberId || !year) return
 
@@ -100,9 +103,11 @@ export default function TimeframeMarketingFunnelsChart({
               source,
               new_clients: 0,
               returning_clients: 0,
+              new_clients_retained: 0,
               retention: 0,
+              avg_ticket: 0,
               timeframe,
-              count: 0, // for averaging retention
+              count: 0, 
             }
           }
           acc[source].new_clients += row.new_clients || 0
@@ -136,6 +141,10 @@ export default function TimeframeMarketingFunnelsChart({
 
     fetchData()
   }, [barberId, year, timeframe])
+
+  const monthsForModal = timeframe === 'year' 
+    ? ALL_MONTHS 
+    : MONTHS_BY_QUARTER[timeframe as Exclude<Timeframe, 'year'>]
 
   if (loading) {
     return (
@@ -176,9 +185,17 @@ export default function TimeframeMarketingFunnelsChart({
           overflow: 'visible',
         }}
       >
-        <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
           📣 {timeframeLabel(timeframe, year)}
         </h2>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-[#748E63] hover:bg-[#9AC8CD] text-[#2a3612ff] hover:text-[#E8EDC7] rounded-lg transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+          >
+            <span>Details</span>
+          </button>
+        </div>
 
         <div className="flex-1 flex items-center justify-center overflow-visible">
           <ResponsiveContainer width="100%" height="100%">
@@ -288,6 +305,15 @@ export default function TimeframeMarketingFunnelsChart({
           </ResponsiveContainer>
         </div>
       </div>
+
+      <MarketingFunnelsDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        barberId={barberId}
+        months={monthsForModal} 
+        year={year}
+        data={data}
+      />
     </UnderConstructionWrapper>
   )
 }
