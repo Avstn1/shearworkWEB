@@ -24,8 +24,9 @@ Deno.serve(async (req) => {
     const qstashClient = new Client({ token: QSTASH_TOKEN })
 
     // Check for optional user_id parameter
-    const url = new URL(req.url)
-    const targetUserId = url.searchParams.get('user_id')
+    const body = await req.json().catch(() => ({}))
+    const targetUserId = body.user_id
+    const targetYear = body.year || new Date().getFullYear()
 
     // Get users with Acuity tokens AND a calendar set (filtered by user_id if provided)
     let tokenQuery = supabase
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     console.log(`Users to sync: ${validTokens.length}${targetUserId ? ` (filtered by user_id: ${targetUserId})` : ''} (${tokens?.length || 0} total with tokens, ${(tokens?.length || 0) - validTokens.length} without calendar)`)
 
     // Get current year and define year range to sync
-    const currentYear = new Date().getFullYear()
+    const currentYear = targetYear
     const startYear = currentYear
     const yearsToSync: number[] = []
     

@@ -33,6 +33,7 @@ export interface ClientUpsertRow {
   last_appt: string
   first_source: string | null
   updated_at: string
+  total_appointments: number
 }
 
 /**
@@ -107,6 +108,8 @@ function updateDateTracking(
   }
 }
 
+
+
 // ======================== MAIN PROCESSOR ========================
 
 export class ClientProcessor {
@@ -148,10 +151,60 @@ export class ClientProcessor {
       }
     }
 
+    // Count appointments per client from database
+    await this.updateAppointmentCounts()
+
     return {
       appointmentToClient,
       clients: this.clients,
       newClientIds: this.newClientIds,
+    }
+  }
+
+  /**
+ * Queries acuity_appointments to get total appointment counts per client.
+ * Updates the clients map with accurate counts.
+ */
+  private async updateAppointmentCounts(): Promise<void> {
+    const clientIds = Array.from(this.clients.keys())
+    
+    if (clientIds.length === 0) return
+
+    // Derive appointments table name from clients table name
+    const prefix = this.tableName.replace('acuity_clients', '')
+    const appointmentsTableName = `${prefix}acuity_appointments`
+    
+    const counts = new Map<string, number>()
+    
+    // Batch the query - process 100 client IDs at a time
+    const batchSize = 100
+    for (let i = 0; i < clientIds.length; i += batchSize) {
+      const batch = clientIds.slice(i, i + batchSize)
+      
+      const { data, error } = await this.supabase
+        .from(appointmentsTableName)
+        .select('client_id')
+        .eq('user_id', this.userId)
+        .in('client_id', batch)
+
+      if (error) {
+        console.error('Error fetching appointment counts:', error)
+        throw error
+      }
+
+      // Count appointments per client in this batch
+      if (data) {
+        for (const row of data) {
+          const count = counts.get(row.client_id) || 0
+          counts.set(row.client_id, count + 1)
+        }
+      }
+    }
+
+    // Update each client with their count
+    for (const [clientId, client] of this.clients) {
+      const count = counts.get(clientId) || 0
+      ;(client as any).totalAppointments = count
     }
   }
 
@@ -172,6 +225,7 @@ export class ClientProcessor {
       second_appt: client.secondAppt,
       last_appt: client.lastAppt,
       first_source: client.firstSource,
+      total_appointments: (client as any).totalAppointments || 0,
       updated_at: new Date().toISOString(),
     }))
   }
@@ -211,10 +265,18 @@ export class ClientProcessor {
 
   // ======================== PRIVATE METHODS ========================
 
+  /**
+   * Loads existing clients from the database into both:
+   * 1. The cache (for identity resolution lookups)
+   * 2. The clients map (to preserve historical dates like first_appt, second_appt, last_appt)
+   * 
+   * This ensures that when we update a client, we merge with their existing data
+   * rather than overwriting it with only the current batch's appointments.
+   */
   private async loadExistingClients(): Promise<void> {
     const { data: existingClients, error } = await this.supabase
       .from(this.tableName)
-      .select('client_id, email, phone_normalized, first_name, last_name')
+      .select('client_id, email, phone_normalized, first_name, last_name, first_appt, second_appt, last_appt, first_source')
       .eq('user_id', this.userId)
 
     if (error) {
@@ -227,6 +289,7 @@ export class ClientProcessor {
     for (const client of existingClients) {
       const clientId = client.client_id
 
+      // Populate cache for identity resolution
       if (client.phone_normalized) {
         this.cache.byPhone.set(client.phone_normalized, clientId)
       }
@@ -239,6 +302,20 @@ export class ClientProcessor {
       if (nameKey) {
         this.cache.byName.set(nameKey, clientId)
       }
+
+      // Pre-populate clients map with existing data from database
+      // This preserves historical dates (first_appt, second_appt, last_appt) when updating
+      this.clients.set(clientId, {
+        clientId,
+        email: client.email,
+        phoneNormalized: client.phone_normalized,
+        firstName: client.first_name,
+        lastName: client.last_name,
+        firstAppt: client.first_appt,
+        secondAppt: client.second_appt,
+        lastAppt: client.last_appt,
+        firstSource: client.first_source,
+      })
     }
   }
 
@@ -304,6 +381,15 @@ export class ClientProcessor {
     }
   }
 
+  /**
+   * Updates an existing client with data from a new appointment.
+   * 
+   * Key behaviors:
+   * - Date tracking: Merges new appointment date with existing first/second/last dates
+   * - Contact info: Only updates if this appointment is the newest
+   * - Name: Only overwrites if new name is valid or existing name is invalid
+   * - First source: Keeps the source from the chronologically earliest appointment
+   */
   private updateClient(clientId: string, appt: NormalizedAppointment): void {
     const email = normalizeEmail(appt.email)
     const phone = normalizePhone(appt.phoneNormalized)
@@ -313,6 +399,7 @@ export class ClientProcessor {
     const existing = this.clients.get(clientId)
 
     if (!existing) {
+      // This should only happen for truly NEW clients (not found in DB)
       const newClient: NormalizedClient = {
         clientId,
         email,
@@ -329,6 +416,7 @@ export class ClientProcessor {
     }
 
     // Update date tracking (firstAppt, secondAppt, lastAppt)
+    // This correctly merges the new appointment date with historical dates from DB
     const updatedDates = updateDateTracking(
       existing.firstAppt,
       existing.secondAppt,
@@ -380,6 +468,7 @@ export class ClientProcessor {
 
     let existingClientId: string | null = null
 
+    // Try to find existing client by phone (strongest identifier)
     if (phone) {
       const { data } = await this.supabase
         .from(this.tableName)
@@ -393,6 +482,7 @@ export class ClientProcessor {
       }
     }
 
+    // Try to find by email if not found by phone
     if (!existingClientId && email) {
       const { data } = await this.supabase
         .from(this.tableName)
@@ -421,11 +511,38 @@ export class ClientProcessor {
       }
     }
 
+    // If we found an existing client, update them and return
     if (existingClientId) {
+      // Load full client data if not already in our map
+      // (This handles edge case where client exists in DB but wasn't in initial load)
+      if (!this.clients.has(existingClientId)) {
+        const { data: clientData } = await this.supabase
+          .from(this.tableName)
+          .select('client_id, email, phone_normalized, first_name, last_name, first_appt, second_appt, last_appt, first_source')
+          .eq('user_id', this.userId)
+          .eq('client_id', existingClientId)
+          .single()
+
+        if (clientData) {
+          this.clients.set(existingClientId, {
+            clientId: clientData.client_id,
+            email: clientData.email,
+            phoneNormalized: clientData.phone_normalized,
+            firstName: clientData.first_name,
+            lastName: clientData.last_name,
+            firstAppt: clientData.first_appt,
+            secondAppt: clientData.second_appt,
+            lastAppt: clientData.last_appt,
+            firstSource: clientData.first_source,
+          })
+        }
+      }
+
       this.updateClient(existingClientId, appt)
       return existingClientId
     }
 
+    // Create new client
     const newClientId = crypto.randomUUID()
     this.newClientIds.add(newClientId)
 
