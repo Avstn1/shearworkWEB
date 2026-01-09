@@ -56,6 +56,64 @@ export default function MarketingFunnelsDetailsModal({
     return monthMap[monthName] || 1
   }
 
+  // Determine timeline type and message
+  const getTimelineInfo = () => {
+    if (months.length === 1) {
+      return {
+        type: 'month',
+        message: `No other visits for the month of ${months[0]}`
+      }
+    }
+    
+    // Check if it's a quarter
+    const monthNumbers = months.map(m => getMonthNumber(m)).sort((a, b) => a - b)
+    const quarters = [
+      [1, 2, 3], // Q1
+      [4, 5, 6], // Q2
+      [7, 8, 9], // Q3
+      [10, 11, 12] // Q4
+    ]
+    
+    for (let i = 0; i < quarters.length; i++) {
+      if (JSON.stringify(monthNumbers) === JSON.stringify(quarters[i])) {
+        return {
+          type: 'quarter',
+          message: `No other visits for Q${i + 1} of ${year}`
+        }
+      }
+    }
+    
+    // Check if it's a full year
+    if (months.length === 12) {
+      return {
+        type: 'year',
+        message: `No other visits for ${year}`
+      }
+    }
+    
+    // Custom range
+    return {
+      type: 'custom',
+      message: `No other visits for selected period`
+    }
+  }
+
+  const timelineInfo = getTimelineInfo()
+
+  // Check if a date falls within the timeline
+  const isDateInTimeline = (dateString: string): boolean => {
+    if (!dateString) return false
+    
+    const date = new Date(dateString + 'T00:00:00')
+    const dateMonth = date.getMonth() + 1
+    const dateYear = date.getFullYear()
+    
+    if (dateYear !== year) return false
+    
+    const monthNumbers = months.map(m => getMonthNumber(m))
+    return monthNumbers.includes(dateMonth)
+  }
+
   useEffect(() => {
     if (!isOpen) return
 
@@ -86,34 +144,6 @@ export default function MarketingFunnelsDetailsModal({
         return monthNumbers.includes(apptMonth)
       }) || []
 
-      // Fetch marketing funnels data for retention metrics
-      const { data: funnels } = await supabase
-        .from('marketing_funnels')
-        .select('source, new_clients, new_clients_retained, retention, avg_ticket')
-        .eq('user_id', barberId)
-        .in('report_month', months)
-        .eq('report_year', year)
-
-      // Create a map of retention data by source
-      const retentionMap = new Map<string, { retention: number, avg_ticket: number, new_clients_retained: number }>()
-      
-      funnels?.forEach(funnel => {
-        const existing = retentionMap.get(funnel.source)
-        if (existing) {
-          // Average the retention and avg_ticket across months
-          const totalClients = existing.new_clients_retained + (funnel.new_clients_retained || 0)
-          existing.new_clients_retained = totalClients
-          existing.avg_ticket = ((existing.avg_ticket + funnel.avg_ticket) / 2)
-          existing.retention = ((existing.retention + funnel.retention) / 2)
-        } else {
-          retentionMap.set(funnel.source, {
-            retention: funnel.retention || 0,
-            avg_ticket: funnel.avg_ticket || 0,
-            new_clients_retained: funnel.new_clients_retained || 0
-          })
-        }
-      })
-
       // Group clients by source
       const sourceMap = new Map<string, ClientDetail[]>()
 
@@ -130,14 +160,37 @@ export default function MarketingFunnelsDetailsModal({
         })
       })
 
-      // Build final data
+      // Build final data with timeline-based retention
       const funnelData: FunnelWithClients[] = []
 
       for (const [source, clientList] of sourceMap.entries()) {
-        const retentionData = retentionMap.get(source)
+        // Calculate retention based on timeline
+        const clientsWithSecondVisitInTimeline = clientList.filter(client => 
+          client.second_visit && isDateInTimeline(client.second_visit)
+        ).length
         
-        // Sort client names by first visit date
+        const newClients = clientList.length
+        const retention = newClients > 0 ? (clientsWithSecondVisitInTimeline / newClients) * 100 : 0
+        
+        // Calculate average ticket from clients who returned in timeline
+        const clientsWhoReturned = clientList.filter(client => 
+          client.second_visit && isDateInTimeline(client.second_visit)
+        )
+        
+        // For avg_ticket, we'd need actual ticket data - keeping it at 0 for now
+        // or you can fetch from appointments table if needed
+        
+        // Sort client names: clients with second_visit first, then by first_visit date
         const sortedClientNames = clientList.sort((a, b) => {
+          // Prioritize clients with second_visit in timeline
+          const aHasSecondInTimeline = a.second_visit && isDateInTimeline(a.second_visit) ? 1 : 0
+          const bHasSecondInTimeline = b.second_visit && isDateInTimeline(b.second_visit) ? 1 : 0
+          
+          if (bHasSecondInTimeline !== aHasSecondInTimeline) {
+            return bHasSecondInTimeline - aHasSecondInTimeline // Clients with second_visit in timeline come first
+          }
+          
+          // If both have or don't have second_visit in timeline, sort by first_visit
           const dateA = new Date(a.first_visit + 'T00:00:00')
           const dateB = new Date(b.first_visit + 'T00:00:00')
           return dateA.getTime() - dateB.getTime()
@@ -145,11 +198,11 @@ export default function MarketingFunnelsDetailsModal({
 
         funnelData.push({
           source,
-          new_clients: clientList.length,
+          new_clients: newClients,
           returning_clients: 0,
-          new_clients_retained: retentionData?.new_clients_retained || 0,
-          retention: retentionData?.retention || 0,
-          avg_ticket: retentionData?.avg_ticket || 0,
+          new_clients_retained: clientsWithSecondVisitInTimeline,
+          retention: retention,
+          avg_ticket: 0, // Would need to calculate from actual appointment data
           client_names: sortedClientNames
         })
       }
@@ -310,35 +363,39 @@ export default function MarketingFunnelsDetailsModal({
                                   </h4>
                                   {funnel.client_names && funnel.client_names.length > 0 ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
-                                      {funnel.client_names.map((client, idx) => (
-                                        <div 
-                                          key={idx}
-                                          className="bg-gradient-to-r from-white/5 to-white/10 border border-white/10 p-1.5 rounded hover:border-[#9AC8CD]/30 transition-colors"
-                                        >
-                                          <div className="flex flex-col gap-1">
-                                            <span className="text-[#E8EDC7] text-[12px] capitalize font-medium truncate">
-                                              {client.client_name}
-                                            </span>
-                                            <div className="flex items-center gap-1.5 text-[9px]">
-                                              <div className="flex items-center gap-0.5">
-                                                <span className="text-[#E8EDC7]/50 font-semibold">1st:</span>
-                                                <span className="text-[#E8EDC7] bg-[#9AC8CD]/20 px-1 py-0.5 rounded whitespace-nowrap">
-                                                  {new Date(client.first_visit + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                </span>
-                                              </div>
-                                              <div className="flex items-center gap-0.5">
-                                                <span className="text-[#E8EDC7]/50 font-semibold">2nd:</span>
-                                                <span className={`px-1 py-0.5 rounded whitespace-nowrap ${client.second_visit ? 'text-[#E8EDC7] bg-[#748E63]/20' : 'text-[#E8EDC7]/40 bg-white/5'}`}>
-                                                  {client.second_visit 
-                                                    ? new Date(client.second_visit + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                                    : 'N/A'
-                                                  }
-                                                </span>
+                                      {funnel.client_names.map((client, idx) => {
+                                        const hasSecondVisitInTimeline = client.second_visit && isDateInTimeline(client.second_visit)
+                                        
+                                        return (
+                                          <div 
+                                            key={idx}
+                                            className="bg-gradient-to-r from-white/5 to-white/10 border border-white/10 p-1.5 rounded hover:border-[#9AC8CD]/30 transition-colors"
+                                          >
+                                            <div className="flex flex-col gap-1">
+                                              <span className="text-[#E8EDC7] text-[12px] capitalize font-medium truncate">
+                                                {client.client_name}
+                                              </span>
+                                              <div className="flex items-center gap-1.5 text-[9px]">
+                                                <div className="flex items-center gap-0.5">
+                                                  <span className="text-[#E8EDC7]/50 font-semibold">1st:</span>
+                                                  <span className="text-[#E8EDC7] bg-[#9AC8CD]/20 px-1 py-0.5 rounded whitespace-nowrap">
+                                                    {new Date(client.first_visit + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center gap-0.5">
+                                                  <span className="text-[#E8EDC7]/50 font-semibold">2nd:</span>
+                                                  <span className={`px-1 py-0.5 rounded text-[8px] ${hasSecondVisitInTimeline ? 'text-[#E8EDC7] bg-[#748E63]/20' : 'text-[#E8EDC7]/40 bg-white/5'}`}>
+                                                    {hasSecondVisitInTimeline
+                                                      ? new Date(client.second_visit! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                      : timelineInfo.message
+                                                    }
+                                                  </span>
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        )
+                                      })}
                                     </div>
                                   ) : (
                                     <p className="text-[#E8EDC7] opacity-50 text-xs">No client data available</p>

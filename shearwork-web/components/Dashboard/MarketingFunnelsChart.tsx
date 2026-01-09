@@ -45,50 +45,101 @@ export default function MarketingFunnelsChart({
   const [data, setData] = useState<MarketingFunnel[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  // Convert month name to number
+  const getMonthNumber = (monthName: string): number => {
+    const monthMap: { [key: string]: number } = {
+      'January': 1, 'February': 2, 'March': 3, 'April': 4,
+      'May': 5, 'June': 6, 'July': 7, 'August': 8,
+      'September': 9, 'October': 10, 'November': 11, 'December': 12
+    }
+    return monthMap[monthName] || 1
+  }
+
+  // Check if a date falls within the timeline
+  const isDateInTimeline = (dateString: string, monthName: string, yearNum: number): boolean => {
+    if (!dateString) return false
+    
+    const date = new Date(dateString + 'T00:00:00')
+    const dateMonth = date.getMonth() + 1
+    const dateYear = date.getFullYear()
+    
+    if (dateYear !== yearNum) return false
+    
+    const targetMonth = getMonthNumber(monthName)
+    return dateMonth === targetMonth
+  }
+
   useEffect(() => {
     const fetchData = async () => {
-      const { data: funnels, error } = await supabase
-        .from('marketing_funnels')
-        .select('source, new_clients, returning_clients, new_clients_retained, retention, avg_ticket')
+      const monthNumber = getMonthNumber(month)
+
+      // Fetch clients who had their first appointment in the selected month/year
+      const { data: clients, error } = await supabase
+        .from('acuity_clients')
+        .select('client_id, first_name, last_name, first_appt, second_appt, first_source')
         .eq('user_id', barberId)
-        .eq('report_month', month)
-        .eq('report_year', year)
+        .not('first_source', 'is', null)
+        .not('first_source', 'eq', 'Unknown')
+        .not('first_source', 'eq', 'Returning Client')
+        .not('first_source', 'eq', 'No Source')
+        .gte('first_appt', `${year}-01-01`)
+        .lte('first_appt', `${year}-12-31`)
 
       if (error) {
-        console.error('Error fetching marketing funnels:', error)
+        console.error('Error fetching client details:', error)
         return
       }
 
-      // ✅ Filter out "No Source", "Unknown", and "Returning Client"
-      let filtered = (funnels as MarketingFunnel[]).filter(
-        (f) =>
-          f.source &&
-          f.source !== 'Unknown' &&
-          f.source !== 'Returning Client' &&
-          f.source !== 'No Source'
-      )
+      // Filter clients whose first_appt is in the selected month
+      const filteredClients = clients?.filter(client => {
+        if (!client.first_appt) return false
+        const apptMonth = new Date(client.first_appt + 'T00:00:00').getMonth() + 1
+        return apptMonth === monthNumber
+      }) || []
 
-      // ✅ Calculate retention for chart: % of new clients who came back within the same month
-      filtered = filtered.map((f) => {
-        const newClientsRetained = f.new_clients_retained || 0
-        const newClients = f.new_clients || 0
-        const timeframeRetention = newClients > 0 
-          ? (newClientsRetained / newClients) * 100 
-          : 0
-        return {
-          ...f,
-          retention: timeframeRetention,
+      // Group clients by source and calculate metrics
+      const sourceMap = new Map<string, MarketingFunnel>()
+
+      filteredClients.forEach(client => {
+        const source = client.first_source || 'Unknown'
+        
+        if (!sourceMap.has(source)) {
+          sourceMap.set(source, {
+            source,
+            new_clients: 0,
+            returning_clients: 0,
+            new_clients_retained: 0,
+            retention: 0,
+            avg_ticket: 0,
+          })
+        }
+        
+        const funnel = sourceMap.get(source)!
+        funnel.new_clients += 1
+        
+        // Check if client returned within the same month
+        const hasSecondAppt = !!client.second_appt
+        const isInTimeline = hasSecondAppt && isDateInTimeline(client.second_appt, month, year)
+        
+        if (isInTimeline) {
+          funnel.new_clients_retained += 1
         }
       })
 
-      filtered.sort(
-        (a, b) =>
-          (b.new_clients || 0) + (b.returning_clients || 0) -
-          ((a.new_clients || 0) + (a.returning_clients || 0))
-      )
+      // Calculate retention for each source
+      const funnelData = Array.from(sourceMap.values()).map(funnel => ({
+        ...funnel,
+        retention: funnel.new_clients > 0 
+          ? (funnel.new_clients_retained / funnel.new_clients) * 100 
+          : 0
+      }))
 
-      const topSources = filtered.slice(0, topN)
-      const otherSources = filtered.slice(topN)
+      // Sort by total new clients
+      funnelData.sort((a, b) => b.new_clients - a.new_clients)
+
+      const topSources = funnelData.slice(0, topN)
+      const otherSources = funnelData.slice(topN)
+      
       if (otherSources.length > 0) {
         const other = otherSources.reduce(
           (acc, f) => {
@@ -107,7 +158,8 @@ export default function MarketingFunnelsChart({
             avg_ticket: 0,
           } as MarketingFunnel
         )
-        // ✅ Calculate retention for "Other" bucket: % of new clients who came back
+        
+        // Calculate retention for "Other" bucket
         other.retention = other.new_clients > 0
           ? (other.new_clients_retained / other.new_clients) * 100
           : 0

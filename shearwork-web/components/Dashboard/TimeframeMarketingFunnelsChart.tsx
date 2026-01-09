@@ -26,6 +26,7 @@ export interface MarketingFunnel {
   returning_clients: number
   new_clients_retained: number
   retention: number
+  retention_height?: number
   avg_ticket: number
   timeframe: string
 }
@@ -68,6 +69,30 @@ export default function TimeframeMarketingFunnelsChart({
   const [data, setData] = useState<MarketingFunnel[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  // Convert month name to number
+  const getMonthNumber = (monthName: string): number => {
+    const monthMap: { [key: string]: number } = {
+      'January': 1, 'February': 2, 'March': 3, 'April': 4,
+      'May': 5, 'June': 6, 'July': 7, 'August': 8,
+      'September': 9, 'October': 10, 'November': 11, 'December': 12
+    }
+    return monthMap[monthName] || 1
+  }
+
+  // Check if a date falls within the timeline
+  const isDateInTimeline = (dateString: string, months: string[], yearNum: number): boolean => {
+    if (!dateString) return false
+    
+    const date = new Date(dateString + 'T00:00:00')
+    const dateMonth = date.getMonth() + 1
+    const dateYear = date.getFullYear()
+    
+    if (dateYear !== yearNum) return false
+    
+    const monthNumbers = months.map(m => getMonthNumber(m))
+    return monthNumbers.includes(dateMonth)
+  }
   
   useEffect(() => {
     if (!barberId || !year) return
@@ -80,26 +105,42 @@ export default function TimeframeMarketingFunnelsChart({
           ? ALL_MONTHS 
           : MONTHS_BY_QUARTER[timeframe as Exclude<Timeframe, 'year'>]
 
-        const { data: funnels, error } = await supabase
-          .from('marketing_funnels')
-          .select('source, new_clients, returning_clients, retention')
+        const monthNumbers = monthsToQuery.map(m => getMonthNumber(m))
+
+        // Fetch clients who had their first appointment in the selected months/year
+        const { data: clients, error } = await supabase
+          .from('acuity_clients')
+          .select('client_id, first_name, last_name, first_appt, second_appt, first_source')
           .eq('user_id', barberId)
-          .eq('report_year', year)
-          .in('report_month', monthsToQuery)
-          .neq('source', 'Returning Client')
-          .neq('source', 'No Source')
+          .not('first_source', 'is', null)
+          .not('first_source', 'eq', 'Unknown')
+          .not('first_source', 'eq', 'Returning Client')
+          .not('first_source', 'eq', 'No Source')
+          .gte('first_appt', `${year}-01-01`)
+          .lte('first_appt', `${year}-12-31`)
 
         if (error) {
-          console.error('Error fetching marketing funnels:', error)
+          console.error('Error fetching client details:', error)
           setData([])
+          setLoading(false)
           return
         }
 
-        // Aggregate data by source
-        const aggregated = funnels.reduce((acc, row) => {
-          const source = row.source
-          if (!acc[source]) {
-            acc[source] = {
+        // Filter clients whose first_appt is in the selected months
+        const filteredClients = clients?.filter(client => {
+          if (!client.first_appt) return false
+          const apptMonth = new Date(client.first_appt + 'T00:00:00').getMonth() + 1
+          return monthNumbers.includes(apptMonth)
+        }) || []
+
+        // Group clients by source and calculate metrics
+        const sourceMap = new Map<string, MarketingFunnel>()
+
+        filteredClients.forEach(client => {
+          const source = client.first_source || 'Unknown'
+          
+          if (!sourceMap.has(source)) {
+            sourceMap.set(source, {
               source,
               new_clients: 0,
               returning_clients: 0,
@@ -107,29 +148,39 @@ export default function TimeframeMarketingFunnelsChart({
               retention: 0,
               avg_ticket: 0,
               timeframe,
-              count: 0, 
-            }
+            })
           }
-          acc[source].new_clients += row.new_clients || 0
-          acc[source].returning_clients += row.returning_clients || 0
-          acc[source].retention += row.retention || 0
-          acc[source].count += 1
-          return acc
-        }, {} as Record<string, MarketingFunnel & { count: number }>)
-
-        // Calculate average retention and remove count
-        const result = Object.values(aggregated).map(item => {
-          const { count, ...rest } = item
-          return {
-            ...rest,
-            retention: count > 0 ? rest.retention / count : 0,
+          
+          const funnel = sourceMap.get(source)!
+          funnel.new_clients += 1
+          
+          // Check if client returned within the same timeframe
+          if (client.second_appt && isDateInTimeline(client.second_appt, monthsToQuery, year)) {
+            funnel.new_clients_retained += 1
           }
         })
 
-        console.log(barberId, year, timeframe)
-        console.log(JSON.stringify(result))
+        // Calculate retention for each source
+        const result = Array.from(sourceMap.values()).map(funnel => ({
+          ...funnel,
+          retention: funnel.new_clients > 0 
+            ? (funnel.new_clients_retained / funnel.new_clients) * 100 
+            : 0
+        }))
 
-        setData(result)
+        // Find max new_clients to scale retention bars
+        const maxNewClients = Math.max(...result.map(f => f.new_clients), 1)
+
+        // Add retention_height field: retention percentage scaled to max new_clients
+        const resultWithRetentionHeight = result.map(funnel => ({
+          ...funnel,
+          retention_height: (funnel.retention / 100) * maxNewClients
+        }))
+
+        // Sort by new clients descending
+        resultWithRetentionHeight.sort((a, b) => b.new_clients - a.new_clients)
+
+        setData(resultWithRetentionHeight)
 
       } catch (err) {
         console.error('Error preparing timeframe marketing funnels:', err)
@@ -217,9 +268,15 @@ export default function TimeframeMarketingFunnelsChart({
               <YAxis stroke="#E8EDC7" />
 
               <Tooltip
-                formatter={(value: any, name: string) => {
-                  if (name === 'Retention')
-                    return [`${Number(value).toFixed(2)}%`, name]
+                formatter={(value: any, name: string, props: any) => {
+                  if (name === 'Retention') {
+                    // Show the actual retention percentage in tooltip
+                    const item = props.payload
+                    return [`${item.retention.toFixed(2)}%`, name]
+                  }
+                  if (name === 'New Clients Retained') {
+                    return [value, name]
+                  }
                   return [value, name]
                 }}
                 contentStyle={{
@@ -257,24 +314,24 @@ export default function TimeframeMarketingFunnelsChart({
                 />
               </Bar>
 
-              {/* Returning Clients Bar */}
+              {/* New Clients Retained Bar */}
               <Bar
-                dataKey="returning_clients"
-                name="Returning Clients"
+                dataKey="new_clients_retained"
+                name="New Clients Retained"
                 fill={COLORS[3]}
                 radius={[8, 8, 0, 0]}
               >
                 <LabelList
-                  dataKey="returning_clients"
+                  dataKey="new_clients_retained"
                   position="top"
                   style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
                   dy={-15}
                 />
               </Bar>
 
-              {/* Retention Bar (2 decimals) */}
+              {/* Retention Bar - height scaled to new_clients */}
               <Bar
-                dataKey="retention"
+                dataKey="retention_height"
                 name="Retention"
                 fill={COLORS[2]}
                 radius={[8, 8, 0, 0]}
