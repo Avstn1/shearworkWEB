@@ -111,27 +111,35 @@ export class AcuityAdapter implements BookingAdapter {
 
   // ======================== FETCH APPOINTMENTS ========================
 
-  async fetchAppointments(
-    accessToken: string,
-    calendarId: string,
-    dateRange: DateRange
-  ): Promise<NormalizedAppointment[]> {
-    const appointments: NormalizedAppointment[] = []
-    const today = new Date()
+async fetchAppointments(
+  accessToken: string,
+  calendarId: string,
+  dateRange: DateRange
+): Promise<NormalizedAppointment[]> {
+  const seen = new Set<string>()
+  const appointments: NormalizedAppointment[] = []
+  const today = new Date()
 
-    const start = new Date(dateRange.startISO)
-    const end = new Date(dateRange.endISO)
+  const start = new Date(dateRange.startISO)
+  const end = new Date(dateRange.endISO)
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      if (d > today) break
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    if (d > today) break
 
-      const dayStr = d.toISOString().split('T')[0]
-      const dayAppointments = await this.fetchDay(accessToken, calendarId, dayStr)
-      appointments.push(...dayAppointments)
+    const dayStr = d.toISOString().split('T')[0]
+    const dayAppointments = await this.fetchDay(accessToken, calendarId, dayStr)
+    
+    // Dedupe: only add appointments we haven't seen yet
+    for (const appt of dayAppointments) {
+      if (!seen.has(appt.externalId)) {
+        seen.add(appt.externalId)
+        appointments.push(appt)
+      }
     }
-
-    return appointments
   }
+
+  return appointments
+}
 
   private async fetchDay(
     accessToken: string,
