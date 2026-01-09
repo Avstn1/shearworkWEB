@@ -305,6 +305,21 @@ export default function AcuityTab() {
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <button
+                onClick={syncFullYear}
+                disabled={syncingAppointments}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  syncingClients
+                    ? 'bg-white/10 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
+                }`}
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${syncingAppointments ? 'animate-spin' : ''}`}
+                />
+                {syncingAppointments ? `Syncing ${year}...` : `Sync All Appointments`}
+              </button>
+
+              {/* <button
                 onClick={syncYear}
                 disabled={syncingClients}
                 className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
@@ -317,24 +332,7 @@ export default function AcuityTab() {
                   className={`w-4 h-4 ${syncingClients ? 'animate-spin' : ''}`}
                 />
                 {syncingClients ? `Syncing ${year}...` : `Sync Clients`}
-              </button>
-
-              <button
-                onClick={syncFullYear}
-                disabled={syncingAppointments}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
-                  syncingAppointments
-                    ? 'bg-white/10 text-gray-400 cursor-not-allowed'
-                    : 'bg-white/10 border border-white/20 hover:bg-white/15'
-                }`}
-              >
-                <Database
-                  className={`w-4 h-4 ${
-                    syncingAppointments ? 'animate-pulse' : ''
-                  }`}
-                />
-                {syncingAppointments ? `Syncing ${year}...` : `Sync All Appointments`}
-              </button>
+              </button> */}
             </div>
           </div>
 
