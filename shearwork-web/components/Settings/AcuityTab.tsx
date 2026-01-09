@@ -170,7 +170,13 @@ export default function AcuityTab() {
 
     try {
       const { data, error } = await supabase.functions.invoke(
-        `fullyear_sync_barbers?user_id=${encodeURIComponent(profile.user_id)}`
+        'fullyear_sync_barbers',
+        {
+          body: {
+            user_id: profile.user_id,
+            year: year
+          }
+        }
       )
 
       if (error) {
@@ -305,7 +311,7 @@ export default function AcuityTab() {
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <button
-                onClick={syncFullYear}
+                onClick={syncYear}
                 disabled={syncingAppointments}
                 className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
                   syncingClients
