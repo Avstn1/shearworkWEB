@@ -4,6 +4,7 @@ import { PullContext, AggregationResult } from '../../types'
 import { OrchestratorOptions, pullOptionsToDateRange } from '../../orchestrator'
 import { validateDateRange } from './shared/utils'
 
+// Upserts to daily_data
 export async function runDailyAggregation(
   context: PullContext,
   orchestratorOptions: OrchestratorOptions = {}
