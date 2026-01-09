@@ -1,5 +1,6 @@
 // supabase/functions/fullyear_sync_barbers/index.ts
 
+// @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { Client } from 'npm:@upstash/qstash@2'
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
     }
 
     // Filter users who have a calendar set
-    const userIds = tokens?.map(t => t.user_id) || []
+    const userIds = tokens?.map((t: { user_id: string }) => t.user_id) || []
     
     if (userIds.length === 0) {
       return new Response(JSON.stringify({ 
@@ -70,15 +71,15 @@ Deno.serve(async (req) => {
 
     if (profileError) throw profileError
 
-    const validUserIds = new Set(profiles?.map(p => p.user_id) || [])
-    const validTokens = tokens?.filter(t => validUserIds.has(t.user_id)) || []
+    const validUserIds = new Set(profiles?.map((p: { user_id: string }) => p.user_id) || [])
+    const validTokens = tokens?.filter((t: { user_id: string }) => validUserIds.has(t.user_id)) || []
 
     console.log(`Users to sync: ${validTokens.length}${targetUserId ? ` (filtered by user_id: ${targetUserId})` : ''} (${tokens?.length || 0} total with tokens, ${(tokens?.length || 0) - validTokens.length} without calendar)`)
 
     // Get current year and define year range to sync
     const currentYear = new Date().getFullYear()
     const startYear = currentYear
-    const yearsToSync = []
+    const yearsToSync: number[] = []
     
     for (let year = startYear; year <= currentYear; year++) {
       yearsToSync.push(year)
@@ -100,7 +101,8 @@ Deno.serve(async (req) => {
     // Enqueue all requests, distributing evenly across queues
     for (const tokenItem of validTokens) {
       for (const year of yearsToSync) {
-        const targetUrl = `https://shearwork-web.vercel.app/api/acuity/pull-year?year=${year}&user_id=${tokenItem.user_id}`
+        // Use new /api/pull endpoint with year granularity
+        const targetUrl = `https://shearwork-web.vercel.app/api/pull?granularity=year&year=${year}`
         
         // Round-robin distribution across queues
         const currentQueue = queues[queueIndex % NUM_QUEUES]
@@ -110,6 +112,8 @@ Deno.serve(async (req) => {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+            'X-User-Id': tokenItem.user_id,
             'x-vercel-protection-bypass': BYPASS_TOKEN
           },
           retries: 3,
@@ -127,15 +131,17 @@ Deno.serve(async (req) => {
       message: 'All requests queued to QStash',
       totalRequests: enqueuedCount,
       queues: Array.from({ length: NUM_QUEUES }, (_, i) => `acuity-sync-${i + 1}`),
-      distribution: `Evenly distributed across ${NUM_QUEUES} queues (parallelism=2 each = 10 concurrent total)`
+      distribution: `Evenly distributed across ${NUM_QUEUES} queues (parallelism=2 each = 10 concurrent total)`,
+      endpoint: '/api/pull?granularity=year'
     }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Edge function error:', err)
+    const errorMessage = err instanceof Error ? err.message : String(err)
     return new Response(JSON.stringify({ 
-      error: String(err?.message ?? err) 
+      error: errorMessage 
     }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }

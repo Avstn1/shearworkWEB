@@ -1,5 +1,6 @@
-// supabase/functions/sync-acuity-cron/index.ts
+// supabase/functions/daily_sync_barbers/index.ts
 
+// @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -21,10 +22,10 @@ const { data: tokens, error: tokenError } = await supabase
 if (tokenError) throw tokenError
 console.log('Users with Acuity tokens:', tokens)
 
-Deno.serve(async (req) => {
+Deno.serve(async (_req) => {
   try {
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
-    const token = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
+    const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
 
     // Get current date
     const now = new Date()
@@ -36,10 +37,27 @@ Deno.serve(async (req) => {
     
     const CONCURRENCY_LIMIT = 100
 
+    // Filter users who have a calendar set
+    const userIds = tokens?.map((t: { user_id: string }) => t.user_id) || []
+    
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_id, calendar')
+      .in('user_id', userIds)
+      .not('calendar', 'is', null)
+      .neq('calendar', '')
+
+    if (profileError) throw profileError
+
+    const validUserIds = new Set(profiles?.map((p: { user_id: string }) => p.user_id) || [])
+    const validTokens = tokens?.filter((t: { user_id: string }) => validUserIds.has(t.user_id)) || []
+
+    console.log(`Users to sync: ${validTokens.length} (${tokens?.length || 0} total with tokens, ${(tokens?.length || 0) - validTokens.length} without calendar)`)
+
     // Build all requests to be made (one per user for current month)
     const allRequests: { userId: string; month: string; year: number }[] = []
     
-    for (const tokenItem of tokens || []) {
+    for (const tokenItem of validTokens) {
       allRequests.push({
         userId: tokenItem.user_id,
         month: currentMonth,
@@ -47,36 +65,45 @@ Deno.serve(async (req) => {
       })
     }
 
-    async function fireWithConcurrency(items, limit) {
+    const results: { userId: string; success: boolean; error?: string; data?: unknown }[] = []
+
+    async function fireWithConcurrency(items: typeof allRequests, limit: number) {
       let active = 0
       let index = 0
 
-      return new Promise(resolve => {
+      return new Promise<void>(resolve => {
         function next() {
           while (active < limit && index < items.length) {
             const request = items[index++]
             active++
 
-            const url = `https://shearwork-web.vercel.app/api/acuity/pull?endpoint=appointments&month=${request.month}&year=${request.year}`
+            // Use new /api/pull endpoint with month granularity
+            const url = `https://shearwork-web.vercel.app/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
             
             fetch(url, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
                 'X-User-Id': request.userId,
                 'x-vercel-protection-bypass': BYPASS_TOKEN,
-                // 'x-client-access-token': accessToken,
               }
             })
-              .then(response => {
+              .then(async response => {
                 if (!response.ok) {
-                    return response.text().then(errorText => {
-                    console.error(`✗ ${request.userId} - ${request.month} ${request.year}: ${errorText}`)
-                  })
+                  const errorText = await response.text()
+                  console.error(`✗ ${request.userId} - ${request.month} ${request.year}: ${errorText}`)
+                  results.push({ userId: request.userId, success: false, error: errorText })
+                } else {
+                  const data = await response.json()
+                  console.log(`✓ ${request.userId} - ${request.month} ${request.year}: ${data.result?.appointmentCount || 0} appointments, ${data.result?.clients?.totalProcessed || 0} clients`)
+                  results.push({ userId: request.userId, success: true, data })
                 }
               })
-              .catch(err => console.error(`Error for ${request.userId} - ${request.month} ${request.year}:`, err))
+              .catch(err => {
+                console.error(`Error for ${request.userId} - ${request.month} ${request.year}:`, err)
+                results.push({ userId: request.userId, success: false, error: String(err) })
+              })
               .finally(() => {
                 active--
                 next()
@@ -92,19 +119,32 @@ Deno.serve(async (req) => {
 
     await fireWithConcurrency(allRequests, CONCURRENCY_LIMIT)
 
-    console.log(`All requests dispatched (with concurrency limit ${CONCURRENCY_LIMIT})`)
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+
+    console.log(`All requests completed. Success: ${successCount}, Failed: ${failCount}`)
     console.log(`SYNC ENDED. CURRENT TIME: ${new Date()}`)
 
     return new Response(JSON.stringify({ 
       message: 'Current month sync completed',
       month: currentMonth,
       year: currentYear,
-      users: allRequests.length
+      totalUsers: allRequests.length,
+      success: successCount,
+      failed: failCount,
+      errors: results.filter(r => !r.success).map(r => ({ userId: r.userId, error: r.error }))
     }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
-  } catch (err) {
-    return new Response(String(err?.message ?? err), { status: 500 })
+  } catch (err: unknown) {
+    console.error('Edge function error:', err)
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    return new Response(JSON.stringify({ 
+      error: errorMessage 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 })
