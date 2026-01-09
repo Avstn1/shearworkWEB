@@ -139,55 +139,47 @@ export default function DashboardPage() {
     if (!user) return
     setIsRefreshing(true)
     const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
+
     try {
-      syncMarketingFunnels()
-      const res = await fetch(`/api/acuity/pull?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`)
-      // if (!res.ok) throw new Error('Acuity data fetch failed')
-      await res.json()
+      // New pipeline endpoint: triggers provider pull + truth table upserts + aggregations
+      const res = await fetch(
+        `/api/pull?granularity=month&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`
+      )
+
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || body.details || 'Pull failed')
+
       setRefreshKey(prev => prev + 1)
       toast.success(`Data updated for ${selectedMonth} ${selectedYear}`, { id: toastId })
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Error fetching Acuity data.', { id: toastId })
+      toast.error(err.message || 'Error syncing data.', { id: toastId })
     } finally {
       setIsRefreshing(false)
-    }
-  }
-
-  const syncMarketingFunnels = async () => {
-    if (!user.id) return
-    //setIsRefreshing(true)
-
-    try {
-      const res = await fetch(`/api/acuity/pull-marketing-funnels?endpoint=appointments&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`)
-      // if (!res.ok) throw new Error('Acuity data fetch failed')
-      await res.json()
-      //setRefreshKey(prev => prev + 1)
-
-    } catch (err) {
-      console.error(err)
-
-    } finally {
-      //setIsRefreshing(false)
     }
   }
 
   const handleFullAcuitySync = async () => {
     setIsRefreshing(true)
-    const toastId = toast.loading('Performing full Acuity sync...')
+    const toastId = toast.loading('Performing full sync...')
+
     try {
-      const res = await fetch('/api/acuity/pull-all', { method: 'POST' })
-      if (!res.ok) throw new Error('Full Acuity sync failed')
-      await res.json()
-      toast.success('Full Acuity sync complete!', { id: toastId })
+      // Closest equivalent of "pull-all": sync the selected year
+      const res = await fetch(`/api/pull?granularity=year&year=${selectedYear}`)
+
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || body.details || 'Full sync failed')
+
+      toast.success('Full sync complete!', { id: toastId })
       setRefreshKey(prev => prev + 1)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Full Acuity sync failed.', { id: toastId })
+      toast.error(err.message || 'Full sync failed.', { id: toastId })
     } finally {
       setIsRefreshing(false)
     }
   }
+
 
   if (loading) return <div className="flex justify-center items-center h-screen text-white">Loading dashboard...</div>
   if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>

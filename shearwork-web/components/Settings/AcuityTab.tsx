@@ -118,46 +118,45 @@ export default function AcuityTab() {
     })
   }
 
+  /**
+   * ✅ Migrated: Uses new pipeline endpoint /api/pull
+   * This will trigger the orchestrated sync + aggregations for each month.
+   */
   const syncYear = async () => {
     if (!profile) return
 
     setSyncingClients(true)
-    const toastId = toast.loading(`Syncing clients for ${year}...`)
+    const toastId = toast.loading(`Syncing ${year}...`)
 
     try {
       for (const month of MONTHS) {
         const res = await fetch(
-          `/api/acuity/pull?month=${encodeURIComponent(
-            month
-          )}&year=${encodeURIComponent(year)}`,
+          `/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`,
           { method: 'GET' }
         )
 
         const body = await res.json().catch(() => ({}))
 
         if (!res.ok) {
-          throw new Error(
-            body.error || `Sync failed for ${month} ${year}`
-          )
+          throw new Error(body.error || `Sync failed for ${month} ${year}`)
         }
       }
 
-      toast.success(`Synced clients + visits for all of ${year}`, {
-        id: toastId,
-      })
+      toast.success(`Synced data for all of ${year}`, { id: toastId })
     } catch (err: any) {
       console.error(err)
-      toast.error(
-        `Failed to sync clients for ${year}: ${
-          err.message || 'Unknown error'
-        }`,
-        { id: toastId }
-      )
+      toast.error(`Failed to sync ${year}: ${err.message || 'Unknown error'}`, {
+        id: toastId,
+      })
     } finally {
       setSyncingClients(false)
     }
   }
 
+  /**
+   * Leaving as-is: this queues a background sync via Supabase function.
+   * If that function calls /api/acuity/pull internally, update it separately.
+   */
   const syncFullYear = async () => {
     if (!profile) return
 
@@ -178,30 +177,32 @@ export default function AcuityTab() {
         throw new Error(error.message || 'Full Acuity sync failed')
       }
 
-      toast.success(`Successfully queued sync for ${year}! It will process in the background.`, {
-        id: toastId,
-      })
+      toast.success(
+        `Successfully queued sync for ${year}! It will process in the background.`,
+        { id: toastId }
+      )
     } catch (err: any) {
       console.error(err)
-      toast.error(`Failed to queue sync for ${year}`, {
-        id: toastId,
-      })
+      toast.error(`Failed to queue sync for ${year}`, { id: toastId })
     } finally {
       setSyncingAppointments(false)
     }
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-12">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
-    </div>
-  )
+  if (loading)
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
+      </div>
+    )
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold mb-2">Acuity Integration</h2>
-        <p className="text-sm text-gray-400">Connect and sync your Acuity Scheduling data</p>
+        <p className="text-sm text-gray-400">
+          Connect and sync your Acuity Scheduling data
+        </p>
       </div>
 
       <ConnectAcuityButton onConnectSuccess={loadData} />
@@ -258,7 +259,8 @@ export default function AcuityTab() {
         {confirmingChange && (
           <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-3">
             <p className="text-sm text-amber-200">
-              Changing your calendar will sync all data for this calendar. Confirm if you want to continue.
+              Changing your calendar will sync all data for this calendar.
+              Confirm if you want to continue.
             </p>
 
             <div className="flex gap-3">
@@ -311,7 +313,9 @@ export default function AcuityTab() {
                     : 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
                 }`}
               >
-                <RefreshCw className={`w-4 h-4 ${syncingClients ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 ${syncingClients ? 'animate-spin' : ''}`}
+                />
                 {syncingClients ? `Syncing ${year}...` : `Sync Clients`}
               </button>
 
@@ -324,14 +328,19 @@ export default function AcuityTab() {
                     : 'bg-white/10 border border-white/20 hover:bg-white/15'
                 }`}
               >
-                <Database className={`w-4 h-4 ${syncingAppointments ? 'animate-pulse' : ''}`} />
+                <Database
+                  className={`w-4 h-4 ${
+                    syncingAppointments ? 'animate-pulse' : ''
+                  }`}
+                />
                 {syncingAppointments ? `Syncing ${year}...` : `Sync All Appointments`}
               </button>
             </div>
           </div>
 
           <p className="text-xs text-gray-500">
-            Sync clients to update customer data and appointment history. Sync all appointments for comprehensive revenue reports.
+            Sync clients to update customer data and appointment history. Sync all
+            appointments for comprehensive revenue reports.
           </p>
         </div>
       </div>
