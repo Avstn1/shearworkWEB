@@ -33,6 +33,7 @@ export interface ClientUpsertRow {
   last_appt: string
   first_source: string | null
   updated_at: string
+  total_appointments: number
 }
 
 /**
@@ -107,6 +108,8 @@ function updateDateTracking(
   }
 }
 
+
+
 // ======================== MAIN PROCESSOR ========================
 
 export class ClientProcessor {
@@ -148,10 +151,60 @@ export class ClientProcessor {
       }
     }
 
+    // Count appointments per client from database
+    await this.updateAppointmentCounts()
+
     return {
       appointmentToClient,
       clients: this.clients,
       newClientIds: this.newClientIds,
+    }
+  }
+
+  /**
+ * Queries acuity_appointments to get total appointment counts per client.
+ * Updates the clients map with accurate counts.
+ */
+  private async updateAppointmentCounts(): Promise<void> {
+    const clientIds = Array.from(this.clients.keys())
+    
+    if (clientIds.length === 0) return
+
+    // Derive appointments table name from clients table name
+    const prefix = this.tableName.replace('acuity_clients', '')
+    const appointmentsTableName = `${prefix}acuity_appointments`
+    
+    const counts = new Map<string, number>()
+    
+    // Batch the query - process 100 client IDs at a time
+    const batchSize = 100
+    for (let i = 0; i < clientIds.length; i += batchSize) {
+      const batch = clientIds.slice(i, i + batchSize)
+      
+      const { data, error } = await this.supabase
+        .from(appointmentsTableName)
+        .select('client_id')
+        .eq('user_id', this.userId)
+        .in('client_id', batch)
+
+      if (error) {
+        console.error('Error fetching appointment counts:', error)
+        throw error
+      }
+
+      // Count appointments per client in this batch
+      if (data) {
+        for (const row of data) {
+          const count = counts.get(row.client_id) || 0
+          counts.set(row.client_id, count + 1)
+        }
+      }
+    }
+
+    // Update each client with their count
+    for (const [clientId, client] of this.clients) {
+      const count = counts.get(clientId) || 0
+      ;(client as any).totalAppointments = count
     }
   }
 
@@ -172,6 +225,7 @@ export class ClientProcessor {
       second_appt: client.secondAppt,
       last_appt: client.lastAppt,
       first_source: client.firstSource,
+      total_appointments: (client as any).totalAppointments || 0,
       updated_at: new Date().toISOString(),
     }))
   }
