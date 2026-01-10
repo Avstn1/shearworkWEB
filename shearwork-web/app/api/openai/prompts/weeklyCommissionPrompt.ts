@@ -92,8 +92,7 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
 
 
 <h2>📣 Marketing Funnels</h2>
-${dataset.special_access 
-  ? (funnels.length
+${(funnels.length
       ? `<table>
           <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
           <tbody>
@@ -114,7 +113,6 @@ ${dataset.special_access
         <p>PROMPT: State which channels did the well and Encourage exposing more of their work publicly. DO NOT mention any other channels</p>
         Instructions: creative analysis/generation`
       : `<p>No data available for this section.</p>`)
-  : `<p>This area is under construction. We appreciate your understanding.</p>`
 }
 
 

@@ -225,7 +225,7 @@ export default function TimeframeMarketingFunnelsChart({
     )
 
   return (
-    <UnderConstructionWrapper>
+    <>
       <div
         className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
         style={{
@@ -371,6 +371,6 @@ export default function TimeframeMarketingFunnelsChart({
         year={year}
         data={data}
       />
-    </UnderConstructionWrapper>
+    </>
   )
 }

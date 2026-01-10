@@ -133,10 +133,9 @@ ${
    </table>
 
 <h2>📣 Marketing Funnels</h2>
-${dataset.special_access 
-  ? (funnels.length
+${(funnels.length
       ? `<table>
-          <thead><tr><th>Source</th><th>New Clients</th><th>Returning</th><th>Total</th><th>Retention</th><th>Avg Ticket</th></tr></thead>
+          <thead><tr><th>Source</th><th>New Clients</th><th>Retained</th><th>Retention</th><th>Avg Ticket</th></tr></thead>
           <tbody>
             ${funnels
               .filter((f: any) => f.source !== 'Returning Client' && f.source !== "Walk In")
@@ -147,7 +146,6 @@ ${dataset.special_access
                       <td>${f.source}</td>
                       <td>${f.new_clients || 0}</td>
                       <td>${f.returning_clients || 0}</td>
-                      <td>${(f.new_clients || 0) + (f.returning_clients || 0)}</td>
                       <td>${(f.returning_clients && f.new_clients) ? ((f.returning_clients/f.new_clients) * 100).toFixed(2) + '%' : '--'}</td>
                       <td>$${(f.avg_ticket || 0).toFixed(2)}</td>
                   </tr>`
@@ -158,7 +156,6 @@ ${dataset.special_access
         <p>PROMPT: State which channels did the well (UNLESS it's "Walking By") and Encourage exposing more of their work publicly. DO NOT mention any other channels</p>
         Instructions: creative analysis/generation`
       : `<p>No data available for this section.</p>`)
-  : `<p>This area is under construction. We appreciate your understanding.</p>`
 }
 
 6. <h2>👑 Top Clients</h2>
