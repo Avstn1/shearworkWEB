@@ -3,7 +3,7 @@
 'use server'
 
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { openai } from '@/lib/openaiClient'
 import { prompts } from '../prompts'
 import { getWeeklyBreakdown } from './weeklyExpenses'
@@ -86,7 +86,7 @@ function monthYearFallback(params: {
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const supabase = await createSupabaseAdminClient()
     const authHeader = req.headers.get('authorization')
 
     if (
@@ -400,45 +400,107 @@ export async function POST(req: Request) {
     // ---------------- Marketing funnels ----------------
     let funnels: any[] = []
 
-    // ✅ UPDATED: Query from weekly_marketing_funnels_base (new base table)
+    const getMonthNumber = (monthName: string): number => {
+      const monthMap: { [key: string]: number } = {
+        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+        'September': 9, 'October': 10, 'November': 11, 'December': 12
+      }
+      return monthMap[monthName] || 1
+    }
+
     const fetchFunnels = async () => {
       if (type === 'monthly') {
-        const { data, error } = await supabase
-          .from('marketing_funnels')
-          .select('*')
+        const monthNumber = getMonthNumber(month)
+        
+        // Fetch clients for this month/year
+        const { data: clients, error } = await supabase
+          .from('acuity_clients')
+          .select('client_id, first_appt, second_appt, first_source')
           .eq('user_id', user_id)
-          .eq('report_month', month)
-          .eq('report_year', normalizedYear)
-          .neq('source', 'No Source') 
+          .not('first_source', 'is', null)
+          .not('first_source', 'eq', 'Unknown')
+          .not('first_source', 'eq', 'Returning Client')
+          .not('first_source', 'eq', 'No Source')
+          .gte('first_appt', `${normalizedYear}-01-01`)
+          .lte('first_appt', `${normalizedYear}-12-31`)
+
         if (error) throw error
-        return data ?? []
+
+        // Filter to this specific month
+        const filteredClients = clients?.filter(client => {
+          if (!client.first_appt) return false
+          const apptMonth = new Date(client.first_appt + 'T00:00:00').getMonth() + 1
+          return apptMonth === monthNumber
+        }) || []
+
+        // Group by source and calculate metrics
+        const sourceMap = new Map<string, any>()
+        
+        filteredClients.forEach(client => {
+          const source = client.first_source || 'Unknown'
+          
+          if (!sourceMap.has(source)) {
+            sourceMap.set(source, {
+              source,
+              user_id,
+              report_month: month,
+              report_year: normalizedYear,
+              new_clients: 0,
+              returning_clients: 0,
+              retention: 0,
+              avg_ticket: 0,
+            })
+          }
+          
+          const funnel = sourceMap.get(source)!
+          funnel.new_clients += 1
+          
+          // Check if returned in same month
+          if (client.second_appt) {
+            const secondApptDate = new Date(client.second_appt + 'T00:00:00')
+            const secondApptMonth = secondApptDate.getMonth() + 1
+            const secondApptYear = secondApptDate.getFullYear()
+            
+            if (secondApptMonth === monthNumber && secondApptYear === normalizedYear) {
+              funnel.returning_clients += 1
+            }
+          }
+        })
+
+        // Calculate retention
+        const result = Array.from(sourceMap.values()).map(funnel => ({
+          ...funnel,
+          retention: funnel.new_clients > 0 
+            ? (funnel.returning_clients / funnel.new_clients) * 100 
+            : 0
+        }))
+
+        return result
       }
 
       if (type === 'weekly') {
-        if (effectiveWeekNumber == null) {
-          throw new Error('effectiveWeekNumber is null for weekly funnels')
-        }
         const { data, error } = await supabase
-          .from('weekly_marketing_funnels_base')  // ✅ CHANGED from weekly_marketing_funnels
+          .from('weekly_marketing_funnels_base')
           .select('*')
           .eq('user_id', user_id)
           .eq('report_month', month)
           .eq('report_year', normalizedYear)
           .eq('week_number', effectiveWeekNumber)
-          .neq('source', 'No Source') 
+          .neq('source', 'No Source')
+        
         if (error) throw error
         return data ?? []
       }
 
       // weekly_comparison
       let q = supabase
-        .from('weekly_marketing_funnels_base')  // ✅ CHANGED from weekly_marketing_funnels
+        .from('weekly_marketing_funnels_base')
         .select('*')
         .eq('user_id', user_id)
         .eq('report_month', month)
         .eq('report_year', normalizedYear)
-        .neq('source', 'No Source') 
-
+        .neq('source', 'No Source')
 
       if (week_number != null) q = q.lte('week_number', week_number)
 
@@ -448,16 +510,6 @@ export async function POST(req: Request) {
     }
 
     funnels = await fetchFunnels()
-
-    // ✅ Extra visibility: confirm if ANY funnels exist for this user/month/year
-    const { data: funnelAny, error: funnelAnyErr } = await supabase
-      .from('weekly_marketing_funnels_base')  // ✅ CHANGED from weekly_marketing_funnels
-      .select('user_id, report_month, report_year, week_number, source')
-      .eq('user_id', user_id)
-      .eq('report_month', month)
-      .eq('report_year', normalizedYear)
-      .limit(5)
-    if (funnelAnyErr) console.warn('FUNNELS ANY query failed:', funnelAnyErr)
 
     // ---------------- Top clients ----------------
     let topClients: any[] = []
@@ -541,7 +593,6 @@ export async function POST(req: Request) {
         weeklyExpensesData = (week_number && allWeeks[week_number]?.total) || 0
       }
     }
-    console.log(weeklyExpensesData)
 
     // ✅ FIX: week_number in dataset must be correct + consistent
     const datasetWeekNumber =
@@ -550,8 +601,6 @@ export async function POST(req: Request) {
         : type === 'weekly_comparison'
           ? week_number ?? null
           : null
-
-    console.log(userData.special_access)
 
     const dataset = {
       month,

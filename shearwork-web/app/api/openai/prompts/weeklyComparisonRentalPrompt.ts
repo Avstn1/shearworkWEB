@@ -339,8 +339,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
 </table>
 
 <h2>📣 Marketing Funnels</h2>
-${dataset.special_access 
-  ? `<table>
+<table>
       <thead>
         <tr>
           <th style="padding: 8px 4px;">Source</th>
@@ -403,8 +402,7 @@ ${dataset.special_access
           return top5Rows + othersRow;
         })()}
       </tbody>
-    </table>`
-  : `<p>This area is under construction. We appreciate your understanding.</p>`
+    </table>
 }
 
 <h2>Key Insights & Trends 🔍</h2>

@@ -93,8 +93,7 @@ THE FOLLOWING HAS AI INSTRUCTIONS IN THE TAGS, INTERPRET AND FOLLOW INSTRUCTIONS
   }
   
 <h2>📣 Marketing Funnels</h2>
-${dataset.special_access 
-  ? (activeFunnels.length
+${(activeFunnels.length
       ? `<table>
            <thead><tr><th>Source</th><th>New Clients</th><th>Avg Ticket</th></tr></thead>
            <tbody>
@@ -113,7 +112,6 @@ ${dataset.special_access
          </table>
          <p>Your top-performing channel this week was <strong>${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source || 'No Source'}</strong>, bringing in ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.new_clients || 0} new clients. ${activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'No Source' && activeFunnels.sort((a:any,b:any)=>(b.new_clients||0)-(a.new_clients||0))[0]?.source !== 'Walking By' ? 'Consider showcasing more of your work publicly to attract even more potential clients!' : 'Consider asking satisfied clients how they heard about you to better track your marketing channels.'}</p>`
       : `<p>No new client acquisition data available for this week.</p>`)
-  : `<p>This area is under construction. We appreciate your understanding.</p>`
 }
 
 <h2>Top Clients 💈</h2>

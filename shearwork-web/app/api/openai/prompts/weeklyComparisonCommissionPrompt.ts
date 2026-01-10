@@ -367,73 +367,71 @@ ${JSON.stringify(minimalDataset, null, 2)}
 </table>
 
 <h2>📣 Marketing Funnels</h2>
-${dataset.special_access 
-  ? `<table>
-      <thead>
-        <tr>
-          <th style="padding: 8px 4px;">Source</th>
-          ${minimalDataset.weekly_rows.map((w: any) => `<th style="padding: 8px 4px;">W${w.week_number}</th>`).join('')}
-        </tr>
-      </thead>
-      <tbody>
-        ${(() => {
-          // Get all unique sources with their total new clients
-          const sourceNames = [...new Set(funnels.map((f: any) => f.source))]
-            .filter(source => source !== 'Returning Client' && source !== 'Walk In');
-          
-          const sourcesWithTotals = sourceNames.map(source => {
-            const weeklyNewClients = minimalDataset.weekly_rows.map((w: any) => {
-              const funnelData = funnels.find((f: any) => 
-                f.source === source && f.week_number === w.week_number
-              );
-              return funnelData?.new_clients || 0;
-            });
-            
-            const lastWeekClients = weeklyNewClients[weeklyNewClients.length - 1] || 0;
-            
-            return {
-              name: source,
-              weeklyNewClients,
-              lastWeekClients
-            };
-          })
-          .filter(s => s.weeklyNewClients.some((c: any) => c > 0))  // Remove sources with 0 new clients across all weeks
-          .sort((a, b) => b.lastWeekClients - a.lastWeekClients);  // Sort by latest week (highest first)
-          
-          // Split into top 5 and others
-          const top5 = sourcesWithTotals.slice(0, 5);
-          const others = sourcesWithTotals.slice(5);
-          
-          // Generate rows for top 5
-          const top5Rows = top5.map(source => {
-            return `
-              <tr>
-                <td style="padding: 8px 4px;">${source.name}</td>
-                ${source.weeklyNewClients.map((clients: number) => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
-              </tr>
-            `;
-          }).join('');
-          
-          // Generate "Others" row if there are more than 5 sources
-          const othersRow = others.length > 0 ? (() => {
-            const othersWeeklyClients = minimalDataset.weekly_rows.map((w: any, index: number) => {
-              return others.reduce((sum: number, source) => sum + (source.weeklyNewClients[index] || 0), 0);
-            });
-            
-            return `
-              <tr style="font-style: italic; opacity: 0.8;">
-                <td style="padding: 8px 4px;"><em>Others (${others.length} sources)</em></td>
-                ${othersWeeklyClients.map((clients: number) => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
-              </tr>
-            `;
-          })() : '';
-          
-          return top5Rows + othersRow;
-        })()}
-      </tbody>
-    </table>`
-  : `<p>This area is under construction. We appreciate your understanding.</p>`
-}
+<table>
+  <thead>
+    <tr>
+      <th style="padding: 8px 4px;">Source</th>
+      ${minimalDataset.weekly_rows.map((w: any) => `<th style="padding: 8px 4px;">W${w.week_number}</th>`).join('')}
+    </tr>
+  </thead>
+  <tbody>
+    ${(() => {
+      // Get all unique sources with their total new clients
+      const sourceNames = [...new Set(funnels.map((f: any) => f.source))]
+        .filter(source => source !== 'Returning Client' && source !== 'Walk In');
+      
+      const sourcesWithTotals = sourceNames.map(source => {
+        const weeklyNewClients = minimalDataset.weekly_rows.map((w: any) => {
+          const funnelData = funnels.find((f: any) => 
+            f.source === source && f.week_number === w.week_number
+          );
+          return funnelData?.new_clients || 0;
+        });
+        
+        const lastWeekClients = weeklyNewClients[weeklyNewClients.length - 1] || 0;
+        
+        return {
+          name: source,
+          weeklyNewClients,
+          lastWeekClients
+        };
+      })
+      .filter(s => s.weeklyNewClients.some((c: any) => c > 0))  // Remove sources with 0 new clients across all weeks
+      .sort((a, b) => b.lastWeekClients - a.lastWeekClients);  // Sort by latest week (highest first)
+      
+      // Split into top 5 and others
+      const top5 = sourcesWithTotals.slice(0, 5);
+      const others = sourcesWithTotals.slice(5);
+      
+      // Generate rows for top 5
+      const top5Rows = top5.map(source => {
+        return `
+          <tr>
+            <td style="padding: 8px 4px;">${source.name}</td>
+            ${source.weeklyNewClients.map((clients: number) => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
+          </tr>
+        `;
+      }).join('');
+      
+      // Generate "Others" row if there are more than 5 sources
+      const othersRow = others.length > 0 ? (() => {
+        const othersWeeklyClients = minimalDataset.weekly_rows.map((w: any, index: number) => {
+          return others.reduce((sum: number, source) => sum + (source.weeklyNewClients[index] || 0), 0);
+        });
+        
+        return `
+          <tr style="font-style: italic; opacity: 0.8;">
+            <td style="padding: 8px 4px;"><em>Others (${others.length} sources)</em></td>
+            ${othersWeeklyClients.map((clients: number) => `<td style="padding: 8px 4px;">${clients}</td>`).join('')}
+          </tr>
+        `;
+      })() : '';
+      
+      return top5Rows + othersRow;
+    })()}
+  </tbody>
+</table>
+
 
 <h2>Key Insights & Trends 🔍</h2>
 <ul>
