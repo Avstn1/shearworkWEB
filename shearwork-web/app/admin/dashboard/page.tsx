@@ -213,6 +213,7 @@ export default function AdminDashboardPage() {
           .from('profiles')
           .select('*')
           .ilike('role', 'barber')
+          .not('full_name', 'is', null)
           .order('full_name', { ascending: true })
         if (error) throw error
         setBarbers(data as Barber[])
