@@ -29,6 +29,8 @@ async function aggregateWeeklyData(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}weekly_data`
+
+  console.log('Weekly Data Date Range:', dateRange)
   
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
@@ -138,6 +140,8 @@ async function aggregateWeeklyData(
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }))
+
+    console.log('Weekly Data Upsert:', upsertData)
 
     if (upsertData.length > 0) {
       const { error: upsertError } = await supabase

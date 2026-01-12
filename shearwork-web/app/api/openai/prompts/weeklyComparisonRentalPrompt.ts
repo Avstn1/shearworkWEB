@@ -408,7 +408,6 @@ ${JSON.stringify(minimalDataset, null, 2)}
 <h2>Key Insights & Trends 🔍</h2>
 <ul>
   <li>Revenue Performance: Final revenue $${finalRevenue.toFixed(2)}, Best week: Week ${bestWeekRevenue.week_number}, Worst week: Week ${worstWeekRevenue.week_number}</li>
-  <li>Client Retention: Overall ${retentionRate}%, highlight best retention week.</li>
   <li>Average Ticket: Monthly avg $${(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.final_revenue||0),0)/(minimalDataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||1),0))).toFixed(2)}, range from lowest to highest week.</li>
   <li>Service Breakdown: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>
 </ul>

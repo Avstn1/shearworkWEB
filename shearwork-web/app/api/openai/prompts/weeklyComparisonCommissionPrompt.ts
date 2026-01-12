@@ -442,7 +442,6 @@ ${JSON.stringify(minimalDataset, null, 2)}
       <li>Best personal earnings week: Week ${dataset.weekly_rows.reduce((a:any,b:any)=>(b.final_revenue*(dataset.commission_rate||0)>a.final_revenue*(dataset.commission_rate||0)?b:a), dataset.weekly_rows[0]).week_number}</li>
     </ul>
   </li>
-  <li>Client Retention: Overall rate ${retentionRate}%</li>
   <li>Average Ticket Growth: Month avg: $${(dataset.weekly_rows.reduce((sum:number,w:any)=>sum+w.final_revenue,0)/dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.num_appointments||0),0)).toFixed(2)}</li>
   <li>Tip income total: $${dataset.weekly_rows.reduce((sum:number,w:any)=>sum+(w.tips||0),0).toFixed(2)}</li>
   <li>Service Mix Evolution: ${dataset.services_percentage?.map((s:any)=>s.name + ': ' + s.bookings + ' (' + s.percentage.toFixed(1) + '%)').join(', ')||'No data'}</li>

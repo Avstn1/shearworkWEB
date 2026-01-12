@@ -143,7 +143,6 @@ ${dataset.top_clients && dataset.top_clients.length > 0 ? `
 <h2>Insights 🔍</h2>
 AI INSTRUCTIONS: Based on the data provided, generate 2-3 insightful observations about:
 <ul>
-  <li><strong>Client Retention:</strong> ${retentionRate}% retention rate ${parseFloat(retentionRate) >= 60 ? 'shows strong loyalty! Keep nurturing these relationships.' : 'has room for improvement. Focus on rebooking strategies and follow-ups.'}</li>
   <li><strong>Revenue Patterns:</strong> Your personal earnings of $${personalEarnings.toFixed(2)} were driven by ${summary.num_appointments || 0} appointments at an average of $${avgTicket} per client.</li>
   <li><strong>Service Strategy:</strong> ${dataset.services_percentage?.[0]?.name || 'Your top service'} is your highest performer. ${dataset.services_percentage && dataset.services_percentage.length > 2 ? 'Consider promoting underperforming services to balance your mix.' : ''}</li>
   ${bestDay ? `<li><strong>Peak Performance:</strong> ${bestDay.date} was your strongest day with $${(bestDay.total_revenue || 0).toFixed(2)} in revenue. Analyze what made this day successful.</li>` : ''}
