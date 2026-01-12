@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const { user, supabase } = await getAuthenticatedUser(request)
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user || !supabase) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url);
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const selectedDate = dateParam || defaultDate;
 
     // Build query for appointments on the selected date
-    let query = supabase
+    const query = supabase
       .from('acuity_appointments')
       .select(`
         id,
