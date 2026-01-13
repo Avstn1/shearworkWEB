@@ -2,6 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, motion, Variants, easeInOut } from 'framer-motion'
+import { useSearchParams, useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
+import { supabase } from '@/utils/supabaseClient'
 
 import Navbar from '@/components/Navbar'
 import SidebarTabs from '@/components/Settings/SidebarTabs'
@@ -10,6 +13,7 @@ import AcuityTab from '@/components/Settings/AcuityTab'
 import SecurityTab from '@/components/Settings/SecurityTab'
 import LogoutTab from '@/components/Settings/LogoutTab'
 import BillingSection from '@/components/Settings/BillingSection'
+import CreditsModal from '@/components/Dashboard/CreditsModal'
 
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -26,10 +30,74 @@ const fadeInUp: Variants = {
 }
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  
   const [activeTab, setActiveTab] = useState('profile')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showCreditsModal, setShowCreditsModal] = useState(false)
+  const [authenticating, setAuthenticating] = useState(false)
   const navbarRef = useRef<HTMLDivElement>(null)
   const [navbarHeight, setNavbarHeight] = useState(0)
+
+  // Handle authentication from mobile app code
+  useEffect(() => {
+    const authenticateUser = async () => {
+      const code = searchParams.get('code')
+      
+      if (!code) return
+      
+      setAuthenticating(true)
+      
+      try {
+        console.log('Authenticating with mobile code...')
+        
+        const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        })
+
+        const data = await response.json()
+        
+        if (!response.ok || !data.access_token) {
+          toast.error(data.error || 'Invalid or expired code. Please try again from the app.')
+          router.push('/login')
+          return
+        }
+
+        // Set session with the tokens from the verified code
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        })
+
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          throw sessionError
+        }
+        
+        toast.success('Successfully authenticated!')
+        
+        // Clean URL - remove the code parameter
+        router.replace('/settings')
+        
+        // Open credits modal after authentication
+        setTimeout(() => {
+          setShowCreditsModal(true)
+        }, 500)
+        
+      } catch (err: any) {
+        console.error('Auth error:', err)
+        toast.error('Authentication failed')
+        router.push('/login')
+      } finally {
+        setAuthenticating(false)
+      }
+    }
+
+    authenticateUser()
+  }, [searchParams, router])
 
   // Measure navbar height for padding
   useEffect(() => {
@@ -107,6 +175,15 @@ export default function SettingsPage() {
         className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] text-white"
         style={{ paddingTop: 'calc(80px + 1.5rem)' }} // Navbar height + spacing
       >
+        {authenticating && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-300 mx-auto mb-4"></div>
+              <p className="text-gray-300">Authenticating...</p>
+            </div>
+          </div>
+        )}
+        
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Desktop Sidebar */}
@@ -138,6 +215,12 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Credits Modal */}
+      <CreditsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+      />
     </>
   )
 }
