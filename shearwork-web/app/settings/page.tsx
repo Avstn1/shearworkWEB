@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, Suspense } from 'react'
 import { AnimatePresence, motion, Variants, easeInOut } from 'framer-motion'
 import { useSearchParams, useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -29,7 +29,20 @@ const fadeInUp: Variants = {
   },
 }
 
-export default function SettingsPage() {
+// Loading component for Suspense fallback
+function SettingsPageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-300 mx-auto mb-4"></div>
+        <p className="text-gray-300">Loading...</p>
+      </div>
+    </div>
+  )
+}
+
+// Main settings component
+function SettingsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
@@ -49,6 +62,8 @@ export default function SettingsPage() {
       setAuthenticating(true)
       
       try {
+        console.log('Authenticating with mobile code:', code)
+        
         const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -219,5 +234,14 @@ export default function SettingsPage() {
         onClose={() => setShowCreditsModal(false)}
       />
     </>
+  )
+}
+
+// Export wrapped component with Suspense
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<SettingsPageLoader />}>
+      <SettingsPageContent />
+    </Suspense>
   )
 }
