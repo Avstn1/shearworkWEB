@@ -44,14 +44,11 @@ export default function SettingsPage() {
   useEffect(() => {
     const authenticateUser = async () => {
       const code = searchParams.get('code')
-      
       if (!code) return
       
       setAuthenticating(true)
       
       try {
-        console.log('Authenticating with mobile code...')
-        
         const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

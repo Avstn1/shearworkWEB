@@ -3,8 +3,6 @@ import type { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 export default async function middleware(request: NextRequest) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
   // -----------------------------
@@ -13,19 +11,24 @@ export default async function middleware(request: NextRequest) {
   // Routes that can bypass auth when they have a 'code' query parameter
   const codePassthroughRoutes = ['/pricing', '/settings']
   
-  if (codePassthroughRoutes.includes(pathname) && request.nextUrl.searchParams.has('code')) {
-    console.log(`Allowing mobile app auth code through middleware for ${pathname}`)
+  if (codePassthroughRoutes.some(route => pathname.startsWith(route))) {
+    console.log(`Allowing access to ${pathname}`)
     return NextResponse.next()
   }
+
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Public routes (anyone can access)
   const publicRoutes = ['/login', '/signup', '/_next', '/api', '/images', '/heroImages']
 
   // Handle unauthenticated users
   if (!user) {
+    // console.log('User not authenticated. Running public route check for path:', pathname)
     if (pathname === '/' || publicRoutes.some(path => pathname.startsWith(path))) {
       return NextResponse.next()
     }
+    console.log('User not authenticated. Redirecting to home from path:', pathname)
     return NextResponse.redirect(new URL('/', request.url))
   }
 

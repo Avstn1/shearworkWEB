@@ -18,11 +18,11 @@ export async function POST(request: Request) {
       )
     }
     
-    await authCodeCache.set(code, user?.id, 10)
+    await authCodeCache.set(code, user?.id, 300) // Code valid for 5 minutes
 
     return NextResponse.json({ 
       code,
-      expiresIn: 10
+      expiresIn: 300  // Code valid for 5 minutes
     })
     
   } catch (err: any) {
