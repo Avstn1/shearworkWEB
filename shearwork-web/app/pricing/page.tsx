@@ -62,7 +62,7 @@ function PricingPageContent() {
         
         if (code) {
           // User came from mobile app with a one-time code
-          console.log('Authenticating with mobile code...')
+          console.log('Authenticating with mobile code: ' + code)
           
           const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
             method: 'POST',
