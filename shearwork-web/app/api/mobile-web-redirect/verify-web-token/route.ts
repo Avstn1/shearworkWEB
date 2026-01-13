@@ -11,6 +11,7 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const { code } = await req.json()
+    console.log('Verifying web token for code:', code)
 
     if (!code) {
       return NextResponse.json(
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
 
     // Get userId from Redis
     const userId = await authCodeCache.get(code)
+    console.log('Retrieved userId from cache:', userId)
     
     if (!userId) {
       console.error('❌ Code not found or expired:', code)
