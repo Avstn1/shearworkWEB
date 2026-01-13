@@ -1,7 +1,7 @@
 // app/pricing/page.tsx
 'use client'
 
-import React, { useEffect, useState, Suspense } from 'react'
+import React, { useEffect, useState, useRef, Suspense } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   EmbeddedCheckout,
@@ -62,8 +62,6 @@ function PricingPageContent() {
         
         if (code) {
           // User came from mobile app with a one-time code
-          console.log('Authenticating with mobile code: ' + code)
-          
           const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

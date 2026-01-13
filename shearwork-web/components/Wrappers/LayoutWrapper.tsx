@@ -8,6 +8,7 @@ import { createBrowserClient } from '@supabase/ssr'
 export default function LayoutWrapper({ children }: { children: ReactNode }) {
   const [hasSession, setHasSession] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isPremiumUser, setIsPremiumUser] = useState(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
@@ -18,7 +19,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
   )
 
   // Public routes that don't need authentication
-  const publicRoutes = ['/', '/login', '/signup']
+  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings']
   const isPublicRoute = publicRoutes.includes(pathname)
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, stripe_subscription_status')
           .eq('user_id', session.user.id)
           .single()
 
@@ -64,6 +65,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
           setIsAdmin(false)
         } else {
           setIsAdmin(profile?.role === 'Admin')
+          setIsPremiumUser(profile?.stripe_subscription_status === true)
         }
         
         setIsInitialLoad(false)
@@ -121,7 +123,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
     return null
   }
 
-  const showSidebar = hasSession && !isAdmin
+  const showSidebar = hasSession && !isAdmin && isPremiumUser
 
   return (
     <>
