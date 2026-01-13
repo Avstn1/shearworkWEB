@@ -11,7 +11,7 @@ export default async function middleware(request: NextRequest) {
   // SPECIAL CASE: Mobile App Authentication Passthrough
   // -----------------------------
   // Routes that can bypass auth when they have a 'code' query parameter
-  const codePassthroughRoutes = ['/pricing']
+  const codePassthroughRoutes = ['/pricing', '/settings']
   
   if (codePassthroughRoutes.includes(pathname) && request.nextUrl.searchParams.has('code')) {
     console.log(`Allowing mobile app auth code through middleware for ${pathname}`)
