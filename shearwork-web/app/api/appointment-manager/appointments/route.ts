@@ -138,7 +138,7 @@ export async function PATCH(request: Request) {
       .from('acuity_appointments')
       .update(updateData)
       .eq('id', id)
-      .eq('user_id', user.id) // Ensure user owns this appointment
+      .eq('user_id', user.id) 
       .select()
       .single();
 
