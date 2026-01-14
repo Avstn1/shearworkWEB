@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
     const { user, supabase } = await getAuthenticatedUser(request)
 
@@ -96,7 +95,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(request: Request) {
   try {
     const { user, supabase } = await getAuthenticatedUser(request)
 
