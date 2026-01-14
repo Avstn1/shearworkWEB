@@ -19,8 +19,12 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
   )
 
   // Public routes that don't need authentication
-  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings']
-  const isPublicRoute = publicRoutes.includes(pathname)
+  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings'];
+  const normalPublicRoutes = ['/', '/login', '/signup'];
+
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isNormalPublicRoute = normalPublicRoutes.includes(pathname);
+
 
   useEffect(() => {
     let mounted = true
@@ -87,7 +91,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
         setHasSession(true)
         // Only redirect if we're on a public route (actual login flow)
         // Don't redirect if already on a protected route (session refresh)
-        if (isPublicRoute) {
+        if (isNormalPublicRoute) {
           router.push('/dashboard')
         }
       }
