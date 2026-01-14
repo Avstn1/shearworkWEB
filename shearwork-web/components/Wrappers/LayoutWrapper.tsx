@@ -65,7 +65,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
           setIsAdmin(false)
         } else {
           setIsAdmin(profile?.role === 'Admin')
-          setIsPremiumUser(profile?.stripe_subscription_status === true)
+          setIsPremiumUser(profile?.stripe_subscription_status === 'active')
         }
         
         setIsInitialLoad(false)
