@@ -97,7 +97,6 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    console.log('PATCH request received');
     const { user, supabase } = await getAuthenticatedUser(request)
 
     if (!user || !supabase) {
@@ -111,8 +110,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    console.log('ID received');
-
     // Build update object with provided fields
     const updateData: { tip?: number; revenue?: number } = {};
 
@@ -121,7 +118,6 @@ export async function PATCH(request: Request) {
       if (isNaN(tipValue) || tipValue < 0) {
         return NextResponse.json({ error: 'tip must be a valid non-negative number' }, { status: 400 });
       }
-      console.log('Tip value parsed:', tipValue);
       updateData.tip = tipValue;
     }
 
@@ -130,7 +126,6 @@ export async function PATCH(request: Request) {
       if (isNaN(revenueValue) || revenueValue < 0) {
         return NextResponse.json({ error: 'revenue must be a valid non-negative number' }, { status: 400 });
       }
-      console.log('Revenue value parsed:', revenueValue);
       updateData.revenue = revenueValue;
     }
 
