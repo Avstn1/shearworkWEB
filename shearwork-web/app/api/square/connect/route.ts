@@ -7,11 +7,9 @@ import { getAuthenticatedUser } from "@/utils/api-auth"
 const SCOPES = [
 	"MERCHANT_PROFILE_READ",
 	"CUSTOMERS_READ",
-	"EMPLOYEES_READ",
-	"ORDERS_READ",
-	"ITEMS_READ",
 	"PAYMENTS_READ",
 	"APPOINTMENTS_READ",
+	"APPOINTMENTS_ALL_READ",
 ]
 
 function base64Url(buf: Buffer) {

@@ -1,12 +1,21 @@
 // components/Settings/SquareTab.tsx
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import ConnectSquareButton from '../ConnectSquareButton'
 import Select from '@/components/UI/Select'
-import { RefreshCw, Database, Store, Users, DollarSign, Calendar } from 'lucide-react'
+import { ChevronDown, Database, RefreshCw, Store } from 'lucide-react'
+
+interface SquareLocation {
+	location_id: string
+	name: string | null
+	timezone: string | null
+	status: string | null
+	is_active: boolean
+	selected: boolean
+}
 
 const MONTHS = [
 	'January',
@@ -26,15 +35,56 @@ const MONTHS = [
 export default function SquareTab() {
 	const [loading, setLoading] = useState(true)
 	const [connected, setConnected] = useState(false)
-	const [merchantId, setMerchantId] = useState<string | null>(null)
-	const [connectedAt, setConnectedAt] = useState<string | null>(null)
+	const [locations, setLocations] = useState<SquareLocation[]>([])
+	const [initialLocationIds, setInitialLocationIds] = useState<string[]>([])
+	const [loadingLocations, setLoadingLocations] = useState(false)
+	const [savingLocations, setSavingLocations] = useState(false)
+	const [confirmingLocationChange, setConfirmingLocationChange] = useState(false)
+	const [locationDropdownOpen, setLocationDropdownOpen] = useState(false)
+	const locationDropdownRef = useRef<HTMLDivElement>(null)
 	const [year, setYear] = useState(new Date().getFullYear().toString())
-	const [syncingCustomers, setSyncingCustomers] = useState(false)
 	const [syncingAll, setSyncingAll] = useState(false)
 
 	useEffect(() => {
 		loadStatus()
 	}, [])
+
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				locationDropdownRef.current &&
+				!locationDropdownRef.current.contains(event.target as Node)
+			) {
+				setLocationDropdownOpen(false)
+			}
+		}
+
+		document.addEventListener('mousedown', handleClickOutside)
+		return () => document.removeEventListener('mousedown', handleClickOutside)
+	}, [])
+
+	const loadLocations = async () => {
+		setLoadingLocations(true)
+		try {
+			const res = await fetch('/api/square/locations', { cache: 'no-store' })
+			const body = await res.json()
+			if (!res.ok) {
+				throw new Error(body?.error || 'Failed to load locations')
+			}
+			const fetchedLocations = body.locations || []
+			setLocations(fetchedLocations)
+			setInitialLocationIds(
+				fetchedLocations.filter((loc: SquareLocation) => loc.selected).map((loc: SquareLocation) => loc.location_id)
+			)
+			setConfirmingLocationChange(false)
+			setLocationDropdownOpen(false)
+		} catch (err: any) {
+			console.error(err)
+			toast.error(err.message || 'Failed to load Square locations')
+		} finally {
+			setLoadingLocations(false)
+		}
+	}
 
 	const loadStatus = async () => {
 		setLoading(true)
@@ -47,22 +97,23 @@ export default function SquareTab() {
 				return
 			}
 
-			const res = await fetch('/api/square/status')
+			const res = await fetch('/api/square/status', { cache: 'no-store' })
 			const body = await res.json()
 
 			if (res.ok && body?.connected) {
 				setConnected(true)
-				setMerchantId(body.merchant_id || null)
-				setConnectedAt(body.connected_at || null)
+				await loadLocations()
 			} else {
 				setConnected(false)
-				setMerchantId(null)
-				setConnectedAt(null)
+				setLocations([])
+				setInitialLocationIds([])
+				setConfirmingLocationChange(false)
 			}
 		} catch (e) {
 			setConnected(false)
-			setMerchantId(null)
-			setConnectedAt(null)
+			setLocations([])
+			setInitialLocationIds([])
+			setConfirmingLocationChange(false)
 		} finally {
 			setLoading(false)
 		}
@@ -80,9 +131,73 @@ export default function SquareTab() {
 			if (!res.ok) throw new Error(body?.error || 'Disconnect failed')
 
 			toast.success('Square disconnected', { id: toastId })
+			setConnected(false)
+			setLocations([])
+			setInitialLocationIds([])
+			setConfirmingLocationChange(false)
+			setLocationDropdownOpen(false)
 			await loadStatus()
 		} catch (err: any) {
 			toast.error(err.message || 'Failed to disconnect', { id: toastId })
+		}
+	}
+
+	const getSelectedLocationIds = (list: SquareLocation[]) =>
+		list.filter((location) => location.selected).map((location) => location.location_id)
+
+	const selectionChanged = (selectedIds: string[]) => {
+		if (selectedIds.length !== initialLocationIds.length) return true
+		const initialSet = new Set(initialLocationIds)
+		return selectedIds.some((id) => !initialSet.has(id))
+	}
+
+	const resetLocationSelection = () => {
+		const initialSet = new Set(initialLocationIds)
+		setLocations((prev) =>
+			prev.map((location) => ({
+				...location,
+				selected: initialSet.has(location.location_id),
+			}))
+		)
+	}
+
+	const toggleLocation = (locationId: string) => {
+		setLocations((prev) => {
+			const next = prev.map((location) =>
+				location.location_id === locationId
+					? { ...location, selected: !location.selected }
+					: location
+			)
+			const selectedIds = getSelectedLocationIds(next)
+			setConfirmingLocationChange(selectionChanged(selectedIds))
+			return next
+		})
+	}
+
+	const saveLocations = async () => {
+		setSavingLocations(true)
+		const toastId = toast.loading('Saving locations...')
+		try {
+			const selectedLocationIds = getSelectedLocationIds(locations)
+
+			const res = await fetch('/api/square/locations', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ selectedLocationIds }),
+			})
+
+			const body = await res.json()
+			if (!res.ok) throw new Error(body?.error || 'Failed to save locations')
+
+			setInitialLocationIds(selectedLocationIds)
+			setConfirmingLocationChange(false)
+			setLocationDropdownOpen(false)
+
+			toast.success('Locations saved', { id: toastId })
+		} catch (err: any) {
+			toast.error(err.message || 'Failed to save locations', { id: toastId })
+		} finally {
+			setSavingLocations(false)
 		}
 	}
 
@@ -94,29 +209,7 @@ export default function SquareTab() {
 		})
 	}
 
-	const syncCustomers = async () => {
-		setSyncingCustomers(true)
-		const toastId = toast.loading('Syncing customers...')
-		try {
-			const res = await fetch('/api/square/pull-customers', { method: 'GET' })
-			const body = await res.json()
-
-			if (!res.ok) {
-				throw new Error(body?.error || 'Customer sync failed')
-			}
-
-			toast.success(
-				`Customers synced ✅ fetched ${body.totalFetched || 0}, upserted ${body.totalUpserted || 0}`,
-				{ id: toastId }
-			)
-		} catch (err: any) {
-			toast.error(err.message || 'Failed to sync customers', { id: toastId })
-		} finally {
-			setSyncingCustomers(false)
-		}
-	}
-
-	const syncAllData = async () => {
+	const syncYear = async () => {
 		if (!connected) {
 			toast.error('Please connect Square first')
 			return
@@ -131,18 +224,18 @@ export default function SquareTab() {
 		const toastId = toast.loading(`Syncing Square data for ${year}...`)
 
 		try {
-			// For now, just sync customers
-			const res = await fetch('/api/square/pull-customers', { method: 'GET' })
-			const body = await res.json()
+			for (const month of MONTHS) {
+				const res = await fetch(
+					`/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`
+				)
+				const body = await res.json().catch(() => ({}))
 
-			if (!res.ok) {
-				throw new Error(body?.error || 'Square sync failed')
+				if (!res.ok) {
+					throw new Error(body?.error || `Sync failed for ${month} ${year}`)
+				}
 			}
 
-			toast.success(
-				`Successfully synced ${body.totalUpserted || 0} customers for ${year}`,
-				{ id: toastId }
-			)
+			toast.success(`Synced data for all of ${year}`, { id: toastId })
 		} catch (err: any) {
 			console.error(err)
 			toast.error(`Failed to sync Square data for ${year}`, { id: toastId })
@@ -150,6 +243,15 @@ export default function SquareTab() {
 			setSyncingAll(false)
 		}
 	}
+
+	const selectedLocations = locations.filter((location) => location.selected)
+	const locationLabel = (() => {
+		if (selectedLocations.length === 0) return 'All locations'
+		if (selectedLocations.length === 1) {
+			return selectedLocations[0].name || selectedLocations[0].location_id
+		}
+		return `${selectedLocations.length} locations selected`
+	})()
 
 	if (loading)
 		return (
@@ -167,43 +269,152 @@ export default function SquareTab() {
 				</p>
 			</div>
 
-			<ConnectSquareButton onConnectSuccess={loadStatus} />
+			<div className="space-y-3">
+				{connected ? (
+					<button
+						onClick={handleDisconnect}
+						className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+					>
+						Disconnect Square
+					</button>
+				) : (
+					<ConnectSquareButton onConnectSuccess={loadStatus} />
+				)}
+			</div>
 
-			{/* Connection Status */}
-			{connected && (
-				<div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-					<h3 className="text-lg font-semibold flex items-center gap-2">
-						<Store className="w-5 h-5" />
-						Connection Status
-					</h3>
+			<div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+				<h3 className="text-lg font-semibold flex items-center gap-2">
+					<Store className="w-5 h-5" />
+					Locations
+				</h3>
 
-					<div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="font-semibold text-emerald-300">
-									✓ Connected to Square
-								</p>
-								<p className="text-sm text-gray-400 mt-1">
-									Merchant ID: {merchantId}
-								</p>
-								{connectedAt && (
-									<p className="text-xs text-gray-500 mt-1">
-										Connected on {new Date(connectedAt).toLocaleDateString()}
-									</p>
+				{!connected ? (
+					<p className="text-sm text-gray-400">Connect Square to load locations.</p>
+				) : loadingLocations ? (
+					<div className="flex items-center justify-center py-6">
+						<div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-lime-400"></div>
+					</div>
+				) : (
+					<div className="space-y-4">
+						<div className="flex flex-col sm:flex-row gap-3">
+							<div className="relative flex-1" ref={locationDropdownRef}>
+								<button
+									type="button"
+									onClick={() =>
+										locations.length > 0 ? setLocationDropdownOpen((prev) => !prev) : null
+									}
+									className={`flex items-center justify-between p-3 rounded-xl border border-[var(--accent-2)] bg-black/90 text-white transition-all ${
+										locations.length > 0
+											? 'hover:bg-black/80'
+											: 'opacity-50 cursor-not-allowed'
+									}`}
+									disabled={locations.length === 0}
+								>
+									<span>
+										{locations.length === 0 ? 'No locations found' : locationLabel}
+									</span>
+									<ChevronDown className="w-4 h-4 ml-2" />
+								</button>
+
+								{locationDropdownOpen && (
+									<div className="absolute left-0 right-0 mt-2 bg-black/95 border border-[var(--accent-2)] rounded-xl shadow-lg z-50 max-h-56 overflow-y-auto">
+										{locations.length === 0 ? (
+											<p className="px-3 py-2 text-sm text-gray-400">No locations available.</p>
+										) : (
+											locations.map((location) => (
+												<label
+													key={location.location_id}
+													className="flex items-start gap-3 px-3 py-2 cursor-pointer hover:bg-white/10"
+												>
+													<input
+														type="checkbox"
+														checked={location.selected}
+														onChange={() => toggleLocation(location.location_id)}
+														className="mt-1 h-4 w-4 accent-lime-400"
+													/>
+													<div>
+														<p className="text-sm text-white font-medium">
+															{location.name || location.location_id}
+														</p>
+														<p className="text-xs text-gray-500">
+															{location.timezone || 'Timezone unknown'}
+														</p>
+													</div>
+												</label>
+											))
+										)}
+									</div>
 								)}
 							</div>
+
+							<div className="flex gap-2">
+								<button
+									onClick={saveLocations}
+									disabled={savingLocations}
+									className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+										savingLocations
+											? 'bg-white/10 text-gray-400 cursor-not-allowed'
+											: 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
+									}`}
+								>
+									{savingLocations ? 'Saving...' : 'Save'}
+								</button>
+								<button
+									onClick={loadLocations}
+									disabled={loadingLocations}
+									className={`px-4 py-3 rounded-xl font-semibold transition-all ${
+										loadingLocations
+											? 'bg-white/10 text-gray-400 cursor-not-allowed'
+											: 'bg-white/10 text-white hover:bg-white/15'
+									}`}
+								>
+									Refresh
+								</button>
+							</div>
+
+						</div>
+
+						<p className="text-xs text-gray-500">
+							If no locations are selected, all active locations will sync.
+						</p>
+					</div>
+				)}
+
+				{confirmingLocationChange && (
+					<div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-3">
+						<p className="text-sm text-amber-200">
+							Changing your locations will sync data for the new selection.
+						</p>
+
+						<div className="flex gap-3">
 							<button
-								onClick={handleDisconnect}
-								className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-300 rounded-lg hover:bg-red-500/20 transition-all text-sm font-medium"
+								onClick={() => {
+									resetLocationSelection()
+									setConfirmingLocationChange(false)
+									setLocationDropdownOpen(false)
+								}}
+								className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
 							>
-								Disconnect
+
+								Cancel
+							</button>
+
+							<button
+								onClick={saveLocations}
+								disabled={savingLocations}
+								className={`px-6 py-2 rounded-xl font-semibold transition-all ${
+									savingLocations
+										? 'bg-white/10 text-gray-400 cursor-not-allowed'
+										: 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg'
+								}`}
+							>
+								{savingLocations ? 'Saving...' : 'Confirm Change'}
 							</button>
 						</div>
 					</div>
-				</div>
-			)}
+				)}
+			</div>
 
-			{/* Sync Section */}
 			<div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
 				<h3 className="text-lg font-semibold flex items-center gap-2">
 					<Database className="w-5 h-5" />
@@ -222,104 +433,26 @@ export default function SquareTab() {
 
 						<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
 							<button
-								onClick={syncAllData}
+								onClick={syncYear}
 								disabled={!connected || syncingAll}
-								className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${!connected || syncingAll
+								className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+									!connected || syncingAll
 										? 'bg-white/10 text-gray-400 cursor-not-allowed'
 										: 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
-									}`}
+								}`}
 							>
 								<RefreshCw
 									className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`}
 								/>
-								{syncingAll ? `Syncing ${year}...` : `Sync All Data`}
-							</button>
-
-							<button
-								onClick={syncCustomers}
-								disabled={!connected || syncingCustomers}
-								className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${!connected || syncingCustomers
-										? 'bg-white/10 text-gray-400 cursor-not-allowed'
-										: 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
-									}`}
-							>
-								<RefreshCw
-									className={`w-4 h-4 ${syncingCustomers ? 'animate-spin' : ''}`}
-								/>
-								{syncingCustomers ? 'Syncing...' : 'Sync Customers'}
+								{syncingAll ? `Syncing ${year}...` : `Sync All Appointments`}
 							</button>
 						</div>
 					</div>
 
 					<p className="text-xs text-gray-500">
-						Customers are synced into the <code>square_clients</code> table. Revenue and order data coming soon.
+						Sync appointments and payments to refresh revenue reporting.
 					</p>
 				</div>
-			</div>
-
-			{/* Coming Soon Section */}
-			<div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-				<h3 className="text-lg font-semibold mb-3">Coming Soon</h3>
-
-				<div className="space-y-4">
-					{/* Revenue & Orders */}
-					<div className="flex items-start gap-4 p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
-						<div className="p-2 bg-amber-500/10 rounded-lg">
-							<DollarSign className="w-5 h-5 text-amber-400" />
-						</div>
-						<div>
-							<h4 className="font-semibold text-amber-300">Revenue & Orders</h4>
-							<p className="text-sm text-gray-400 mt-1">
-								Track sales transactions, service history, and revenue analytics.
-							</p>
-						</div>
-					</div>
-
-					{/* Payment Details */}
-					<div className="flex items-start gap-4 p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
-						<div className="p-2 bg-amber-500/10 rounded-lg">
-							<Calendar className="w-5 h-5 text-amber-400" />
-						</div>
-						<div>
-							<h4 className="font-semibold text-amber-300">Payment Analytics</h4>
-							<p className="text-sm text-gray-400 mt-1">
-								Detailed payment tracking, tips analysis, and financial reporting.
-							</p>
-						</div>
-					</div>
-
-					{/* Customer Insights */}
-					<div className="flex items-start gap-4 p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
-						<div className="p-2 bg-amber-500/10 rounded-lg">
-							<Users className="w-5 h-5 text-amber-400" />
-						</div>
-						<div>
-							<h4 className="font-semibold text-amber-300">Customer Insights</h4>
-							<p className="text-sm text-gray-400 mt-1">
-								Advanced customer analytics, purchase patterns, and loyalty tracking.
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			{/* Currently Synced */}
-			<div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-				<h3 className="text-lg font-semibold mb-3">Currently Synced</h3>
-				<ul className="space-y-3 text-sm text-gray-400">
-					<li className="flex items-start gap-3">
-						<div className="w-2 h-2 bg-lime-400 rounded-full mt-2"></div>
-						<p>Customer contact information (name, email, phone)</p>
-					</li>
-					<li className="flex items-start gap-3">
-						<div className="w-2 h-2 bg-lime-400 rounded-full mt-2"></div>
-						<p>Basic customer profiles and contact details</p>
-					</li>
-					<li className="flex items-start gap-3">
-						<div className="w-2 h-2 bg-lime-400 rounded-full mt-2"></div>
-						<p>Stored in <code>square_clients</code> table for unified client management</p>
-					</li>
-				</ul>
 			</div>
 		</div>
 	)
