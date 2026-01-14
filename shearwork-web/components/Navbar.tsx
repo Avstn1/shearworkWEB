@@ -9,7 +9,6 @@ import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/ManageTipsButton'
 import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
-
 import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 import CreditsModal from '@/components/Dashboard/CreditsModal'
 
@@ -28,31 +27,31 @@ const COLORS = {
   greenGlow: 'rgba(115, 170, 87, 0.4)',
 }
 
-async function logNavLinkClick(user_id: string, linkName: string) {
-  const { error: insertError } = await supabase
-    .from('system_logs')
-    .insert({
-      source: user_id,
-      action: `clicked_${linkName}`,
-      status: 'success',
-      details: `Opened navigation link: ${linkName}`,
-    });
-
-  if (insertError) throw insertError;
-}
-
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false)
   const [showFeaturesModal, setShowFeaturesModal] = useState(false)
-
   const [hasUnreadFeatures, setHasUnreadFeatures] = useState(false)
-
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Fetch user role helper
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('user_id', userId)
+        .single()
+
+      if (profileError) throw profileError
+      setUserRole(profileData.role)
+    } catch (err: any) {
+      console.error('Error fetching user role:', err.message)
+    }
+  }
 
   useEffect(() => {
     const getUser = async () => {
@@ -71,14 +70,7 @@ export default function Navbar() {
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .single()
-
-          if (profileError) throw profileError
-          setUserRole(profileData.role)
+          await fetchUserRole(session.user.id)
         }
       } catch (err: any) {
         console.error('Unexpected error fetching user:', err.message)
@@ -90,8 +82,20 @@ export default function Navbar() {
 
     getUser()
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null)
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN') {
+        setUser(session?.user || null)
+        
+        // Fetch role when signing in
+        if (session?.user) {
+          await fetchUserRole(session.user.id)
+        }
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setUserRole(null)
+      }
     })
 
     return () => subscription.subscription.unsubscribe()
@@ -160,12 +164,8 @@ export default function Navbar() {
     }
   }
 
-  if (loading) return null
-
   const desktopIcons = (
-    <>
- 
-    </>
+    <></>
   )
 
   const renderMobileMenu = () => {
@@ -437,6 +437,7 @@ export default function Navbar() {
             <ChartBar className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
         </Link>
+        
         <Link href="/dashboard" className="relative flex flex-col items-center group hidden md:flex">
           <div 
             className="p-2 rounded-full transition-colors"
@@ -485,130 +486,130 @@ export default function Navbar() {
 
   return (
     <>
-    <nav 
-      className="fixed top-0 w-full z-50 backdrop-blur-md shadow-sm"
-      style={{
-        backgroundColor: `${COLORS.navBg}f0`, // 94% opacity with greenish tint
-        borderBottom: `1px solid rgba(115, 170, 87, 0.2)`, // Subtle green border
-      }}
-    >
-      <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
-        {/* --- LEFT: Logo --- */}
-        <Link 
-          href="/" 
-          className="flex items-center gap-0"
-        >
-          <img 
-            src="/images/corvalogo.png" 
-            alt="Corva Logo" 
-            className="h-12 w-auto"
-          />
-          <span 
-            className="text-[clamp(1.25rem,4vw,2rem)] -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent"
+      <nav 
+        className="fixed top-0 w-full z-50 backdrop-blur-md shadow-sm"
+        style={{
+          backgroundColor: `${COLORS.navBg}f0`,
+          borderBottom: `1px solid rgba(115, 170, 87, 0.2)`,
+        }}
+      >
+        <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
+          {/* --- LEFT: Logo --- */}
+          <Link 
+            href="/" 
+            className="flex items-center gap-0"
           >
-            orva
-          </span>
-        </Link>
+            <img 
+              src="/images/corvalogo.png" 
+              alt="Corva Logo" 
+              className="h-12 w-auto"
+            />
+            <span 
+              className="text-[clamp(1.25rem,4vw,2rem)] -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent"
+            >
+              orva
+            </span>
+          </Link>
 
-        {/* --- RIGHT SIDE --- */}
-        <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-          {rightSideContent}
-          <button
-            className="md:hidden p-[clamp(4px,1vw,8px)] rounded transition-colors"
-            style={{
-              backgroundColor: 'transparent',
-              color: COLORS.text,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-            onClick={() => setOpen(!open)}
-          >
-            {open ? (
-              <X className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
-            ) : (
-              <Menu className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* --- MOBILE MENU SIDEBAR --- */}
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-            onClick={() => setOpen(false)}
-          />
-          
-          {/* Sidebar */}
-          <div 
-            ref={menuRef} 
-            className="md:hidden fixed left-0 top-0 h-screen w-64 z-50 shadow-2xl"
-            style={{
-              backgroundColor: COLORS.navBg,
-              borderRight: `1px solid rgba(115, 170, 87, 0.2)`,
-              animation: 'slideInLeft 0.3s ease-out',
-            }}
-          >
-            <style jsx>{`
-              @keyframes slideInLeft {
-                from {
-                  transform: translateX(-100%);
-                }
-                to {
-                  transform: translateX(0);
-                }
-              }
-            `}</style>
-            
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <div className="flex items-center gap-0">
-                <img 
-                  src="/images/corvalogo.png" 
-                  alt="Corva Logo" 
-                  className="h-10 w-auto"
-                />
-                <span className="text-xl -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent">
-                  orva
-                </span>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-2 rounded-lg transition-colors"
-                style={{
-                  backgroundColor: 'transparent',
-                  color: COLORS.text,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Menu Items */}
-            <div className="flex flex-col py-4 px-3 space-y-1">
-              {renderMobileMenu()}
-            </div>
+          {/* --- RIGHT SIDE --- */}
+          <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+            {rightSideContent}
+            <button
+              className="md:hidden p-[clamp(4px,1vw,8px)] rounded transition-colors"
+              style={{
+                backgroundColor: 'transparent',
+                color: COLORS.text,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+              onClick={() => setOpen(!open)}
+            >
+              {open ? (
+                <X className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
+              ) : (
+                <Menu className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
+              )}
+            </button>
           </div>
-        </>
-      )}
-    </nav>
+        </div>
 
-    <CreditsModal
-      isOpen={showCreditsModal}
-      onClose={() => setShowCreditsModal(false)}
-    />
+        {/* --- MOBILE MENU SIDEBAR --- */}
+        {open && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              onClick={() => setOpen(false)}
+            />
+            
+            {/* Sidebar */}
+            <div 
+              ref={menuRef} 
+              className="md:hidden fixed left-0 top-0 h-screen w-64 z-50 shadow-2xl"
+              style={{
+                backgroundColor: COLORS.navBg,
+                borderRight: `1px solid rgba(115, 170, 87, 0.2)`,
+                animation: 'slideInLeft 0.3s ease-out',
+              }}
+            >
+              <style jsx>{`
+                @keyframes slideInLeft {
+                  from {
+                    transform: translateX(-100%);
+                  }
+                  to {
+                    transform: translateX(0);
+                  }
+                }
+              `}</style>
+              
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <div className="flex items-center gap-0">
+                  <img 
+                    src="/images/corvalogo.png" 
+                    alt="Corva Logo" 
+                    className="h-10 w-auto"
+                  />
+                  <span className="text-xl -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent">
+                    orva
+                  </span>
+                </div>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-2 rounded-lg transition-colors"
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: COLORS.text,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Menu Items */}
+              <div className="flex flex-col py-4 px-3 space-y-1">
+                {renderMobileMenu()}
+              </div>
+            </div>
+          </>
+        )}
+      </nav>
+
+      <CreditsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+      />
     </>
   )
 }
