@@ -97,13 +97,12 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    console.log('PATCH request received');
     const { user, supabase } = await getAuthenticatedUser(request)
 
     if (!user || !supabase) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    console.log('PATCH request received');
 
     const body = await request.json();
     const { id, tip, revenue } = body;
