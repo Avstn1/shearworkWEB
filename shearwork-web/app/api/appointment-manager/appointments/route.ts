@@ -103,12 +103,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    console.log('PATCH request received');
+
     const body = await request.json();
     const { id, tip, revenue } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
+
+    console.log('ID received');
 
     // Build update object with provided fields
     const updateData: { tip?: number; revenue?: number } = {};
@@ -118,6 +122,7 @@ export async function PATCH(request: Request) {
       if (isNaN(tipValue) || tipValue < 0) {
         return NextResponse.json({ error: 'tip must be a valid non-negative number' }, { status: 400 });
       }
+      console.log('Tip value parsed:', tipValue);
       updateData.tip = tipValue;
     }
 
@@ -126,6 +131,7 @@ export async function PATCH(request: Request) {
       if (isNaN(revenueValue) || revenueValue < 0) {
         return NextResponse.json({ error: 'revenue must be a valid non-negative number' }, { status: 400 });
       }
+      console.log('Revenue value parsed:', revenueValue);
       updateData.revenue = revenueValue;
     }
 
@@ -138,7 +144,7 @@ export async function PATCH(request: Request) {
       .from('acuity_appointments')
       .update(updateData)
       .eq('id', id)
-      .eq('user_id', user.id) // Ensure user owns this appointment
+      .eq('user_id', user.id) 
       .select()
       .single();
 
