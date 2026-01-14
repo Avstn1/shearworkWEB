@@ -77,21 +77,18 @@ function PricingPageContent() {
           }
 
           // Set session with the tokens from the verified code
-          const { error: sessionError } = await supabase.auth.setSession({
+          supabase.auth.setSession({
             access_token: data.access_token,
             refresh_token: data.refresh_token
           })
-
-          if (sessionError) {
-            console.error('Session error:', sessionError)
-            throw sessionError
-          }
           
           setUserId(data.user.id)
           toast.success('Successfully authenticated!')
           
-          // Clean URL - remove the code parameter
-          router.replace('/pricing')
+          // Reload to /pricing to ensure session is fully set
+          setTimeout(() => {
+            globalThis.location.href = '/pricing'
+          }, 500)
           
         } else {
           // No code - check for existing web session
@@ -104,12 +101,12 @@ function PricingPageContent() {
           }
           
           setUserId(session.user.id)
+          setAuthenticating(false) // Only set false when not using code flow
         }
       } catch (err: any) {
         console.error('Auth error:', err)
         toast.error('Authentication failed')
         router.push('/login')
-      } finally {
         setAuthenticating(false)
       }
     }

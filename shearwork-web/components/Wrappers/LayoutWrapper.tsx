@@ -89,8 +89,23 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
       
       if (event === 'SIGNED_IN') {
         setHasSession(true)
+        console.log('User signed in:', session)
+        
+        // Re-check user role when signed in
+        if (session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, stripe_subscription_status')
+            .eq('user_id', session.user.id)
+            .single()
+          
+          if (mounted) {
+            setIsAdmin(profile?.role === 'Admin')
+            setIsPremiumUser(profile?.stripe_subscription_status === 'active')
+          }
+        }
+        
         // Only redirect if we're on a public route (actual login flow)
-        // Don't redirect if already on a protected route (session refresh)
         if (isNormalPublicRoute) {
           router.push('/dashboard')
         }
@@ -99,6 +114,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setHasSession(false)
         setIsAdmin(false)
+        setIsPremiumUser(false)
         router.push('/')
         return
       }
