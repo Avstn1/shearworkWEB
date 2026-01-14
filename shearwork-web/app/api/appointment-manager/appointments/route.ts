@@ -98,11 +98,10 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const { user, supabase } = await getAuthenticatedUser(request)
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user || !supabase) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
     const body = await request.json();
