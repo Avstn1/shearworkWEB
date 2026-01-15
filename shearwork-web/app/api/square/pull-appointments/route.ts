@@ -48,10 +48,11 @@ export async function GET(request: Request) {
 		const allAppointments: any[] = []
 		let cursor: string | null = null
 
-		do {
-			const url = new URL(`${squareBaseUrl()}/v2/bookings`)
-			url.searchParams.set('start_at', `${startDate}T00:00:00Z`)
-			url.searchParams.set('end_at', `${endDate}T23:59:59Z`)
+			do {
+				const url = new URL(`${squareBaseUrl()}/v2/bookings`)
+				url.searchParams.set('start_at_min', `${startDate}T00:00:00Z`)
+
+			url.searchParams.set('start_at_max', `${endDate}T23:59:59Z`)
 			url.searchParams.set('limit', '100')
 			if (cursor) url.searchParams.set('cursor', cursor)
 

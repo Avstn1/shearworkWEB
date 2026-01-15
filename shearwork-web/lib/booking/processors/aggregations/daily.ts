@@ -18,20 +18,65 @@ export async function runDailyAggregation(
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    // Fetch appointments in date range
-    const { data: appointments, error: fetchError } = await supabase
+    const includeSquare = tablePrefix === ''
+
+    const { data: acuityAppointments, error: acuityError } = await supabase
       .from(`${tablePrefix}acuity_appointments`)
-      .select('appointment_date, revenue, tip, client_id')
+      .select('appointment_date, revenue, tip')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
 
-    if (fetchError) throw fetchError
+    if (acuityError) throw acuityError
 
-    if (!appointments || appointments.length === 0) {
+    const { data: squareAppointments, error: squareError } = includeSquare
+      ? await supabase
+        .from('square_appointments')
+        .select('appointment_date, revenue, tip, order_id')
+        .eq('user_id', userId)
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (squareError) throw squareError
+
+    const appointments = [
+      ...(acuityAppointments || []).map((appt) => ({
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        tip: appt.tip || 0,
+        order_id: null as string | null,
+      })),
+      ...(squareAppointments || []).map((appt) => ({
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        tip: appt.tip || 0,
+        order_id: appt.order_id as string | null,
+      })),
+    ]
+
+    const matchedOrderIds = new Set(
+      (squareAppointments || [])
+        .map((appt) => appt.order_id)
+        .filter(Boolean) as string[]
+    )
+
+    const { data: squarePayments, error: paymentError } = includeSquare
+      ? await supabase
+        .from('square_payments')
+        .select('appointment_date, amount_total, tip_amount, order_id, status')
+        .eq('user_id', userId)
+        .eq('status', 'COMPLETED')
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (paymentError) throw paymentError
+
+    if (appointments.length === 0 && (!squarePayments || squarePayments.length === 0)) {
       return {
         table: tableName,
-        rowsUpserted: 0
+        rowsUpserted: 0,
       }
     }
 
@@ -69,6 +114,29 @@ export async function runDailyAggregation(
       stats.num_appointments++
       stats.total_revenue += appt.revenue || 0
       stats.tips += appt.tip || 0
+    }
+
+    for (const payment of squarePayments || []) {
+      const date = payment.appointment_date
+      if (!date) continue
+      if (payment.order_id && matchedOrderIds.has(payment.order_id)) continue
+
+      if (!dailyStats.has(date)) {
+        const dateObj = new Date(date + 'T00:00:00')
+
+        dailyStats.set(date, {
+          date,
+          num_appointments: 0,
+          total_revenue: 0,
+          tips: 0,
+          year: dateObj.getUTCFullYear(),
+          month: MONTHS[dateObj.getUTCMonth()]
+        })
+      }
+
+      const stats = dailyStats.get(date)!
+      stats.total_revenue += Number(payment.amount_total) || 0
+      stats.tips += Number(payment.tip_amount) || 0
     }
 
     // Convert to upsert payload matching your schema

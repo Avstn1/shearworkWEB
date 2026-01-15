@@ -1,15 +1,17 @@
-import { Client, Environment } from 'square'
+import { SquareClient, SquareEnvironment } from 'square'
 
 export function getSquareEnvironment() {
 	return process.env.SQUARE_ENV === 'production'
-		? Environment.Production
-		: Environment.Sandbox
+		? SquareEnvironment.Production
+		: SquareEnvironment.Sandbox
 }
 
 export function createSquareClient(accessToken?: string) {
-	return new Client({
+	return new SquareClient({
 		environment: getSquareEnvironment(),
-		accessToken,
-		userAgentDetail: 'shearwork-web',
+		token: accessToken,
+		headers: {
+			'Square-Version': process.env.SQUARE_VERSION || '2025-10-16',
+		},
 	})
 }

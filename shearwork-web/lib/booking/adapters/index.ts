@@ -2,9 +2,11 @@
 
 import { BookingAdapter } from './BookingAdapter'
 import { AcuityAdapter } from './acuity'
+import { SquareAdapter } from './square'
 
 const adapters: Record<string, () => BookingAdapter> = {
   acuity: () => new AcuityAdapter(),
+  square: () => new SquareAdapter(),
 }
 
 export function getBookingAdapter(software: string): BookingAdapter {
@@ -23,3 +25,4 @@ export function getBookingAdapter(software: string): BookingAdapter {
 // Use `export type` for interfaces/types
 export type { BookingAdapter } from './BookingAdapter'
 export { AcuityAdapter } from './acuity'
+export { SquareAdapter } from './square'

@@ -70,11 +70,17 @@ export async function GET(request: Request) {
 		process.env.SUPABASE_SERVICE_ROLE_KEY!
 	)
 
+	const expiresAt = tokenData.expires_at
+		? new Date(tokenData.expires_at).toISOString()
+		: tokenData.expires_in
+			? new Date(Date.now() + Number(tokenData.expires_in) * 1000).toISOString()
+			: null
+
 	await supabaseAdmin.from("square_tokens").upsert({
 		user_id: saved.user_id,
 		access_token: tokenData.access_token,
 		refresh_token: tokenData.refresh_token,
-		expires_in: tokenData.expires_at ? new Date(tokenData.expires_at).toISOString() : null,
+		expires_in: expiresAt,
 		merchant_id: tokenData.merchant_id,
 		updated_at: new Date().toISOString(),
 	})

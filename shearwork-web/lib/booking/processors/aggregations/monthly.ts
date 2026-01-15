@@ -30,37 +30,105 @@ async function aggregateMonthlyData(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}monthly_data`
+  const includeSquare = tablePrefix === ''
   
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    // Fetch appointments
-    const { data: appointments, error: fetchError } = await supabase
+    const { data: acuityAppointments, error: acuityError } = await supabase
       .from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, tip, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
 
-    if (fetchError) throw fetchError
-    if (!appointments || appointments.length === 0) {
+    if (acuityError) throw acuityError
+
+    const { data: squareAppointments, error: squareError } = includeSquare
+      ? await supabase
+        .from('square_appointments')
+        .select('appointment_date, revenue, tip, customer_id, order_id')
+        .eq('user_id', userId)
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (squareError) throw squareError
+
+    const appointments = [
+      ...(acuityAppointments || []).map((appt) => ({
+        source: 'acuity',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        tip: appt.tip || 0,
+        client_id: appt.client_id,
+      })),
+      ...(squareAppointments || []).map((appt) => ({
+        source: 'square',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        tip: appt.tip || 0,
+        client_id: appt.customer_id,
+        order_id: appt.order_id as string | null,
+      })),
+    ]
+
+    const matchedOrderIds = new Set(
+      (squareAppointments || [])
+        .map((appt) => appt.order_id)
+        .filter(Boolean) as string[]
+    )
+
+    const { data: squarePayments, error: paymentError } = includeSquare
+      ? await supabase
+        .from('square_payments')
+        .select('appointment_date, amount_total, tip_amount, order_id, status')
+        .eq('user_id', userId)
+        .eq('status', 'COMPLETED')
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (paymentError) throw paymentError
+
+    if (appointments.length === 0 && (!squarePayments || squarePayments.length === 0)) {
       return { table: tableName, rowsUpserted: 0 }
     }
 
-    // Fetch clients separately
-    const clientIds = [...new Set(appointments.map(a => a.client_id))]
-    const { data: clients, error: clientError } = await supabase
-      .from(`${tablePrefix}acuity_clients`)
-      .select('client_id, first_appt')
-      .eq('user_id', userId)
-      .in('client_id', clientIds)
+    const acuityClientIds = [...new Set((acuityAppointments || []).map((a) => a.client_id))]
+    const squareClientIds = [...new Set((squareAppointments || []).map((a) => a.customer_id))]
 
-    if (clientError) throw clientError
+    const { data: acuityClients, error: acuityClientError } = acuityClientIds.length > 0
+      ? await supabase
+        .from(`${tablePrefix}acuity_clients`)
+        .select('client_id, first_appt')
+        .eq('user_id', userId)
+        .in('client_id', acuityClientIds)
+      : { data: [], error: null }
 
-    // Create client lookup map
-    const clientMap = new Map(clients?.map(c => [c.client_id, c]) || [])
+    if (acuityClientError) throw acuityClientError
 
-    // Group by month
+    const { data: squareClients, error: squareClientError } =
+      includeSquare && squareClientIds.length > 0
+        ? await supabase
+          .from('square_clients')
+          .select('customer_id, first_appt')
+          .eq('user_id', userId)
+          .in('customer_id', squareClientIds)
+        : { data: [], error: null }
+
+    if (squareClientError) throw squareClientError
+
+    const clientMap = new Map<string, { first_appt: string | null }>()
+
+    for (const client of acuityClients || []) {
+      clientMap.set(`acuity:${client.client_id}`, client)
+    }
+
+    for (const client of squareClients || []) {
+      clientMap.set(`square:${client.customer_id}`, client)
+    }
+
     const monthlyStats = new Map<string, {
       month: string
       year: number
@@ -100,24 +168,52 @@ async function aggregateMonthlyData(
       stats.num_appointments++
       stats.total_revenue += appt.revenue || 0
       stats.tips += appt.tip || 0
-      stats.uniqueClients.add(appt.client_id)
 
-      // Classify client as new or returning
-      const client = clientMap.get(appt.client_id)
+      const clientKey = `${appt.source}:${appt.client_id}`
+      stats.uniqueClients.add(clientKey)
+
+      const client = clientMap.get(clientKey)
       if (client?.first_appt) {
         const firstApptDate = new Date(client.first_appt + 'T00:00:00')
         const firstApptMonth = MONTHS[firstApptDate.getUTCMonth()]
         const firstApptYear = firstApptDate.getUTCFullYear()
         
         if (firstApptMonth === month && firstApptYear === year) {
-          stats.newClients.add(appt.client_id)
+          stats.newClients.add(clientKey)
         } else {
-          stats.returningClients.add(appt.client_id)
+          stats.returningClients.add(clientKey)
         }
       }
     }
 
-    // Convert to upsert payload
+    for (const payment of squarePayments || []) {
+      const date = payment.appointment_date
+      if (!date) continue
+      if (payment.order_id && matchedOrderIds.has(payment.order_id)) continue
+
+      const apptDate = new Date(date + 'T00:00:00')
+      const month = MONTHS[apptDate.getUTCMonth()]
+      const year = apptDate.getUTCFullYear()
+      const key = `${year}||${month}`
+
+      if (!monthlyStats.has(key)) {
+        monthlyStats.set(key, {
+          month,
+          year,
+          num_appointments: 0,
+          total_revenue: 0,
+          tips: 0,
+          uniqueClients: new Set(),
+          newClients: new Set(),
+          returningClients: new Set()
+        })
+      }
+
+      const stats = monthlyStats.get(key)!
+      stats.total_revenue += Number(payment.amount_total) || 0
+      stats.tips += Number(payment.tip_amount) || 0
+    }
+
     const upsertData = Array.from(monthlyStats.values()).map(stats => {
       const avgTicket = stats.num_appointments > 0 
         ? stats.total_revenue / stats.num_appointments 
@@ -170,39 +266,92 @@ async function aggregateReportTopClients(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}report_top_clients`
+  const includeSquare = tablePrefix === ''
   
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    // Fetch appointments
-    const { data: appointments, error: fetchError } = await supabase
+    const { data: acuityAppointments, error: acuityError } = await supabase
       .from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
 
-    if (fetchError) throw fetchError
-    if (!appointments || appointments.length === 0) {
+    if (acuityError) throw acuityError
+
+    const { data: squareAppointments, error: squareError } = includeSquare
+      ? await supabase
+        .from('square_appointments')
+        .select('appointment_date, revenue, customer_id')
+        .eq('user_id', userId)
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (squareError) throw squareError
+
+    const appointments = [
+      ...(acuityAppointments || []).map((appt) => ({
+        source: 'acuity',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        client_id: appt.client_id,
+      })),
+      ...(squareAppointments || []).map((appt) => ({
+        source: 'square',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        client_id: appt.customer_id,
+      })),
+    ]
+
+    if (appointments.length === 0) {
       return { table: tableName, rowsUpserted: 0 }
     }
 
-    // Fetch clients separately
-    const clientIds = [...new Set(appointments.map(a => a.client_id))]
-    const { data: clients, error: clientError } = await supabase
-      .from(`${tablePrefix}acuity_clients`)
-      .select('client_id, first_name, last_name, email, phone_normalized')
-      .eq('user_id', userId)
-      .in('client_id', clientIds)
+    const acuityClientIds = [...new Set((acuityAppointments || []).map((a) => a.client_id))]
+    const squareClientIds = [...new Set((squareAppointments || []).map((a) => a.customer_id))]
 
-    if (clientError) throw clientError
+    const { data: acuityClients, error: acuityClientError } = acuityClientIds.length > 0
+      ? await supabase
+        .from(`${tablePrefix}acuity_clients`)
+        .select('client_id, first_name, last_name, email, phone_normalized')
+        .eq('user_id', userId)
+        .in('client_id', acuityClientIds)
+      : { data: [], error: null }
 
-    // Create client lookup map
-    const clientMap = new Map(clients?.map(c => [c.client_id, c]) || [])
+    if (acuityClientError) throw acuityClientError
 
-    // Group by month + client
+    const { data: squareClients, error: squareClientError } =
+      includeSquare && squareClientIds.length > 0
+        ? await supabase
+          .from('square_clients')
+          .select('customer_id, first_name, last_name, email, phone_normalized')
+          .eq('user_id', userId)
+          .in('customer_id', squareClientIds)
+        : { data: [], error: null }
+
+    if (squareClientError) throw squareClientError
+
+    const clientMap = new Map<string, {
+      first_name: string | null
+      last_name: string | null
+      email: string | null
+      phone_normalized: string | null
+    }>()
+
+    for (const client of acuityClients || []) {
+      clientMap.set(`acuity:${client.client_id}`, client)
+    }
+
+    for (const client of squareClients || []) {
+      clientMap.set(`square:${client.customer_id}`, client)
+    }
+
     const clientStats = new Map<string, {
       clientId: string
+      clientKey: string
       clientName: string
       email: string
       phone: string
@@ -221,13 +370,16 @@ async function aggregateReportTopClients(
       const apptDate = new Date(appt.appointment_date + 'T00:00:00')
       const month = MONTHS[apptDate.getUTCMonth()]
       const year = apptDate.getUTCFullYear()
-      const key = `${year}||${month}||${appt.client_id}`
 
-      const client = clientMap.get(appt.client_id)
+      const clientKey = `${appt.source}:${appt.client_id}`
+      const key = `${year}||${month}||${clientKey}`
+
+      const client = clientMap.get(clientKey)
 
       if (!clientStats.has(key)) {
         clientStats.set(key, {
           clientId: appt.client_id,
+          clientKey,
           clientName: `${client?.first_name || ''} ${client?.last_name || ''}`.trim() || 'Unknown',
           email: client?.email || '',
           phone: client?.phone_normalized || '',
@@ -243,11 +395,10 @@ async function aggregateReportTopClients(
       stats.numVisits++
     }
 
-    // Convert to upsert payload
     const upsertData = Array.from(clientStats.values()).map(stats => ({
       user_id: userId,
       client_id: stats.clientId,
-      client_key: stats.clientId,
+      client_key: stats.clientKey,
       client_name: stats.clientName,
       email: stats.email,
       phone: stats.phone,
@@ -290,24 +441,40 @@ async function aggregateServiceBookings(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}service_bookings`
+  const includeSquare = tablePrefix === ''
   
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    // Fetch appointments with service type (use revenue instead of price)
-    const { data: appointments, error: fetchError } = await supabase
+    const { data: acuityAppointments, error: acuityError } = await supabase
       .from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, service_type, revenue')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
 
-    if (fetchError) throw fetchError
-    if (!appointments || appointments.length === 0) {
+    if (acuityError) throw acuityError
+
+    const { data: squareAppointments, error: squareError } = includeSquare
+      ? await supabase
+        .from('square_appointments')
+        .select('appointment_date, service_type, revenue')
+        .eq('user_id', userId)
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (squareError) throw squareError
+
+    const appointments = [
+      ...(acuityAppointments || []),
+      ...(squareAppointments || []),
+    ]
+
+    if (appointments.length === 0) {
       return { table: tableName, rowsUpserted: 0 }
     }
 
-    // Group by month + service
     const serviceStats = new Map<string, {
       serviceName: string
       month: string
@@ -326,7 +493,6 @@ async function aggregateServiceBookings(
       const month = MONTHS[apptDate.getUTCMonth()]
       const year = apptDate.getUTCFullYear()
       
-      // Normalize service name
       const serviceName = (appt.service_type || 'Unknown')
         .trim()
         .replace(/\s+/g, ' ')
@@ -342,19 +508,17 @@ async function aggregateServiceBookings(
           month,
           year,
           bookings: 0,
-          price: appt.revenue || 0  // Use revenue instead of price
+          price: appt.revenue || 0
         })
       }
 
       const stats = serviceStats.get(key)!
       stats.bookings++
-      // Keep the first non-null revenue encountered as the price
       if (!stats.price && appt.revenue) {
         stats.price = appt.revenue
       }
     }
 
-    // Convert to upsert payload
     const upsertData = Array.from(serviceStats.values()).map(stats => ({
       user_id: userId,
       service_name: stats.serviceName,
