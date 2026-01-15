@@ -131,6 +131,7 @@ async fetchAppointments(
     
     // Dedupe: only add appointments we haven't seen yet
     for (const appt of dayAppointments) {
+      // console.log(JSON.stringify(appt))
       if (!seen.has(appt.externalId)) {
         seen.add(appt.externalId)
         appointments.push(appt)
@@ -151,7 +152,7 @@ async fetchAppointments(
     const results: NormalizedAppointment[] = []
 
     while (true) {
-      const url = new URL(`${this.apiBase}/appointments`)
+      const url = new URL(`${this.apiBase}/appointments?showall=true`)
       url.searchParams.set('minDate', dayStr)
       url.searchParams.set('maxDate', dayStr)
       url.searchParams.set('max', String(pageSize))
@@ -169,6 +170,8 @@ async fetchAppointments(
 
       const data = await response.json()
 
+      // console.log('appt ex: ' + JSON.stringify(data[0]))
+
       if (!Array.isArray(data) || data.length === 0) break
 
       for (const raw of data) {
@@ -180,13 +183,16 @@ async fetchAppointments(
       offset += pageSize
     }
 
+    // console.log('Last item of results:')
+    // console.log(results[results.length - 1])
+
     return results
   }
 
   // ======================== NORMALIZATION ========================
 
   private normalize(raw: any): NormalizedAppointment | null {
-    if (!raw.id) return null
+    // console.log('Raw appointment: ' + JSON.stringify(raw))
 
     const datetime = raw.datetime || ''
     const date = datetime.split('T')[0]
@@ -216,6 +222,7 @@ async fetchAppointments(
       notes: raw.notes || null,
       referralSource: extractSourceFromForms(raw.forms),
       forms: raw.forms,
+      canceled: raw.canceled || raw.noShow,
     }
   }
 

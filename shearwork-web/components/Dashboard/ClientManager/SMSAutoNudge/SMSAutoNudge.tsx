@@ -744,11 +744,7 @@ export default function SMSAutoNudge() {
           startDate = parts[1]; 
           endDate = parts[2];  
         }
-        console.log(parts)
       }
-
-      console.log(startDate)
-      console.log(endDate)
 
       const messageToSave = {
         id: msg.id,

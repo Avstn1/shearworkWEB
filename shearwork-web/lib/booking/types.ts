@@ -98,6 +98,8 @@ export interface NormalizedAppointment {
   
   referralSource: string | null         // e.g., 'Instagram', 'Google', 'Walk-in'
   forms?: any[]                         // Raw forms data for additional processing
+
+  canceled?: boolean                  // e.g., true if appointment was canceled
 }
 
 /**
@@ -188,7 +190,7 @@ export interface AppointmentProcessorResult {
   totalProcessed: number                // e.g., 150 (total appointments)
   inserted: number                      // e.g., 25 (new appointments)
   updated: number                       // e.g., 120 (existing appointments updated)
-  skipped: number                       // e.g., 5 (filtered out, e.g., cancelled)
+  skipped: number                       // e.g., 5 (filtered out, e.g., canceled)
 }
 
 /**

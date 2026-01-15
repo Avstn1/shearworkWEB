@@ -106,11 +106,11 @@ export default function AppointmentSheets() {
 
       if (seq !== requestSeq.current) return;
 
-      // Sort by datetime descending (latest first)
+      // Sort by datetime ascending (earliest first)
       const sortedAppointments = (body.appointments || []).sort((a, b) => {
         const dateA = new Date(a.datetime).getTime();
         const dateB = new Date(b.datetime).getTime();
-        return dateB - dateA;
+        return dateA - dateB;
       });
 
       setAppointments(sortedAppointments);
@@ -374,7 +374,7 @@ export default function AppointmentSheets() {
               No appointments found for {formatDateDisplay(selectedDate)}.
             </p>
             <p className="text-xs text-[#777] mt-1">
-              Try selecting a different date.
+              Try selecting a different date. Note: Only appointments that have passed their date and time will appear here.
             </p>
           </div>
         ) : (
@@ -391,7 +391,7 @@ export default function AppointmentSheets() {
             </thead>
             <tbody>
               {appointments.map((appt, index) => {
-                const rowNumber = appointments.length - index;
+                const rowNumber = index + 1;
                 const clientName = [appt.client_first_name, appt.client_last_name]
                   .filter(Boolean)
                   .join(' ') || 'Unknown';
