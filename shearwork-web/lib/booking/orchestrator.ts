@@ -17,7 +17,7 @@ import { AppointmentProcessor } from './processors/appointments'
 import { SquareClientProcessor } from './processors/squareClients'
 import { SquareAppointmentProcessor } from './processors/squareAppointments'
 import { runAggregations } from './processors/aggregations'
-import { SquarePaymentRecord } from '@/lib/square/normalize'
+import { SquareOrderRecord, SquarePaymentRecord } from '@/lib/square/normalize'
 
 // ======================== DATE RANGE HELPERS ========================
 
@@ -275,6 +275,13 @@ export async function pull(
         locations
       )
 
+      const squareOrders = await squareAdapter.fetchOrders(
+        squareAccessToken,
+        locationId,
+        dateRange,
+        locations
+      )
+
       const squarePayments = await squareAdapter.fetchPayments(
         squareAccessToken,
         locationId,
@@ -282,10 +289,21 @@ export async function pull(
         locations
       )
 
+      const storedOrders = await loadStoredSquareOrders(
+        supabase,
+        userId,
+        dateRange
+      )
+
       const storedPayments = await loadStoredSquarePayments(
         supabase,
         userId,
         dateRange
+      )
+
+      const ordersForMatching = mergeSquareOrders(
+        squareOrders,
+        storedOrders
       )
 
       const paymentsForMatching = mergeSquarePayments(
@@ -295,7 +313,8 @@ export async function pull(
 
       const { appointments: appointmentsWithPayments } = matchSquarePaymentsToAppointments(
         squareAppointments,
-        paymentsForMatching
+        paymentsForMatching,
+        ordersForMatching
       )
 
       if (!dryRun) {
@@ -304,6 +323,13 @@ export async function pull(
           userId,
           squareToken?.merchant_id || 'unknown',
           squarePayments
+        )
+
+        await upsertSquareOrders(
+          supabase,
+          userId,
+          squareToken?.merchant_id || 'unknown',
+          squareOrders
         )
       }
 
@@ -406,7 +432,7 @@ function formatErrorMessage(error: unknown): string {
 
   try {
     return JSON.stringify(error)
-  } catch (err) {
+  } catch {
     return String(error)
   }
 }
@@ -459,6 +485,71 @@ function mergeSquarePayments(
   return merged
 }
 
+function mergeSquareOrders(
+  primary: SquareOrderRecord[],
+  secondary: SquareOrderRecord[]
+): SquareOrderRecord[] {
+  const map = new Map<string, SquareOrderRecord>()
+  const merged: SquareOrderRecord[] = []
+
+  for (const order of secondary) {
+    if (!order.orderId) continue
+    map.set(order.orderId, order)
+  }
+
+  for (const order of primary) {
+    if (!order.orderId) continue
+    map.set(order.orderId, order)
+  }
+
+  for (const order of map.values()) {
+    merged.push(order)
+  }
+
+  return merged
+}
+
+async function loadStoredSquareOrders(
+  supabase: SupabaseClient,
+  userId: string,
+  dateRange: DateRange
+): Promise<SquareOrderRecord[]> {
+  const rangeFilter = `and(created_at.gte.${dateRange.startISO},created_at.lte.${dateRange.endISO}),and(closed_at.gte.${dateRange.startISO},closed_at.lte.${dateRange.endISO})`
+
+  const { data, error } = await supabase
+    .from('square_orders')
+    .select('order_id, location_id, customer_id, created_at, closed_at, total_amount, currency, line_items, status, source')
+    .eq('user_id', userId)
+    .or(rangeFilter)
+
+  if (error || !data) {
+    if (error) {
+      console.error('Failed to load stored Square orders:', error)
+    }
+    return []
+  }
+
+  return data
+    .filter((order) => order.order_id)
+    .map((order) => ({
+      orderId: order.order_id,
+      locationId: order.location_id || null,
+      customerId: order.customer_id || null,
+      createdAt: order.created_at || null,
+      closedAt: order.closed_at || null,
+      appointmentDate: order.closed_at
+        ? order.closed_at.split('T')[0]
+        : order.created_at
+          ? order.created_at.split('T')[0]
+          : null,
+      totalAmount: Number(order.total_amount || 0),
+      currency: order.currency || null,
+      lineItems: Array.isArray(order.line_items) ? order.line_items : [],
+      status: order.status || null,
+      source: order.source || null,
+    }))
+}
+
 async function loadStoredSquarePayments(
   supabase: SupabaseClient,
   userId: string,
@@ -505,45 +596,156 @@ async function loadStoredSquarePayments(
     }))
 }
 
+function buildOrderIndex(
+  orders: SquareOrderRecord[]
+): Map<string, SquareOrderRecord> {
+  const map = new Map<string, SquareOrderRecord>()
+  for (const order of orders) {
+    if (!order.orderId) continue
+    map.set(order.orderId, order)
+  }
+  return map
+}
+
+function buildFallbackOrderIndex(
+  orders: SquareOrderRecord[]
+): Map<string, SquareOrderRecord[]> {
+  const index = new Map<string, SquareOrderRecord[]>()
+
+  for (const order of orders) {
+    if (!order.customerId || !order.appointmentDate) continue
+    const key = buildFallbackKey(order.customerId, order.appointmentDate)
+    if (!key) continue
+
+    const bucket = index.get(key) || []
+    bucket.push(order)
+    index.set(key, bucket)
+  }
+
+  return index
+}
+
+function filterOrdersByLocation(
+  orders: SquareOrderRecord[],
+  locationId: string | null | undefined
+): SquareOrderRecord[] {
+  if (!locationId) return orders
+  return orders.filter(
+    (order) => !order.locationId || order.locationId === locationId
+  )
+}
+
+function selectClosestOrder(
+  appointment: NormalizedAppointment,
+  orders: SquareOrderRecord[]
+): SquareOrderRecord | null {
+  if (orders.length === 0) return null
+
+  const appointmentTime = parseDateToMillis(appointment.datetime || null)
+  const candidates = orders
+
+  if (!appointmentTime) return candidates[0]
+
+  return candidates.reduce((closest, order) => {
+    const orderTime = parseDateToMillis(order.closedAt || order.createdAt)
+    if (!orderTime) return closest
+
+    const closestTime = parseDateToMillis(closest.closedAt || closest.createdAt)
+    if (!closestTime) return order
+
+    return Math.abs(orderTime - appointmentTime) < Math.abs(closestTime - appointmentTime)
+      ? order
+      : closest
+  }, candidates[0])
+}
+
+function buildOrderServiceName(order: SquareOrderRecord | null): string | null {
+  if (!order || order.lineItems.length === 0) return null
+
+  const names = order.lineItems
+    .map((item) => item.variationName || item.name)
+    .filter((name): name is string => Boolean(name && name.trim()))
+
+  if (names.length === 0) return null
+
+  return names.join(' + ')
+}
+
 function matchSquarePaymentsToAppointments(
   appointments: NormalizedAppointment[],
-  payments: SquarePaymentRecord[]
+  payments: SquarePaymentRecord[],
+  orders: SquareOrderRecord[]
 ): { appointments: NormalizedAppointment[] } {
   const paymentTotalsByOrder = buildPaymentTotalsByOrder(payments)
   const fallbackIndex = buildFallbackPaymentIndex(payments)
   const usedPaymentIds = new Set<string>()
 
+  const orderById = buildOrderIndex(orders)
+  const orderFallbackIndex = buildFallbackOrderIndex(orders)
+
   const updatedAppointments = appointments.map((appointment) => {
-    if (appointment.orderId) {
-      const totals = paymentTotalsByOrder.get(appointment.orderId)
-      if (totals) {
-        totals.paymentIds.forEach((id) => usedPaymentIds.add(id))
-        return {
-          ...appointment,
-          price: totals.total,
-          tip: totals.tip,
-          paymentId: totals.paymentIds.length === 1 ? totals.paymentIds[0] : appointment.paymentId,
+    let updatedAppointment = { ...appointment }
+    let matchedOrder: SquareOrderRecord | null = null
+
+    if (updatedAppointment.orderId) {
+      matchedOrder = orderById.get(updatedAppointment.orderId) || null
+    }
+
+    if (!matchedOrder) {
+      const fallbackKey = buildFallbackKey(updatedAppointment.customerId, updatedAppointment.date)
+      const candidates = fallbackKey ? orderFallbackIndex.get(fallbackKey) || [] : []
+      const filtered = filterOrdersByLocation(candidates, updatedAppointment.locationId)
+      const selectedOrder = selectClosestOrder(updatedAppointment, filtered)
+
+      if (selectedOrder) {
+        matchedOrder = selectedOrder
+        updatedAppointment = {
+          ...updatedAppointment,
+          orderId: selectedOrder.orderId,
         }
       }
     }
 
-    const fallbackKey = buildFallbackKey(appointment.customerId, appointment.date)
-    if (!fallbackKey) return appointment
+    if (matchedOrder && !updatedAppointment.serviceType) {
+      const serviceName = buildOrderServiceName(matchedOrder)
+      if (serviceName) {
+        updatedAppointment = {
+          ...updatedAppointment,
+          serviceType: serviceName,
+        }
+      }
+    }
+
+    if (updatedAppointment.orderId) {
+      const totals = paymentTotalsByOrder.get(updatedAppointment.orderId)
+      if (totals) {
+        totals.paymentIds.forEach((id) => usedPaymentIds.add(id))
+        return {
+          ...updatedAppointment,
+          price: totals.total,
+          tip: totals.tip,
+          paymentId: totals.paymentIds.length === 1 ? totals.paymentIds[0] : updatedAppointment.paymentId,
+        }
+      }
+    }
+
+    const fallbackKey = buildFallbackKey(updatedAppointment.customerId, updatedAppointment.date)
+    if (!fallbackKey) return updatedAppointment
 
     const candidates = (fallbackIndex.get(fallbackKey) || []).filter(
       (payment) => !usedPaymentIds.has(payment.paymentId)
     )
 
-    const filteredCandidates = filterPaymentsByLocation(candidates, appointment.locationId)
-    if (filteredCandidates.length === 0) return appointment
+    const filteredCandidates = filterPaymentsByLocation(candidates, updatedAppointment.locationId)
+    if (filteredCandidates.length === 0) return updatedAppointment
 
-    const selected = selectClosestPayment(appointment, filteredCandidates)
-    if (!selected) return appointment
+    const selected = selectClosestPayment(updatedAppointment, filteredCandidates)
+    if (!selected) return updatedAppointment
 
     usedPaymentIds.add(selected.paymentId)
 
     return {
-      ...appointment,
+      ...updatedAppointment,
       price: selected.amountTotal,
       tip: selected.tipAmount,
       paymentId: selected.paymentId,
@@ -625,6 +827,42 @@ function parseDateToMillis(value: string | null | undefined): number | null {
   const date = new Date(normalized)
   if (Number.isNaN(date.getTime())) return null
   return date.getTime()
+}
+
+async function upsertSquareOrders(
+  supabase: SupabaseClient,
+  userId: string,
+  merchantId: string,
+  orders: SquareOrderRecord[]
+): Promise<void> {
+  if (orders.length === 0) return
+
+  const now = new Date().toISOString()
+  const safeMerchantId = merchantId || 'unknown'
+
+  const rows = orders.map((order) => ({
+    order_id: order.orderId,
+    user_id: userId,
+    merchant_id: safeMerchantId,
+    location_id: order.locationId,
+    customer_id: order.customerId,
+    created_at: order.createdAt,
+    closed_at: order.closedAt,
+    total_amount: order.totalAmount,
+    currency: order.currency,
+    line_items: order.lineItems,
+    source: order.source,
+    updated_at: now,
+  }))
+
+  const { error } = await supabase
+    .from('square_orders')
+    .upsert(rows, { onConflict: 'user_id,order_id' })
+
+  if (error) {
+    console.error('Square orders upsert error:', error)
+    throw error
+  }
 }
 
 async function upsertSquarePayments(

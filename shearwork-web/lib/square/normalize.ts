@@ -28,8 +28,101 @@ export interface SquareLocationInfo {
   status?: string | null
 }
 
+export interface SquareOrderLineItem {
+  name: string | null
+  quantity: number | null
+  catalogObjectId: string | null
+  variationName: string | null
+}
+
+export interface SquareOrderRecord {
+  orderId: string
+  locationId: string | null
+  customerId: string | null
+  createdAt: string | null
+  closedAt: string | null
+  appointmentDate: string | null
+  totalAmount: number
+  currency: string | null
+  lineItems: SquareOrderLineItem[]
+  status: string | null
+  source: string | null
+}
+
+export interface SquareLocationPayload {
+  id?: string
+  name?: string
+  timezone?: string
+  status?: string
+}
+
+export interface SquareBookingPayload {
+  id?: string
+  start_at?: string
+  customer_details?: {
+    email_address?: string
+    phone_number?: string
+    given_name?: string
+    family_name?: string
+  }
+  customer_phone?: string
+  appointment_segments?: Array<{
+    service_variation_name?: string
+    service_variation_price_money?: { amount?: number }
+  }>
+  customer_note?: string
+  customer_id?: string
+  location_id?: string
+  order_id?: string
+  team_member_id?: string
+  status?: string
+}
+
+export interface SquarePaymentPayload {
+  id?: string
+  location_id?: string
+  order_id?: string
+  customer_id?: string
+  amount_money?: { amount?: number; currency?: string }
+  tip_money?: { amount?: number }
+  processing_fee?: Array<{ amount_money?: { amount?: number } }>
+  net_amount_money?: { amount?: number }
+  status?: string
+  source_type?: string
+  receipt_number?: string
+  receipt_url?: string
+  created_at?: string
+  updated_at?: string
+  card_details?: {
+    card?: {
+      card_brand?: string
+      last_4?: string
+    }
+  }
+}
+
+export interface SquareOrderPayload {
+  id?: string
+  location_id?: string
+  customer_id?: string
+  created_at?: string
+  closed_at?: string
+  total_money?: { amount?: number; currency?: string }
+  line_items?: Array<{
+    name?: string
+    quantity?: string
+    catalog_object_id?: string
+    variation_name?: string
+  }>
+  state?: string
+  source?: {
+    name?: string
+    type?: string
+  }
+}
+
 export function normalizeSquareBooking(
-  booking: any,
+  booking: SquareBookingPayload,
   timezone: string | null
 ): NormalizedAppointment | null {
   if (!booking?.id) return null
@@ -71,7 +164,7 @@ export function normalizeSquareBooking(
 }
 
 export function normalizeSquarePayment(
-  payment: any,
+  payment: SquarePaymentPayload,
   timezone: string | null
 ): SquarePaymentRecord | null {
   if (!payment?.id) return null
@@ -80,7 +173,7 @@ export function normalizeSquarePayment(
   const tipAmount = toMoney(payment.tip_money)
   const processingFee = Array.isArray(payment.processing_fee)
     ? payment.processing_fee.reduce(
-        (sum: number, fee: any) => sum + toMoney(fee?.amount_money),
+        (sum, fee) => sum + toMoney(fee?.amount_money),
         0
       )
     : 0
@@ -93,7 +186,7 @@ export function normalizeSquarePayment(
     locationId: payment.location_id || null,
     orderId: payment.order_id || null,
     customerId: payment.customer_id || null,
-    appointmentDate: formatDateInTimezone(payment.created_at, timezone),
+    appointmentDate: formatDateInTimezone(payment.created_at ?? null, timezone),
     currency: payment.amount_money?.currency || null,
     amountTotal,
     tipAmount,
@@ -107,6 +200,38 @@ export function normalizeSquarePayment(
     cardLast4: payment.card_details?.card?.last_4 || null,
     createdAt: payment.created_at || null,
     updatedAt: payment.updated_at || null,
+  }
+}
+
+export function normalizeSquareOrder(
+  order: SquareOrderPayload,
+  timezone: string | null
+): SquareOrderRecord | null {
+  if (!order?.id) return null
+
+  const timestamp = order.closed_at || order.created_at || null
+
+  const lineItems = Array.isArray(order.line_items)
+    ? order.line_items.map((item) => ({
+        name: item.name || null,
+        quantity: item.quantity ? Number(item.quantity) : null,
+        catalogObjectId: item.catalog_object_id || null,
+        variationName: item.variation_name || null,
+      }))
+    : []
+
+  return {
+    orderId: order.id,
+    locationId: order.location_id || null,
+    customerId: order.customer_id || null,
+    createdAt: order.created_at || null,
+    closedAt: order.closed_at || null,
+    appointmentDate: formatDateInTimezone(timestamp, timezone),
+    totalAmount: toMoney(order.total_money),
+    currency: order.total_money?.currency || null,
+    lineItems,
+    status: order.state || null,
+    source: order.source?.name || order.source?.type || null,
   }
 }
 

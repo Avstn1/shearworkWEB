@@ -4,7 +4,13 @@ import { NormalizedAppointment, DateRange } from '../types'
 import {
   normalizeSquareBooking,
   normalizeSquarePayment,
+  normalizeSquareOrder,
+  SquareBookingPayload,
   SquareLocationInfo,
+  SquareLocationPayload,
+  SquareOrderPayload,
+  SquareOrderRecord,
+  SquarePaymentPayload,
   SquarePaymentRecord,
 } from '@/lib/square/normalize'
 
@@ -130,11 +136,11 @@ export class SquareAdapter implements BookingAdapter {
     }
 
     return Array.isArray(data.locations)
-      ? data.locations.map((location: any) => ({
-          id: location.id,
+      ? data.locations.map((location: SquareLocationPayload) => ({
+          id: location.id || '',
           name: location.name,
-          timezone: location.timezone,
-          status: location.status,
+          timezone: location.timezone || null,
+          status: location.status || null,
         }))
       : []
   }
@@ -239,6 +245,46 @@ export class SquareAdapter implements BookingAdapter {
 
     return payments
   }
+
+  async fetchOrders(
+    accessToken: string,
+    calendarId: string,
+    dateRange: DateRange,
+    locations: SquareLocationInfo[]
+  ): Promise<SquareOrderRecord[]> {
+    const selectedIds = parseLocationIds(calendarId)
+    const activeLocations = filterLocations(locations, selectedIds)
+    const timezones = buildTimezoneMap(activeLocations)
+
+    const locationIds = activeLocations.length > 0
+      ? activeLocations.map((location) => location.id)
+      : selectedIds || []
+
+    const orders = await fetchSquareOrders(accessToken, locationIds, dateRange)
+    const seen = new Set<string>()
+    const normalizedOrders: SquareOrderRecord[] = []
+
+    for (const order of orders) {
+      const locationId = order.location_id || null
+      const timezone = locationId ? timezones[locationId] ?? null : null
+      const normalized = normalizeSquareOrder(order, timezone)
+      if (!normalized) continue
+
+      if (!normalized.appointmentDate) continue
+      if (
+        normalized.appointmentDate < dateRange.startISO ||
+        normalized.appointmentDate > dateRange.endISO
+      ) {
+        continue
+      }
+
+      if (seen.has(normalized.orderId)) continue
+      seen.add(normalized.orderId)
+      normalizedOrders.push(normalized)
+    }
+
+    return normalizedOrders
+  }
 }
 
 function parseLocationIds(calendarId: string): string[] | null {
@@ -301,8 +347,8 @@ async function fetchSquareBookingsForLocation(
   accessToken: string,
   locationId: string,
   dateRange: DateRange
-): Promise<any[]> {
-  const bookings: any[] = []
+): Promise<SquareBookingPayload[]> {
+  const bookings: SquareBookingPayload[] = []
 
   const chunks = buildDateChunks(
     dateRange.startISO,
@@ -358,8 +404,8 @@ async function fetchSquarePaymentsForLocation(
   accessToken: string,
   locationId: string | null,
   dateRange: DateRange
-): Promise<any[]> {
-  const payments: any[] = []
+): Promise<SquarePaymentPayload[]> {
+  const payments: SquarePaymentPayload[] = []
   const chunks = buildDateChunks(
     dateRange.startISO,
     dateRange.endISO,
@@ -409,4 +455,79 @@ async function fetchSquarePaymentsForLocation(
   }
 
   return payments
+}
+
+async function fetchSquareOrders(
+  accessToken: string,
+  locationIds: string[],
+  dateRange: DateRange
+): Promise<SquareOrderPayload[]> {
+  const orders: SquareOrderPayload[] = []
+  const chunks = buildDateChunks(
+    dateRange.startISO,
+    dateRange.endISO,
+    MAX_SQUARE_RANGE_DAYS
+  )
+
+  for (const chunk of chunks) {
+    let cursor: string | null = null
+
+    const start = new Date(chunk.start)
+    const end = new Date(chunk.end)
+    start.setDate(start.getDate() - 1)
+    end.setDate(end.getDate() + 1)
+
+    do {
+      const body: Record<string, unknown> = {
+        limit: 100,
+        return_entries: false,
+        query: {
+          filter: {
+            date_time_filter: {
+              created_at: {
+                start_at: start.toISOString(),
+                end_at: end.toISOString(),
+              },
+            },
+          },
+        },
+      }
+
+      if (locationIds.length > 0) {
+        body.location_ids = locationIds
+      }
+
+      if (cursor) {
+        body.cursor = cursor
+      }
+
+      const response = await fetch(`${squareBaseUrl()}/v2/orders/search`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Square-Version': getSquareVersion(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(`Square orders fetch failed: ${JSON.stringify(data)}`)
+      }
+
+      if (Array.isArray(data.orders)) {
+        orders.push(...data.orders)
+      }
+
+      cursor = data.cursor || null
+
+      if (cursor) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    } while (cursor)
+  }
+
+  return orders
 }
