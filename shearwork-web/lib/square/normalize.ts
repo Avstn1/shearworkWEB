@@ -226,7 +226,7 @@ export function normalizeSquareOrder(
     customerId: order.customer_id || null,
     createdAt: order.created_at || null,
     closedAt: order.closed_at || null,
-    appointmentDate: formatDateInTimezone(timestamp, timezone),
+    appointmentDate: formatDateInTimezone(timestamp ?? null, timezone),
     totalAmount: toMoney(order.total_money),
     currency: order.total_money?.currency || null,
     lineItems,

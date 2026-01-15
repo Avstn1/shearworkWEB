@@ -531,23 +531,25 @@ async function loadStoredSquareOrders(
 
   return data
     .filter((order) => order.order_id)
-    .map((order) => ({
-      orderId: order.order_id,
-      locationId: order.location_id || null,
-      customerId: order.customer_id || null,
-      createdAt: order.created_at || null,
-      closedAt: order.closed_at || null,
-      appointmentDate: order.closed_at
-        ? order.closed_at.split('T')[0]
-        : order.created_at
-          ? order.created_at.split('T')[0]
-          : null,
-      totalAmount: Number(order.total_amount || 0),
-      currency: order.currency || null,
-      lineItems: Array.isArray(order.line_items) ? order.line_items : [],
-      status: order.status || null,
-      source: order.source || null,
-    }))
+    .map((order) => {
+      const appointmentDate = extractDateOnly(order.closed_at || order.created_at)
+
+      return {
+        orderId: order.order_id,
+        locationId: order.location_id || null,
+        customerId: order.customer_id || null,
+        createdAt: order.created_at || null,
+        closedAt: order.closed_at || null,
+        appointmentDate,
+        totalAmount: Number(order.total_amount || 0),
+        currency: order.currency || null,
+        lineItems: Array.isArray(order.line_items)
+          ? (order.line_items as SquareOrderRecord['lineItems'])
+          : [],
+        status: order.status || null,
+        source: order.source || null,
+      }
+    })
 }
 
 async function loadStoredSquarePayments(
@@ -625,6 +627,40 @@ function buildFallbackOrderIndex(
   return index
 }
 
+function buildLocationOrderIndex(
+  orders: SquareOrderRecord[]
+): Map<string, SquareOrderRecord[]> {
+  const index = new Map<string, SquareOrderRecord[]>()
+
+  for (const order of orders) {
+    if (!order.locationId || !order.appointmentDate) continue
+    const key = buildLocationKey(order.locationId, order.appointmentDate)
+    if (!key) continue
+
+    const bucket = index.get(key) || []
+    bucket.push(order)
+    index.set(key, bucket)
+  }
+
+  return index
+}
+
+function buildLocationKey(
+  locationId: string | null | undefined,
+  date: string | null | undefined
+): string | null {
+  if (!locationId || !date) return null
+  return `${locationId}|${date}`
+}
+
+function extractDateOnly(value: string | null | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (trimmed.includes('T')) return trimmed.split('T')[0]
+  return trimmed.split(' ')[0]
+}
+
 function filterOrdersByLocation(
   orders: SquareOrderRecord[],
   locationId: string | null | undefined
@@ -642,7 +678,14 @@ function selectClosestOrder(
   if (orders.length === 0) return null
 
   const appointmentTime = parseDateToMillis(appointment.datetime || null)
-  const candidates = orders
+  const amount = appointment.price || 0
+  const amountTolerance = amount > 0 ? Math.max(1, amount * 0.05) : null
+
+  const amountFiltered = amountTolerance
+    ? orders.filter((order) => Math.abs(order.totalAmount - amount) <= amountTolerance)
+    : orders
+
+  const candidates = amountFiltered.length > 0 ? amountFiltered : orders
 
   if (!appointmentTime) return candidates[0]
 
@@ -682,6 +725,8 @@ function matchSquarePaymentsToAppointments(
 
   const orderById = buildOrderIndex(orders)
   const orderFallbackIndex = buildFallbackOrderIndex(orders)
+  const orderLocationIndex = buildLocationOrderIndex(orders)
+  const usedOrderIds = new Set<string>()
 
   const updatedAppointments = appointments.map((appointment) => {
     let updatedAppointment = { ...appointment }
@@ -692,13 +737,25 @@ function matchSquarePaymentsToAppointments(
     }
 
     if (!matchedOrder) {
-      const fallbackKey = buildFallbackKey(updatedAppointment.customerId, updatedAppointment.date)
-      const candidates = fallbackKey ? orderFallbackIndex.get(fallbackKey) || [] : []
+      const customerKey = buildFallbackKey(updatedAppointment.customerId, updatedAppointment.date)
+      const locationKey = buildLocationKey(updatedAppointment.locationId, updatedAppointment.date)
+
+      const customerCandidates = customerKey ? orderFallbackIndex.get(customerKey) || [] : []
+      const locationCandidates = locationKey ? orderLocationIndex.get(locationKey) || [] : []
+
+      const candidateMap = new Map<string, SquareOrderRecord>()
+      for (const candidate of [...customerCandidates, ...locationCandidates]) {
+        if (!candidate.orderId || usedOrderIds.has(candidate.orderId)) continue
+        candidateMap.set(candidate.orderId, candidate)
+      }
+
+      const candidates = Array.from(candidateMap.values())
       const filtered = filterOrdersByLocation(candidates, updatedAppointment.locationId)
       const selectedOrder = selectClosestOrder(updatedAppointment, filtered)
 
       if (selectedOrder) {
         matchedOrder = selectedOrder
+        usedOrderIds.add(selectedOrder.orderId)
         updatedAppointment = {
           ...updatedAppointment,
           orderId: selectedOrder.orderId,
@@ -744,12 +801,32 @@ function matchSquarePaymentsToAppointments(
 
     usedPaymentIds.add(selected.paymentId)
 
-    return {
+    let nextAppointment = {
       ...updatedAppointment,
       price: selected.amountTotal,
       tip: selected.tipAmount,
       paymentId: selected.paymentId,
     }
+
+    if (!nextAppointment.orderId && selected.orderId) {
+      const order = orderById.get(selected.orderId) || null
+      nextAppointment = {
+        ...nextAppointment,
+        orderId: selected.orderId,
+      }
+
+      if (order && !nextAppointment.serviceType) {
+        const serviceName = buildOrderServiceName(order)
+        if (serviceName) {
+          nextAppointment = {
+            ...nextAppointment,
+            serviceType: serviceName,
+          }
+        }
+      }
+    }
+
+    return nextAppointment
   })
 
   return { appointments: updatedAppointments }
