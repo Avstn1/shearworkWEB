@@ -28,30 +28,23 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
         const currentYear = year ?? new Date().getFullYear()
         const monthIndex = MONTHS.indexOf(selectedMonth)
 
-        // Build date range for current month
-        const startDate = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}-01`
-        const endDate = monthIndex === 11 
-          ? `${currentYear + 1}-01-01`
-          : `${currentYear}-${String(monthIndex + 2).padStart(2, '0')}-01`
-
-        // Fetch current month from acuity_appointments
-        const { data: currentAppts, error: currentError } = await supabase
-          .from('acuity_appointments')
-          .select('revenue, tip')
+        const { data: currentMonthRow, error: currentError } = await supabase
+          .from('monthly_data')
+          .select('total_revenue, tips, num_appointments')
           .eq('user_id', userId)
-          .gte('appointment_date', startDate)
-          .lt('appointment_date', endDate)
+          .eq('month', selectedMonth)
+          .eq('year', currentYear)
+          .maybeSingle()
 
         if (currentError) {
-          console.error('Error fetching current appointments:', currentError)
+          console.error('Error fetching current month summary:', currentError)
         }
 
-        // Calculate average ticket (revenue + tips) / count
-        if (currentAppts && currentAppts.length > 0) {
-          const totalRevenue = currentAppts.reduce((sum, appt) => sum + (appt.revenue || 0), 0)
-          const totalTips = currentAppts.reduce((sum, appt) => sum + (appt.tip || 0), 0)
-          const total = totalRevenue + totalTips
-          setAvgTicket(total / currentAppts.length)
+        if (currentMonthRow && Number(currentMonthRow.num_appointments || 0) > 0) {
+          const totalRevenue = Number(currentMonthRow.total_revenue || 0)
+          const totalTips = Number(currentMonthRow.tips || 0)
+          const count = Number(currentMonthRow.num_appointments || 0)
+          setAvgTicket((totalRevenue + totalTips) / count)
         } else {
           setAvgTicket(null)
         }
@@ -64,30 +57,25 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
           prevYear -= 1
         }
 
-        // Build date range for previous month
-        const prevStartDate = `${prevYear}-${String(prevMonthIndex + 1).padStart(2, '0')}-01`
-        const prevEndDate = prevMonthIndex === 11 
-          ? `${prevYear + 1}-01-01`
-          : `${prevYear}-${String(prevMonthIndex + 2).padStart(2, '0')}-01`
+        const prevMonthName = MONTHS[prevMonthIndex]
 
-        // Fetch previous month from acuity_appointments
-        const { data: prevAppts, error: prevError } = await supabase
-          .from('acuity_appointments')
-          .select('revenue, tip')
+        const { data: prevMonthRow, error: prevError } = await supabase
+          .from('monthly_data')
+          .select('total_revenue, tips, num_appointments')
           .eq('user_id', userId)
-          .gte('appointment_date', prevStartDate)
-          .lt('appointment_date', prevEndDate)
+          .eq('month', prevMonthName)
+          .eq('year', prevYear)
+          .maybeSingle()
 
         if (prevError) {
-          console.error('Error fetching previous appointments:', prevError)
+          console.error('Error fetching previous month summary:', prevError)
         }
 
-        // Calculate previous month average ticket
-        if (prevAppts && prevAppts.length > 0) {
-          const prevTotalRevenue = prevAppts.reduce((sum, appt) => sum + (appt.revenue || 0), 0)
-          const prevTotalTips = prevAppts.reduce((sum, appt) => sum + (appt.tip || 0), 0)
-          const prevTotal = prevTotalRevenue + prevTotalTips
-          setPrevAvgTicket(prevTotal / prevAppts.length)
+        if (prevMonthRow && Number(prevMonthRow.num_appointments || 0) > 0) {
+          const prevTotalRevenue = Number(prevMonthRow.total_revenue || 0)
+          const prevTotalTips = Number(prevMonthRow.tips || 0)
+          const count = Number(prevMonthRow.num_appointments || 0)
+          setPrevAvgTicket((prevTotalRevenue + prevTotalTips) / count)
         } else {
           setPrevAvgTicket(null)
         }

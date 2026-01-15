@@ -11,7 +11,11 @@ interface TimeframeAverageTicketCardProps {
   timeframe: Timeframe
 }
 
-// Month ranges for quarters
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
 const QUARTER_MONTHS: Record<Timeframe, { startMonth: number; endMonth: number }> = {
   year: { startMonth: 1, endMonth: 12 },
   Q1: { startMonth: 1, endMonth: 3 },
@@ -35,18 +39,38 @@ export default function TimeframeAverageTicketCard({
       setLoading(true)
       try {
         const { startMonth, endMonth } = QUARTER_MONTHS[timeframe]
+        const monthRange = MONTHS.slice(startMonth - 1, endMonth)
 
-        // Call RPC function to get average ticket (includes tips)
-        const { data, error } = await supabase.rpc('get_yearly_avg_ticket', {
-          p_user_id: userId,
-          p_year: year,
-          p_start_month: startMonth,
-          p_end_month: endMonth,
-        })
+        const { data: rows, error } = await supabase
+          .from('monthly_data')
+          .select('total_revenue, tips, num_appointments')
+          .eq('user_id', userId)
+          .eq('year', year)
+          .in('month', monthRange)
 
         if (error) throw error
 
-        setAvgTicket(data || 0)
+        if (!rows || rows.length === 0) {
+          setAvgTicket(null)
+          return
+        }
+
+        const totals = rows.reduce(
+          (acc, row) => {
+            acc.revenue += Number(row.total_revenue || 0)
+            acc.tips += Number(row.tips || 0)
+            acc.appointments += Number(row.num_appointments || 0)
+            return acc
+          },
+          { revenue: 0, tips: 0, appointments: 0 }
+        )
+
+        if (totals.appointments === 0) {
+          setAvgTicket(null)
+          return
+        }
+
+        setAvgTicket((totals.revenue + totals.tips) / totals.appointments)
       } catch (err) {
         console.error('Error fetching timeframe avg_ticket:', err)
         setAvgTicket(null)

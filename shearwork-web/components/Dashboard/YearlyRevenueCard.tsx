@@ -12,6 +12,11 @@ interface YearlyRevenueCardProps {
   timeframe?: Timeframe
 }
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
 const QUARTER_DATE_RANGES: Record<Exclude<Timeframe, 'year' | 'YTD'>, { startMonth: number; endMonth: number }> = {
   Q1: { startMonth: 1, endMonth: 3 },
   Q2: { startMonth: 4, endMonth: 6 },
@@ -55,36 +60,47 @@ export default function YearlyRevenueCard({
           setCommissionRate(null)
         }
 
-        // 2) Determine date range based on timeframe
-        let startDate: string
-        let endDate: string
+        const now = new Date()
+        const isCurrentYear = currentYear === now.getFullYear()
+
+        let startMonth = 1
+        let endMonth = 12
 
         if (timeframe === 'year' || timeframe === 'YTD') {
-          startDate = `${currentYear}-01-01`
-          endDate = `${currentYear + 1}-01-01`
+          endMonth = isCurrentYear ? now.getMonth() + 1 : 12
         } else {
           const range = QUARTER_DATE_RANGES[timeframe!]
-          startDate = `${currentYear}-${String(range.startMonth).padStart(2, '0')}-01`
-          endDate = range.endMonth === 12 
-            ? `${currentYear + 1}-01-01`
-            : `${currentYear}-${String(range.endMonth + 1).padStart(2, '0')}-01`
+          startMonth = range.startMonth
+          endMonth = range.endMonth
         }
 
-        // 3) Use RPC function for efficient aggregation
-        const { data: aggregateData, error: rpcError } = await supabase
-          .rpc('get_revenue_totals', {
-            p_user_id: userId,
-            p_start_date: startDate,
-            p_end_date: endDate
-          })
-          .single()
+        const monthRange = MONTHS.slice(startMonth - 1, endMonth)
 
-        if (rpcError || !aggregateData) {
-          throw rpcError || new Error('No data returned from RPC')
+        const { data: rows, error: summaryError } = await supabase
+          .from('monthly_data')
+          .select('total_revenue, tips, month')
+          .eq('user_id', userId)
+          .eq('year', currentYear)
+          .in('month', monthRange)
+
+        if (summaryError) {
+          throw summaryError
         }
 
-        const totalRevenue = Number((aggregateData as any).total_revenue) || 0
-        const totalTips = Number((aggregateData as any).total_tips) || 0
+        if (!rows || rows.length === 0) {
+          setTotal(null)
+          setTips(null)
+          return
+        }
+
+        const totalRevenue = rows.reduce(
+          (sum, row) => sum + Number(row.total_revenue || 0),
+          0
+        )
+        const totalTips = rows.reduce(
+          (sum, row) => sum + Number(row.tips || 0),
+          0
+        )
         
         let finalTotal = 0
 

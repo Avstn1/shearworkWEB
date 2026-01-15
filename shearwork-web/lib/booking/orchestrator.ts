@@ -282,17 +282,21 @@ export async function pull(
         locations
       )
 
-      const paymentTotalsByOrder = buildPaymentTotalsByOrder(squarePayments)
-      const appointmentsWithPayments = squareAppointments.map((appointment: NormalizedAppointment) => {
-        if (!appointment.orderId) return appointment
-        const totals = paymentTotalsByOrder.get(appointment.orderId)
-        if (!totals) return appointment
-        return {
-          ...appointment,
-          price: totals.total,
-          tip: totals.tip,
-        }
-      })
+      const storedPayments = await loadStoredSquarePayments(
+        supabase,
+        userId,
+        dateRange
+      )
+
+      const paymentsForMatching = mergeSquarePayments(
+        squarePayments,
+        storedPayments
+      )
+
+      const { appointments: appointmentsWithPayments } = matchSquarePaymentsToAppointments(
+        squareAppointments,
+        paymentsForMatching
+      )
 
       if (!dryRun) {
         await upsertSquarePayments(
@@ -407,21 +411,220 @@ function formatErrorMessage(error: unknown): string {
   }
 }
 
+interface OrderPaymentTotals {
+  total: number
+  tip: number
+  paymentIds: string[]
+}
+
 function buildPaymentTotalsByOrder(
   payments: SquarePaymentRecord[]
-): Map<string, { total: number; tip: number }> {
-  const totals = new Map<string, { total: number; tip: number }>()
+): Map<string, OrderPaymentTotals> {
+  const totals = new Map<string, OrderPaymentTotals>()
 
   for (const payment of payments) {
     if (!payment.orderId) continue
 
-    const current = totals.get(payment.orderId) || { total: 0, tip: 0 }
+    const current = totals.get(payment.orderId) || { total: 0, tip: 0, paymentIds: [] }
     current.total += payment.amountTotal
     current.tip += payment.tipAmount
+    current.paymentIds.push(payment.paymentId)
     totals.set(payment.orderId, current)
   }
 
   return totals
+}
+
+function mergeSquarePayments(
+  primary: SquarePaymentRecord[],
+  secondary: SquarePaymentRecord[]
+): SquarePaymentRecord[] {
+  const map = new Map<string, SquarePaymentRecord>()
+  const merged: SquarePaymentRecord[] = []
+
+  for (const payment of secondary) {
+    if (!payment.paymentId) continue
+    map.set(payment.paymentId, payment)
+  }
+
+  for (const payment of primary) {
+    if (!payment.paymentId) continue
+    map.set(payment.paymentId, payment)
+  }
+
+  for (const payment of map.values()) {
+    merged.push(payment)
+  }
+
+  return merged
+}
+
+async function loadStoredSquarePayments(
+  supabase: SupabaseClient,
+  userId: string,
+  dateRange: DateRange
+): Promise<SquarePaymentRecord[]> {
+  const { data, error } = await supabase
+    .from('square_payments')
+    .select(
+      'payment_id, location_id, order_id, customer_id, appointment_date, currency, amount_total, tip_amount, processing_fee, net_amount, status, source_type, receipt_number, receipt_url, card_brand, card_last4, created_at, updated_at'
+    )
+    .eq('user_id', userId)
+    .eq('status', 'COMPLETED')
+    .gte('appointment_date', dateRange.startISO)
+    .lte('appointment_date', dateRange.endISO)
+
+  if (error || !data) {
+    if (error) {
+      console.error('Failed to load stored Square payments:', error)
+    }
+    return []
+  }
+
+  return data
+    .filter((payment) => payment.payment_id)
+    .map((payment) => ({
+      paymentId: payment.payment_id,
+      locationId: payment.location_id || null,
+      orderId: payment.order_id || null,
+      customerId: payment.customer_id || null,
+      appointmentDate: payment.appointment_date || null,
+      currency: payment.currency || null,
+      amountTotal: Number(payment.amount_total || 0),
+      tipAmount: Number(payment.tip_amount || 0),
+      processingFee: Number(payment.processing_fee || 0),
+      netAmount: payment.net_amount !== null ? Number(payment.net_amount) : null,
+      status: payment.status || null,
+      sourceType: payment.source_type || null,
+      receiptNumber: payment.receipt_number || null,
+      receiptUrl: payment.receipt_url || null,
+      cardBrand: payment.card_brand || null,
+      cardLast4: payment.card_last4 || null,
+      createdAt: payment.created_at || null,
+      updatedAt: payment.updated_at || null,
+    }))
+}
+
+function matchSquarePaymentsToAppointments(
+  appointments: NormalizedAppointment[],
+  payments: SquarePaymentRecord[]
+): { appointments: NormalizedAppointment[] } {
+  const paymentTotalsByOrder = buildPaymentTotalsByOrder(payments)
+  const fallbackIndex = buildFallbackPaymentIndex(payments)
+  const usedPaymentIds = new Set<string>()
+
+  const updatedAppointments = appointments.map((appointment) => {
+    if (appointment.orderId) {
+      const totals = paymentTotalsByOrder.get(appointment.orderId)
+      if (totals) {
+        totals.paymentIds.forEach((id) => usedPaymentIds.add(id))
+        return {
+          ...appointment,
+          price: totals.total,
+          tip: totals.tip,
+          paymentId: totals.paymentIds.length === 1 ? totals.paymentIds[0] : appointment.paymentId,
+        }
+      }
+    }
+
+    const fallbackKey = buildFallbackKey(appointment.customerId, appointment.date)
+    if (!fallbackKey) return appointment
+
+    const candidates = (fallbackIndex.get(fallbackKey) || []).filter(
+      (payment) => !usedPaymentIds.has(payment.paymentId)
+    )
+
+    const filteredCandidates = filterPaymentsByLocation(candidates, appointment.locationId)
+    if (filteredCandidates.length === 0) return appointment
+
+    const selected = selectClosestPayment(appointment, filteredCandidates)
+    if (!selected) return appointment
+
+    usedPaymentIds.add(selected.paymentId)
+
+    return {
+      ...appointment,
+      price: selected.amountTotal,
+      tip: selected.tipAmount,
+      paymentId: selected.paymentId,
+    }
+  })
+
+  return { appointments: updatedAppointments }
+}
+
+function buildFallbackPaymentIndex(
+  payments: SquarePaymentRecord[]
+): Map<string, SquarePaymentRecord[]> {
+  const index = new Map<string, SquarePaymentRecord[]>()
+
+  for (const payment of payments) {
+    if (!payment.customerId || !payment.appointmentDate) continue
+    const key = buildFallbackKey(payment.customerId, payment.appointmentDate)
+    if (!key) continue
+
+    const bucket = index.get(key) || []
+    bucket.push(payment)
+    index.set(key, bucket)
+  }
+
+  return index
+}
+
+function buildFallbackKey(customerId: string | null | undefined, date: string | null | undefined): string | null {
+  if (!customerId || !date) return null
+  return `${customerId}|${date}`
+}
+
+function filterPaymentsByLocation(
+  payments: SquarePaymentRecord[],
+  locationId: string | null | undefined
+): SquarePaymentRecord[] {
+  if (!locationId) return payments
+  return payments.filter(
+    (payment) => !payment.locationId || payment.locationId === locationId
+  )
+}
+
+function selectClosestPayment(
+  appointment: NormalizedAppointment,
+  payments: SquarePaymentRecord[]
+): SquarePaymentRecord | null {
+  if (payments.length === 0) return null
+
+  const appointmentTime = parseDateToMillis(appointment.datetime || null)
+  const amount = appointment.price || 0
+  const amountTolerance = amount > 0 ? Math.max(1, amount * 0.05) : null
+
+  const amountFiltered = amountTolerance
+    ? payments.filter((payment) =>
+        Math.abs(payment.amountTotal - amount) <= amountTolerance
+      )
+    : payments
+
+  const candidates = amountFiltered.length > 0 ? amountFiltered : payments
+
+  if (!appointmentTime) return candidates[0]
+
+  return candidates.reduce((closest, payment) => {
+    const paymentTime = parseDateToMillis(payment.createdAt || payment.appointmentDate)
+    if (!paymentTime) return closest
+
+    const closestTime = parseDateToMillis(closest.createdAt || closest.appointmentDate)
+    if (!closestTime) return payment
+
+    return Math.abs(paymentTime - appointmentTime) < Math.abs(closestTime - appointmentTime)
+      ? payment
+      : closest
+  }, candidates[0])
+}
+
+function parseDateToMillis(value: string | null | undefined): number | null {
+  if (!value) return null
+  const normalized = value.includes(' ') ? value.replace(' ', 'T') : value
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) return null
+  return date.getTime()
 }
 
 async function upsertSquarePayments(

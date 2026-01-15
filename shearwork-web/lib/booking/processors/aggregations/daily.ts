@@ -32,7 +32,7 @@ export async function runDailyAggregation(
     const { data: squareAppointments, error: squareError } = includeSquare
       ? await supabase
         .from('square_appointments')
-        .select('appointment_date, revenue, tip, order_id')
+        .select('appointment_date, revenue, tip, order_id, payment_id')
         .eq('user_id', userId)
         .gte('appointment_date', dateRange.startISO)
         .lte('appointment_date', dateRange.endISO)
@@ -61,10 +61,16 @@ export async function runDailyAggregation(
         .filter(Boolean) as string[]
     )
 
+    const matchedPaymentIds = new Set(
+      (squareAppointments || [])
+        .map((appt) => appt.payment_id)
+        .filter(Boolean) as string[]
+    )
+
     const { data: squarePayments, error: paymentError } = includeSquare
       ? await supabase
         .from('square_payments')
-        .select('appointment_date, amount_total, tip_amount, order_id, status')
+        .select('payment_id, appointment_date, amount_total, tip_amount, order_id, status')
         .eq('user_id', userId)
         .eq('status', 'COMPLETED')
         .gte('appointment_date', dateRange.startISO)
@@ -120,6 +126,7 @@ export async function runDailyAggregation(
       const date = payment.appointment_date
       if (!date) continue
       if (payment.order_id && matchedOrderIds.has(payment.order_id)) continue
+      if (payment.payment_id && matchedPaymentIds.has(payment.payment_id)) continue
 
       if (!dailyStats.has(date)) {
         const dateObj = new Date(date + 'T00:00:00')
