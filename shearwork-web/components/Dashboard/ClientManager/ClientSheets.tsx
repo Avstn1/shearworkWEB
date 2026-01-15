@@ -58,6 +58,7 @@ export default function ClientSheets() {
   const [isFAQOpen, setIsFAQOpen] = useState(false);
 
   const [user, setUser] = useState<any>(null)
+  const [dataSource, setDataSource] = useState<'acuity' | 'square'>('acuity')
 
   const requestSeq = useRef(0);
   const statsCache = useRef<{ minYear?: number; timestamp?: number }>({});
@@ -70,11 +71,20 @@ export default function ClientSheets() {
         if (!session?.user) return
         setUser(session.user)
 
-        // Check cache first (valid for 1 hour)
-        const cacheKey = `client_stats_${session.user.id}`
+        const { data: squareToken } = await supabase
+          .from('square_tokens')
+          .select('user_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+
+        const useSquare = Boolean(squareToken?.user_id)
+        setDataSource(useSquare ? 'square' : 'acuity')
+
+        const sourceKey = useSquare ? 'square' : 'acuity'
+        const cacheKey = `client_stats_${session.user.id}_${sourceKey}`
         const cached = sessionStorage.getItem(cacheKey)
         const now = Date.now()
-        
+
         if (cached) {
           try {
             const { minYear: cachedMinYear, timestamp } = JSON.parse(cached)
@@ -88,25 +98,26 @@ export default function ClientSheets() {
           }
         }
 
-        // Try materialized view first (faster)
-        const { data: statsData } = await supabase
-          .from('user_client_stats')
-          .select('min_year')
-          .eq('user_id', session.user.id)
-          .single()
+        if (!useSquare) {
+          const { data: statsData } = await supabase
+            .from('user_client_stats')
+            .select('min_year')
+            .eq('user_id', session.user.id)
+            .single()
 
-        if (statsData?.min_year) {
-          const year = statsData.min_year
-          setMinYear(year)
-          const cacheData = { minYear: year, timestamp: now }
-          statsCache.current = cacheData
-          sessionStorage.setItem(cacheKey, JSON.stringify(cacheData))
-          return
+          if (statsData?.min_year) {
+            const year = statsData.min_year
+            setMinYear(year)
+            const cacheData = { minYear: year, timestamp: now }
+            statsCache.current = cacheData
+            sessionStorage.setItem(cacheKey, JSON.stringify(cacheData))
+            return
+          }
         }
 
-        // Fallback to direct query if materialized view doesn't exist
+        const tableName = useSquare ? 'square_clients' : 'acuity_clients'
         const { data: minYearData } = await supabase
-          .from('acuity_clients')
+          .from(tableName)
           .select('first_appt')
           .eq('user_id', session.user.id)
           .not('first_appt', 'is', null)
@@ -155,12 +166,15 @@ export default function ClientSheets() {
     setError(null);
 
     try {
+      const tableName = dataSource === 'square' ? 'square_clients' : 'acuity_clients';
+      const clientIdField = dataSource === 'square' ? 'customer_id' : 'client_id';
+
       const monthFilters = activeFilters.filter(
         (f) => f.type === 'first_appt_month' || f.type === 'last_appt_month'
       );
 
       let query = supabase
-        .from('acuity_clients')
+        .from(tableName)
         .select('*', { count: useApproximateCount ? 'planned' : 'exact' })
         .eq('user_id', user.id);
 
@@ -231,7 +245,12 @@ export default function ClientSheets() {
       if (queryError) throw queryError;
       if (seq !== requestSeq.current) return;
 
-      setClients(data || []);
+      const mapped = (data || []).map((row: any) => ({
+        ...row,
+        client_id: row.client_id ?? row[clientIdField] ?? row.customer_id ?? row.client_id,
+      })) as ClientRow[];
+
+      setClients(mapped);
       setTotal(count || 0);
       setTotalPages(Math.max(1, Math.ceil((count || 0) / limit)));
     } catch (err: any) {
@@ -247,7 +266,7 @@ export default function ClientSheets() {
   useEffect(() => {
     fetchClients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortField, sortDir, page, limit, activeFilters, user]);
+  }, [sortField, sortDir, page, limit, activeFilters, user, dataSource]);
 
   const handleSortClick = (field: SortField) => {
     if (sortField === field) {

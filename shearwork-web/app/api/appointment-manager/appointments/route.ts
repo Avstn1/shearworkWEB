@@ -20,22 +20,38 @@ export async function GET(request: NextRequest) {
     const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const selectedDate = dateParam || defaultDate;
 
+    const { data: squareToken } = await supabase
+      .from('square_tokens')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const useSquare = Boolean(squareToken?.user_id);
+    const appointmentTable = useSquare ? 'square_appointments' : 'acuity_appointments';
+    const appointmentIdField = useSquare ? 'square_booking_id' : 'acuity_appointment_id';
+    const clientIdField = useSquare ? 'customer_id' : 'client_id';
+
+    const selectFields = [
+      'id',
+      'user_id',
+      appointmentIdField,
+      clientIdField,
+      'phone_normalized',
+      'appointment_date',
+      'revenue',
+      'datetime',
+      'created_at',
+      'tip',
+      'service_type',
+      'notes',
+      'status',
+      'payment_id',
+    ].join(',');
+
     // Build query for appointments on the selected date
     let query = supabase
-      .from('acuity_appointments')
-      .select(`
-        id,
-        user_id,
-        acuity_appointment_id,
-        client_id,
-        phone_normalized,
-        appointment_date,
-        revenue,
-        datetime,
-        created_at,
-        tip,
-        service_type
-      `)
+      .from(appointmentTable)
+      .select(selectFields)
       .eq('user_id', user.id)
       .eq('appointment_date', selectedDate)
       .order('datetime', { ascending: false }); // Latest first
@@ -47,21 +63,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: 500 });
     }
 
-    // Get unique client_ids to fetch client names
-    const clientIds = [...new Set((appointments || []).map((a: any) => a.client_id).filter(Boolean))];
-    
-    // Fetch client names from acuity_clients
+    const rawAppointments = appointments || [];
+    const clientIds = [...new Set(rawAppointments.map((appt: any) => appt[clientIdField]).filter(Boolean))];
+
     let clientMap: Record<string, { first_name: string | null; last_name: string | null }> = {};
-    
+
     if (clientIds.length > 0) {
+      const clientTable = useSquare ? 'square_clients' : 'acuity_clients';
+      const clientIdColumn = useSquare ? 'customer_id' : 'client_id';
+
       const { data: clients } = await supabase
-        .from('acuity_clients')
-        .select('client_id, first_name, last_name')
-        .in('client_id', clientIds);
-      
+        .from(clientTable)
+        .select(`${clientIdColumn}, first_name, last_name`)
+        .in(clientIdColumn, clientIds);
+
       if (clients) {
         clientMap = clients.reduce((acc: any, client: any) => {
-          acc[client.client_id] = {
+          const key = client[clientIdColumn];
+          acc[key] = {
             first_name: client.first_name,
             last_name: client.last_name,
           };
@@ -70,20 +89,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform the data to include client names
-    const transformedAppointments = (appointments || []).map((appt: any) => ({
-      id: appt.id,
-      acuity_appointment_id: appt.acuity_appointment_id,
-      client_id: appt.client_id,
-      phone_normalized: appt.phone_normalized,
-      appointment_date: appt.appointment_date,
-      datetime: appt.datetime,
-      revenue: appt.revenue,
-      tip: appt.tip,
-      service_type: appt.service_type || null,
-      client_first_name: clientMap[appt.client_id]?.first_name || null,
-      client_last_name: clientMap[appt.client_id]?.last_name || null,
-    }));
+    const transformedAppointments = rawAppointments.map((appt: any) => {
+      const clientId = appt[clientIdField];
+      const appointmentId = appt[appointmentIdField];
+
+      return {
+        id: appt.id,
+        acuity_appointment_id: appointmentId,
+        client_id: clientId,
+        phone_normalized: appt.phone_normalized,
+        appointment_date: appt.appointment_date,
+        datetime: appt.datetime,
+        revenue: appt.revenue,
+        tip: appt.tip,
+        service_type: appt.service_type || null,
+        client_first_name: clientMap[clientId]?.first_name || null,
+        client_last_name: clientMap[clientId]?.last_name || null,
+      };
+    });
 
     return NextResponse.json({
       appointments: transformedAppointments,
@@ -108,12 +131,24 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { id, tip, revenue } = body;
 
+    const { data: squareToken } = await supabase
+      .from('square_tokens')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const useSquare = Boolean(squareToken?.user_id);
+    const appointmentTable = useSquare ? 'square_appointments' : 'acuity_appointments';
+
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
     // Build update object with provided fields
-    const updateData: { tip?: number; revenue?: number } = {};
+    const updateData: { tip?: number; revenue?: number; manually_edited?: boolean; updated_at?: string } = {
+      manually_edited: true,
+      updated_at: new Date().toISOString(),
+    };
 
     if (tip !== undefined && tip !== null) {
       const tipValue = parseFloat(tip);
@@ -137,7 +172,7 @@ export async function PATCH(request: NextRequest) {
 
     // Update the appointment
     const { data, error } = await supabase
-      .from('acuity_appointments')
+      .from(appointmentTable)
       .update(updateData)
       .eq('id', id)
       .eq('user_id', user.id) // Ensure user owns this appointment
