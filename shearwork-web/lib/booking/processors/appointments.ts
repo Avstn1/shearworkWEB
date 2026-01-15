@@ -94,10 +94,10 @@ export class AppointmentProcessor {
       new Date(dt.replace(/([+-]\d{2})(\d{2})$/, '$1:$2'))
       // After parsing: 2026-01-15T08:30:00-0500
 
-      const now = new Date()
+      const nowParse = new Date()
 
       // Skip future appointments
-      if (parseWithOffset(appt.datetime) > now) {
+      if (parseWithOffset(appt.datetime) > nowParse) {
         console.log(`Skipping future appointment ${appt.lastName} scheduled for ${appt.datetime}`)
         continue
       }
