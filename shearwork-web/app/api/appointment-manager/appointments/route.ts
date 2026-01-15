@@ -48,8 +48,7 @@ export async function GET(request: NextRequest) {
       'payment_id',
     ].join(',');
 
-    // Build query for appointments on the selected date
-    let query = supabase
+    const query = supabase
       .from(appointmentTable)
       .select(selectFields)
       .eq('user_id', user.id)
@@ -63,8 +62,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: 500 });
     }
 
-    const rawAppointments = appointments || [];
-    const clientIds = [...new Set(rawAppointments.map((appt: any) => appt[clientIdField]).filter(Boolean))];
+    type RawAppointment = {
+      id: string;
+      appointment_date: string;
+      datetime: string;
+      revenue: number | null;
+      tip: number | null;
+      service_type?: string | null;
+      phone_normalized?: string | null;
+      [key: string]: unknown;
+    };
+
+    type RawClientRow = {
+      first_name: string | null;
+      last_name: string | null;
+      [key: string]: unknown;
+    };
+
+    const toStringValue = (value: unknown) =>
+      typeof value === 'string' && value.trim() ? value : null;
+
+    const rawAppointments = (appointments || []) as unknown as RawAppointment[];
+    const clientIds = [...new Set(
+      rawAppointments
+        .map((appt) => toStringValue(appt[clientIdField]))
+        .filter((id): id is string => Boolean(id))
+    )];
 
     let clientMap: Record<string, { first_name: string | null; last_name: string | null }> = {};
 
@@ -78,33 +101,34 @@ export async function GET(request: NextRequest) {
         .in(clientIdColumn, clientIds);
 
       if (clients) {
-        clientMap = clients.reduce((acc: any, client: any) => {
-          const key = client[clientIdColumn];
+        clientMap = (clients as RawClientRow[]).reduce((acc, client) => {
+          const key = toStringValue(client[clientIdColumn]);
+          if (!key) return acc;
           acc[key] = {
-            first_name: client.first_name,
-            last_name: client.last_name,
+            first_name: client.first_name ?? null,
+            last_name: client.last_name ?? null,
           };
           return acc;
-        }, {});
+        }, {} as Record<string, { first_name: string | null; last_name: string | null }>);
       }
     }
 
-    const transformedAppointments = rawAppointments.map((appt: any) => {
-      const clientId = appt[clientIdField];
-      const appointmentId = appt[appointmentIdField];
+    const transformedAppointments = rawAppointments.map((appt) => {
+      const clientId = toStringValue(appt[clientIdField]);
+      const appointmentId = toStringValue(appt[appointmentIdField]);
 
       return {
         id: appt.id,
         acuity_appointment_id: appointmentId,
         client_id: clientId,
-        phone_normalized: appt.phone_normalized,
+        phone_normalized: appt.phone_normalized ?? null,
         appointment_date: appt.appointment_date,
         datetime: appt.datetime,
         revenue: appt.revenue,
         tip: appt.tip,
         service_type: appt.service_type || null,
-        client_first_name: clientMap[clientId]?.first_name || null,
-        client_last_name: clientMap[clientId]?.last_name || null,
+        client_first_name: clientId ? clientMap[clientId]?.first_name || null : null,
+        client_last_name: clientId ? clientMap[clientId]?.last_name || null : null,
       };
     });
 
@@ -113,7 +137,7 @@ export async function GET(request: NextRequest) {
       total: transformedAppointments.length,
       date: selectedDate,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Appointments GET error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -128,7 +152,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as {
+      id?: string;
+      tip?: number | string | null;
+      revenue?: number | string | null;
+    };
     const { id, tip, revenue } = body;
 
     const { data: squareToken } = await supabase
@@ -151,7 +179,7 @@ export async function PATCH(request: NextRequest) {
     };
 
     if (tip !== undefined && tip !== null) {
-      const tipValue = parseFloat(tip);
+      const tipValue = typeof tip === 'string' ? parseFloat(tip) : Number(tip);
       if (isNaN(tipValue) || tipValue < 0) {
         return NextResponse.json({ error: 'tip must be a valid non-negative number' }, { status: 400 });
       }
@@ -159,7 +187,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (revenue !== undefined && revenue !== null) {
-      const revenueValue = parseFloat(revenue);
+      const revenueValue = typeof revenue === 'string' ? parseFloat(revenue) : Number(revenue);
       if (isNaN(revenueValue) || revenueValue < 0) {
         return NextResponse.json({ error: 'revenue must be a valid non-negative number' }, { status: 400 });
       }
@@ -193,7 +221,7 @@ export async function PATCH(request: NextRequest) {
       appointment: data,
       message: 'Appointment updated successfully' 
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Appointments PATCH error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

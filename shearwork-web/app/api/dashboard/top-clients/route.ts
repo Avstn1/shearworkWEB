@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       month,
       year,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Top clients GET error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

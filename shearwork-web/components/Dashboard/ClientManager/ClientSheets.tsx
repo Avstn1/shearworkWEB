@@ -57,7 +57,7 @@ export default function ClientSheets() {
   const [useApproximateCount, setUseApproximateCount] = useState(false);
   const [isFAQOpen, setIsFAQOpen] = useState(false);
 
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string } | null>(null)
   const [dataSource, setDataSource] = useState<'acuity' | 'square'>('acuity')
 
   const requestSeq = useRef(0);
@@ -69,7 +69,7 @@ export default function ClientSheets() {
         const { data: { session }, error: authError } = await supabase.auth.getSession()
         if (authError) throw authError
         if (!session?.user) return
-        setUser(session.user)
+        setUser({ id: session.user.id })
 
         const { data: squareToken } = await supabase
           .from('square_tokens')
@@ -245,18 +245,23 @@ export default function ClientSheets() {
       if (queryError) throw queryError;
       if (seq !== requestSeq.current) return;
 
-      const mapped = (data || []).map((row: any) => ({
-        ...row,
-        client_id: row.client_id ?? row[clientIdField] ?? row.customer_id ?? row.client_id,
-      })) as ClientRow[];
+      const mapped = (data || []).map((row) => {
+        const record = row as ClientRow & { customer_id?: string | null; client_id?: string | null };
+        const derivedId = record.client_id ?? record.customer_id ?? record[clientIdField as keyof typeof record];
+        return {
+          ...record,
+          client_id: typeof derivedId === 'string' ? derivedId : record.client_id ?? '',
+        };
+      });
 
       setClients(mapped);
       setTotal(count || 0);
       setTotalPages(Math.max(1, Math.ceil((count || 0) / limit)));
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (seq !== requestSeq.current) return;
       console.error(err);
-      setError(err.message || 'Something went wrong');
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      setError(message);
     } finally {
       if (seq !== requestSeq.current) return;
       setLoading(false);

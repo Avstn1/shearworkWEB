@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -72,6 +73,10 @@ export default function AppointmentSheets() {
 
   const selectedDateStr = formatDateToISO(selectedDate);
 
+  const calendarStyle: CSSProperties & { ['--rdp-accent-color']?: string } = {
+    '--rdp-accent-color': '#f59e0b',
+  };
+
   // Close calendar when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -114,10 +119,11 @@ export default function AppointmentSheets() {
       });
 
       setAppointments(sortedAppointments);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (seq !== requestSeq.current) return;
       console.error(err);
-      setError(err.message || 'Something went wrong');
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      setError(message);
     } finally {
       if (seq !== requestSeq.current) return;
       setLoading(false);
@@ -284,7 +290,7 @@ export default function AppointmentSheets() {
                     [&_.rdp-head_cell]:min-w-[2rem] [&_.rdp-head_cell]:text-center
                     [&_.rdp-table]:w-full
                   "
-                  style={{ ['--rdp-accent-color' as any]: '#f59e0b' }}
+                  style={calendarStyle}
                 />
 
                 {/* Quick select buttons */}

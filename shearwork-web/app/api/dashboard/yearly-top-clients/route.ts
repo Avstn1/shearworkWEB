@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       year,
       timeframe,
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Yearly top clients error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
