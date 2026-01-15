@@ -52,17 +52,28 @@ function SettingsPageContent() {
   const [authenticating, setAuthenticating] = useState(false)
   const navbarRef = useRef<HTMLDivElement>(null)
   const [navbarHeight, setNavbarHeight] = useState(0)
+  const hasProcessedCode = useRef(false)
+
+  useEffect(() => {
+    const shouldOpenCredits = searchParams.get('openCredits')
+    if (shouldOpenCredits === 'true') {
+      setTimeout(() => {
+        setShowCreditsModal(true)
+        router.replace('/settings')
+      }, 0)
+    }
+  }, [searchParams, router])
 
   // Handle authentication from mobile app code
   useEffect(() => {
     const authenticateUser = async () => {
       const code = searchParams.get('code')
-      if (!code) return
+      if (!code) return // Remove hasProcessedCode check temporarily
       
-      setAuthenticating(true)
+      // setAuthenticating(true)
       
       try {
-        console.log('Authenticating with mobile code:', code)
+        console.log('Starting auth with code:', code)
         
         const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
           method: 'POST',
@@ -70,41 +81,34 @@ function SettingsPageContent() {
           body: JSON.stringify({ code })
         })
 
+        console.log('Response status:', response.status)
         const data = await response.json()
+        console.log('Response data:', data)
         
         if (!response.ok || !data.access_token) {
+          console.log('Auth failed - invalid response')
           toast.error(data.error || 'Invalid or expired code. Please try again from the app.')
+          setAuthenticating(false)
           router.push('/login')
           return
         }
-
-        // Set session with the tokens from the verified code
-        const { error: sessionError } = await supabase.auth.setSession({
+        
+        supabase.auth.setSession({
           access_token: data.access_token,
           refresh_token: data.refresh_token
         })
 
-        if (sessionError) {
-          console.error('Session error:', sessionError)
-          throw sessionError
-        }
-        
         toast.success('Successfully authenticated!')
-        
-        // Clean URL - remove the code parameter
-        router.replace('/settings')
-        
-        // Open credits modal after authentication
+
         setTimeout(() => {
-          setShowCreditsModal(true)
+          globalThis.location.href = '/settings?openCredits=true'
         }, 500)
         
       } catch (err: any) {
         console.error('Auth error:', err)
         toast.error('Authentication failed')
-        router.push('/login')
-      } finally {
         setAuthenticating(false)
+        router.push('/login')
       }
     }
 

@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    console.log('User successfully verified:', user.email)
     const { data, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink', 
       email: user.email,
