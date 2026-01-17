@@ -172,13 +172,55 @@ export default function MarketingFunnelsDetailsModal({
         const newClients = clientList.length
         const retention = newClients > 0 ? (clientsWithSecondVisitInTimeline / newClients) * 100 : 0
         
-        // Calculate average ticket from clients who returned in timeline
-        const clientsWhoReturned = clientList.filter(client => 
-          client.second_visit && isDateInTimeline(client.second_visit)
-        )
+        // Calculate average ticket from FIRST appointments for all new clients in this source
+        let avgTicket = 0
         
-        // For avg_ticket, we'd need actual ticket data - keeping it at 0 for now
-        // or you can fetch from appointments table if needed
+        if (clientList.length > 0) {
+          // Get client_ids and their first appointment dates
+          const clientAppointmentData = clientList
+            .map(c => {
+              const originalClient = filteredClients.find(fc => 
+                `${fc.first_name} ${fc.last_name}`.toLowerCase() === c.client_name.toLowerCase()
+              )
+              return originalClient ? {
+                client_id: originalClient.client_id,
+                first_appt: originalClient.first_appt
+              } : null
+            })
+            .filter(Boolean) as Array<{ client_id: string; first_appt: string }>
+          
+          if (clientAppointmentData.length > 0) {
+            // Fetch first appointments for these clients
+            const clientIds = clientAppointmentData.map(c => c.client_id)
+            
+            const { data: appointments } = await supabase
+              .from('acuity_appointments')
+              .select('client_id, appointment_date, revenue')
+              .eq('user_id', barberId)
+              .in('client_id', clientIds)
+            
+            if (appointments && appointments.length > 0) {
+              // Match appointments to first_appt dates and get revenue
+              const firstAppointmentRevenues: number[] = []
+              
+              clientAppointmentData.forEach(clientData => {
+                const firstAppt = appointments.find(appt => 
+                  appt.client_id === clientData.client_id && 
+                  appt.appointment_date === clientData.first_appt
+                )
+                
+                if (firstAppt && firstAppt.revenue) {
+                  firstAppointmentRevenues.push(Number(firstAppt.revenue))
+                }
+              })
+              
+              if (firstAppointmentRevenues.length > 0) {
+                const totalRevenue = firstAppointmentRevenues.reduce((sum, rev) => sum + rev, 0)
+                avgTicket = totalRevenue / firstAppointmentRevenues.length
+              }
+            }
+          }
+        }
         
         // Sort client names: clients with second_visit first, then by first_visit date
         const sortedClientNames = clientList.sort((a, b) => {
@@ -202,7 +244,7 @@ export default function MarketingFunnelsDetailsModal({
           returning_clients: 0,
           new_clients_retained: clientsWithSecondVisitInTimeline,
           retention: retention,
-          avg_ticket: 0, // Would need to calculate from actual appointment data
+          avg_ticket: avgTicket,
           client_names: sortedClientNames
         })
       }
@@ -442,4 +484,4 @@ export default function MarketingFunnelsDetailsModal({
   )
 
   return typeof window !== 'undefined' ? createPortal(modalContent, document.body) : null
-}
+} 
