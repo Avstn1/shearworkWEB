@@ -25,9 +25,10 @@ export async function GET(request: Request) {
       .eq('user_id', user.id)
       .maybeSingle();
     
-
     // Future-proofed for other booking softwares
     const booking_software = squareToken?.user_id ? 'square' : 'acuity';
+    const useSquare = booking_software === 'square';
+    const useAcuity = booking_software === 'acuity';
     
     let appointmentTable: string;
     let appointmentIdField: string;
