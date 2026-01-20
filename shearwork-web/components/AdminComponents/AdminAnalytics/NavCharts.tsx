@@ -9,7 +9,10 @@ interface HourRow {
   hour: number
   clicked_expenses: number
   clicked_dashboard: number
-  clicked_barberEditor: number
+  clickedSMSAutoNudge: number
+  clickedSMSCampaigns: number
+  clicked_clientSheets: number
+  clicked_appointmentSheets: number
   total?: number
 }
 
@@ -17,7 +20,10 @@ interface DayRow {
   day: string
   clicked_expenses: number
   clicked_dashboard: number
-  clicked_barberEditor: number
+  clickedSMSAutoNudge: number
+  clickedSMSCampaigns: number
+  clicked_clientSheets: number
+  clicked_appointmentSheets: number
   total?: number
 }
 
@@ -88,7 +94,8 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
           // Add total field for aggregate mode
           const dataWithTotal = summary.map((row: HourRow) => ({
             ...row,
-            total: row.clicked_expenses + row.clicked_dashboard + row.clicked_barberEditor
+            total: row.clicked_expenses + row.clicked_dashboard + row.clickedSMSAutoNudge + 
+                   row.clickedSMSCampaigns + row.clicked_clientSheets + row.clicked_appointmentSheets
           }))
           
           if (Array.isArray(dataWithTotal) && dataWithTotal.length > 0) {
@@ -98,7 +105,10 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
               hour: h,
               clicked_expenses: 0,
               clicked_dashboard: 0,
-              clicked_barberEditor: 0,
+              clickedSMSAutoNudge: 0,
+              clickedSMSCampaigns: 0,
+              clicked_clientSheets: 0,
+              clicked_appointmentSheets: 0,
               total: 0
             })))
           }
@@ -117,7 +127,10 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
             day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
             clicked_expenses: 0,
             clicked_dashboard: 0,
-            clicked_barberEditor: 0,
+            clickedSMSAutoNudge: 0,
+            clickedSMSCampaigns: 0,
+            clicked_clientSheets: 0,
+            clicked_appointmentSheets: 0,
             total: 0
           }))
 
@@ -137,14 +150,18 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
               if (dayIndex >= 0 && dayIndex < 7) {
                 merged[dayIndex].clicked_expenses += dayData.clicked_expenses || 0
                 merged[dayIndex].clicked_dashboard += dayData.clicked_dashboard || 0
-                merged[dayIndex].clicked_barberEditor += dayData.clicked_barberEditor || 0
+                merged[dayIndex].clickedSMSAutoNudge += dayData.clickedSMSAutoNudge || 0
+                merged[dayIndex].clickedSMSCampaigns += dayData.clickedSMSCampaigns || 0
+                merged[dayIndex].clicked_clientSheets += dayData.clicked_clientSheets || 0
+                merged[dayIndex].clicked_appointmentSheets += dayData.clicked_appointmentSheets || 0
               }
             })
           }
 
           // Calculate totals
           merged.forEach(day => {
-            day.total = day.clicked_expenses + day.clicked_dashboard + day.clicked_barberEditor
+            day.total = day.clicked_expenses + day.clicked_dashboard + day.clickedSMSAutoNudge + 
+                        day.clickedSMSCampaigns + day.clicked_clientSheets + day.clicked_appointmentSheets
           })
 
           setData(merged)
@@ -156,7 +173,10 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
             hour: h,
             clicked_expenses: 0,
             clicked_dashboard: 0,
-            clicked_barberEditor: 0,
+            clickedSMSAutoNudge: 0,
+            clickedSMSCampaigns: 0,
+            clicked_clientSheets: 0,
+            clicked_appointmentSheets: 0,
             total: 0
           })))
         } else {
@@ -164,7 +184,10 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
             day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
             clicked_expenses: 0,
             clicked_dashboard: 0,
-            clicked_barberEditor: 0,
+            clickedSMSAutoNudge: 0,
+            clickedSMSCampaigns: 0,
+            clicked_clientSheets: 0,
+            clicked_appointmentSheets: 0,
             total: 0
           })))
         }
@@ -178,7 +201,8 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
 
   // -------------------- Title --------------------
   const totalLogs = data.reduce((sum, row) =>
-    sum + (row as any).clicked_expenses + (row as any).clicked_dashboard + (row as any).clicked_barberEditor
+    sum + (row as any).clicked_expenses + (row as any).clicked_dashboard + (row as any).clickedSMSAutoNudge +
+    (row as any).clickedSMSCampaigns + (row as any).clicked_clientSheets + (row as any).clicked_appointmentSheets
   , 0)
 
   const titleText = viewMode === 'hourly'
@@ -262,9 +286,33 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="clicked_barberEditor" 
-                    name="Barber Editor"
+                    dataKey="clickedSMSAutoNudge" 
+                    name="SMS Auto Nudge"
                     stroke="#1e88e5" 
+                    strokeWidth={2} 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="clickedSMSCampaigns" 
+                    name="SMS Campaigns"
+                    stroke="#9c27b0" 
+                    strokeWidth={2} 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="clicked_clientSheets" 
+                    name="Client Sheets"
+                    stroke="#ffeb3b" 
+                    strokeWidth={2} 
+                    dot={false} 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="clicked_appointmentSheets" 
+                    name="Appointment Sheets"
+                    stroke="#00bcd4" 
                     strokeWidth={2} 
                     dot={false} 
                   />

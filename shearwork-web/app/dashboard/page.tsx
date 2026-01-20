@@ -113,6 +113,29 @@ export default function DashboardPage() {
     fetchUserAndProfile()
   }, [])
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const addToLogs = async () => {
+      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
+
+      if (userData?.role != 'Admin') {
+        const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: `${userData?.full_name}: ${user.id}`,
+          action: 'clicked_dashboard',
+          status: 'success',
+          details: `Opened navigation link: Dashboard`,
+        })
+
+        if (insertError) throw insertError
+      }
+    }
+
+    addToLogs()
+  }, [user])
+
   // -------------------- INITIAL ACUITY SYNC --------------------
   useEffect(() => {
     if (!user || hasSyncedInitially.current) return
@@ -335,7 +358,6 @@ export default function DashboardPage() {
       </div>
     </motion.div>
   )
-
 
   // -------------------- PAGE CONTENT --------------------
   const content = (

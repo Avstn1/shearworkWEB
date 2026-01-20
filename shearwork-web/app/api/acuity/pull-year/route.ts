@@ -487,8 +487,6 @@ async function handleSync(request: Request) {
   const appointmentsToUpsert: any[] = []
   const processedApptIds = new Set<string>()
 
-  console.log('Processing appointments...')
-  
   for (const appt of appointments) {
     if (!appt.id) continue
     if (processedApptIds.has(appt.id)) continue

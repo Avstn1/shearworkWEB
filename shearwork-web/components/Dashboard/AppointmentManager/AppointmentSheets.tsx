@@ -7,6 +7,7 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { Calendar, ChevronDown } from 'lucide-react';
 import AppointmentEditModal from './AppointmentEditModal';
+import { supabase } from '@/utils/supabaseClient';
 
 type AppointmentRow = {
   id: string;
@@ -41,8 +42,47 @@ export default function AppointmentSheets() {
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentRow | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const [session, setSession] = useState<any>(null);
+
   // Request sequencing
   const requestSeq = useRef(0);
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) {
+        console.error('Error fetching session:', sessionError);
+        return;
+      }
+      setSession(session);
+    };
+
+    getSession()
+  }, [])
+
+  useEffect(() => {
+    if (session == null) return;
+
+    const addToLogs = async () => {
+      const userId = session.user.id
+      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', userId).single();
+
+      if (userData?.role != 'Admin') {
+        const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: `${userData?.full_name}: ${userId}`,
+          action: 'clicked_appointmentSheets',
+          status: 'success',
+          details: `Opened navigation link: Appointment Sheets`,
+        })
+
+        if (insertError) throw insertError
+      }
+    }
+
+    addToLogs()
+  }, [session])
 
   // Format date to YYYY-MM-DD
   const formatDateToISO = (date: Date) => {

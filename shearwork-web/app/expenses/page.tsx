@@ -59,8 +59,30 @@ export default function UserExpensesPage() {
     fetchUser()
   }, [router])
 
+  useEffect(() => {
+    if (!user?.id) return
 
-    // Helper to parse date strings as local dates (not UTC)
+    const addToLogs = async () => {
+      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
+
+      if (userData?.role != 'Admin') {
+        const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: `${userData?.full_name}: ${user.id}`,
+          action: 'clicked_expenses',
+          status: 'success',
+          details: `Opened navigation link: Expenses`,
+        })
+
+        if (insertError) throw insertError
+      }
+    }
+
+    addToLogs()
+  }, [user])
+
+  // Helper to parse date strings as local dates (not UTC)
   const parseLocalDate = (dateString: string): Date => {
     const [year, month, day] = dateString.split('-').map(Number)
     return new Date(year, month - 1, day)

@@ -58,7 +58,8 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const actions = ['clicked_expenses', 'clicked_dashboard', 'clicked_barberEditor']
+    const actions = ['clicked_expenses', 'clicked_dashboard', 'clickedSMSAutoNudge', 
+                     'clickedSMSCampaigns', 'clicked_clientSheets', 'clicked_appointmentSheets']
     
     if (summaryType === 'hourly') {
       const start = targetDate ?? startDate
@@ -89,7 +90,10 @@ Deno.serve(async (req: Request) => {
         hour: h,
         clicked_expenses: 0,
         clicked_dashboard: 0,
-        clicked_barberEditor: 0,
+        clickedSMSAutoNudge: 0,
+        clickedSMSCampaigns: 0,
+        clicked_clientSheets: 0,
+        clicked_appointmentSheets: 0,
       }))
 
       // Aggregate across all matching rows
@@ -111,7 +115,8 @@ Deno.serve(async (req: Request) => {
       }
 
       const totalLogs = aggregated.reduce((sum, h) => 
-        sum + h.clicked_expenses + h.clicked_dashboard + h.clicked_barberEditor, 0
+        sum + h.clicked_expenses + h.clicked_dashboard + h.clickedSMSAutoNudge + 
+        h.clickedSMSCampaigns + h.clicked_clientSheets + h.clicked_appointmentSheets, 0
       )
       console.log(`📊 Total nav logs aggregated: ${totalLogs}`)
 
@@ -147,7 +152,10 @@ Deno.serve(async (req: Request) => {
         day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],
         clicked_expenses: 0,
         clicked_dashboard: 0,
-        clicked_barberEditor: 0,
+        clickedSMSAutoNudge: 0,
+        clickedSMSCampaigns: 0,
+        clicked_clientSheets: 0,
+        clicked_appointmentSheets: 0,
       }))
 
       // Aggregate the week's data
@@ -169,7 +177,8 @@ Deno.serve(async (req: Request) => {
       }
 
       const totalLogs = aggregated.reduce((sum, d) => 
-        sum + d.clicked_expenses + d.clicked_dashboard + d.clicked_barberEditor, 0
+        sum + d.clicked_expenses + d.clicked_dashboard + d.clickedSMSAutoNudge + 
+        d.clickedSMSCampaigns + d.clicked_clientSheets + d.clicked_appointmentSheets, 0
       )
       console.log(`📊 Total nav logs aggregated: ${totalLogs}`)
       console.log('📊 Weekly breakdown:', aggregated)

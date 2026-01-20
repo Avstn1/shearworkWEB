@@ -135,7 +135,7 @@ export default function SMSAutoNudge() {
         // Fetch profile with auto_nudge_schedule
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('auto_nudge_schedule')
+          .select('auto_nudge_schedule, role, full_name')
           .eq('user_id', session.user.id)
           .single();
 
@@ -143,6 +143,20 @@ export default function SMSAutoNudge() {
           console.log('⚠️ No schedule found in profile');
           setIsLoadingSchedule(false);
           return;
+        }
+
+        // Log user action for clicking auto-nudge
+        if (profile?.role != 'Admin') {
+          const { error: insertError } = await supabase
+          .from('system_logs')
+          .insert({
+            source: `${profile?.full_name}: ${session.user.id}`,
+            action: 'clicked_SMSAutoNudge',
+            status: 'success',
+            details: `Opened navigation link: SMS Auto Nudge`,
+          })
+
+          if (insertError) throw insertError
         }
 
         // Parse the schedule: "minute hour day * * | startdate | enddate"

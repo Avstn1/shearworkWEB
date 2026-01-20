@@ -140,6 +140,29 @@ export default function ClientSheets() {
     fetchUser()
   }, [])
 
+  useEffect(() => {
+    if (!user?.id) return
+
+    const addToLogs = async () => {
+      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
+
+      if (userData?.role != 'Admin') {
+        const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: `${userData?.full_name}: ${user.id}`,
+          action: 'clicked_clientSheets',
+          status: 'success',
+          details: `Opened navigation link: Client Sheets`,
+        })
+
+        if (insertError) throw insertError
+      }
+    }
+
+    addToLogs()
+  }, [user])
+
   // Load filters from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(FILTERS_STORAGE_KEY);
