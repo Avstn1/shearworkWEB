@@ -37,7 +37,7 @@ async function aggregateWeeklyData(
   const { data: squareToken } = await supabase
       .from('square_tokens')
       .select('user_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
     
   // Future-proofed for other booking softwares. Instead of doing this, add a column in the profiles table that specifies the booking software.
@@ -285,7 +285,17 @@ async function aggregateWeeklyTopClients(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}weekly_top_clients`
-  const useSquare = tablePrefix === ''
+  
+  const { data: squareToken } = await supabase
+      .from('square_tokens')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+  // Future-proofed for other booking softwares. Instead of doing this, add a column in the profiles table that specifies the booking software.
+  const booking_software = squareToken?.user_id ? 'square' : 'acuity';
+  const useAcuity = booking_software === 'acuity'
+  const useSquare = booking_software === 'square'
   
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
@@ -478,6 +488,17 @@ async function aggregateWeeklyMarketingFunnels(
 
   console.log(dateRange.startISO)
   console.log(dateRange.endISO)
+
+  const { data: squareToken } = await supabase
+      .from('square_tokens')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+  // Future-proofed for other booking softwares. Instead of doing this, add a column in the profiles table that specifies the booking software.
+  const booking_software = squareToken?.user_id ? 'square' : 'acuity';
+  const useAcuity = booking_software === 'acuity'
+  const useSquare = booking_software === 'square'
   
   try {
     // Fetch clients whose FIRST appointment is in the date range
