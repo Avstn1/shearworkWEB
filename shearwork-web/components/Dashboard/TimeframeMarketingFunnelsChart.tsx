@@ -15,8 +15,6 @@ import {
 import { supabase } from '@/utils/supabaseClient'
 
 import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal';
-import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
-
 
 const COLORS = ['#E8EDC7', '#9AC8CD', '#B19470', '#748E63', '#F1EEDC']
 
@@ -26,9 +24,8 @@ export interface MarketingFunnel {
   returning_clients: number
   new_clients_retained: number
   retention: number
-  retention_height?: number
   avg_ticket: number
-  timeframe: string
+  timeframe?: string
 }
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
@@ -160,27 +157,53 @@ export default function TimeframeMarketingFunnelsChart({
           }
         })
 
-        // Calculate retention for each source
-        const result = Array.from(sourceMap.values()).map(funnel => ({
-          ...funnel,
-          retention: funnel.new_clients > 0 
+        // Calculate retention and avg_ticket for each source
+        const funnelData = Array.from(sourceMap.values())
+        
+        for (const funnel of funnelData) {
+          // Calculate retention
+          funnel.retention = funnel.new_clients > 0 
             ? (funnel.new_clients_retained / funnel.new_clients) * 100 
             : 0
-        }))
 
-        // Find max new_clients to scale retention bars
-        const maxNewClients = Math.max(...result.map(f => f.new_clients), 1)
-
-        // Add retention_height field: retention percentage scaled to max new_clients
-        const resultWithRetentionHeight = result.map(funnel => ({
-          ...funnel,
-          retention_height: (funnel.retention / 100) * maxNewClients
-        }))
+          // Calculate average ticket from FIRST appointments for all new clients in this source
+          const sourceClients = filteredClients.filter(c => c.first_source === funnel.source)
+          
+          if (sourceClients.length > 0) {
+            const clientIds = sourceClients.map(c => c.client_id)
+            
+            const { data: appointments } = await supabase
+              .from('acuity_appointments')
+              .select('client_id, appointment_date, revenue')
+              .eq('user_id', barberId)
+              .in('client_id', clientIds)
+            
+            if (appointments && appointments.length > 0) {
+              const firstAppointmentRevenues: number[] = []
+              
+              sourceClients.forEach(client => {
+                const firstAppt = appointments.find(appt => 
+                  appt.client_id === client.client_id && 
+                  appt.appointment_date === client.first_appt
+                )
+                
+                if (firstAppt && firstAppt.revenue) {
+                  firstAppointmentRevenues.push(Number(firstAppt.revenue))
+                }
+              })
+              
+              if (firstAppointmentRevenues.length > 0) {
+                const totalRevenue = firstAppointmentRevenues.reduce((sum, rev) => sum + rev, 0)
+                funnel.avg_ticket = totalRevenue / firstAppointmentRevenues.length
+              }
+            }
+          }
+        }
 
         // Sort by new clients descending
-        resultWithRetentionHeight.sort((a, b) => b.new_clients - a.new_clients)
+        funnelData.sort((a, b) => b.new_clients - a.new_clients)
 
-        setData(resultWithRetentionHeight)
+        setData(funnelData)
 
       } catch (err) {
         console.error('Error preparing timeframe marketing funnels:', err)
@@ -224,6 +247,11 @@ export default function TimeframeMarketingFunnelsChart({
       </div>
     )
 
+  // Adjust label font and bar size dynamically
+  const labelFontSize = data.length > 10 ? 8 : 12
+  const barSize = data.length > 15 ? 10 : 20
+  const filteredData = data.filter(d => d.new_clients > 0)
+
   return (
     <>
       <div
@@ -232,14 +260,13 @@ export default function TimeframeMarketingFunnelsChart({
           borderColor: 'var(--card-revenue-border)',
           background: 'var(--card-revenue-bg)',
           minHeight: '400px',
-          maxHeight: '440px',
-          overflow: 'visible',
+          maxHeight: '500px',
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
-          📣 {timeframeLabel(timeframe, year)}
-        </h2>
+          <h2 className="text-[#E8EDC7] text-xl font-semibold">
+            📣 {timeframeLabel(timeframe, year)}
+          </h2>
           <button
             onClick={() => setIsModalOpen(true)}
             className="px-4 py-2 bg-[#748E63] hover:bg-[#9AC8CD] text-[#2a3612ff] hover:text-[#E8EDC7] rounded-lg transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
@@ -248,37 +275,37 @@ export default function TimeframeMarketingFunnelsChart({
           </button>
         </div>
 
-        <div className="flex-1 flex items-center justify-center overflow-visible">
+        <div className="flex-1 flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={data}
-              margin={{ top: 20, right: 20, left: 0, bottom: 60 }}
+              layout="vertical"
+              data={filteredData}
+              margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+              barCategoryGap={filteredData.length > 10 ? '30%' : '15%'}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
 
-              <XAxis
+              <XAxis xAxisId="clients" type="number" stroke="#E8EDC7" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
+              <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#E8EDC7" hide />
+              
+              <YAxis
+                type="category"
                 dataKey="source"
                 stroke="#E8EDC7"
-                angle={-35}
-                textAnchor="end"
-                interval={0}
-                height={60}
-                style={{ fontSize: '12px' }}
+                width={60}   
+                style={{ fontSize: labelFontSize }}
               />
-              <YAxis stroke="#E8EDC7" />
 
               <Tooltip
-                formatter={(value: any, name: string, props: any) => {
-                  if (name === 'Retention') {
-                    // Show the actual retention percentage in tooltip
-                    const item = props.payload
-                    return [`${item.retention.toFixed(2)}%`, name]
-                  }
-                  if (name === 'New Clients Retained') {
-                    return [value, name]
-                  }
-                  return [value, name]
+                labelFormatter={(value, payload) => {
+                  const row = payload?.[0]?.payload
+                  return row?.source || ''
                 }}
+                formatter={(value: any, name: string) =>
+                  name === 'Retention'
+                    ? [`${(Number(value)).toFixed(2)}%`, name]
+                    : [value, name]
+                }
                 contentStyle={{
                   backgroundColor: '#2b2b2b',
                   border: '1px solid #E8EDC7',
@@ -294,69 +321,214 @@ export default function TimeframeMarketingFunnelsChart({
                   value === 'Retention' ? 'Retention (%)' : value
                 }
                 iconType="circle"
-                wrapperStyle={{
-                  color: '#E8EDC7',
-                  paddingTop: '10px',
-                }}
+                wrapperStyle={{ color: '#E8EDC7', paddingTop: '10px' }}
               />
 
-              {/* New Clients Bar */}
+              <YAxis
+                type="category"
+                axisLine={false}  
+                tick={false}      
+                width={0}      
+              />
+
               <Bar
+                xAxisId="clients"
                 dataKey="new_clients"
                 name="New Clients"
                 fill={COLORS[1]}
                 radius={[8, 8, 0, 0]}
+                barSize={barSize}
               >
                 <LabelList
                   dataKey="new_clients"
-                  position="top"
-                  style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
+                  content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    const entry = filteredData[index];
+                    
+                    if (!entry) return null;
+                    
+                    const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
+                    const percentage = (entry.new_clients / maxNewClients) * 100;
+                    
+                    if (percentage > 70) {
+                      return (
+                        <text
+                          x={x + 5}
+                          y={y + height / 2}
+                          fill="#2a3612ff"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value}
+                        </text>
+                      );
+                    } else {
+                      return (
+                        <text
+                          x={x + width + 5}
+                          y={y + height / 2}
+                          fill="#E8EDC7"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value}
+                        </text>
+                      );
+                    }
+                  }}
+                />
+
+                <LabelList
+                  dataKey="source"
+                  content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    const entry = filteredData[index];
+                    
+                    if (!entry) return null;
+                    
+                    const maxNewClients = Math.max(...filteredData.map(d => d.new_clients));
+                    const percentage = (entry.new_clients / maxNewClients) * 100;
+                    
+                    if (percentage > 70) {
+                      return (
+                        <text
+                          x={x + 25}
+                          y={y + height / 2}
+                          fill="#2a3612ff"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value}
+                        </text>
+                      );
+                    } else {
+                      return (
+                        <text
+                          x={x + width + 25}
+                          y={y + height / 2}
+                          fill="#E8EDC7"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value}
+                        </text>
+                      );
+                    }
+                  }}
                 />
               </Bar>
 
-              {/* New Clients Retained Bar */}
               <Bar
+                xAxisId="clients"
                 dataKey="new_clients_retained"
                 name="New Clients Retained"
                 fill={COLORS[3]}
                 radius={[8, 8, 0, 0]}
+                barSize={barSize}
               >
                 <LabelList
                   dataKey="new_clients_retained"
-                  position="top"
-                  style={{ fill: '#E8EDC7', fontSize: 12, fontWeight: 'bold' }}
-                  dy={-15}
+                  content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    const entry = filteredData[index];
+                    
+                    if (!entry) return null;
+                    
+                    const maxClients = Math.max(
+                      ...filteredData.map(d => Math.max(d.new_clients, d.new_clients_retained))
+                    );
+                    const percentage = (entry.new_clients_retained / maxClients) * 100;
+                    
+                    if (percentage > 70) {
+                      return (
+                        <text
+                          x={x + 5}
+                          y={y + height / 2}
+                          fill="#2a3612ff"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value}
+                        </text>
+                      );
+                    } else {
+                      return (
+                        <text
+                          x={x + width + 5}
+                          y={y + height / 2}
+                          fill="#E8EDC7"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value}
+                        </text>
+                      );
+                    }
+                  }}
                 />
               </Bar>
 
-              {/* Retention Bar - height scaled to new_clients */}
               <Bar
-                dataKey="retention_height"
+                xAxisId="retention"
+                dataKey="retention"
                 name="Retention"
                 fill={COLORS[2]}
                 radius={[8, 8, 0, 0]}
+                barSize={barSize}
               >
-              <LabelList
-                dataKey="retention"
-                position="top"
-                content={(props) => {
-                  const { x, y, value } = props;
-
-                  if (x == null || y == null || value == null) return null;
-
-                  return (
-                    <text
-                      x={Number(x)}
-                      y={Number(y) - 5}
-                      fill="#E8EDC7"
-                      fontSize={10}
-                      fontWeight="bold"
-                    >
-                      {`${Number(value).toFixed(2)}%`}
-                    </text>
-                  );
-                }}
-              />
+                <LabelList
+                  dataKey="retention"
+                  content={(props: any) => {
+                    const { x, y, width, height, value, index } = props;
+                    const entry = filteredData[index];
+                    
+                    if (!entry) return null;
+                    
+                    const percentage = entry.retention;
+                    
+                    if (percentage > 70) {
+                      return (
+                        <text
+                          x={x + 5}
+                          y={y + height / 2}
+                          fill="#2a3612ff"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
+                        </text>
+                      );
+                    } else {
+                      return (
+                        <text
+                          x={x + width + 5}
+                          y={y + height / 2}
+                          fill="#E8EDC7"
+                          fontSize={labelFontSize}
+                          fontWeight="bold"
+                          textAnchor="start"
+                          dominantBaseline="middle"
+                        >
+                          {value !== undefined && value !== null ? `${Number(value).toFixed(2)}%` : ''}
+                        </text>
+                      );
+                    }
+                  }}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

@@ -8,11 +8,16 @@ import {
   Month,
   MONTHS,
   AggregationResult,
+  NormalizedAppointment,
 } from './types'
 import { getBookingAdapter } from './adapters'
+import { SquareAdapter } from './adapters/square'
 import { ClientProcessor } from './processors/clients'
 import { AppointmentProcessor } from './processors/appointments'
+import { SquareClientProcessor } from './processors/squareClients'
+import { SquareAppointmentProcessor } from './processors/squareAppointments'
 import { runAggregations } from './processors/aggregations'
+import { SquareOrderRecord, SquarePaymentRecord } from '@/lib/square/normalize'
 
 // ======================== DATE RANGE HELPERS ========================
 
@@ -147,115 +152,837 @@ export async function pull(
   const { tablePrefix = '', skipAggregations = false, dryRun = false } = orchestratorOptions
   const errors: string[] = []
   const aggregations: AggregationResult[] = []
-
   const fetchedAt = new Date().toISOString()
 
-  try {
-    // ======================== STEP 1: GET ADAPTER ========================
+  const sources: PullResult['sources'] = {}
+  const combinedClients = {
+    totalProcessed: 0,
+    newClients: 0,
+    existingClients: 0,
+    mergedClients: 0,
+  }
+  const combinedAppointments = {
+    totalProcessed: 0,
+    inserted: 0,
+    updated: 0,
+    skippedNoClient: 0,
+    revenuePreserved: 0,
+  }
 
-    // Get the user's booking software from profile
-    // Note: booking_software column may not exist in all deployments, default to 'acuity'
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('calendar')
-      .eq('user_id', userId)
-      .single()
+  let appointmentCount = 0
 
-    if (profileError || !profile) {
-      throw new Error(`No profile found for user: ${profileError?.message || 'unknown error'}`)
-    }
+  const dateRange = pullOptionsToDateRange(options)
 
-    // Default to 'acuity' - can be extended to support multiple booking providers
-    const bookingSoftware = 'acuity'
-    const adapter = getBookingAdapter(bookingSoftware)
+  // ======================== ACUITY PIPELINE ========================
+  const { data: acuityToken } = await supabase
+    .from('acuity_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .maybeSingle()
 
-    // ======================== STEP 2: FETCH APPOINTMENTS ========================
+  if (acuityToken?.access_token) {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('calendar')
+        .eq('user_id', userId)
+        .single()
 
-    const accessToken = await adapter.ensureValidToken(supabase, userId)
-    const calendarId = await adapter.getCalendarId(accessToken, supabase, userId)
-    const dateRange = pullOptionsToDateRange(options)
+      if (profileError || !profile) {
+        throw new Error(`No profile found for user: ${profileError?.message || 'unknown error'}`)
+      }
 
-    const appointments = await adapter.fetchAppointments(accessToken, calendarId, dateRange)
+      const acuityAdapter = getBookingAdapter('acuity')
+      const acuityAccessToken = await acuityAdapter.ensureValidToken(supabase, userId)
+      const calendarId = await acuityAdapter.getCalendarId(acuityAccessToken, supabase, userId)
+      const appointments = await acuityAdapter.fetchAppointments(acuityAccessToken, calendarId, dateRange)
 
-    // ======================== STEP 3: PROCESS CLIENTS ========================
+      const clientProcessor = new ClientProcessor(supabase, userId, { tablePrefix })
+      const clientResolution = await clientProcessor.resolve(appointments)
 
-    const clientProcessor = new ClientProcessor(supabase, userId, { tablePrefix })
-    const clientResolution = await clientProcessor.resolve(appointments)
-
-    let clientResult = {
-      totalProcessed: clientResolution.clients.size,
-      newClients: clientResolution.newClientIds.size,
-      existingClients: clientResolution.clients.size - clientResolution.newClientIds.size,
-      mergedClients: 0,
-    }
-
-    if (!dryRun) {
-      clientResult = await clientProcessor.upsert()
-    }
-
-    // ======================== STEP 4: PROCESS APPOINTMENTS ========================
-
-    const appointmentProcessor = new AppointmentProcessor(supabase, userId, { tablePrefix })
-    appointmentProcessor.process(appointments, clientResolution)
-
-    let appointmentResult = {
-      totalProcessed: appointmentProcessor.getUpsertPayload().length,
-      inserted: 0,
-      updated: 0,
-      skippedNoClient: appointmentProcessor.getSkippedCount(),
-      revenuePreserved: 0,
-    }
-
-    if (!dryRun) {
-      appointmentResult = await appointmentProcessor.upsert()
-    }
-
-    // ======================== STEP 5: RUN AGGREGATIONS ========================
-
-    if (!skipAggregations) {
-      const aggregationResults = await runAggregations(
-        { supabase, userId, options },
-        { tablePrefix, skipAggregations, dryRun }
-      )
-      aggregations.push(...aggregationResults)
-    }
-
-    // ======================== RETURN RESULT ========================
-
-    return {
-      success: errors.length === 0,
-      fetchedAt,
-      appointmentCount: appointments.length,
-      clients: clientResult,
-      appointments: {
-        totalProcessed: appointmentResult.totalProcessed,
-        inserted: appointmentResult.inserted,
-        updated: appointmentResult.updated,
-        skipped: appointmentResult.skippedNoClient,
-      },
-      aggregations,
-      errors: errors.length > 0 ? errors : undefined,
-    }
-  } catch (err) {
-    return {
-      success: false,
-      fetchedAt,
-      appointmentCount: 0,
-      clients: {
-        totalProcessed: 0,
-        newClients: 0,
-        existingClients: 0,
+      let clientResult = {
+        totalProcessed: clientResolution.clients.size,
+        newClients: clientResolution.newClientIds.size,
+        existingClients: clientResolution.clients.size - clientResolution.newClientIds.size,
         mergedClients: 0,
-      },
-      appointments: {
-        totalProcessed: 0,
+      }
+
+      if (!dryRun) {
+        clientResult = await clientProcessor.upsert()
+      }
+
+      const appointmentProcessor = new AppointmentProcessor(supabase, userId, { tablePrefix })
+      appointmentProcessor.process(appointments, clientResolution)
+
+      let appointmentResult = {
+        totalProcessed: appointmentProcessor.getUpsertPayload().length,
         inserted: 0,
         updated: 0,
-        skipped: 0,
-      },
-      aggregations: [],
-      errors: [String(err)],
+        skippedNoClient: appointmentProcessor.getSkippedCount(),
+        revenuePreserved: 0,
+      }
+
+      if (!dryRun) {
+        appointmentResult = await appointmentProcessor.upsert()
+      }
+
+      sources.acuity = {
+        appointmentCount: appointments.length,
+        clients: clientResult,
+        appointments: {
+          totalProcessed: appointmentResult.totalProcessed,
+          inserted: appointmentResult.inserted,
+          updated: appointmentResult.updated,
+          skipped: appointmentResult.skippedNoClient,
+        },
+      }
+
+      appointmentCount += appointments.length
+      combinedClients.totalProcessed += clientResult.totalProcessed
+      combinedClients.newClients += clientResult.newClients
+      combinedClients.existingClients += clientResult.existingClients
+      combinedClients.mergedClients += clientResult.mergedClients
+      combinedAppointments.totalProcessed += appointmentResult.totalProcessed
+      combinedAppointments.inserted += appointmentResult.inserted
+      combinedAppointments.updated += appointmentResult.updated
+      combinedAppointments.skippedNoClient += appointmentResult.skippedNoClient
+      combinedAppointments.revenuePreserved += appointmentResult.revenuePreserved
+    } catch (err) {
+      errors.push(`Acuity: ${formatErrorMessage(err)}`)
     }
+  }
+
+  // ======================== SQUARE PIPELINE ========================
+  const { data: squareToken } = await supabase
+    .from('square_tokens')
+    .select('access_token, merchant_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const shouldRunSquare = Boolean(squareToken?.access_token) && tablePrefix === ''
+
+  if (shouldRunSquare) {
+    try {
+      const squareAdapter = new SquareAdapter()
+      const squareAccessToken = await squareAdapter.ensureValidToken(supabase, userId)
+      const locationId = await squareAdapter.getCalendarId(squareAccessToken, supabase, userId)
+      const locations = await squareAdapter.fetchLocations(squareAccessToken)
+
+      const squareAppointments = await squareAdapter.fetchAppointmentsForLocations(
+        squareAccessToken,
+        locationId,
+        dateRange,
+        locations
+      )
+
+      const squareOrders = await squareAdapter.fetchOrders(
+        squareAccessToken,
+        locationId,
+        dateRange,
+        locations
+      )
+
+      const squarePayments = await squareAdapter.fetchPayments(
+        squareAccessToken,
+        locationId,
+        dateRange,
+        locations
+      )
+
+      const storedOrders = await loadStoredSquareOrders(
+        supabase,
+        userId,
+        dateRange
+      )
+
+      const storedPayments = await loadStoredSquarePayments(
+        supabase,
+        userId,
+        dateRange
+      )
+
+      const ordersForMatching = mergeSquareOrders(
+        squareOrders,
+        storedOrders
+      )
+
+      const paymentsForMatching = mergeSquarePayments(
+        squarePayments,
+        storedPayments
+      )
+
+      const { appointments: appointmentsWithPayments } = matchSquarePaymentsToAppointments(
+        squareAppointments,
+        paymentsForMatching,
+        ordersForMatching
+      )
+
+      if (!dryRun) {
+        await upsertSquarePayments(
+          supabase,
+          userId,
+          squareToken?.merchant_id || 'unknown',
+          squarePayments
+        )
+
+        await upsertSquareOrders(
+          supabase,
+          userId,
+          squareToken?.merchant_id || 'unknown',
+          squareOrders
+        )
+      }
+
+      const squareClientProcessor = new SquareClientProcessor(supabase, userId, {
+        tablePrefix,
+        merchantId: squareToken?.merchant_id || 'unknown',
+      })
+      const squareClientResolution = await squareClientProcessor.resolve(appointmentsWithPayments)
+
+      let squareClientResult = {
+        totalProcessed: squareClientResolution.clients.size,
+        newClients: squareClientResolution.newClientIds.size,
+        existingClients: squareClientResolution.clients.size - squareClientResolution.newClientIds.size,
+        mergedClients: 0,
+      }
+
+      if (!dryRun) {
+        squareClientResult = await squareClientProcessor.upsert()
+      }
+
+      const squareAppointmentProcessor = new SquareAppointmentProcessor(supabase, userId, {
+        tablePrefix,
+        merchantId: squareToken?.merchant_id || 'unknown',
+      })
+
+      squareAppointmentProcessor.process(appointmentsWithPayments, squareClientResolution)
+
+      let squareAppointmentResult = {
+        totalProcessed: squareAppointmentProcessor.getUpsertPayload().length,
+        inserted: 0,
+        updated: 0,
+        skippedNoClient: squareAppointmentProcessor.getSkippedCount(),
+        revenuePreserved: 0,
+      }
+
+      if (!dryRun) {
+        squareAppointmentResult = await squareAppointmentProcessor.upsert()
+      }
+
+      sources.square = {
+        appointmentCount: appointmentsWithPayments.length,
+        clients: squareClientResult,
+        appointments: {
+          totalProcessed: squareAppointmentResult.totalProcessed,
+          inserted: squareAppointmentResult.inserted,
+          updated: squareAppointmentResult.updated,
+          skipped: squareAppointmentResult.skippedNoClient,
+        },
+      }
+
+      appointmentCount += appointmentsWithPayments.length
+      combinedClients.totalProcessed += squareClientResult.totalProcessed
+      combinedClients.newClients += squareClientResult.newClients
+      combinedClients.existingClients += squareClientResult.existingClients
+      combinedClients.mergedClients += squareClientResult.mergedClients
+      combinedAppointments.totalProcessed += squareAppointmentResult.totalProcessed
+      combinedAppointments.inserted += squareAppointmentResult.inserted
+      combinedAppointments.updated += squareAppointmentResult.updated
+      combinedAppointments.skippedNoClient += squareAppointmentResult.skippedNoClient
+      combinedAppointments.revenuePreserved += squareAppointmentResult.revenuePreserved
+    } catch (err) {
+      errors.push(`Square: ${formatErrorMessage(err)}`)
+    }
+  }
+
+  const hasSources = Object.keys(sources).length > 0
+
+  if (!hasSources) {
+    errors.push('No booking sources connected')
+  }
+
+  if (!skipAggregations && hasSources) {
+    const aggregationResults = await runAggregations(
+      { supabase, userId, options },
+      { tablePrefix, skipAggregations, dryRun }
+    )
+    aggregations.push(...aggregationResults)
+  }
+
+  return {
+    success: errors.length === 0,
+    fetchedAt,
+    appointmentCount,
+    clients: combinedClients,
+    appointments: {
+      totalProcessed: combinedAppointments.totalProcessed,
+      inserted: combinedAppointments.inserted,
+      updated: combinedAppointments.updated,
+      skipped: combinedAppointments.skippedNoClient,
+    },
+    aggregations,
+    errors: errors.length > 0 ? errors : undefined,
+    sources,
+  }
+}
+
+function formatErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
+}
+
+interface OrderPaymentTotals {
+  total: number
+  tip: number
+  paymentIds: string[]
+}
+
+function buildPaymentTotalsByOrder(
+  payments: SquarePaymentRecord[]
+): Map<string, OrderPaymentTotals> {
+  const totals = new Map<string, OrderPaymentTotals>()
+
+  for (const payment of payments) {
+    if (!payment.orderId) continue
+
+    const current = totals.get(payment.orderId) || { total: 0, tip: 0, paymentIds: [] }
+    current.total += payment.amountTotal
+    current.tip += payment.tipAmount
+    current.paymentIds.push(payment.paymentId)
+    totals.set(payment.orderId, current)
+  }
+
+  return totals
+}
+
+function mergeSquarePayments(
+  primary: SquarePaymentRecord[],
+  secondary: SquarePaymentRecord[]
+): SquarePaymentRecord[] {
+  const map = new Map<string, SquarePaymentRecord>()
+  const merged: SquarePaymentRecord[] = []
+
+  for (const payment of secondary) {
+    if (!payment.paymentId) continue
+    map.set(payment.paymentId, payment)
+  }
+
+  for (const payment of primary) {
+    if (!payment.paymentId) continue
+    map.set(payment.paymentId, payment)
+  }
+
+  for (const payment of map.values()) {
+    merged.push(payment)
+  }
+
+  return merged
+}
+
+function mergeSquareOrders(
+  primary: SquareOrderRecord[],
+  secondary: SquareOrderRecord[]
+): SquareOrderRecord[] {
+  const map = new Map<string, SquareOrderRecord>()
+  const merged: SquareOrderRecord[] = []
+
+  for (const order of secondary) {
+    if (!order.orderId) continue
+    map.set(order.orderId, order)
+  }
+
+  for (const order of primary) {
+    if (!order.orderId) continue
+    map.set(order.orderId, order)
+  }
+
+  for (const order of map.values()) {
+    merged.push(order)
+  }
+
+  return merged
+}
+
+async function loadStoredSquareOrders(
+  supabase: SupabaseClient,
+  userId: string,
+  dateRange: DateRange
+): Promise<SquareOrderRecord[]> {
+  const rangeFilter = `and(created_at.gte.${dateRange.startISO},created_at.lte.${dateRange.endISO}),and(closed_at.gte.${dateRange.startISO},closed_at.lte.${dateRange.endISO})`
+
+  const { data, error } = await supabase
+    .from('square_orders')
+    .select('order_id, location_id, customer_id, created_at, closed_at, total_amount, currency, line_items, status, source')
+    .eq('user_id', userId)
+    .or(rangeFilter)
+
+  if (error || !data) {
+    if (error) {
+      console.error('Failed to load stored Square orders:', error)
+    }
+    return []
+  }
+
+  return data
+    .filter((order) => order.order_id)
+    .map((order) => {
+      const appointmentDate = extractDateOnly(order.closed_at || order.created_at)
+
+      return {
+        orderId: order.order_id,
+        locationId: order.location_id || null,
+        customerId: order.customer_id || null,
+        createdAt: order.created_at || null,
+        closedAt: order.closed_at || null,
+        appointmentDate,
+        totalAmount: Number(order.total_amount || 0),
+        currency: order.currency || null,
+        lineItems: Array.isArray(order.line_items)
+          ? (order.line_items as SquareOrderRecord['lineItems'])
+          : [],
+        status: order.status || null,
+        source: order.source || null,
+      }
+    })
+}
+
+async function loadStoredSquarePayments(
+  supabase: SupabaseClient,
+  userId: string,
+  dateRange: DateRange
+): Promise<SquarePaymentRecord[]> {
+  const { data, error } = await supabase
+    .from('square_payments')
+    .select(
+      'payment_id, location_id, order_id, customer_id, appointment_date, currency, amount_total, tip_amount, processing_fee, net_amount, status, source_type, receipt_number, receipt_url, card_brand, card_last4, created_at, updated_at'
+    )
+    .eq('user_id', userId)
+    .eq('status', 'COMPLETED')
+    .gte('appointment_date', dateRange.startISO)
+    .lte('appointment_date', dateRange.endISO)
+
+  if (error || !data) {
+    if (error) {
+      console.error('Failed to load stored Square payments:', error)
+    }
+    return []
+  }
+
+  return data
+    .filter((payment) => payment.payment_id)
+    .map((payment) => ({
+      paymentId: payment.payment_id,
+      locationId: payment.location_id || null,
+      orderId: payment.order_id || null,
+      customerId: payment.customer_id || null,
+      appointmentDate: payment.appointment_date || null,
+      currency: payment.currency || null,
+      amountTotal: Number(payment.amount_total || 0),
+      tipAmount: Number(payment.tip_amount || 0),
+      processingFee: Number(payment.processing_fee || 0),
+      netAmount: payment.net_amount !== null ? Number(payment.net_amount) : null,
+      status: payment.status || null,
+      sourceType: payment.source_type || null,
+      receiptNumber: payment.receipt_number || null,
+      receiptUrl: payment.receipt_url || null,
+      cardBrand: payment.card_brand || null,
+      cardLast4: payment.card_last4 || null,
+      createdAt: payment.created_at || null,
+      updatedAt: payment.updated_at || null,
+    }))
+}
+
+function buildOrderIndex(
+  orders: SquareOrderRecord[]
+): Map<string, SquareOrderRecord> {
+  const map = new Map<string, SquareOrderRecord>()
+  for (const order of orders) {
+    if (!order.orderId) continue
+    map.set(order.orderId, order)
+  }
+  return map
+}
+
+function buildFallbackOrderIndex(
+  orders: SquareOrderRecord[]
+): Map<string, SquareOrderRecord[]> {
+  const index = new Map<string, SquareOrderRecord[]>()
+
+  for (const order of orders) {
+    if (!order.customerId || !order.appointmentDate) continue
+    const key = buildFallbackKey(order.customerId, order.appointmentDate)
+    if (!key) continue
+
+    const bucket = index.get(key) || []
+    bucket.push(order)
+    index.set(key, bucket)
+  }
+
+  return index
+}
+
+function buildLocationOrderIndex(
+  orders: SquareOrderRecord[]
+): Map<string, SquareOrderRecord[]> {
+  const index = new Map<string, SquareOrderRecord[]>()
+
+  for (const order of orders) {
+    if (!order.locationId || !order.appointmentDate) continue
+    const key = buildLocationKey(order.locationId, order.appointmentDate)
+    if (!key) continue
+
+    const bucket = index.get(key) || []
+    bucket.push(order)
+    index.set(key, bucket)
+  }
+
+  return index
+}
+
+function buildLocationKey(
+  locationId: string | null | undefined,
+  date: string | null | undefined
+): string | null {
+  if (!locationId || !date) return null
+  return `${locationId}|${date}`
+}
+
+function extractDateOnly(value: string | null | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (trimmed.includes('T')) return trimmed.split('T')[0]
+  return trimmed.split(' ')[0]
+}
+
+function filterOrdersByLocation(
+  orders: SquareOrderRecord[],
+  locationId: string | null | undefined
+): SquareOrderRecord[] {
+  if (!locationId) return orders
+  return orders.filter(
+    (order) => !order.locationId || order.locationId === locationId
+  )
+}
+
+function selectClosestOrder(
+  appointment: NormalizedAppointment,
+  orders: SquareOrderRecord[]
+): SquareOrderRecord | null {
+  if (orders.length === 0) return null
+
+  const appointmentTime = parseDateToMillis(appointment.datetime || null)
+  const amount = appointment.price || 0
+  const amountTolerance = amount > 0 ? Math.max(1, amount * 0.05) : null
+
+  const amountFiltered = amountTolerance
+    ? orders.filter((order) => Math.abs(order.totalAmount - amount) <= amountTolerance)
+    : orders
+
+  const candidates = amountFiltered.length > 0 ? amountFiltered : orders
+
+  if (!appointmentTime) return candidates[0]
+
+  return candidates.reduce((closest, order) => {
+    const orderTime = parseDateToMillis(order.closedAt || order.createdAt)
+    if (!orderTime) return closest
+
+    const closestTime = parseDateToMillis(closest.closedAt || closest.createdAt)
+    if (!closestTime) return order
+
+    return Math.abs(orderTime - appointmentTime) < Math.abs(closestTime - appointmentTime)
+      ? order
+      : closest
+  }, candidates[0])
+}
+
+function buildOrderServiceName(order: SquareOrderRecord | null): string | null {
+  if (!order || order.lineItems.length === 0) return null
+
+  const names = order.lineItems
+    .map((item) => item.variationName || item.name)
+    .filter((name): name is string => Boolean(name && name.trim()))
+
+  if (names.length === 0) return null
+
+  return names.join(' + ')
+}
+
+function matchSquarePaymentsToAppointments(
+  appointments: NormalizedAppointment[],
+  payments: SquarePaymentRecord[],
+  orders: SquareOrderRecord[]
+): { appointments: NormalizedAppointment[] } {
+  const paymentTotalsByOrder = buildPaymentTotalsByOrder(payments)
+  const fallbackIndex = buildFallbackPaymentIndex(payments)
+  const usedPaymentIds = new Set<string>()
+
+  const orderById = buildOrderIndex(orders)
+  const orderFallbackIndex = buildFallbackOrderIndex(orders)
+  const orderLocationIndex = buildLocationOrderIndex(orders)
+  const usedOrderIds = new Set<string>()
+
+  const updatedAppointments = appointments.map((appointment) => {
+    let updatedAppointment = { ...appointment }
+    let matchedOrder: SquareOrderRecord | null = null
+
+    if (updatedAppointment.orderId) {
+      matchedOrder = orderById.get(updatedAppointment.orderId) || null
+    }
+
+    if (!matchedOrder) {
+      const customerKey = buildFallbackKey(updatedAppointment.customerId, updatedAppointment.date)
+      const locationKey = buildLocationKey(updatedAppointment.locationId, updatedAppointment.date)
+
+      const customerCandidates = customerKey ? orderFallbackIndex.get(customerKey) || [] : []
+      const locationCandidates = locationKey ? orderLocationIndex.get(locationKey) || [] : []
+
+      const candidateMap = new Map<string, SquareOrderRecord>()
+      for (const candidate of [...customerCandidates, ...locationCandidates]) {
+        if (!candidate.orderId || usedOrderIds.has(candidate.orderId)) continue
+        candidateMap.set(candidate.orderId, candidate)
+      }
+
+      const candidates = Array.from(candidateMap.values())
+      const filtered = filterOrdersByLocation(candidates, updatedAppointment.locationId)
+      const selectedOrder = selectClosestOrder(updatedAppointment, filtered)
+
+      if (selectedOrder) {
+        matchedOrder = selectedOrder
+        usedOrderIds.add(selectedOrder.orderId)
+        updatedAppointment = {
+          ...updatedAppointment,
+          orderId: selectedOrder.orderId,
+        }
+      }
+    }
+
+    if (matchedOrder && !updatedAppointment.serviceType) {
+      const serviceName = buildOrderServiceName(matchedOrder)
+      if (serviceName) {
+        updatedAppointment = {
+          ...updatedAppointment,
+          serviceType: serviceName,
+        }
+      }
+    }
+
+    if (updatedAppointment.orderId) {
+      const totals = paymentTotalsByOrder.get(updatedAppointment.orderId)
+      if (totals) {
+        totals.paymentIds.forEach((id) => usedPaymentIds.add(id))
+        return {
+          ...updatedAppointment,
+          price: totals.total,
+          tip: totals.tip,
+          paymentId: totals.paymentIds.length === 1 ? totals.paymentIds[0] : updatedAppointment.paymentId,
+        }
+      }
+    }
+
+    const fallbackKey = buildFallbackKey(updatedAppointment.customerId, updatedAppointment.date)
+    if (!fallbackKey) return updatedAppointment
+
+    const candidates = (fallbackIndex.get(fallbackKey) || []).filter(
+      (payment) => !usedPaymentIds.has(payment.paymentId)
+    )
+
+    const filteredCandidates = filterPaymentsByLocation(candidates, updatedAppointment.locationId)
+    if (filteredCandidates.length === 0) return updatedAppointment
+
+    const selected = selectClosestPayment(updatedAppointment, filteredCandidates)
+    if (!selected) return updatedAppointment
+
+    usedPaymentIds.add(selected.paymentId)
+
+    let nextAppointment = {
+      ...updatedAppointment,
+      price: selected.amountTotal,
+      tip: selected.tipAmount,
+      paymentId: selected.paymentId,
+    }
+
+    if (!nextAppointment.orderId && selected.orderId) {
+      const order = orderById.get(selected.orderId) || null
+      nextAppointment = {
+        ...nextAppointment,
+        orderId: selected.orderId,
+      }
+
+      if (order && !nextAppointment.serviceType) {
+        const serviceName = buildOrderServiceName(order)
+        if (serviceName) {
+          nextAppointment = {
+            ...nextAppointment,
+            serviceType: serviceName,
+          }
+        }
+      }
+    }
+
+    return nextAppointment
+  })
+
+  return { appointments: updatedAppointments }
+}
+
+function buildFallbackPaymentIndex(
+  payments: SquarePaymentRecord[]
+): Map<string, SquarePaymentRecord[]> {
+  const index = new Map<string, SquarePaymentRecord[]>()
+
+  for (const payment of payments) {
+    if (!payment.customerId || !payment.appointmentDate) continue
+    const key = buildFallbackKey(payment.customerId, payment.appointmentDate)
+    if (!key) continue
+
+    const bucket = index.get(key) || []
+    bucket.push(payment)
+    index.set(key, bucket)
+  }
+
+  return index
+}
+
+function buildFallbackKey(customerId: string | null | undefined, date: string | null | undefined): string | null {
+  if (!customerId || !date) return null
+  return `${customerId}|${date}`
+}
+
+function filterPaymentsByLocation(
+  payments: SquarePaymentRecord[],
+  locationId: string | null | undefined
+): SquarePaymentRecord[] {
+  if (!locationId) return payments
+  return payments.filter(
+    (payment) => !payment.locationId || payment.locationId === locationId
+  )
+}
+
+function selectClosestPayment(
+  appointment: NormalizedAppointment,
+  payments: SquarePaymentRecord[]
+): SquarePaymentRecord | null {
+  if (payments.length === 0) return null
+
+  const appointmentTime = parseDateToMillis(appointment.datetime || null)
+  const amount = appointment.price || 0
+  const amountTolerance = amount > 0 ? Math.max(1, amount * 0.05) : null
+
+  const amountFiltered = amountTolerance
+    ? payments.filter((payment) =>
+        Math.abs(payment.amountTotal - amount) <= amountTolerance
+      )
+    : payments
+
+  const candidates = amountFiltered.length > 0 ? amountFiltered : payments
+
+  if (!appointmentTime) return candidates[0]
+
+  return candidates.reduce((closest, payment) => {
+    const paymentTime = parseDateToMillis(payment.createdAt || payment.appointmentDate)
+    if (!paymentTime) return closest
+
+    const closestTime = parseDateToMillis(closest.createdAt || closest.appointmentDate)
+    if (!closestTime) return payment
+
+    return Math.abs(paymentTime - appointmentTime) < Math.abs(closestTime - appointmentTime)
+      ? payment
+      : closest
+  }, candidates[0])
+}
+
+function parseDateToMillis(value: string | null | undefined): number | null {
+  if (!value) return null
+  const normalized = value.includes(' ') ? value.replace(' ', 'T') : value
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) return null
+  return date.getTime()
+}
+
+async function upsertSquareOrders(
+  supabase: SupabaseClient,
+  userId: string,
+  merchantId: string,
+  orders: SquareOrderRecord[]
+): Promise<void> {
+  if (orders.length === 0) return
+
+  const now = new Date().toISOString()
+  const safeMerchantId = merchantId || 'unknown'
+
+  const rows = orders.map((order) => ({
+    order_id: order.orderId,
+    user_id: userId,
+    merchant_id: safeMerchantId,
+    location_id: order.locationId,
+    customer_id: order.customerId,
+    created_at: order.createdAt,
+    closed_at: order.closedAt,
+    total_amount: order.totalAmount,
+    currency: order.currency,
+    line_items: order.lineItems,
+    source: order.source,
+    updated_at: now,
+  }))
+
+  const { error } = await supabase
+    .from('square_orders')
+    .upsert(rows, { onConflict: 'user_id,order_id' })
+
+  if (error) {
+    console.error('Square orders upsert error:', error)
+    throw error
+  }
+}
+
+async function upsertSquarePayments(
+  supabase: SupabaseClient,
+  userId: string,
+  merchantId: string,
+  payments: SquarePaymentRecord[]
+): Promise<void> {
+  if (payments.length === 0) return
+
+  const now = new Date().toISOString()
+  const safeMerchantId = merchantId || 'unknown'
+
+  const rows = payments.map((payment) => ({
+    payment_id: payment.paymentId,
+    user_id: userId,
+    merchant_id: safeMerchantId,
+    location_id: payment.locationId,
+    order_id: payment.orderId,
+    customer_id: payment.customerId,
+    appointment_date: payment.appointmentDate,
+    currency: payment.currency,
+    amount_total: payment.amountTotal,
+    tip_amount: payment.tipAmount,
+    processing_fee: payment.processingFee,
+    net_amount: payment.netAmount,
+    status: payment.status,
+    source_type: payment.sourceType,
+    receipt_number: payment.receiptNumber,
+    receipt_url: payment.receiptUrl,
+    card_brand: payment.cardBrand,
+    card_last4: payment.cardLast4,
+    created_at: payment.createdAt,
+    updated_at: payment.updatedAt || now,
+  }))
+
+  const { error } = await supabase
+    .from('square_payments')
+    .upsert(rows, { onConflict: 'user_id,payment_id' })
+
+  if (error) {
+    console.error('Square payments upsert error:', error)
+    throw error
   }
 }
 

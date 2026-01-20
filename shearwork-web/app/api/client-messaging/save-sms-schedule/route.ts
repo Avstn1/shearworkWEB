@@ -511,7 +511,6 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const { user, supabase } = await getAuthenticatedUser(request)
-    console.log('Fetching SMS schedules for user:', user?.id)
     if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)

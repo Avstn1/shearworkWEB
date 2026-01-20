@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { user, supabase } = await getAuthenticatedUser(request)
     
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');

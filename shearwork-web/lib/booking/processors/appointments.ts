@@ -28,7 +28,7 @@ export interface AppointmentProcessorResult {
   inserted: number
   updated: number
   skippedNoClient: number
-  revenuePreserved: number  // Count of appointments where we preserved manual edits
+  revenuePreserved: number  
 }
 
 interface AppointmentWithValues {
@@ -48,13 +48,14 @@ export interface AppointmentProcessorOptions {
 // ======================== MAIN PROCESSOR ========================
 
 export class AppointmentProcessor {
-  private appointmentsToUpsert: AppointmentWithValues[] = []
+  private readonly appointmentsToUpsert: AppointmentWithValues[] = []
+  private readonly appointmentIDsToDelete: string[] = []
   private skippedNoClient: number = 0
-  private tableName: string
+  private readonly tableName: string
 
   constructor(
-    private supabase: SupabaseClient,
-    private userId: string,
+    private readonly supabase: SupabaseClient,
+    private readonly userId: string,
     options: AppointmentProcessorOptions = {}
   ) {
     const prefix = options.tablePrefix || ''
@@ -75,13 +76,41 @@ export class AppointmentProcessor {
     const now = new Date().toISOString()
 
     for (const appt of appointments) {
+
+      console.log(`Processing appointment ID ${appt.externalId}, last name: ${appt.lastName}`) 
+      // if (appt.lastName === "toledo") {
+      //   console.log(`Linking appointment ${appt.lastName} on ${appt.date} to client ID ${clientId}`)
+      // }
+
+      // Canceled → delete only
+      if (appt.canceled) {
+        this.appointmentIDsToDelete.push(appt.externalId)
+        console.log(`Appointment ${appt.lastName} marked as canceled, will be deleted. ${appt.datetime}`)
+        continue
+      }
+
+      // Skip future appointments (including time in the same day) | datetime format 2026-01-15T08:30:00-0500
+      const parseWithOffset = (dt: string) =>
+      new Date(dt.replace(/([+-]\d{2})(\d{2})$/, '$1:$2'))
+      // After parsing: 2026-01-15T08:30:00-0500
+
+      const nowParse = new Date()
+
+      // Skip future appointments
+      if (parseWithOffset(appt.datetime) > nowParse) {
+        console.log(`Skipping future appointment ${appt.lastName} scheduled for ${appt.datetime}`)
+        continue
+      }
+
       const clientId = clientResolution.appointmentToClient.get(appt.externalId)
 
       if (!clientId) {
         this.skippedNoClient++
+        console.log(`No client resolution for appointment ${appt.lastName} on ${appt.date}, skipping.`)
         continue
       }
 
+      // console.log(`Processing appointment ${appt.lastName} for date ${appt.date}`)
       this.appointmentsToUpsert.push({
         row: {
           user_id: this.userId,
@@ -91,8 +120,8 @@ export class AppointmentProcessor {
           appointment_date: appt.date,
           datetime: appt.datetime,
           service_type: appt.serviceType,
-          revenue: null,  // Will be set after upsert if needed
-          tip: null,      // Will be set after upsert if needed
+          revenue: null,
+          tip: null,
           notes: appt.notes,
           created_at: now,
           updated_at: now,
@@ -102,6 +131,7 @@ export class AppointmentProcessor {
       })
     }
   }
+
 
   /**
    * Returns the upsert payload without writing to database.
@@ -181,6 +211,19 @@ export class AppointmentProcessor {
     if (upsertError) {
       console.error('Appointment upsert error:', upsertError)
       throw upsertError
+    }
+
+    // Delete canceled appointments from the database
+    if (this.appointmentIDsToDelete.length > 0) {
+      const { error: deleteError } = await this.supabase
+        .from(this.tableName)
+        .delete()
+        .eq('user_id', this.userId)
+        .in('acuity_appointment_id', this.appointmentIDsToDelete)
+
+      if (deleteError) {
+        throw deleteError
+      }
     }
 
     let inserted = 0

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
@@ -72,6 +73,10 @@ export default function AppointmentSheets() {
 
   const selectedDateStr = formatDateToISO(selectedDate);
 
+  const calendarStyle: CSSProperties & { ['--rdp-accent-color']?: string } = {
+    '--rdp-accent-color': '#f59e0b',
+  };
+
   // Close calendar when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -106,18 +111,19 @@ export default function AppointmentSheets() {
 
       if (seq !== requestSeq.current) return;
 
-      // Sort by datetime descending (latest first)
+      // Sort by datetime ascending (earliest first)
       const sortedAppointments = (body.appointments || []).sort((a, b) => {
         const dateA = new Date(a.datetime).getTime();
         const dateB = new Date(b.datetime).getTime();
-        return dateB - dateA;
+        return dateA - dateB;
       });
 
       setAppointments(sortedAppointments);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (seq !== requestSeq.current) return;
       console.error(err);
-      setError(err.message || 'Something went wrong');
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      setError(message);
     } finally {
       if (seq !== requestSeq.current) return;
       setLoading(false);
@@ -284,7 +290,7 @@ export default function AppointmentSheets() {
                     [&_.rdp-head_cell]:min-w-[2rem] [&_.rdp-head_cell]:text-center
                     [&_.rdp-table]:w-full
                   "
-                  style={{ ['--rdp-accent-color' as any]: '#f59e0b' }}
+                  style={calendarStyle}
                 />
 
                 {/* Quick select buttons */}
@@ -374,7 +380,7 @@ export default function AppointmentSheets() {
               No appointments found for {formatDateDisplay(selectedDate)}.
             </p>
             <p className="text-xs text-[#777] mt-1">
-              Try selecting a different date.
+              Try selecting a different date. Note: Only appointments that have passed their date and time will appear here.
             </p>
           </div>
         ) : (
@@ -391,7 +397,7 @@ export default function AppointmentSheets() {
             </thead>
             <tbody>
               {appointments.map((appt, index) => {
-                const rowNumber = appointments.length - index;
+                const rowNumber = index + 1;
                 const clientName = [appt.client_first_name, appt.client_last_name]
                   .filter(Boolean)
                   .join(' ') || 'Unknown';
