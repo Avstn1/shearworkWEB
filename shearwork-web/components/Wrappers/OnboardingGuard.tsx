@@ -3,36 +3,27 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const { user, profile, isLoading } = useAuth()
+
 
   useEffect(() => {
     const checkOnboarding = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarded')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
       if (!profile?.onboarded) {
         router.replace('/onboarding')
-      } else {
-        setLoading(false)
       }
     }
 
     checkOnboarding()
   }, [router])
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen text-[var(--accent-2)]">
-        Loading...
+        Loading onboarding guard...
       </div>
     )
   }

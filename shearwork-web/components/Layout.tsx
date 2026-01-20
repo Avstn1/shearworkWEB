@@ -74,7 +74,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       })
     : navLinksBase
 
-  if (loadingRole) return <p>Loading...</p>
+  if (loadingRole) return <p>Loading components/layout...</p>
 
   return (
     <div className="flex flex-col sm:flex-row min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">

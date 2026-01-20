@@ -36,7 +36,7 @@ function PricingPageLoader() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
       <Loader2 className="h-8 w-8 animate-spin text-[#7affc9]" />
-      <p className="mt-4 text-gray-300">Loading...</p>
+      <p className="mt-4 text-gray-300">Loading pricing...</p>
     </div>
   )
 }

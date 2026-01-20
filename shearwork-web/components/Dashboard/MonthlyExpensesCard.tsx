@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 interface MonthlyExpensesCardProps {
-  userId: string
+  userId?: string
   month: string
   year: number
 }

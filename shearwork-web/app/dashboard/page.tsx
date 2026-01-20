@@ -33,6 +33,8 @@ import YearlyDashboard from '@/components/Dashboard/YearlyDashboard'
 
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 
+import { useAuth } from '@/contexts/AuthContext'
+
 import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
@@ -58,9 +60,8 @@ const getLocalMonthYear = () => {
 }
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, profile, isLoading } = useAuth()
+
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState<string>(getLocalMonthYear().month)
@@ -74,56 +75,21 @@ export default function DashboardPage() {
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const hasSyncedInitially = useRef(false)
   const firstSyncAfterConnect = useRef(false)
+  const isSyncing = useRef(false)
+
 
   const cardClass =
     'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
-
-  // -------------------- USER & PROFILE --------------------
-  useEffect(() => {
-    const fetchUserAndProfile = async () => {
-      try {
-        setLoading(true)
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError) throw authError
-        if (!user) throw new Error('No user session found.')
-        setUser(user)
-
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (profileError) throw profileError
-        setProfile(profileData)
-
-        setIsAdmin(['admin', 'owner'].includes(profileData?.role?.toLowerCase()))
-
-        if (profileData?.acuity_access_token && !profileData?.last_acuity_sync) {
-          firstSyncAfterConnect.current = true
-        }
-      } catch (err: any) {
-        console.error(err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-  
-    fetchUserAndProfile()
-  }, [])
 
   useEffect(() => {
     if (!user?.id) return
 
     const addToLogs = async () => {
-      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
-
-      if (userData?.role != 'Admin') {
+      if (profile?.role != 'Admin') {
         const { error: insertError } = await supabase
         .from('system_logs')
         .insert({
-          source: `${userData?.full_name}: ${user.id}`,
+          source: `${profile?.full_name}: ${user.id}`,
           action: 'clicked_dashboard',
           status: 'success',
           details: `Opened navigation link: Dashboard`,
@@ -134,7 +100,7 @@ export default function DashboardPage() {
     }
 
     addToLogs()
-  }, [user])
+  }, [user, profile])
 
   // -------------------- INITIAL ACUITY SYNC --------------------
   useEffect(() => {
@@ -157,9 +123,16 @@ export default function DashboardPage() {
     syncAcuityData()
   }, [selectedMonth, selectedYear])
 
+  if (!user) {
+    return <div className="flex justify-center items-center h-screen text-white">Please log in to access your dashboard.</div>
+  }
+
   // -------------------- SYNC FUNCTIONS --------------------
   const syncAcuityData = async () => {
     if (!user) return
+    if (isSyncing.current) return
+
+    isSyncing.current = true
     setIsRefreshing(true)
     const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
 
@@ -178,7 +151,9 @@ export default function DashboardPage() {
       console.error(err)
       toast.error(err.message || 'Error syncing data.', { id: toastId })
     } finally {
+      isSyncing.current = false
       setIsRefreshing(false)
+      toast.dismiss(toastId)
     }
   }
 
@@ -204,7 +179,7 @@ export default function DashboardPage() {
   }
 
 
-  if (loading) return <div className="flex justify-center items-center h-screen text-white">Loading dashboard...</div>
+  if (isLoading) return <div className="flex justify-center items-center h-screen text-white">Loading dashboard...</div>
   if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>
 
   // -------------------- HEADER COMPONENT --------------------

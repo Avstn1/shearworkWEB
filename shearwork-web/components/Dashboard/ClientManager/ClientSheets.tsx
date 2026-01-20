@@ -9,6 +9,8 @@ import ClientSheetsFilterDropdown, {
 } from '@/components/Dashboard/ClientManager/ClientSheetsFilterModal';
 import FAQModal from '@/components/Dashboard/ClientManager/FAQModal';
 
+import { useAuth } from '@/contexts/AuthContext'
+
 import toast from 'react-hot-toast'
 
 type ClientRow = {
@@ -57,100 +59,92 @@ export default function ClientSheets() {
   const [useApproximateCount, setUseApproximateCount] = useState(false);
   const [isFAQOpen, setIsFAQOpen] = useState(false);
 
-  const [user, setUser] = useState<{ id: string } | null>(null)
   const [dataSource, setDataSource] = useState<'acuity' | 'square'>('acuity')
 
   const requestSeq = useRef(0);
   const statsCache = useRef<{ minYear?: number; timestamp?: number }>({});
 
+  const { user, profile, isLoading: authLoading } = useAuth()
+
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const { data: { session }, error: authError } = await supabase.auth.getSession()
-        if (authError) throw authError
-        if (!session?.user) return
-        setUser({ id: session.user.id })
+    if (!user?.id) return
 
-        const { data: squareToken } = await supabase
-          .from('square_tokens')
-          .select('user_id')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
+    const checkDataSource = async () => {
+      const { data: squareToken } = await supabase
+        .from('square_tokens')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-        const useSquare = Boolean(squareToken?.user_id)
-        setDataSource(useSquare ? 'square' : 'acuity')
+      const useSquare = Boolean(squareToken?.user_id)
+      setDataSource(useSquare ? 'square' : 'acuity')
 
-        const sourceKey = useSquare ? 'square' : 'acuity'
-        const cacheKey = `client_stats_${session.user.id}_${sourceKey}`
-        const cached = sessionStorage.getItem(cacheKey)
-        const now = Date.now()
+      const sourceKey = useSquare ? 'square' : 'acuity'
+      const cacheKey = `client_stats_${user.id}_${sourceKey}`
+      const cached = sessionStorage.getItem(cacheKey)
+      const now = Date.now()
 
-        if (cached) {
-          try {
-            const { minYear: cachedMinYear, timestamp } = JSON.parse(cached)
-            if (cachedMinYear && timestamp && (now - timestamp < 3600000)) { // 1 hour
-              setMinYear(cachedMinYear)
-              statsCache.current = { minYear: cachedMinYear, timestamp }
-              return
-            }
-          } catch (e) {
-            // Invalid cache, continue to fetch
-          }
-        }
-
-        if (!useSquare) {
-          const { data: statsData } = await supabase
-            .from('user_client_stats')
-            .select('min_year')
-            .eq('user_id', session.user.id)
-            .single()
-
-          if (statsData?.min_year) {
-            const year = statsData.min_year
-            setMinYear(year)
-            const cacheData = { minYear: year, timestamp: now }
-            statsCache.current = cacheData
-            sessionStorage.setItem(cacheKey, JSON.stringify(cacheData))
+      if (cached) {
+        try {
+          const { minYear: cachedMinYear, timestamp } = JSON.parse(cached)
+          if (cachedMinYear && timestamp && (now - timestamp < 3600000)) { // 1 hour
+            setMinYear(cachedMinYear)
+            statsCache.current = { minYear: cachedMinYear, timestamp }
             return
           }
+        } catch (e) {
+          // Invalid cache, continue to fetch
         }
+      }
 
-        const tableName = useSquare ? 'square_clients' : 'acuity_clients'
-        const { data: minYearData } = await supabase
-          .from(tableName)
-          .select('first_appt')
-          .eq('user_id', session.user.id)
-          .not('first_appt', 'is', null)
-          .order('first_appt', { ascending: true })
-          .limit(1)
+      if (!useSquare) {
+        const { data: statsData } = await supabase
+          .from('user_client_stats')
+          .select('min_year')
+          .eq('user_id', user.id)
           .single()
 
-        if (minYearData?.first_appt) {
-          const year = new Date(minYearData.first_appt).getFullYear()
+        if (statsData?.min_year) {
+          const year = statsData.min_year
           setMinYear(year)
           const cacheData = { minYear: year, timestamp: now }
           statsCache.current = cacheData
           sessionStorage.setItem(cacheKey, JSON.stringify(cacheData))
+          return
         }
-      } catch (err) {
-        console.error('Error fetching user:', err)
-        toast.error('Failed to fetch user.')
+      }
+
+      const tableName = useSquare ? 'square_clients' : 'acuity_clients'
+      const { data: minYearData } = await supabase
+        .from(tableName)
+        .select('first_appt')
+        .eq('user_id', user.id)
+        .not('first_appt', 'is', null)
+        .order('first_appt', { ascending: true })
+        .limit(1)
+        .single()
+
+      if (minYearData?.first_appt) {
+        const year = new Date(minYearData.first_appt).getFullYear()
+        setMinYear(year)
+        const cacheData = { minYear: year, timestamp: now }
+        statsCache.current = cacheData
+        sessionStorage.setItem(cacheKey, JSON.stringify(cacheData))
       }
     }
-    fetchUser()
-  }, [])
+
+    checkDataSource()
+  }, [user])
 
   useEffect(() => {
     if (!user?.id) return
 
     const addToLogs = async () => {
-      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
-
-      if (userData?.role != 'Admin') {
+      if (profile?.role != 'Admin') {
         const { error: insertError } = await supabase
         .from('system_logs')
         .insert({
-          source: `${userData?.full_name}: ${user.id}`,
+          source: `${profile?.full_name}: ${user.id}`,
           action: 'clicked_clientSheets',
           status: 'success',
           details: `Opened navigation link: Client Sheets`,
@@ -161,7 +155,7 @@ export default function ClientSheets() {
     }
 
     addToLogs()
-  }, [user])
+  }, [user, profile])
 
   // Load filters from localStorage on mount
   useEffect(() => {
@@ -292,8 +286,11 @@ export default function ClientSheets() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user) return;  // Don't call fetchClients at all if no user
+    
     fetchClients();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortField, sortDir, page, limit, activeFilters, user, dataSource]);
 
   const handleSortClick = (field: SortField) => {

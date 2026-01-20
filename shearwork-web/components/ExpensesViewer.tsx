@@ -57,6 +57,8 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
   const PAGE_SIZE = 4
   const [totalCount, setTotalCount] = useState(0)
 
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
   // Helper to parse date strings as local dates (not UTC)
   const parseLocalDate = (dateString: string): Date => {
     const [year, month, day] = dateString.split('-').map(Number)
@@ -65,20 +67,24 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
 
   // Fetch expenses with pagination
   const fetchExpenses = async () => {
+    console.log('📊 fetchExpenses START')
     setLoading(true)
     try {
       const monthIndex = MONTHS.indexOf(month)
+      console.log('📊 monthIndex:', monthIndex, 'month:', month, 'year:', year)
       const yearNum = parseInt(year)
       const monthStart = new Date(yearNum, monthIndex, 1)
       const monthEnd = new Date(yearNum, monthIndex + 1, 0)
 
-      // First get all expenses for this user
+      console.log('📊 Querying recurring_expenses for user:', barberId)
       const { data: allExpenses, error } = await supabase
         .from('recurring_expenses')
         .select('*')
         .eq('user_id', barberId)
         .order('created_at', { ascending: false })
 
+      console.log('📊 Query result:', { count: allExpenses?.length, error })
+      
       if (error) throw error
 
       // Filter client-side based on frequency and activity
@@ -119,15 +125,23 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
         setPage(validPage)
       }
     } catch (err) {
-      console.error(err)
-      toast.error('Failed to load recurring expenses')
-    } finally {
-      setLoading(false)
-    }
+    console.error('📊 fetchExpenses ERROR:', err)
+    toast.error('Failed to load recurring expenses')
+  } finally {
+    console.log('📊 fetchExpenses FINALLY - setting loading to false')
+    setLoading(false)
+  }
   }
 
   // Real-time subscription
   useEffect(() => {
+    console.log('📊 ExpensesViewer effect - barberId:', barberId)
+    if (!barberId) {
+      console.log('📊 No barberId, skipping fetch')
+      setLoading(false) // Add this!
+      return
+    }
+
     fetchExpenses()
 
     const channel = supabase
@@ -337,8 +351,6 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
 
     return { lastAdded, nextPending }
   }
-
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
   if (loading) return <p className="text-sm text-gray-400">Loading recurring expenses...</p>
 
