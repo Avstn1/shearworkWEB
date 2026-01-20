@@ -19,56 +19,67 @@ export async function GET(request: Request) {
     const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const selectedDate = dateParam || defaultDate;
 
-<<<<<<< HEAD
-    // Build query for appointments on the selected date
-    const query = supabase
-      .from('acuity_appointments')
-      .select(`
-        id,
-        user_id,
-        acuity_appointment_id,
-        client_id,
-        phone_normalized,
-        appointment_date,
-        revenue,
-        datetime,
-        created_at,
-        tip,
-        service_type
-      `)
-=======
     const { data: squareToken } = await supabase
       .from('square_tokens')
       .select('user_id')
       .eq('user_id', user.id)
       .maybeSingle();
+    
 
-    const useSquare = Boolean(squareToken?.user_id);
-    const appointmentTable = useSquare ? 'square_appointments' : 'acuity_appointments';
-    const appointmentIdField = useSquare ? 'square_booking_id' : 'acuity_appointment_id';
-    const clientIdField = useSquare ? 'customer_id' : 'client_id';
+    // Future-proofed for other booking softwares
+    const booking_software = squareToken?.user_id ? 'square' : 'acuity';
+    
+    let appointmentTable: string;
+    let appointmentIdField: string;
+    let clientIdField: string;
+    let selectFields: string;
 
-    const selectFields = [
-      'id',
-      'user_id',
-      appointmentIdField,
-      clientIdField,
-      'phone_normalized',
-      'appointment_date',
-      'revenue',
-      'datetime',
-      'created_at',
-      'tip',
-      'service_type',
-      'notes',
-      'status',
-      'payment_id',
-    ].join(',');
+    // Configure based on booking software
+    if (booking_software === 'square') {
+      appointmentTable = 'square_appointments';
+      appointmentIdField = 'square_booking_id';
+      clientIdField = 'customer_id';
+      selectFields = [
+        'id',
+        'user_id',
+        'square_booking_id',
+        'customer_id',
+        'phone_normalized',
+        'appointment_date',
+        'revenue',
+        'datetime',
+        'created_at',
+        'tip',
+        'service_type',
+        'notes',
+        'status',
+        'payment_id',
+      ].join(',');
+    } else if (booking_software === 'acuity') {
+      appointmentTable = 'acuity_appointments';
+      appointmentIdField = 'acuity_appointment_id';
+      clientIdField = 'client_id';
+      selectFields = [
+        'id',
+        'user_id',
+        'acuity_appointment_id',
+        'client_id',
+        'phone_normalized',
+        'appointment_date',
+        'revenue',
+        'datetime',
+        'created_at',
+        'tip',
+        'service_type',
+      ].join(',');
+    } else {
+      throw new Error(`Unsupported booking software: ${booking_software}`);
+    }
 
+    // Build query for appointments on the selected date
     const query = supabase
       .from(appointmentTable)
       .select(selectFields)
->>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
       .eq('user_id', user.id)
       .eq('appointment_date', selectedDate)
       .order('datetime', { ascending: false }); // Latest first

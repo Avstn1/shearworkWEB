@@ -28,26 +28,35 @@ async function aggregateWeeklyData(
   const { tablePrefix = '' } = orchestratorOptions
   
   const dateRange = pullOptionsToDateRange(options)
-  const tableName = `${tablePrefix}weekly_data`
-<<<<<<< HEAD
 
-=======
-  const includeSquare = tablePrefix === ''
+  // Table prefix is for testng. Example: '' for production, 'test_' for testing
+  const tableName = `${tablePrefix}weekly_data`
   
->>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
   validateDateRange(dateRange.startISO, dateRange.endISO)
+
+  const { data: squareToken } = await supabase
+      .from('square_tokens')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+  // Future-proofed for other booking softwares. Instead of doing this, add a column in the profiles table that specifies the booking software.
+  const booking_software = squareToken?.user_id ? 'square' : 'acuity';
+  const useAcuity = booking_software === 'acuity'
+  const useSquare = booking_software === 'square'
   
   try {
-    const { data: acuityAppointments, error: acuityError } = await supabase
+    const { data: acuityAppointments, error: acuityError } = useAcuity ? await supabase
       .from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, tip, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
 
     if (acuityError) throw acuityError
 
-    const { data: squareAppointments, error: squareError } = includeSquare
+    const { data: squareAppointments, error: squareError } = useSquare
       ? await supabase
         .from('square_appointments')
         .select('appointment_date, revenue, tip, customer_id, order_id, payment_id')
@@ -88,7 +97,7 @@ async function aggregateWeeklyData(
         .filter(Boolean) as string[]
     )
 
-    const { data: squarePayments, error: paymentError } = includeSquare
+    const { data: squarePayments, error: paymentError } = useSquare
       ? await supabase
         .from('square_payments')
         .select('payment_id, appointment_date, amount_total, tip_amount, order_id, status')
@@ -118,7 +127,7 @@ async function aggregateWeeklyData(
     if (acuityClientError) throw acuityClientError
 
     const { data: squareClients, error: squareClientError } =
-      includeSquare && squareClientIds.length > 0
+      useSquare && squareClientIds.length > 0
         ? await supabase
           .from('square_clients')
           .select('customer_id, first_appt')
@@ -276,21 +285,22 @@ async function aggregateWeeklyTopClients(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}weekly_top_clients`
-  const includeSquare = tablePrefix === ''
+  const useSquare = tablePrefix === ''
   
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    const { data: acuityAppointments, error: acuityError } = await supabase
+    const { data: acuityAppointments, error: acuityError } =  useAcuity ? await supabase
       .from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
 
     if (acuityError) throw acuityError
 
-    const { data: squareAppointments, error: squareError } = includeSquare
+    const { data: squareAppointments, error: squareError } = useSquare
       ? await supabase
         .from('square_appointments')
         .select('appointment_date, revenue, customer_id')
@@ -334,7 +344,7 @@ async function aggregateWeeklyTopClients(
     if (acuityClientError) throw acuityClientError
 
     const { data: squareClients, error: squareClientError } =
-      includeSquare && squareClientIds.length > 0
+      useSquare && squareClientIds.length > 0
         ? await supabase
           .from('square_clients')
           .select('customer_id, first_name, last_name, email, phone_normalized')
@@ -471,12 +481,13 @@ async function aggregateWeeklyMarketingFunnels(
   
   try {
     // Fetch clients whose FIRST appointment is in the date range
-    const { data: clients, error: clientError } = await supabase
+    const { data: clients, error: clientError } = useAcuity ? await supabase
       .from(`${tablePrefix}acuity_clients`)
       .select('client_id, first_appt, first_source, first_name, last_name')
       .eq('user_id', userId)
       .gte('first_appt', dateRange.startISO)
       .lte('first_appt', dateRange.endISO)
+      : { data: [], error: null }
 
     if (clientError) throw clientError
     if (!clients || clients.length === 0) {

@@ -13,11 +13,8 @@ import AcuityTab from '@/components/Settings/AcuityTab'
 import SecurityTab from '@/components/Settings/SecurityTab'
 import LogoutTab from '@/components/Settings/LogoutTab'
 import BillingSection from '@/components/Settings/BillingSection'
-<<<<<<< HEAD
 import CreditsModal from '@/components/Dashboard/CreditsModal'
-=======
 import SquareTab from '@/components/Settings/SquareTab'
->>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
 
 const fadeInUp: Variants = {
 	hidden: { opacity: 0, y: 20 },
@@ -33,7 +30,6 @@ const fadeInUp: Variants = {
 	},
 }
 
-<<<<<<< HEAD
 // Loading component for Suspense fallback
 function SettingsPageLoader() {
   return (
@@ -73,9 +69,7 @@ function SettingsPageContent() {
   useEffect(() => {
     const authenticateUser = async () => {
       const code = searchParams.get('code')
-      if (!code) return // Remove hasProcessedCode check temporarily
-      
-      // setAuthenticating(true)
+      if (!code) return
       
       try {
         console.log('Starting auth with code:', code)
@@ -119,13 +113,6 @@ function SettingsPageContent() {
 
     authenticateUser()
   }, [searchParams, router])
-=======
-export default function SettingsPage() {
-	const [activeTab, setActiveTab] = useState('profile')
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-	const navbarRef = useRef<HTMLDivElement>(null)
-	const [navbarHeight, setNavbarHeight] = useState(0)
->>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
 
 	// Measure navbar height for padding
 	useEffect(() => {
@@ -200,11 +187,10 @@ export default function SettingsPage() {
 				)}
 			</AnimatePresence>
 
-<<<<<<< HEAD
       {/* Page Content */}
       <div
         className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] text-white"
-        style={{ paddingTop: 'calc(80px + 1.5rem)' }} // Navbar height + spacing
+        style={{ paddingTop: 'calc(80px + 1.5rem)' }}
       >
         {authenticating && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -221,19 +207,6 @@ export default function SettingsPage() {
             <div className="hidden lg:flex w-64 flex-shrink-0">
               <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
-=======
-			{/* Page Content */}
-			<div
-				className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] text-white"
-				style={{ paddingTop: 'calc(80px + 1.5rem)' }} // Navbar height + spacing
-			>
-				<div className="max-w-7xl mx-auto">
-					<div className="flex flex-col lg:flex-row gap-6">
-						{/* Desktop Sidebar */}
-						<div className="hidden lg:flex w-64 flex-shrink-0">
-							<SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-						</div>
->>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
 
 						{/* Mobile Menu Button */}
 						<div className="flex lg:hidden">
@@ -245,7 +218,6 @@ export default function SettingsPage() {
 							</button>
 						</div>
 
-<<<<<<< HEAD
             {/* Main Content */}
             <motion.div
               key={activeTab}
@@ -278,22 +250,3 @@ export default function SettingsPage() {
     </Suspense>
   )
 }
-=======
-						{/* Main Content */}
-						<motion.div
-							key={activeTab}
-							variants={fadeInUp}
-							initial="hidden"
-							animate="visible"
-							exit="exit"
-							className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-xl min-h-[600px]"
-						>
-							<AnimatePresence mode="wait">{renderTab()}</AnimatePresence>
-						</motion.div>
-					</div>
-				</div>
-			</div>
-		</>
-	)
-}
->>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90

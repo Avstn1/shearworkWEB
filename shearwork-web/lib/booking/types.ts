@@ -99,9 +99,8 @@ export interface NormalizedAppointment {
   referralSource: string | null         // e.g., 'Instagram', 'Google', 'Walk-in'
   forms?: any[]                         // Raw forms data for additional processing
 
-<<<<<<< HEAD
   canceled?: boolean                  // e.g., true if appointment was canceled
-=======
+  
   // Optional fields for providers like Square
   customerId?: string | null
   locationId?: string | null
@@ -109,7 +108,6 @@ export interface NormalizedAppointment {
   teamMemberId?: string | null
   paymentId?: string | null
   status?: string | null
->>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
 }
 
 /**
