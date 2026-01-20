@@ -29,37 +29,115 @@ async function aggregateWeeklyData(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}weekly_data`
+<<<<<<< HEAD
 
+=======
+  const includeSquare = tablePrefix === ''
+  
+>>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    // Fetch appointments
-    const { data: appointments, error: fetchError } = await supabase
+    const { data: acuityAppointments, error: acuityError } = await supabase
       .from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, tip, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
 
-    if (fetchError) throw fetchError
-    if (!appointments || appointments.length === 0) {
+    if (acuityError) throw acuityError
+
+    const { data: squareAppointments, error: squareError } = includeSquare
+      ? await supabase
+        .from('square_appointments')
+        .select('appointment_date, revenue, tip, customer_id, order_id, payment_id')
+        .eq('user_id', userId)
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (squareError) throw squareError
+
+    const appointments = [
+      ...(acuityAppointments || []).map((appt) => ({
+        source: 'acuity',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        tip: appt.tip || 0,
+        client_id: appt.client_id,
+      })),
+      ...(squareAppointments || []).map((appt) => ({
+        source: 'square',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        tip: appt.tip || 0,
+        client_id: appt.customer_id,
+        order_id: appt.order_id as string | null,
+      })),
+    ]
+
+    const matchedOrderIds = new Set(
+      (squareAppointments || [])
+        .map((appt) => appt.order_id)
+        .filter(Boolean) as string[]
+    )
+
+    const matchedPaymentIds = new Set(
+      (squareAppointments || [])
+        .map((appt) => appt.payment_id)
+        .filter(Boolean) as string[]
+    )
+
+    const { data: squarePayments, error: paymentError } = includeSquare
+      ? await supabase
+        .from('square_payments')
+        .select('payment_id, appointment_date, amount_total, tip_amount, order_id, status')
+        .eq('user_id', userId)
+        .eq('status', 'COMPLETED')
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (paymentError) throw paymentError
+
+    if (appointments.length === 0 && (!squarePayments || squarePayments.length === 0)) {
       return { table: tableName, rowsUpserted: 0 }
     }
 
-    // Fetch clients separately
-    const clientIds = [...new Set(appointments.map(a => a.client_id))]
-    const { data: clients, error: clientError } = await supabase
-      .from(`${tablePrefix}acuity_clients`)
-      .select('client_id, first_appt')
-      .eq('user_id', userId)
-      .in('client_id', clientIds)
+    const acuityClientIds = [...new Set((acuityAppointments || []).map((a) => a.client_id))]
+    const squareClientIds = [...new Set((squareAppointments || []).map((a) => a.customer_id))]
 
-    if (clientError) throw clientError
+    const { data: acuityClients, error: acuityClientError } = acuityClientIds.length > 0
+      ? await supabase
+        .from(`${tablePrefix}acuity_clients`)
+        .select('client_id, first_appt')
+        .eq('user_id', userId)
+        .in('client_id', acuityClientIds)
+      : { data: [], error: null }
 
-    // Create client lookup map
-    const clientMap = new Map(clients?.map(c => [c.client_id, c]) || [])
+    if (acuityClientError) throw acuityClientError
 
-    // Group by week
+    const { data: squareClients, error: squareClientError } =
+      includeSquare && squareClientIds.length > 0
+        ? await supabase
+          .from('square_clients')
+          .select('customer_id, first_appt')
+          .eq('user_id', userId)
+          .in('customer_id', squareClientIds)
+        : { data: [], error: null }
+
+    if (squareClientError) throw squareClientError
+
+    const clientMap = new Map<string, { first_appt: string | null }>()
+
+    for (const client of acuityClients || []) {
+      clientMap.set(`acuity:${client.client_id}`, client)
+    }
+
+    for (const client of squareClients || []) {
+      clientMap.set(`square:${client.customer_id}`, client)
+    }
+
     const weeklyStats = new Map<string, {
       weekStart: Date
       weekEnd: Date
@@ -85,7 +163,6 @@ async function aggregateWeeklyData(
       const weekKey = formatISODate(weekStart)
 
       if (!weeklyStats.has(weekKey)) {
-        // Calculate week number within month
         const weekNumber = Math.ceil(weekStart.getUTCDate() / 7)
         
         weeklyStats.set(weekKey, {
@@ -107,21 +184,52 @@ async function aggregateWeeklyData(
       stats.total_revenue += appt.revenue || 0
       stats.tips += appt.tip || 0
 
-      // Classify client as new or returning
-      const client = clientMap.get(appt.client_id)
+      const clientKey = `${appt.source}:${appt.client_id}`
+      const client = clientMap.get(clientKey)
       if (client?.first_appt) {
         const firstApptDate = new Date(client.first_appt + 'T00:00:00')
         const firstApptWeekStart = getMondayOfWeek(firstApptDate)
         
         if (formatISODate(firstApptWeekStart) === weekKey) {
-          stats.newClients.add(appt.client_id)
+          stats.newClients.add(clientKey)
         } else {
-          stats.returningClients.add(appt.client_id)
+          stats.returningClients.add(clientKey)
         }
       }
     }
 
-    // Convert to upsert payload
+    for (const payment of squarePayments || []) {
+      const date = payment.appointment_date
+      if (!date) continue
+      if (payment.order_id && matchedOrderIds.has(payment.order_id)) continue
+      if (payment.payment_id && matchedPaymentIds.has(payment.payment_id)) continue
+
+      const apptDate = new Date(date + 'T00:00:00')
+      const weekStart = getMondayOfWeek(apptDate)
+      const weekEnd = getSundayOfWeek(weekStart)
+      const weekKey = formatISODate(weekStart)
+
+      if (!weeklyStats.has(weekKey)) {
+        const weekNumber = Math.ceil(weekStart.getUTCDate() / 7)
+        weeklyStats.set(weekKey, {
+          weekStart,
+          weekEnd,
+          weekNumber,
+          month: MONTHS[weekStart.getUTCMonth()],
+          year: weekStart.getUTCFullYear(),
+          num_appointments: 0,
+          total_revenue: 0,
+          tips: 0,
+          newClients: new Set(),
+          returningClients: new Set()
+        })
+      }
+
+      const stats = weeklyStats.get(weekKey)!
+      stats.total_revenue += Number(payment.amount_total) || 0
+      stats.tips += Number(payment.tip_amount) || 0
+    }
+
     const upsertData = Array.from(weeklyStats.values()).map(stats => ({
       user_id: userId,
       week_number: stats.weekNumber,
@@ -168,39 +276,92 @@ async function aggregateWeeklyTopClients(
   
   const dateRange = pullOptionsToDateRange(options)
   const tableName = `${tablePrefix}weekly_top_clients`
+  const includeSquare = tablePrefix === ''
   
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    // Fetch appointments
-    const { data: appointments, error: fetchError } = await supabase
+    const { data: acuityAppointments, error: acuityError } = await supabase
       .from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
       .lte('appointment_date', dateRange.endISO)
 
-    if (fetchError) throw fetchError
-    if (!appointments || appointments.length === 0) {
+    if (acuityError) throw acuityError
+
+    const { data: squareAppointments, error: squareError } = includeSquare
+      ? await supabase
+        .from('square_appointments')
+        .select('appointment_date, revenue, customer_id')
+        .eq('user_id', userId)
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+      : { data: [], error: null }
+
+    if (squareError) throw squareError
+
+    const appointments = [
+      ...(acuityAppointments || []).map((appt) => ({
+        source: 'acuity',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        client_id: appt.client_id,
+      })),
+      ...(squareAppointments || []).map((appt) => ({
+        source: 'square',
+        appointment_date: appt.appointment_date,
+        revenue: appt.revenue || 0,
+        client_id: appt.customer_id,
+      })),
+    ]
+
+    if (appointments.length === 0) {
       return { table: tableName, rowsUpserted: 0 }
     }
 
-    // Fetch clients separately
-    const clientIds = [...new Set(appointments.map(a => a.client_id))]
-    const { data: clients, error: clientError } = await supabase
-      .from(`${tablePrefix}acuity_clients`)
-      .select('client_id, first_name, last_name, email, phone_normalized')
-      .eq('user_id', userId)
-      .in('client_id', clientIds)
+    const acuityClientIds = [...new Set((acuityAppointments || []).map((a) => a.client_id))]
+    const squareClientIds = [...new Set((squareAppointments || []).map((a) => a.customer_id))]
 
-    if (clientError) throw clientError
+    const { data: acuityClients, error: acuityClientError } = acuityClientIds.length > 0
+      ? await supabase
+        .from(`${tablePrefix}acuity_clients`)
+        .select('client_id, first_name, last_name, email, phone_normalized')
+        .eq('user_id', userId)
+        .in('client_id', acuityClientIds)
+      : { data: [], error: null }
 
-    // Create client lookup map
-    const clientMap = new Map(clients?.map(c => [c.client_id, c]) || [])
+    if (acuityClientError) throw acuityClientError
 
-    // Group by week + client
+    const { data: squareClients, error: squareClientError } =
+      includeSquare && squareClientIds.length > 0
+        ? await supabase
+          .from('square_clients')
+          .select('customer_id, first_name, last_name, email, phone_normalized')
+          .eq('user_id', userId)
+          .in('customer_id', squareClientIds)
+        : { data: [], error: null }
+
+    if (squareClientError) throw squareClientError
+
+    const clientMap = new Map<string, {
+      first_name: string | null
+      last_name: string | null
+      email: string | null
+      phone_normalized: string | null
+    }>()
+
+    for (const client of acuityClients || []) {
+      clientMap.set(`acuity:${client.client_id}`, client)
+    }
+
+    for (const client of squareClients || []) {
+      clientMap.set(`square:${client.customer_id}`, client)
+    }
+
     const weeklyClientStats = new Map<string, {
       clientId: string
+      clientKey: string
       clientName: string
       email: string
       phone: string
@@ -225,14 +386,16 @@ async function aggregateWeeklyTopClients(
       const weekNumber = Math.ceil(weekStart.getUTCDate() / 7)
       const month = MONTHS[weekStart.getUTCMonth()]
       const year = weekStart.getUTCFullYear()
-      
-      const key = `${formatISODate(weekStart)}||${appt.client_id}`
 
-      const client = clientMap.get(appt.client_id)
+      const clientKey = `${appt.source}:${appt.client_id}`
+      const key = `${formatISODate(weekStart)}||${clientKey}`
+
+      const client = clientMap.get(clientKey)
 
       if (!weeklyClientStats.has(key)) {
         weeklyClientStats.set(key, {
           clientId: appt.client_id,
+          clientKey,
           clientName: `${client?.first_name || ''} ${client?.last_name || ''}`.trim() || 'Unknown',
           email: client?.email || '',
           phone: client?.phone_normalized || '',
@@ -251,11 +414,10 @@ async function aggregateWeeklyTopClients(
       stats.numVisits++
     }
 
-    // Convert to upsert payload
     const upsertData = Array.from(weeklyClientStats.values()).map(stats => ({
       user_id: userId,
       client_id: stats.clientId,
-      client_key: stats.clientId,
+      client_key: stats.clientKey,
       client_name: stats.clientName,
       email: stats.email,
       phone: stats.phone,

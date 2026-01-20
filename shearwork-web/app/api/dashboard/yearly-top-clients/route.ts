@@ -3,7 +3,11 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 export const dynamic = 'force-dynamic'
 
-// Month ranges for quarters
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
 const QUARTER_MONTHS: Record<string, { startMonth: number; endMonth: number }> = {
   year: { startMonth: 1, endMonth: 12 },
   Q1: { startMonth: 1, endMonth: 3 },
@@ -33,27 +37,47 @@ export async function GET(request: NextRequest) {
     const quarterConfig = QUARTER_MONTHS[timeframe] || QUARTER_MONTHS['year']
     const { startMonth, endMonth } = quarterConfig
 
-    // Call RPC function
-    const { data, error } = await supabase.rpc('get_yearly_top_clients', {
-      p_user_id: user.id,
-      p_year: year,
-      p_start_month: startMonth,
-      p_end_month: endMonth,
-      p_limit: limit,
-    })
+    const monthRange = MONTHS.slice(startMonth - 1, endMonth)
+
+    const { data, error } = await supabase
+      .from('report_top_clients')
+      .select('client_id, client_name, total_paid, num_visits, client_key, month')
+      .eq('user_id', user.id)
+      .eq('year', year)
+      .in('month', monthRange)
 
     if (error) {
-      console.error('RPC error:', error)
+      console.error('Yearly top clients error:', error)
       return NextResponse.json({ error: 'Failed to fetch top clients' }, { status: 500 })
     }
 
-    // Format response
-    const clients = (data || []).map((row: any) => ({
-      client_id: row.client_id,
-      client_name: row.client_name,
-      total_spent: parseFloat(row.total_spent) || 0,
-      num_visits: parseInt(row.num_visits) || 0,
-    }))
+    const totals = new Map<string, {
+      client_id: string
+      client_name: string
+      total_spent: number
+      num_visits: number
+    }>()
+
+    for (const row of data || []) {
+      const key = row.client_key || row.client_id
+      if (!key) continue
+
+      const existing = totals.get(key) || {
+        client_id: row.client_id,
+        client_name: row.client_name || 'Unknown',
+        total_spent: 0,
+        num_visits: 0,
+      }
+
+      existing.total_spent += Number(row.total_paid || 0)
+      existing.num_visits += Number(row.num_visits || 0)
+
+      totals.set(key, existing)
+    }
+
+    const clients = Array.from(totals.values())
+      .sort((a, b) => b.total_spent - a.total_spent)
+      .slice(0, limit)
 
     return NextResponse.json({
       clients,
@@ -61,7 +85,7 @@ export async function GET(request: NextRequest) {
       year,
       timeframe,
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Yearly top clients error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

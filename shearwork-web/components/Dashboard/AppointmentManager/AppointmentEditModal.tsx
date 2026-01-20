@@ -90,9 +90,10 @@ export default function AppointmentEditModal({
       setTimeout(() => {
         onClose();
       }, 800);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Something went wrong');
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      setError(message);
     } finally {
       setSaving(false);
     }

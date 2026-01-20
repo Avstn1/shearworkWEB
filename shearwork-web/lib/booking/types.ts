@@ -99,7 +99,17 @@ export interface NormalizedAppointment {
   referralSource: string | null         // e.g., 'Instagram', 'Google', 'Walk-in'
   forms?: any[]                         // Raw forms data for additional processing
 
+<<<<<<< HEAD
   canceled?: boolean                  // e.g., true if appointment was canceled
+=======
+  // Optional fields for providers like Square
+  customerId?: string | null
+  locationId?: string | null
+  orderId?: string | null
+  teamMemberId?: string | null
+  paymentId?: string | null
+  status?: string | null
+>>>>>>> 0194bbc25a9917ec0c1dc473269c0f6970935b90
 }
 
 /**
@@ -222,6 +232,12 @@ export interface AggregationResult {
  *   ]
  * }
  */
+export interface PullSourceResult {
+  appointmentCount: number
+  clients: ClientProcessorResult
+  appointments: AppointmentProcessorResult
+}
+
 export interface PullResult {
   success: boolean                      // e.g., true
   fetchedAt: string                     // e.g., '2025-01-07T15:30:00.000Z' (ISO timestamp)
@@ -230,4 +246,8 @@ export interface PullResult {
   appointments: AppointmentProcessorResult
   aggregations: AggregationResult[]
   errors?: string[]                     // e.g., ['Failed to upsert daily_data']
+  sources?: {
+    acuity?: PullSourceResult
+    square?: PullSourceResult
+  }
 }

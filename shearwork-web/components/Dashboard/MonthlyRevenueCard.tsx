@@ -57,30 +57,24 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       try {
         const currentYear = year ?? new Date().getFullYear()
         const monthIndex = MONTHS.indexOf(selectedMonth)
-        
-        // Build date range for the month
-        const startDate = `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}-01`
-        const endDate = monthIndex === 11 
-          ? `${currentYear + 1}-01-01`
-          : `${currentYear}-${String(monthIndex + 2).padStart(2, '0')}-01`
 
-        // Fetch current month totals from acuity_appointments
-        const { data: currentAppts, error: currentError } = await supabase
-          .from('acuity_appointments')
-          .select('revenue, tip')
+        const { data: currentMonthRow, error: currentError } = await supabase
+          .from('monthly_data')
+          .select('total_revenue, tips')
           .eq('user_id', userId)
-          .gte('appointment_date', startDate)
-          .lt('appointment_date', endDate)
+          .eq('month', selectedMonth)
+          .eq('year', currentYear)
+          .maybeSingle()
 
         if (currentError) throw currentError
 
         let finalRevenue = null
         let totalTips = null
 
-        if (currentAppts && currentAppts.length > 0) {
-          const totalRevenue = currentAppts.reduce((sum, appt) => sum + (appt.revenue || 0), 0)
-          totalTips = currentAppts.reduce((sum, appt) => sum + (appt.tip || 0), 0)
-          
+        if (currentMonthRow) {
+          const totalRevenue = Number(currentMonthRow.total_revenue || 0)
+          totalTips = Number(currentMonthRow.tips || 0)
+
           finalRevenue = barberType === 'commission' && commissionRate !== null
             ? totalRevenue * commissionRate + totalTips
             : totalRevenue + totalTips
@@ -97,28 +91,26 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
           prevYear -= 1
         }
 
-        const prevStartDate = `${prevYear}-${String(prevMonthIndex + 1).padStart(2, '0')}-01`
-        const prevEndDate = prevMonthIndex === 11 
-          ? `${prevYear + 1}-01-01`
-          : `${prevYear}-${String(prevMonthIndex + 2).padStart(2, '0')}-01`
+        const prevMonthName = MONTHS[prevMonthIndex]
 
-        const { data: prevAppts, error: prevError } = await supabase
-          .from('acuity_appointments')
-          .select('revenue, tip')
+        const { data: prevMonthRow, error: prevError } = await supabase
+          .from('monthly_data')
+          .select('total_revenue, tips')
           .eq('user_id', userId)
-          .gte('appointment_date', prevStartDate)
-          .lt('appointment_date', prevEndDate)
+          .eq('month', prevMonthName)
+          .eq('year', prevYear)
+          .maybeSingle()
 
         if (prevError) throw prevError
 
-        if (prevAppts && prevAppts.length > 0) {
-          const prevTotalRevenue = prevAppts.reduce((sum, appt) => sum + (appt.revenue || 0), 0)
-          const prevTotalTips = prevAppts.reduce((sum, appt) => sum + (appt.tip || 0), 0)
-          
+        if (prevMonthRow) {
+          const prevTotalRevenue = Number(prevMonthRow.total_revenue || 0)
+          const prevTotalTips = Number(prevMonthRow.tips || 0)
+
           const prevFinal = barberType === 'commission' && commissionRate !== null
             ? prevTotalRevenue * commissionRate + prevTotalTips
             : prevTotalRevenue + prevTotalTips
-          
+
           setPrevRevenue(prevFinal)
         } else {
           setPrevRevenue(null)

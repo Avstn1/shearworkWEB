@@ -40,6 +40,7 @@
     "react-simplemde-editor": "^5.2.0",
     "recharts": "^3.3.0",
     "remark-gfm": "^4.0.1",
+    "square": "^43.2.1",
     "stripe": "^20.0.0",
     "tinymce": "^8.2.0",
     "twilio": "^5.10.7",

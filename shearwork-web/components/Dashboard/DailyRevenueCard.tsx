@@ -50,24 +50,23 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
     const fetchRevenue = async () => {
       setLoading(true)
       try {
-        // Fetch today's data from acuity_appointments (source of truth for per-appointment tips)
-        const { data: todayAppts, error: todayError } = await supabase
-          .from('acuity_appointments')
-          .select('revenue, tip')
+        const { data: todayRow, error: todayError } = await supabase
+          .from('daily_data')
+          .select('total_revenue, tips, num_appointments')
           .eq('user_id', userId)
-          .eq('appointment_date', todayStr)
+          .eq('date', todayStr)
+          .maybeSingle()
 
         if (todayError) throw todayError
 
-        if (todayAppts && todayAppts.length > 0) {
-          const totalRevenue = todayAppts.reduce((sum, appt) => sum + (appt.revenue || 0), 0)
-          const totalTips = todayAppts.reduce((sum, appt) => sum + (appt.tip || 0), 0)
-          
-          // Apply commission rate if applicable
+        if (todayRow) {
+          const totalRevenue = Number(todayRow.total_revenue || 0)
+          const totalTips = Number(todayRow.tips || 0)
+
           const finalRevenue = barberType === 'commission' && commissionRate !== null
             ? totalRevenue * commissionRate + totalTips
             : totalRevenue + totalTips
-          
+
           setRevenue(finalRevenue)
           setTips(totalTips)
         } else {
@@ -75,46 +74,29 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
           setTips(null)
         }
 
-        // Fetch previous day's data for comparison
-        const { data: prevAppts, error: prevError } = await supabase
-          .from('acuity_appointments')
-          .select('revenue, tip, appointment_date')
+        const { data: prevRows, error: prevError } = await supabase
+          .from('daily_data')
+          .select('date, total_revenue, tips, num_appointments')
           .eq('user_id', userId)
-          .lt('appointment_date', todayStr)
-          .order('appointment_date', { ascending: false })
-          .limit(50) // Get enough to find a day with appointments
+          .lt('date', todayStr)
+          .or('total_revenue.gt.0,tips.gt.0,num_appointments.gt.0')
+          .order('date', { ascending: false })
+          .limit(1)
 
         if (prevError) throw prevError
 
-        if (prevAppts && prevAppts.length > 0) {
-          // Group by date and find the most recent date with appointments
-          const dateGroups: Record<string, { revenue: number; tips: number }> = {}
-          
-          for (const appt of prevAppts) {
-            const date = appt.appointment_date
-            if (!dateGroups[date]) {
-              dateGroups[date] = { revenue: 0, tips: 0 }
-            }
-            dateGroups[date].revenue += appt.revenue || 0
-            dateGroups[date].tips += appt.tip || 0
-          }
+        const prevRow = prevRows?.[0]
 
-          // Get the most recent date
-          const sortedDates = Object.keys(dateGroups).sort().reverse()
-          if (sortedDates.length > 0) {
-            const prevDate = sortedDates[0]
-            const prevData = dateGroups[prevDate]
-            
-            const prevFinal = barberType === 'commission' && commissionRate !== null
-              ? prevData.revenue * commissionRate + prevData.tips
-              : prevData.revenue + prevData.tips
-            
-            setPrevRevenue(prevFinal)
-            setPrevDataDate(prevDate)
-          } else {
-            setPrevRevenue(null)
-            setPrevDataDate(null)
-          }
+        if (prevRow) {
+          const prevTotalRevenue = Number(prevRow.total_revenue || 0)
+          const prevTotalTips = Number(prevRow.tips || 0)
+
+          const prevFinal = barberType === 'commission' && commissionRate !== null
+            ? prevTotalRevenue * commissionRate + prevTotalTips
+            : prevTotalRevenue + prevTotalTips
+
+          setPrevRevenue(prevFinal)
+          setPrevDataDate(prevRow.date)
         } else {
           setPrevRevenue(null)
           setPrevDataDate(null)
