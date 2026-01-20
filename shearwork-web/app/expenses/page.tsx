@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import ExpensesViewer from '@/components/ExpensesViewer'
 import AdminRecurringExpenses from '@/components/AdminComponents/AdminRecurringExpenses'
+import { useAuth } from '@/contexts/AuthContext'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CURRENT_YEAR = new Date().getFullYear()
@@ -25,8 +26,7 @@ const fadeInUp = {
 
 export default function UserExpensesPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+
   const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleString('default', { month: 'long' }))
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [receipts, setReceipts] = useState<{ id: string, url: string, path: string, label: string }[]>([])
@@ -35,52 +35,9 @@ export default function UserExpensesPage() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [selectedReceipt, setSelectedReceipt] = useState<{ url: string, label: string } | null>(null)
 
-  // Fetch user & profile
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError) throw authError
-        if (!user) return router.push('/login')
-        setUser(user)
+  const { user, profile, isLoading } = useAuth()
+  console.log('💰 Expenses page - user:', !!user, 'isLoading:', isLoading)
 
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-        if (profileError) throw profileError
-        setProfile(profileData)
-      } catch (err) {
-        console.error('Error fetching user/profile:', err)
-        toast.error('Failed to fetch user profile.')
-      }
-    }
-    fetchUser()
-  }, [router])
-
-  useEffect(() => {
-    if (!user?.id) return
-
-    const addToLogs = async () => {
-      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
-
-      if (userData?.role != 'Admin') {
-        const { error: insertError } = await supabase
-        .from('system_logs')
-        .insert({
-          source: `${userData?.full_name}: ${user.id}`,
-          action: 'clicked_expenses',
-          status: 'success',
-          details: `Opened navigation link: Expenses`,
-        })
-
-        if (insertError) throw insertError
-      }
-    }
-
-    addToLogs()
-  }, [user])
 
   // Helper to parse date strings as local dates (not UTC)
   const parseLocalDate = (dateString: string): Date => {
@@ -216,7 +173,12 @@ export default function UserExpensesPage() {
     setOpenMenu(null)
   }
 
-  if (!user || !profile) return <div className="flex justify-center items-center h-screen text-[#bdbdbd]">Loading your expenses dashboard...</div>
+  if (isLoading) return <div className="flex justify-center items-center h-screen text-[#bdbdbd]">Loading your expenses dashboard...</div>
+
+  if (!user) {
+    router.replace('/login')
+    return null
+  }
 
   return (
     <>

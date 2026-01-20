@@ -268,7 +268,7 @@ export default function SystemLogsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-6">Loading...</td></tr>
+                <tr><td colSpan={6} className="text-center py-6">Loading syslogs...</td></tr>
               ) : paginatedLogs.length === 0 ? (
                 <tr><td colSpan={6} className="text-center py-6">No logs found.</td></tr>
               ) : (

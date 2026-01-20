@@ -36,7 +36,7 @@ function SettingsPageLoader() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-300 mx-auto mb-4"></div>
-        <p className="text-gray-300">Loading...</p>
+        <p className="text-gray-300">Loading settings...</p>
       </div>
     </div>
   )
