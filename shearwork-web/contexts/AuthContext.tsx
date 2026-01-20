@@ -1,14 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/utils/supabaseClient'
 import { User } from '@supabase/supabase-js'
-
-// Create and export stable supabase client instance
-export const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 interface Profile {
   role: string
@@ -34,16 +28,24 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  console.log('🔵 AuthProvider mounting')
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const hasInitialized = useRef(false)
+  
+  console.log('🔵 AuthProvider render - isLoading:', isLoading, 'user:', !!user)
 
   useEffect(() => {
+    console.log('🔵 useEffect starting')
+    
     // Initial session check
     const initAuth = async () => {
+      console.log('🔵 initAuth starting')
       try {
+        console.log('🔵 About to call getSession')
         const { data: { session }, error } = await supabase.auth.getSession()
+        console.log('🔵 getSession result:', { session: !!session, error })
         
         if (error) {
           console.error('Session error:', error)
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Auth init error:', error)
       } finally {
+        // ALWAYS set loading to false, no matter what happens
         setIsLoading(false)
       }
     }
@@ -82,8 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔴 Auth event:', event)
+      
       // Ignore INITIAL_SESSION and SIGNED_IN events after we've already initialized
       if (hasInitialized.current && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) {
+        console.log('🔴 Ignoring duplicate event:', event)
         return
       }
       

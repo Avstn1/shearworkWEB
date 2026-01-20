@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 
+export const dynamic = 'force-dynamic'
+
 const ENDPOINTS = [
   'appointments',
   'appointment-addons',

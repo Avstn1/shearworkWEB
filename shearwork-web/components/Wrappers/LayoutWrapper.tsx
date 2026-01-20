@@ -1,13 +1,13 @@
 'use client'
 
-import { ReactNode, useEffect } from 'react'
+import { ReactNode, useEffect, Suspense } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 
-export default function LayoutWrapper({ children }: { children: ReactNode }) {
+function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -147,5 +147,20 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
         {children}
       </div>
     </>
+  )
+}
+
+export default function LayoutWrapper({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#73aa57] mb-4"></div>
+          <p className="text-sm text-[#bdbdbd]">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LayoutWrapperContent>{children}</LayoutWrapperContent>
+    </Suspense>
   )
 }
