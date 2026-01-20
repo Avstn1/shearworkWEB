@@ -74,19 +74,15 @@ export default function SMSCampaigns() {
 
   const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'auto-nudge'>('campaign');
   const [maxClients, setMaxClients] = useState<number>(0);
-
   const [profile, setProfile] = useState<any>(null);
-
   const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
-
   const [previewModalKey, setPreviewModalKey] = useState(0);
-
   const [previewLimit, setPreviewLimit] = useState(50);
-
   const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
-
   const [limitMode, setLimitMode] = useState('predefined')
+
+  const [session, setSession] = useState<any>(null);
 
   // Progress tracking state
   const [campaignProgress, setCampaignProgress] = useState<Record<string, {
@@ -98,6 +94,43 @@ export default function SMSCampaigns() {
     is_finished: boolean;
     is_active: boolean;
   }>>({});
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) {
+        console.error('Error fetching session:', sessionError);
+        return;
+      }
+      setSession(session);
+    };
+
+    getSession()
+  }, [])
+
+  useEffect(() => {
+    if (session == null) return;
+
+    const addToLogs = async () => {
+      const userId = session.user.id
+      const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', userId).single();
+
+      if (userData?.role != 'Admin') {
+        const { error: insertError } = await supabase
+        .from('system_logs')
+        .insert({
+          source: `${userData?.full_name}: ${userId}`,
+          action: 'clicked_SMSCampaigns',
+          status: 'success',
+          details: `Opened navigation link: SMS Campaigns`,
+        })
+
+        if (insertError) throw insertError
+      }
+    }
+
+    addToLogs()
+  }, [session])
 
   // Load existing messages on mount
   useEffect(() => {

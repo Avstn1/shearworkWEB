@@ -58,8 +58,8 @@ export async function POST(req: Request) {
             { success: false, error: errorMessage.error || 'Function execution failed', details: errorMessage },
             { status: error.context.status || 500 }
           );
-        } catch (jsonError) {
-          const errorText = await error.context.text();
+        } catch (jsonError: any) {
+          const errorText = await jsonError.context.text();
           console.error('📋 Function error text:', errorText);
           return NextResponse.json(
             { success: false, error: errorText || error.message },

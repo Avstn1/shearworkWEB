@@ -76,16 +76,9 @@ export class AppointmentProcessor {
     const now = new Date().toISOString()
 
     for (const appt of appointments) {
-
-      console.log(`Processing appointment ID ${appt.externalId}, last name: ${appt.lastName}`) 
-      // if (appt.lastName === "toledo") {
-      //   console.log(`Linking appointment ${appt.lastName} on ${appt.date} to client ID ${clientId}`)
-      // }
-
       // Canceled → delete only
       if (appt.canceled) {
         this.appointmentIDsToDelete.push(appt.externalId)
-        console.log(`Appointment ${appt.lastName} marked as canceled, will be deleted. ${appt.datetime}`)
         continue
       }
 
@@ -98,7 +91,6 @@ export class AppointmentProcessor {
 
       // Skip future appointments
       if (parseWithOffset(appt.datetime) > nowParse) {
-        console.log(`Skipping future appointment ${appt.lastName} scheduled for ${appt.datetime}`)
         continue
       }
 
@@ -106,11 +98,9 @@ export class AppointmentProcessor {
 
       if (!clientId) {
         this.skippedNoClient++
-        console.log(`No client resolution for appointment ${appt.lastName} on ${appt.date}, skipping.`)
         continue
       }
 
-      // console.log(`Processing appointment ${appt.lastName} for date ${appt.date}`)
       this.appointmentsToUpsert.push({
         row: {
           user_id: this.userId,
