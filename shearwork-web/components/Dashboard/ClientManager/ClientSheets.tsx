@@ -506,7 +506,7 @@ export default function ClientSheets() {
       {/* Table - Scrollable */}
       <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-white/10 bg-black/20 backdrop-blur-md">
         {loading ? (
-          <div className="py-16 text-center text-sm text-[#bdbdbd]">Loading clients…</div>
+          <div className="py-16 text-center text-sm text-[#bdbdbd]">Loading clients. Please refresh the site</div>
         ) : error ? (
           <div className="py-16 text-center text-sm text-red-300">{error}</div>
         ) : displayClients.length === 0 ? (

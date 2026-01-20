@@ -352,7 +352,7 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
     return { lastAdded, nextPending }
   }
 
-  if (loading) return <p className="text-sm text-gray-400">Loading recurring expenses...</p>
+  if (loading) return <p className="text-sm text-gray-400">Loading recurring expenses. Please refresh the site.</p>
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
