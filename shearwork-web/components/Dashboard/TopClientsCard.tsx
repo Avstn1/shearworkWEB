@@ -101,7 +101,7 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
             <tbody>
               {clients.map((client, idx) => (
                 <tr
-                  key={client.client_id}
+                  key={`${client.client_id}-${idx}`}
                   className={`border-b border-[#444] hover:bg-[#2f2f2a] transition-colors duration-150 ${
                     idx % 2 === 0 ? 'bg-[#1f1f1a]' : ''
                   }`}
