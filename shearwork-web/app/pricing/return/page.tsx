@@ -30,6 +30,9 @@ function PricingReturnContent() {
   const [profileStepComplete, setProfileStepComplete] = useState(false)
   const [profile, setProfile] = useState<{
     onboarded?: boolean | null
+    trial_active?: boolean | null
+    trial_start?: string | null
+    trial_end?: string | null
   } | null>(null)
   const [fullName, setFullName] = useState('')
   const [selectedRole, setSelectedRole] = useState({
@@ -74,7 +77,7 @@ function PricingReturnContent() {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('onboarded, full_name, role, barber_type, commission_rate, avatar_url')
+          .select('onboarded, full_name, role, barber_type, commission_rate, avatar_url, trial_active, trial_start, trial_end')
           .eq('user_id', user.id)
           .single()
 
@@ -119,7 +122,21 @@ function PricingReturnContent() {
     })
   }
 
-  const hasSub = summary?.hasSubscription
+  const isTrialProfileActive = (profileData?: {
+    trial_active?: boolean | null
+    trial_start?: string | null
+    trial_end?: string | null
+  } | null) => {
+    if (!profileData?.trial_active || !profileData.trial_start || !profileData.trial_end) return false
+    const start = new Date(profileData.trial_start)
+    const end = new Date(profileData.trial_end)
+    const now = new Date()
+    return now >= start && now <= end
+  }
+
+  const hasSub = summary?.hasSubscription ?? false
+  const isTrialActive = isTrialProfileActive(profile)
+  const hasAccess = hasSub || isTrialActive
   const interval = summary?.price?.interval
   const intervalLabel =
     interval === 'year' ? 'yearly' : interval === 'month' ? 'monthly' : 'recurring'
@@ -244,6 +261,13 @@ function PricingReturnContent() {
               per {interval === 'year' ? 'year' : 'month'} unless you cancel.
             </p>
           </>
+        ) : isTrialActive ? (
+          <>
+            <p className="text-lg font-semibold">Your free trial is active 🎉</p>
+            <p className="text-sm text-gray-300">
+              Complete your profile to start using Corva Pro and connect your calendar.
+            </p>
+          </>
         ) : (
           <>
             <p className="text-lg font-semibold">No active subscription</p>
@@ -254,15 +278,15 @@ function PricingReturnContent() {
         )}
 
         <button
-          onClick={() => router.push(hasSub ? '/dashboard' : '/pricing')}
+          onClick={() => router.push(hasAccess ? '/dashboard' : '/pricing')}
           className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold w-full"
         >
-          {hasSub ? 'Go to dashboard' : 'Return to pricing'}
+          {hasAccess ? 'Go to dashboard' : 'Return to pricing'}
         </button>
 
         </div>
 
-        {!loading && hasSub && !profile?.onboarded && (
+        {!loading && hasAccess && !profile?.onboarded && (
           <div className="mt-8 border border-white/10 rounded-3xl bg-black/30 shadow-2xl p-6 md:p-8">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
