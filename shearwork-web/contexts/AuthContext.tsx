@@ -30,99 +30,43 @@ const AuthContext = createContext<AuthContextType>({
   isPremiumUser: false,
 })
 
-// Helper to get initial session from localStorage
-function getInitialSession(): User | null {
-  if (typeof window === 'undefined') return null
-  
-  try {
-    // Log all localStorage keys to find the right one
-    console.log('🟣 All localStorage keys:', Object.keys(localStorage))
-    
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    console.log('🟣 Supabase URL:', url)
-    
-    const projectRef = url?.split('//')[1]?.split('.')[0]
-    console.log('🟣 Project ref:', projectRef)
-    
-    const key = `sb-${projectRef}-auth-token`
-    console.log('🟣 Looking for key:', key)
-    
-    const stored = localStorage.getItem(key)
-    console.log('🟣 Stored value exists:', !!stored)
-    
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      console.log('🟣 Parsed session:', {
-        hasCurrentSession: !!parsed?.currentSession,
-        hasUser: !!parsed?.currentSession?.user,
-        userId: parsed?.currentSession?.user?.id
-      })
-      return parsed?.currentSession?.user || null
-    }
-  } catch (error) {
-    console.error('🟣 Error reading initial session:', error)
-  }
-  return null
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   console.log('🔵 AuthProvider mounting')
-  const [user, setUser] = useState<User | null>(null) // Start null, will load from localStorage in useEffect
+  const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const sessionHandled = useRef(false)
-  const isClient = useRef(false)
 
   console.log('🔵 AuthProvider render - isLoading:', isLoading, 'user:', !!user)
 
   useEffect(() => {
     console.log('🔵 useEffect starting')
     
-    // On first client mount, try to load from localStorage immediately
-    if (!isClient.current) {
-      isClient.current = true
-      const cachedUser = getInitialSession()
-      if (cachedUser) {
-        console.log('🔵 Found cached user in localStorage')
-        setUser(cachedUser)
-      }
-    }
-    
     const loadSession = async (session: Session) => {
-      console.log('🔵 loadSession called with session:', !!session)
+      console.log('🔵 loadSession called')
       if (sessionHandled.current) {
         console.log('🔵 Session already handled, skipping')
         return
       }
       
       sessionHandled.current = true
-      console.log('🔵 loadSession: marked session as handled')
       
       try {
-        console.log('🔵 loadSession: fetching profile for user:', session.user.id)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', session.user.id)
           .single()
 
-        console.log('🔵 loadSession: profile fetch complete', { 
-          hasData: !!profileData, 
-          error: profileError?.message 
-        })
-
         if (profileError) {
           console.error('Profile error:', profileError)
         }
 
-        console.log('🔵 loadSession: setting user and profile state')
         setUser(session.user)
         setProfile(profileData || null)
-        console.log('🔵 loadSession: state set successfully')
       } catch (error) {
         console.error('Error loading session:', error)
       } finally {
-        console.log('🔵 loadSession: setting isLoading to false')
         setIsLoading(false)
       }
     }
