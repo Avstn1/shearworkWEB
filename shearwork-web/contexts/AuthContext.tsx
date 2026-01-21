@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useRef, ReactNode, useMemo } from 'react'
-import { supabase } from '@/utils/supabaseClient'
+import { supabase, createSupabaseBrowserClient } from '@/utils/supabaseClient'
 import { User, Session } from '@supabase/supabase-js'
 
 interface Profile {
@@ -54,11 +54,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       try {
         console.log('🔵 loadSession: fetching profile for user:', session.user.id)
-        const { data: profileData, error: profileError } = await supabase
+        
+        // Create fresh client instance to avoid connection reuse issues on Vercel
+        const freshClient = createSupabaseBrowserClient()
+        
+        // Race profile fetch against timeout
+        const profilePromise = freshClient
           .from('profiles')
           .select('*')
           .eq('user_id', session.user.id)
           .single()
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+        )
+        
+        const { data: profileData, error: profileError } = await Promise.race([
+          profilePromise,
+          timeoutPromise
+        ]) as any
 
         console.log('🔵 loadSession: profile fetch complete', { 
           hasData: !!profileData, 
@@ -73,8 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session.user)
         setProfile(profileData || null)
         console.log('🔵 loadSession: state set successfully')
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading session:', error)
+        if (error?.message === 'Profile fetch timeout') {
+          console.log('⚠️ Profile fetch timed out - setting user without profile')
+          // Set user even without profile so auth flow continues
+          setUser(session.user)
+          setProfile(null)
+        }
       } finally {
         console.log('🔵 loadSession: setting isLoading to false')
         setIsLoading(false)
