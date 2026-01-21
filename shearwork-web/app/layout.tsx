@@ -5,6 +5,8 @@ import { AppProvider } from '@/contexts/AppContext'
 import Navbar from '@/components/Navbar'
 import LayoutWrapper from '@/components/Wrappers/LayoutWrapper'
 import { AuthProvider } from '@/contexts/AuthContext'
+import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
+
 
 export const metadata = {
   title: 'Corva',
@@ -24,10 +26,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AuthProvider> 
           <AppProvider>
             <Navbar/>
-            <LayoutWrapper>
-              {children}
-            </LayoutWrapper>
-
+            <UnderConstructionWrapper>
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
+            </UnderConstructionWrapper>
+            
             <Toaster
               position="bottom-center"
               toastOptions={{
