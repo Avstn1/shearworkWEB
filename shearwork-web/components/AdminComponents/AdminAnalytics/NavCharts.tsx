@@ -49,7 +49,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
     target.setDate(target.getDate() - diff + 3)
     const yearStart = new Date(target.getFullYear(), 0, 4)
     const weekNo = Math.floor(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7) + 1
-    return `${target.getFullYear()}-W${String(weekNo).padStart(2, '0')}`
+    return `${target.getFullYear()}-W${weekNo}`
   }
 
   const getActualWeekRange = () => {
@@ -144,16 +144,19 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
               body: JSON.stringify({ summaryType: 'weekly', isoWeek }),
             })
             const result = await res.json()
+            console.log('Weekly fetch result:', JSON.stringify(result))
             const weekData: DayRow[] = result.data?.summary || []
 
+            // The edge function already returns aggregated numbers per day
+            // Just sum them across weeks
             weekData.forEach((dayData, dayIndex) => {
               if (dayIndex >= 0 && dayIndex < 7) {
-                merged[dayIndex].clicked_expenses += dayData.clicked_expenses || 0
-                merged[dayIndex].clicked_dashboard += dayData.clicked_dashboard || 0
-                merged[dayIndex].clickedSMSAutoNudge += dayData.clickedSMSAutoNudge || 0
-                merged[dayIndex].clickedSMSCampaigns += dayData.clickedSMSCampaigns || 0
-                merged[dayIndex].clicked_clientSheets += dayData.clicked_clientSheets || 0
-                merged[dayIndex].clicked_appointmentSheets += dayData.clicked_appointmentSheets || 0
+                merged[dayIndex].clicked_expenses += Number(dayData.clicked_expenses) || 0
+                merged[dayIndex].clicked_dashboard += Number(dayData.clicked_dashboard) || 0
+                merged[dayIndex].clickedSMSAutoNudge += Number(dayData.clickedSMSAutoNudge) || 0
+                merged[dayIndex].clickedSMSCampaigns += Number(dayData.clickedSMSCampaigns) || 0
+                merged[dayIndex].clicked_clientSheets += Number(dayData.clicked_clientSheets) || 0
+                merged[dayIndex].clicked_appointmentSheets += Number(dayData.clicked_appointmentSheets) || 0
               }
             })
           }

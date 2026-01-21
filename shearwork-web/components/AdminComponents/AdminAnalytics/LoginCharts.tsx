@@ -44,7 +44,7 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
     target.setDate(target.getDate() - diff + 3)
     const yearStart = new Date(target.getFullYear(), 0, 4)
     const weekNo = Math.floor(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7) + 1
-    return `${target.getFullYear()}-W${String(weekNo).padStart(2, '0')}`
+    return `${target.getFullYear()}-W${weekNo}`
   }
 
   // Calculate the actual date range (monday of first week to sunday of last week)
