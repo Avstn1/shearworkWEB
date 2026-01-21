@@ -9,7 +9,7 @@ import MobileAuthHandler from './MobileAuthHandler'
 function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, profile, isAdmin, isPremiumUser, isLoading } = useAuth()
+  const { user, profile, isAdmin, isPremiumUser, isLoading, profileStatus } = useAuth()
 
   // Public routes that don't need authentication
   const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings']
@@ -20,7 +20,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
   // -----------------------------
   useEffect(() => {
     console.log('🟡 LayoutWrapper redirect effect:', { isLoading, pathname, user: !!user })
-    if (isLoading) return
+    if (isLoading || (user && profileStatus === 'loading')) return
 
     const role = profile?.role?.toLowerCase()
     const subStatus = profile?.stripe_subscription_status
@@ -66,15 +66,36 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       router.push('/dashboard')
       return
     }
-  }, [isLoading, user, profile, pathname, router])
+  }, [isLoading, user, profile, profileStatus, pathname, router])
 
   // Show loading only for protected routes
-  if (isLoading && !isPublicRoute) {
+  if ((isLoading || (user && profileStatus === 'loading')) && !isPublicRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#73aa57] mb-4"></div>
           <p className="text-sm text-[#bdbdbd]">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (user && profileStatus === 'error' && !isPublicRoute) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+        <div className="text-center max-w-md px-6">
+          <h2 className="text-lg font-semibold text-white">We couldn&apos;t load your profile</h2>
+          <p className="mt-2 text-sm text-[#bdbdbd]">
+            Please refresh the page. If this keeps happening, try logging out and back in.
+          </p>
+          <button
+            onClick={() => {
+              globalThis.location.reload()
+            }}
+            className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold"
+          >
+            Reload
+          </button>
         </div>
       </div>
     )
