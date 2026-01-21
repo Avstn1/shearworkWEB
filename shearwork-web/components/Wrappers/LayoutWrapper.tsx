@@ -45,7 +45,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
           return
         }
         
-        supabase.auth.setSession({
+        await supabase.auth.setSession({
           access_token: data.access_token,
           refresh_token: data.refresh_token
         })
@@ -64,7 +64,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     }
 
     authenticateUser()
-  }, [searchParams, router])
+  }, [code, router])
 
   // Handle redirections after auth is loaded
   useEffect(() => {
