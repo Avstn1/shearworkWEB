@@ -43,30 +43,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('🔵 useEffect starting')
     
     const loadSession = async (session: Session) => {
-      console.log('🔵 loadSession called')
+      console.log('🔵 loadSession called with session:', !!session)
       if (sessionHandled.current) {
         console.log('🔵 Session already handled, skipping')
         return
       }
       
       sessionHandled.current = true
+      console.log('🔵 loadSession: marked session as handled')
       
       try {
+        console.log('🔵 loadSession: fetching profile for user:', session.user.id)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', session.user.id)
           .single()
 
+        console.log('🔵 loadSession: profile fetch complete', { 
+          hasData: !!profileData, 
+          error: profileError?.message 
+        })
+
         if (profileError) {
           console.error('Profile error:', profileError)
         }
 
+        console.log('🔵 loadSession: setting user and profile state')
         setUser(session.user)
         setProfile(profileData || null)
+        console.log('🔵 loadSession: state set successfully')
       } catch (error) {
         console.error('Error loading session:', error)
       } finally {
+        console.log('🔵 loadSession: setting isLoading to false')
         setIsLoading(false)
       }
     }
