@@ -37,6 +37,17 @@ export default async function middleware(request: NextRequest) {
     .eq('user_id', user.id)
     .maybeSingle()
 
+  // Store profile in cookie for client-side access
+  const response = NextResponse.next()
+  if (profile) {
+    response.cookies.set('user-profile', JSON.stringify(profile), {
+      httpOnly: false, // Client needs to read this
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 // 1 hour
+    })
+  }
+
   const role = profile?.role?.toLowerCase()
   const subStatus = profile?.stripe_subscription_status
 
@@ -80,7 +91,7 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {

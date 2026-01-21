@@ -53,34 +53,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔵 loadSession: marked session as handled')
       
       try {
-        console.log('🔵 loadSession: fetching profile for user:', session.user.id)
+        // Try to read profile from cookie first (set by middleware)
+        let profileData = null
+        if (typeof document !== 'undefined') {
+          const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('user-profile='))
+            ?.split('=')[1]
+          
+          if (cookieValue) {
+            try {
+              profileData = JSON.parse(decodeURIComponent(cookieValue))
+              console.log('🔵 loadSession: loaded profile from cookie')
+            } catch (e) {
+              console.error('Failed to parse profile cookie:', e)
+            }
+          }
+        }
         
-        // Create fresh client instance to avoid connection reuse issues on Vercel
-        const freshClient = createSupabaseBrowserClient()
-        
-        // Race profile fetch against timeout
-        const profilePromise = freshClient
-          .from('profiles')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single()
-        
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-        )
-        
-        const { data: profileData, error: profileError } = await Promise.race([
-          profilePromise,
-          timeoutPromise
-        ]) as any
+        // If no profile in cookie, fetch it (fallback)
+        if (!profileData) {
+          console.log('🔵 loadSession: fetching profile from Supabase for user:', session.user.id)
+          
+          const freshClient = createSupabaseBrowserClient()
+          
+          const profilePromise = freshClient
+            .from('profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single()
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+          )
+          
+          const result = await Promise.race([
+            profilePromise,
+            timeoutPromise
+          ]) as any
 
-        console.log('🔵 loadSession: profile fetch complete', { 
-          hasData: !!profileData, 
-          error: profileError?.message 
-        })
+          console.log('🔵 loadSession: profile fetch complete', { 
+            hasData: !!result.data, 
+            error: result.error?.message 
+          })
 
-        if (profileError) {
-          console.error('Profile error:', profileError)
+          if (result.error) {
+            console.error('Profile error:', result.error)
+          }
+          
+          profileData = result.data
         }
 
         console.log('🔵 loadSession: setting user and profile state')
@@ -91,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error loading session:', error)
         if (error?.message === 'Profile fetch timeout') {
           console.log('⚠️ Profile fetch timed out - setting user without profile')
-          // Set user even without profile so auth flow continues
           setUser(session.user)
           setProfile(null)
         }
