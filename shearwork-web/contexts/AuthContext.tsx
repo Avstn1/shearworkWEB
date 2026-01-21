@@ -1,7 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useRef, ReactNode, useMemo } from 'react'
-import { supabase, createSupabaseBrowserClient } from '@/utils/supabaseClient'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  ReactNode,
+  useMemo
+} from 'react'
+import { supabase } from '@/utils/supabaseClient'
 import { User, Session } from '@supabase/supabase-js'
 
 interface Profile {
@@ -27,188 +35,111 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   isLoading: false,
   isAdmin: false,
-  isPremiumUser: false,
+  isPremiumUser: false
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  console.log('🔵 AuthProvider mounting')
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const sessionHandled = useRef(false)
 
-  console.log('🔵 AuthProvider render - isLoading:', isLoading, 'user:', !!user)
+  const profileFetchInFlight = useRef(false)
 
+  // -----------------------------
+  // LOAD PROFILE (SINGLE SOURCE)
+  // -----------------------------
+  const loadProfile = async (session: Session) => {
+    if (profileFetchInFlight.current) return
+    profileFetchInFlight.current = true
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (error) {
+        console.error('Profile fetch error:', error)
+        setProfile(null)
+      } else {
+        setProfile(data)
+      }
+    } finally {
+      profileFetchInFlight.current = false
+    }
+  }
+
+  // -----------------------------
+  // INITIAL SESSION LOAD
+  // -----------------------------
   useEffect(() => {
-    console.log('🔵 useEffect starting')
-    
-    const loadSession = async (session: Session) => {
-      console.log('🔵 loadSession called with session:', !!session)
-      if (sessionHandled.current) {
-        console.log('🔵 Session already handled, skipping')
-        return
-      }
-      
-      sessionHandled.current = true
-      console.log('🔵 loadSession: marked session as handled')
-      
-      try {
-        // Try to read profile from cookie first (set by middleware)
-        let profileData = null
-        if (typeof document !== 'undefined') {
-          const cookieValue = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('user-profile='))
-            ?.split('=')[1]
-          
-          if (cookieValue) {
-            try {
-              profileData = JSON.parse(decodeURIComponent(cookieValue))
-              console.log('🔵 loadSession: loaded profile from cookie')
-            } catch (e) {
-              console.error('Failed to parse profile cookie:', e)
-            }
-          }
-        }
-        
-        // If no profile in cookie, fetch it (fallback)
-        if (!profileData) {
-          console.log('🔵 loadSession: fetching profile from Supabase for user:', session.user.id)
-          
-          const freshClient = createSupabaseBrowserClient()
-          
-          const profilePromise = freshClient
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single()
-          
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-          )
-          
-          const result = await Promise.race([
-            profilePromise,
-            timeoutPromise
-          ]) as any
+    let mounted = true
 
-          console.log('🔵 loadSession: profile fetch complete', { 
-            hasData: !!result.data, 
-            error: result.error?.message 
-          })
+    const init = async () => {
+      const { data, error } = await supabase.auth.getSession()
 
-          if (result.error) {
-            console.error('Profile error:', result.error)
-          }
-          
-          profileData = result.data
-        }
+      if (!mounted) return
 
-        console.log('🔵 loadSession: setting user and profile state')
-        setUser(session.user)
-        setProfile(profileData || null)
-        console.log('🔵 loadSession: state set successfully')
-      } catch (error: any) {
-        console.error('Error loading session:', error)
-        if (error?.message === 'Profile fetch timeout') {
-          console.log('⚠️ Profile fetch timed out - setting user without profile')
-          setUser(session.user)
-          setProfile(null)
-        }
-      } finally {
-        console.log('🔵 loadSession: setting isLoading to false')
-        setIsLoading(false)
-      }
-    }
-    
-    const initAuth = async () => {
-      console.log('🔵 initAuth starting')
-      try {
-        console.log('🔵 About to call getSession')
-        
-        // Race getSession against a timeout
-        const sessionPromise = supabase.auth.getSession()
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('getSession timeout')), 3000)
-        )
-        
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any
-        
-        console.log('🔵 getSession result:', { session: !!session, error })
-        
-        if (error || !session?.user) {
-          console.log('🔵 No session from getSession')
-          setIsLoading(false)
-          setUser(null) // Clear the initial localStorage user if getSession says no session
-          return
-        }
-
-        await loadSession(session)
-        
-      } catch (error: any) {
-        if (error?.message === 'getSession timeout') {
-          console.log('🔵 getSession timeout - waiting for onAuthStateChange fallback')
-          // Give onAuthStateChange 500ms to fire, otherwise stop loading
-          setTimeout(() => {
-            if (!sessionHandled.current) {
-              console.log('🔵 onAuthStateChange did not fire, stopping loading')
-              setIsLoading(false)
-            }
-          }, 500)
-        } else {
-          console.error('🔵 getSession failed:', error)
-          setUser(null)
-          setIsLoading(false)
-        }
-      }
-    }
-
-    initAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔴 Auth event:', event, 'sessionHandled:', sessionHandled.current)
-      
-      if (event === 'SIGNED_IN' && session?.user && !sessionHandled.current) {
-        console.log('🔴 Processing SIGNED_IN event (getSession failed/timeout)')
-        await loadSession(session)
-      }
-      
-      if (event === 'SIGNED_OUT') {
-        console.log('🔴 Processing SIGNED_OUT event')
+      if (error || !data.session?.user) {
         setUser(null)
         setProfile(null)
         setIsLoading(false)
-        sessionHandled.current = false
+        return
       }
-      
-      if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('🔴 Token refreshed')
-        setUser(session.user)
-      }
-    })
 
-    // Safety timeout - if nothing happens in 5 seconds, stop loading
-    const safetyTimeout = setTimeout(() => {
-      if (!sessionHandled.current) {
-        console.log('⚠️ Safety timeout - no session loaded')
-        setIsLoading(false)
+      setUser(data.session.user)
+      await loadProfile(data.session)
+      setIsLoading(false)
+    }
+
+    init()
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return
+
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setProfile(null)
+          setIsLoading(false)
+          return
+        }
+
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          setUser(session.user)
+          await loadProfile(session)
+          setIsLoading(false)
+        }
       }
-    }, 5000)
+    )
 
     return () => {
-      subscription.unsubscribe()
-      clearTimeout(safetyTimeout)
+      mounted = false
+      subscription.subscription.unsubscribe()
     }
   }, [])
 
-  const isAdmin = profile?.role === 'Admin' || profile?.role === 'Owner'
-  const isPremiumUser = profile?.stripe_subscription_status === 'active' || 
-                        profile?.stripe_subscription_status === 'trialing'
+  // -----------------------------
+  // DERIVED FLAGS (UNCHANGED)
+  // -----------------------------
+  const isAdmin =
+    profile?.role === 'Admin' || profile?.role === 'Owner'
 
-  const value = useMemo(() => ({ user, profile, isLoading, isAdmin, isPremiumUser }), [user, profile, isLoading, isAdmin, isPremiumUser])
+  const isPremiumUser =
+    profile?.stripe_subscription_status === 'active' ||
+    profile?.stripe_subscription_status === 'trialing'
+
+  const value = useMemo(
+    () => ({
+      user,
+      profile,
+      isLoading,
+      isAdmin,
+      isPremiumUser
+    }),
+    [user, profile, isLoading, isAdmin, isPremiumUser]
+  )
 
   return (
     <AuthContext.Provider value={value}>

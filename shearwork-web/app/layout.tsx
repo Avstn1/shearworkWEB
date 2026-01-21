@@ -26,11 +26,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AuthProvider> 
           <AppProvider>
             <Navbar/>
-            <UnderConstructionWrapper>
               <LayoutWrapper>
+                <UnderConstructionWrapper>
                 {children}
+                </UnderConstructionWrapper>
               </LayoutWrapper>
-            </UnderConstructionWrapper>
             
             <Toaster
               position="bottom-center"
