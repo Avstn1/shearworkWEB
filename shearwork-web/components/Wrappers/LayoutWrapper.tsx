@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
+import MobileAuthHandler from './MobileAuthHandler'
 
 function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -138,7 +139,12 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <MobileAuthHandler />
+      </Suspense>
+
       {showSidebar && <Sidebar />}
+      
       <div 
         className={`min-h-screen transition-all duration-300 ${
           showSidebar ? 'md:ml-[var(--sidebar-width,0px)] md:w-[calc(100%-var(--sidebar-width,0px))]' : ''
