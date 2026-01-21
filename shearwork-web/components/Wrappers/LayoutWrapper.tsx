@@ -1,73 +1,23 @@
 'use client'
 
-import { ReactNode, useEffect, Suspense } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ReactNode, Suspense, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/utils/supabaseClient'
-import toast from 'react-hot-toast'
 import MobileAuthHandler from './MobileAuthHandler'
 
 function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { user, profile, isAdmin, isPremiumUser, isLoading } = useAuth()
 
   // Public routes that don't need authentication
   const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings']
-  const normalPublicRoutes = ['/', '/login', '/signup']
   const isPublicRoute = publicRoutes.includes(pathname)
-  const isNormalPublicRoute = normalPublicRoutes.includes(pathname)
 
-  // Handle authentication from mobile app code
-  useEffect(() => {
-    const authenticateUser = async () => {
-      const code = searchParams.get('code')
-      if (!code) return
-      
-      try {
-        console.log('Starting auth with code:', code)
-        
-        const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code })
-        })
-
-        console.log('Response status:', response.status)
-        const data = await response.json()
-        console.log('Response data:', data)
-        
-        if (!response.ok || !data.access_token) {
-          console.log('Auth failed - invalid response')
-          toast.error(data.error || 'Invalid or expired code. Please try again from the app.')
-          router.push('/login')
-          return
-        }
-        
-        await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token
-        })
-
-        toast.success('Successfully authenticated!')
-
-        setTimeout(() => {
-          globalThis.location.href = '/settings?openCredits=true'
-        }, 500)
-        
-      } catch (err: any) {
-        console.error('Auth error:', err)
-        toast.error('Authentication failed')
-        router.push('/login')
-      }
-    }
-
-    authenticateUser()
-  }, [searchParams, router])
-
-  // Handle redirections after auth is loaded
+  // -----------------------------
+  // Keep your redirect logic exactly as before
+  // -----------------------------
   useEffect(() => {
     console.log('🟡 LayoutWrapper redirect effect:', { isLoading, pathname, user: !!user })
     if (isLoading) return
@@ -105,14 +55,14 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
     // Redirect non-admin authenticated users from home to dashboard
     if (user && role !== 'admin' && role !== 'owner' && pathname === '/') {
-      console.log('🟡 REDIRECTING to:', '/dashboard') // or whatever
+      console.log('🟡 REDIRECTING to:', '/dashboard')
       router.push('/dashboard')
       return
     }
 
     // Redirect authenticated users away from login/signup
     if (user && (pathname === '/login' || pathname === '/signup')) {
-      console.log('🟡 REDIRECTING to:', '/dashboard') // or whatever
+      console.log('🟡 REDIRECTING to:', '/dashboard')
       router.push('/dashboard')
       return
     }
@@ -139,13 +89,14 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
   return (
     <>
+      {/* Mobile auth code safely handled in Suspense */}
       <Suspense fallback={null}>
         <MobileAuthHandler />
       </Suspense>
 
       {showSidebar && <Sidebar />}
-      
-      <div 
+
+      <div
         className={`min-h-screen transition-all duration-300 ${
           showSidebar ? 'md:ml-[var(--sidebar-width,0px)] md:w-[calc(100%-var(--sidebar-width,0px))]' : ''
         }`}
@@ -157,9 +108,5 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 }
 
 export default function LayoutWrapper({ children }: { children: ReactNode }) {
-  return (
-    <LayoutWrapperContent>
-      {children}
-    </LayoutWrapperContent>
-  )
+  return <LayoutWrapperContent>{children}</LayoutWrapperContent>
 }
