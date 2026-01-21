@@ -24,7 +24,7 @@ export function useCheckOnboarding() {
         .maybeSingle()
 
       if (!error && profile?.onboarded === false) {
-        router.push('/onboarding')
+        router.push('/pricing')
       }
     }
 

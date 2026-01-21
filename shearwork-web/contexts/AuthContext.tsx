@@ -8,7 +8,10 @@ interface Profile {
   role: string
   stripe_subscription_status: string
   full_name?: string
-  [key: string]: any
+  trial_active?: boolean
+  trial_start?: string | null
+  trial_end?: string | null
+  [key: string]: unknown
 }
 
 interface AuthContextType {
