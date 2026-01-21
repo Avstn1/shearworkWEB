@@ -54,6 +54,8 @@ function PricingPageContent() {
   const [authenticating, setAuthenticating] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [trialUsed, setTrialUsed] = useState(false)
+  const [trialStatusLoading, setTrialStatusLoading] = useState(true)
 
 
 
@@ -142,6 +144,34 @@ function PricingPageContent() {
     }
 
     fetchPricing()
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId) return
+
+    const fetchTrialStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('trial_start, stripe_subscription_status')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (error) throw error
+
+        const status = data?.stripe_subscription_status ?? ''
+        const hasUsedTrial = Boolean(data?.trial_start)
+        const hasActiveSub = status === 'active' || status === 'trialing'
+        setTrialUsed(hasUsedTrial || hasActiveSub)
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to load trial status'
+        console.error(message)
+      } finally {
+        setTrialStatusLoading(false)
+      }
+    }
+
+    fetchTrialStatus()
   }, [userId])
 
   const formatAmount = (amount: number, currency: string) =>
@@ -241,7 +271,9 @@ function PricingPageContent() {
                     7 days • billing info required
                   </p>
                   <p className="text-xs text-gray-300">
-                    Start your 7-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
+                    {trialUsed
+                      ? 'Trial already used on this account. Upgrade to continue using Corva Pro.'
+                      : 'Start your 7-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.'}
                   </p>
                 </>
               )}
@@ -255,7 +287,7 @@ function PricingPageContent() {
 
             <button
               onClick={() => startCheckout('trial')}
-              disabled={loading || loadingPrices || !monthly}
+              disabled={loading || loadingPrices || !monthly || trialUsed || trialStatusLoading}
               className="mt-4 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading && selectedPlan === 'trial' && (
@@ -263,7 +295,11 @@ function PricingPageContent() {
               )}
               {loading && selectedPlan === 'trial'
                 ? 'Starting checkout…'
-                : 'Start Free Trial'}
+                : trialStatusLoading
+                  ? 'Checking trial…'
+                  : trialUsed
+                    ? 'Trial already used'
+                    : 'Start Free Trial'}
             </button>
           </div>
 
