@@ -214,52 +214,52 @@ function PricingReturnContent() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] px-4">
       <div className="w-full max-w-3xl text-white">
         <div className="w-full text-center space-y-4 bg-black/30 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl">
-          {loading ? (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <p className="text-sm text-gray-300">
-                Processing your subscription…
-              </p>
-            </div>
-          ) : hasSub ? (
-            <>
-              <p className="text-lg font-semibold">Thanks for subscribing 🎉</p>
-              <p className="text-sm text-gray-300">
-                You&apos;re now on the{' '}
-                <span className="font-semibold">Corva Pro</span>{' '}
-                <span className="font-semibold">{intervalLabel}</span> plan.
-              </p>
-              <p className="text-sm text-gray-300">
-                Your current period ends on{' '}
-                <span className="font-semibold">
-                  {endDateText ?? 'the current billing period end date'}
-                </span>
-                .
-              </p>
-              <p className="text-sm text-gray-400">
-                You&apos;ll be charged{' '}
-                <span className="font-semibold">
-                  {amountText ?? 'your plan price'}
-                </span>{' '}
-                per {interval === 'year' ? 'year' : 'month'} unless you cancel.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-lg font-semibold">Thanks for subscribing 🎉</p>
-              <p className="text-sm text-gray-300">
-                We&apos;re processing your subscription. If you don&apos;t see
-                changes right away, they should appear on your dashboard soon.
-              </p>
-            </>
-          )}
+        {loading ? (
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <p className="text-sm text-gray-300">
+              Processing your subscription…
+            </p>
+          </div>
+        ) : hasSub ? (
+          <>
+            <p className="text-lg font-semibold">Thanks for subscribing 🎉</p>
+            <p className="text-sm text-gray-300">
+              You&apos;re now on the{' '}
+              <span className="font-semibold">Corva Pro</span>{' '}
+              <span className="font-semibold">{intervalLabel}</span> plan.
+            </p>
+            <p className="text-sm text-gray-300">
+              Your current period ends on{' '}
+              <span className="font-semibold">
+                {endDateText ?? 'the current billing period end date'}
+              </span>
+              .
+            </p>
+            <p className="text-sm text-gray-400">
+              You&apos;ll be charged{' '}
+              <span className="font-semibold">
+                {amountText ?? 'your plan price'}
+              </span>{' '}
+              per {interval === 'year' ? 'year' : 'month'} unless you cancel.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-lg font-semibold">No active subscription</p>
+            <p className="text-sm text-gray-300">
+              We couldn&apos;t find an active subscription for this account. Please return to pricing to choose a plan.
+            </p>
+          </>
+        )}
 
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold w-full"
-          >
-            Go to dashboard
-          </button>
+        <button
+          onClick={() => router.push(hasSub ? '/dashboard' : '/pricing')}
+          className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold w-full"
+        >
+          {hasSub ? 'Go to dashboard' : 'Return to pricing'}
+        </button>
+
         </div>
 
         {!loading && hasSub && !profile?.onboarded && (
