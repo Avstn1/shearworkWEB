@@ -77,9 +77,7 @@ export async function POST(req: NextRequest) {
         supabase_user_id: user.id,
         plan, // so you can see which plan they picked in Stripe
       },
-      subscription_data: {
-        trial_period_days: 7,
-      },
+      ...(plan === 'trial' ? { subscription_data: { trial_period_days: 7 } } : {}),
     })
 
     if (!session.client_secret) {
