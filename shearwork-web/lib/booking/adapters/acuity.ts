@@ -170,13 +170,23 @@ async fetchAppointments(
 
       const data = await response.json()
 
-      // console.log('appt ex: ' + JSON.stringify(data[0]))
+      console.log('appt ex: ' + JSON.stringify(data[0]))
 
       if (!Array.isArray(data) || data.length === 0) break
 
       for (const raw of data) {
         const normalized = this.normalize(raw)
-        if (normalized) results.push(normalized)
+        if (!normalized) continue
+        
+        // Skip future appointments
+        const parseWithOffset = (dt: string) =>
+          new Date(dt.replace(/([+-]\d{2})(\d{2})$/, '$1:$2'))
+        
+        if (parseWithOffset(raw.datetime) > new Date()) {
+          continue
+        }
+        
+        results.push(normalized)
       }
 
       if (data.length < pageSize) break

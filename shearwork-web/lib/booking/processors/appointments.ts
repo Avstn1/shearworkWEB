@@ -49,7 +49,7 @@ export interface AppointmentProcessorOptions {
 
 export class AppointmentProcessor {
   private readonly appointmentsToUpsert: AppointmentWithValues[] = []
-  private readonly appointmentIDsToDelete: string[] = []
+  private readonly appointmentIDsToDelete: [string, string | null][] = []
   private skippedNoClient: number = 0
   private readonly tableName: string
 
@@ -76,9 +76,11 @@ export class AppointmentProcessor {
     const now = new Date().toISOString()
 
     for (const appt of appointments) {
+      const clientId = clientResolution.appointmentToClient.get(appt.externalId)
+
       // Canceled → delete only
       if (appt.canceled) {
-        this.appointmentIDsToDelete.push(appt.externalId)
+        this.appointmentIDsToDelete.push([appt.externalId, clientId ?? null])
         continue
       }
 
@@ -93,8 +95,6 @@ export class AppointmentProcessor {
       if (parseWithOffset(appt.datetime) > nowParse) {
         continue
       }
-
-      const clientId = clientResolution.appointmentToClient.get(appt.externalId)
 
       if (!clientId) {
         this.skippedNoClient++
@@ -225,12 +225,19 @@ export class AppointmentProcessor {
     // }
 
     if (this.appointmentIDsToDelete.length > 0) {
+      // Extract just the appointment IDs for the query
+      const appointmentIds = this.appointmentIDsToDelete.map(([apptId]) => apptId)
+      
       // First, check what actually exists in the database
       const { data: existingRows, error: checkError } = await this.supabase
         .from(this.tableName)
         .select('*')
         .eq('user_id', this.userId)
-        .in('acuity_appointment_id', this.appointmentIDsToDelete)
+        .in('acuity_appointment_id', appointmentIds)
+
+      if (checkError) {
+        console.log('Error checking existing appointments for deletion:', checkError)
+      }
 
       console.log('Existing rows that match:', existingRows)
       console.log('Number of matching rows:', existingRows?.length || 0)
@@ -240,7 +247,7 @@ export class AppointmentProcessor {
           .from(this.tableName)
           .delete()
           .eq('user_id', this.userId)
-          .in('acuity_appointment_id', this.appointmentIDsToDelete)
+          .in('acuity_appointment_id', appointmentIds)
           .select()
 
         if (deleteError) {
@@ -249,6 +256,88 @@ export class AppointmentProcessor {
 
         console.log('Deleted rows:', deletedRows)
         console.log('Number of rows deleted:', deletedRows?.length || 0)
+
+        // Now handle client updates/deletions
+        const clientIds = new Set(deletedRows.map(row => row.client_id).filter(Boolean))
+        
+        for (const clientId of clientIds) {
+          // Count remaining appointments for this client
+          const { count, error: countError } = await this.supabase
+            .from(this.tableName)
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', this.userId)
+            .eq('client_id', clientId)
+
+          if (countError) {
+            console.error('Error counting appointments for client:', clientId, countError)
+            continue
+          }
+
+          if (count === 0) {
+            // Delete the client entirely
+            const { error: deleteClientError } = await this.supabase
+              .from('acuity_clients')
+              .delete()
+              .eq('client_id', clientId)
+              .eq('user_id', this.userId)
+
+            if (deleteClientError) {
+              console.error('Error deleting client:', clientId, deleteClientError)
+            } else {
+              console.log('Deleted client:', clientId)
+            }
+          } else {
+            // Update total_appointments and potentially last_appt
+            const { data: clientData, error: clientFetchError } = await this.supabase
+              .from('acuity_clients')
+              .select('last_appt')
+              .eq('client_id', clientId)
+              .eq('user_id', this.userId)
+              .single()
+
+            if (clientFetchError) {
+              console.error('Error fetching client data:', clientId, clientFetchError)
+              continue
+            }
+
+            // Get the most recent appointment for this client
+            const { data: latestAppt, error: latestApptError } = await this.supabase
+              .from(this.tableName)
+              .select('appointment_date')
+              .eq('user_id', this.userId)
+              .eq('client_id', clientId)
+              .order('appointment_date', { ascending: false })
+              .limit(1)
+              .single()
+
+            if (latestApptError) {
+              console.error('Error fetching latest appointment:', clientId, latestApptError)
+              continue
+            }
+
+            const updateData: any = {
+              total_appointments: count,
+              updated_at: new Date().toISOString(),
+            }
+
+            // Update last_appt if it changed
+            if (latestAppt && latestAppt.appointment_date !== clientData.last_appt) {
+              updateData.last_appt = latestAppt.appointment_date
+            }
+
+            const { error: updateClientError } = await this.supabase
+              .from('acuity_clients')
+              .update(updateData)
+              .eq('client_id', clientId)
+              .eq('user_id', this.userId)
+
+            if (updateClientError) {
+              console.error('Error updating client:', clientId, updateClientError)
+            } else {
+              console.log('Updated client:', clientId, updateData)
+            }
+          }
+        }
       } else {
         console.log('No matching rows found to delete')
       }
