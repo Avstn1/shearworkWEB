@@ -1,7 +1,7 @@
 // app/pricing/page.tsx
 'use client'
 
-import React, { useEffect, useState, useRef, Suspense } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   EmbeddedCheckout,
@@ -11,9 +11,6 @@ import { Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import { useSearchParams, useRouter } from 'next/navigation'
-import EditableAvatar from '@/components/EditableAvatar'
-import ConnectAcuityButton from '@/components/ConnectAcuityButton'
-import ConnectSquareButton from '@/components/ConnectSquareButton'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -45,11 +42,6 @@ function PricingPageLoader() {
 }
 
 // Main pricing component
-const ROLE_OPTIONS = [
-  { label: 'Barber (Commission)', role: 'Barber', barber_type: 'commission' },
-  { label: 'Barber (Chair Rental)', role: 'Barber', barber_type: 'rental' },
-]
-
 function PricingPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -61,15 +53,7 @@ function PricingPageContent() {
   const [loadingPrices, setLoadingPrices] = useState(true)
   const [authenticating, setAuthenticating] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [profileStepComplete, setProfileStepComplete] = useState(false)
-  const [profileLoading, setProfileLoading] = useState(false)
-  const [startTrial] = useState(true)
-  const [fullName, setFullName] = useState('')
-  const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS[0])
-  const [commissionRate, setCommissionRate] = useState<number | ''>('')
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
 
 
@@ -169,13 +153,9 @@ function PricingPageContent() {
 
   const startCheckout = async (plan: Plan) => {
     try {
-      if (!profileStepComplete) {
-        toast.error('Complete your profile to continue')
-        return
-      }
-
       setLoading(true)
       setSelectedPlan(plan)
+      setShowCancelModal(false)
 
       const res = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
@@ -202,96 +182,20 @@ function PricingPageContent() {
       console.error(message)
       toast.error(message)
       setSelectedPlan(null)
+      setShowCancelModal(true)
     } finally {
       setLoading(false)
     }
   }
 
-  const closeCheckout = () => {
+  const closeCheckout = (wasCanceled = true) => {
     setClientSecret(null)
     setSelectedPlan(null)
-  }
-
-  const handleAvatarClick = () => fileInputRef.current?.click()
-
-  const handleAvatarChange = (file: File) => {
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
-  }
-
-  const handleProfileSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setProfileLoading(true)
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
-
-      let avatarUrl = ''
-      if (avatarFile) {
-        const fileName = `${fullName.replace(/\s+/g, '_')}_${Date.now()}`
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, avatarFile, { upsert: true })
-        if (uploadError) throw uploadError
-
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
-        avatarUrl = urlData.publicUrl
-      }
-
-      const profileUpdate: Record<string, unknown> = {
-        full_name: fullName,
-        role: selectedRole.role,
-        barber_type: selectedRole.barber_type,
-        avatar_url: avatarUrl,
-        onboarded: true,
-      }
-
-      if (selectedRole.barber_type === 'commission') {
-        if (commissionRate === '' || commissionRate < 1 || commissionRate > 100) {
-          throw new Error('Please enter a valid commission rate between 1 and 100')
-        }
-        profileUpdate.commission_rate = commissionRate / 100
-      }
-
-      const { data: currentProfile, error: currentProfileError } = await supabase
-        .from('profiles')
-        .select('trial_start, available_credits')
-        .eq('user_id', user.id)
-        .single()
-
-      if (currentProfileError) throw currentProfileError
-
-      if (startTrial && !currentProfile?.trial_start) {
-        const now = new Date()
-        const trialEnd = new Date(now)
-        trialEnd.setDate(trialEnd.getDate() + 7)
-
-        profileUpdate.trial_start = now.toISOString()
-        profileUpdate.trial_end = trialEnd.toISOString()
-        profileUpdate.trial_active = true
-
-        const existingCredits = currentProfile?.available_credits || 0
-        profileUpdate.available_credits = existingCredits + 10
-      }
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(profileUpdate)
-        .eq('user_id', user.id)
-
-      if (updateError) throw updateError
-
-      setProfileStepComplete(true)
-      toast.success('Profile saved')
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile'
-      console.error(message)
-      toast.error(message)
-    } finally {
-      setProfileLoading(false)
+    if (wasCanceled) {
+      setShowCancelModal(true)
     }
   }
+
 
   // Show loading state while authenticating
   if (authenticating) {
@@ -460,125 +364,6 @@ function PricingPageContent() {
           All payments are processed securely by Stripe. You can manage or cancel your subscription at any time.
         </p>
 
-        {selectedPlan && (
-          <div className="mt-8 border border-white/10 rounded-3xl bg-black/30 shadow-2xl p-6 md:p-8">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <h2 className="text-lg font-semibold">Complete your profile</h2>
-                <p className="text-xs text-gray-400">
-                  We use this info to personalize your dashboard and reporting.
-                </p>
-              </div>
-              {profileStepComplete && (
-                <span className="text-xs text-emerald-300 border border-emerald-300/30 rounded-full px-3 py-1">
-                  Profile saved
-                </span>
-              )}
-            </div>
-
-            <form onSubmit={handleProfileSave} className="mt-6 grid grid-cols-1 md:grid-cols-[1.1fr_0.9fr] gap-6">
-              <div className="space-y-4">
-                <div className="flex flex-col items-center gap-4">
-                  <EditableAvatar
-                    avatarUrl={avatarPreview}
-                    fullName={fullName}
-                    onClick={handleAvatarClick}
-                    size={110}
-                  />
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => e.target.files?.[0] && handleAvatarChange(e.target.files[0])}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-2 text-sm font-semibold text-white">Full Name</label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={e => setFullName(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-2 text-sm font-semibold text-white">Role</label>
-                  <select
-                    value={selectedRole.label}
-                    onChange={e => {
-                      const roleObj = ROLE_OPTIONS.find(r => r.label === e.target.value)
-                      if (roleObj) setSelectedRole(roleObj)
-                    }}
-                    className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                  >
-                    {ROLE_OPTIONS.map(r => (
-                      <option key={r.label} value={r.label}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedRole.barber_type === 'commission' && (
-                  <div>
-                    <label className="block mb-2 text-sm font-semibold text-white">
-                      Commission Rate (%) <span className="text-xs text-gray-400">(1 to 100)</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="1"
-                      max="100"
-                      value={commissionRate}
-                      onChange={e => setCommissionRate(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                      required
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="border border-white/10 rounded-2xl bg-black/40 p-4">
-                  <h3 className="text-sm font-semibold text-white">Trial details</h3>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Start your 7-day trial now. Billing info required. Cancel anytime.
-                  </p>
-                </div>
-
-                <div className="border border-white/10 rounded-2xl bg-black/40 p-4">
-                  <h3 className="text-sm font-semibold text-white">Connect your calendar</h3>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Connect Acuity or Square now, or skip and do it later in settings.
-                  </p>
-                  <div className="mt-3 flex flex-col gap-2">
-                    <ConnectAcuityButton />
-                    <ConnectSquareButton />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-white/5 border border-white/10 text-white font-semibold rounded-xl hover:bg-white/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                  disabled={profileLoading}
-                >
-                  {profileLoading ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </span>
-                  ) : (
-                    'Save profile details'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
       </div>
 
       {/* Modal: embedded checkout */}
@@ -586,7 +371,7 @@ function PricingPageContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl">
             <button
-              onClick={closeCheckout}
+              onClick={() => closeCheckout(true)}
               className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition px-1.5 py-1.5"
               aria-label="Close checkout"
             >
@@ -597,6 +382,7 @@ function PricingPageContent() {
               Secure checkout
               {selectedPlan === 'monthly' && ' • Monthly plan'}
               {selectedPlan === 'yearly' && ' • Yearly plan'}
+              {selectedPlan === 'trial' && ' • Trial plan'}
             </h2>
 
             <EmbeddedCheckoutProvider
@@ -607,6 +393,26 @@ function PricingPageContent() {
                 <EmbeddedCheckout />
               </div>
             </EmbeddedCheckoutProvider>
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f0e] p-6 text-white shadow-2xl">
+            <h2 className="text-lg font-semibold mb-2">Checkout Canceled</h2>
+            <p className="text-sm text-gray-300 mb-4">
+              Your subscription was not completed. You have not been charged. You can return to our site to try again or choose a different plan.
+            </p>
+            <button
+              onClick={() => {
+                setShowCancelModal(false)
+                router.push('/pricing')
+              }}
+              className="w-full rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold py-2"
+            >
+              Return to pricing
+            </button>
           </div>
         </div>
       )}

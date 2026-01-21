@@ -49,9 +49,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           .maybeSingle()
         if (profileError) throw profileError
 
-        const publicPages = ['/login', '/signup', '/pricing']
+        const publicPages = ['/login', '/signup', '/pricing', '/pricing/return']
         if (profile && profile.onboarded === false && !publicPages.includes(pathname)) {
-          router.push('/pricing')
+          router.push('/pricing/return')
         }
 
         if (profile?.role?.toLowerCase() === 'admin' || profile?.role?.toLowerCase() === 'owner') {
