@@ -43,6 +43,14 @@ export default function UnderConstructionWrapper({ children }: UnderConstruction
     };
 
     checkSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      checkSession();
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
 
