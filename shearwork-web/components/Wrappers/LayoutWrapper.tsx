@@ -76,6 +76,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#73aa57] mb-4"></div>
           <p className="text-sm text-[#bdbdbd]">Loading profile...</p>
+          <p className="mt-2 text-xs text-[#8f8f8f]">If this takes too long, refresh the page.</p>
         </div>
       </div>
     )
@@ -96,6 +97,27 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
             className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold"
           >
             Reload
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user && !isPublicRoute) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+        <div className="text-center max-w-md px-6">
+          <h2 className="text-lg font-semibold text-white">Session expired</h2>
+          <p className="mt-2 text-sm text-[#bdbdbd]">
+            Please log in again to continue.
+          </p>
+          <button
+            onClick={() => {
+              globalThis.location.href = '/login'
+            }}
+            className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold"
+          >
+            Go to login
           </button>
         </div>
       </div>
