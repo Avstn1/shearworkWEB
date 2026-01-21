@@ -1,7 +1,7 @@
 // app/api/stripe/billing-summary/route.ts
 'use server'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
@@ -9,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createSupabaseServerClient()
     const {
@@ -38,7 +38,7 @@ export async function GET(_req: NextRequest) {
     // No active subscription stored
     if (
       !profile?.subscription_id ||
-      profile.stripe_subscription_status !== 'active'
+      !['active', 'trialing'].includes(profile.stripe_subscription_status ?? '')
     ) {
       return NextResponse.json({
         hasSubscription: false,
@@ -46,13 +46,11 @@ export async function GET(_req: NextRequest) {
       })
     }
 
-    // Retrieve subscription; use `any` so we can handle new preview fields
-    const subscriptionResp = await stripe.subscriptions.retrieve(
+    const subscription = await stripe.subscriptions.retrieve(
       profile.subscription_id as string,
     )
-    const subscription = subscriptionResp as any
 
-    const items = (subscription.items?.data ?? []) as any[]
+    const items = subscription.items?.data ?? []
     const firstItem = items[0]
 
     // NEW: billing period end lives on the subscription item
@@ -86,10 +84,11 @@ export async function GET(_req: NextRequest) {
         interval_count,
       },
     })
-  } catch (err: any) {
-    console.error('Billing summary error:', err)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to load billing summary'
+    console.error('Billing summary error:', message)
     return NextResponse.json(
-      { error: err.message || 'Failed to load billing summary' },
+      { error: message },
       { status: 500 },
     )
   }

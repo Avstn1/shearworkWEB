@@ -35,6 +35,14 @@ import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWra
 
 import { useAuth } from '@/contexts/AuthContext'
 
+const isTrialProfileActive = (profile: any) => {
+  if (!profile?.trial_active || !profile?.trial_start || !profile?.trial_end) return false
+  const start = new Date(profile.trial_start)
+  const end = new Date(profile.trial_end)
+  const now = new Date()
+  return now >= start && now <= end
+}
+
 import { supabase } from '@/utils/supabaseClient'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
@@ -74,6 +82,7 @@ export default function DashboardPage() {
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const hasSyncedInitially = useRef(false)
+  const isTrialUser = isTrialProfileActive(profile)
   const firstSyncAfterConnect = useRef(false)
   const isSyncing = useRef(false)
 
@@ -318,18 +327,22 @@ export default function DashboardPage() {
 
       {/* RIGHT COLUMN */}
       <div className="flex flex-col gap-4 pl-1">
-        <motion.div variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
-          <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-        </motion.div>
+        {!isTrialUser && (
+          <motion.div variants={fadeInUp} className={cardClass}>
+            <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
+            <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+          </motion.div>
+        )}
         <motion.div variants={fadeInUp} className={cardClass}>
           <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
           <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
-        <motion.div variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
-          <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-        </motion.div>
+        {!isTrialUser && (
+          <motion.div variants={fadeInUp} className={cardClass}>
+            <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
+            <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+          </motion.div>
+        )}
       </div>
     </motion.div>
   )

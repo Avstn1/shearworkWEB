@@ -17,15 +17,16 @@ export function useCheckOnboarding() {
         return
       }
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('onboarded')
-        .eq('user_id', user.id)
-        .maybeSingle()
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('onboarded')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
-      if (!error && profile?.onboarded === false) {
-        router.push('/onboarding')
-      }
+    if (!error && profile?.onboarded === false) {
+      router.push('/pricing/return')
+    }
+
     }
 
     checkOnboarding()

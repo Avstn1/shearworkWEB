@@ -9,7 +9,7 @@ export default async function middleware(request: NextRequest) {
   // SPECIAL CASE: Mobile App Authentication Passthrough
   // -----------------------------
   // Routes that can bypass auth when they have a 'code' query parameter
-  const codePassthroughRoutes = ['/pricing', '/settings']
+  const codePassthroughRoutes = ['/pricing', '/pricing/return', '/settings']
   
   if (codePassthroughRoutes.some(route => pathname.startsWith(route))) {
     console.log(`Allowing access to ${pathname}`)
@@ -48,6 +48,9 @@ export default async function middleware(request: NextRequest) {
   if (subStatus === 'active' || subStatus === 'trialing') {
     if (pathname === '/pricing') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+    if (pathname === '/pricing/return') {
+      return NextResponse.next()
     }
   }
 

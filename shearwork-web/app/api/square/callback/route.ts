@@ -24,7 +24,12 @@ export async function GET(request: Request) {
 		return NextResponse.json({ error: "Missing state cookie" }, { status: 400 })
 	}
 
-	let saved: any
+	let saved: {
+		state: string
+		user_id: string
+		code_verifier: string
+		is_mobile?: boolean
+	}
 	try {
 		saved = JSON.parse(savedRaw)
 	} catch {
@@ -42,6 +47,12 @@ export async function GET(request: Request) {
 			: "https://connect.squareupsandbox.com"
 
 	// ✅ PKCE token exchange (NO client_secret)
+	const redirectUrl =
+		process.env.SQUARE_REDIRECT_URL ||
+		process.env.REDIRECT_URL ||
+		process.env.redirect_url ||
+		new URL("/api/square/callback", url.origin).toString()
+
 	const tokenRes = await fetch(`${tokenBase}/oauth2/token`, {
 		method: "POST",
 		headers: {
@@ -54,7 +65,7 @@ export async function GET(request: Request) {
 			grant_type: "authorization_code",
 			code,
 			code_verifier: saved.code_verifier,
-			redirect_uri: process.env.SQUARE_REDIRECT_URL,
+			redirect_uri: redirectUrl,
 		}),
 	})
 

@@ -21,6 +21,19 @@ function base64Url(buf: Buffer) {
 		.replace(/=+$/g, "")
 }
 
+function getRedirectUrl(request: Request) {
+	return (
+		process.env.SQUARE_REDIRECT_URL ||
+		process.env.REDIRECT_URL ||
+		process.env.redirect_url ||
+		new URL("/api/square/callback", new URL(request.url).origin).toString()
+	)
+}
+
+function isSecureRequest(request: Request) {
+	return new URL(request.url).protocol === "https:"
+}
+
 export async function GET(request: Request) {
 	const { user } = await getAuthenticatedUser(request)
 	if (!user) {
@@ -53,7 +66,7 @@ export async function GET(request: Request) {
 		}),
 		{
 			httpOnly: true,
-			secure: false, // localhost. set true on https deployments
+			secure: isSecureRequest(request),
 			sameSite: "lax",
 			maxAge: 600,
 			path: "/",
@@ -70,7 +83,7 @@ export async function GET(request: Request) {
 		code_challenge: codeChallenge,
 		code_challenge_method: "S256",
 		// PKCE redirect_uri is allowed/expected (and avoids mismatch issues)
-		redirect_uri: process.env.SQUARE_REDIRECT_URL!,
+		redirect_uri: getRedirectUrl(request),
 	})
 
 	return NextResponse.redirect(`${authBase}/oauth2/authorize?${params.toString()}`)

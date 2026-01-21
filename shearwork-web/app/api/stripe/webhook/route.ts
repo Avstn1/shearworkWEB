@@ -11,7 +11,7 @@ export interface StripeSubscriptionFixed {
   cancel_at: number | null
   canceled_at: number | null
   cancel_at_period_end: boolean
-  [key: string]: any // required because Stripe always adds more fields
+  [key: string]: unknown // required because Stripe always adds more fields
 }
 
 
@@ -44,25 +44,50 @@ export async function POST(req: NextRequest) {
         const supabaseUserId = session.metadata?.supabase_user_id
         if (!supabaseUserId) break
 
+        const subscriptionId = session.subscription as string | null
+        const customerId = session.customer as string | null
+        let subscription: Stripe.Subscription | null = null
+
+        if (subscriptionId) {
+          subscription = await stripe.subscriptions.retrieve(subscriptionId)
+        }
+
+        const trialStart = subscription?.trial_start
+          ? new Date(subscription.trial_start * 1000)
+          : null
+        const trialEnd = subscription?.trial_end
+          ? new Date(subscription.trial_end * 1000)
+          : null
+
         await supabase
           .from('profiles')
           .upsert({
             user_id: supabaseUserId,
-            stripe_id: session.customer as string,
-            subscription_id: session.subscription as string,
-            stripe_subscription_status: 'active',
+            stripe_id: customerId,
+            subscription_id: subscriptionId,
+            stripe_subscription_status: subscription?.status ?? 'active',
+            trial_start: trialStart ? trialStart.toISOString() : null,
+            trial_end: trialEnd ? trialEnd.toISOString() : null,
+            trial_active: subscription?.status === 'trialing',
           })
         break
       }
 
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription
+
+        const trialStart = sub.trial_start ? new Date(sub.trial_start * 1000) : null
+        const trialEnd = sub.trial_end ? new Date(sub.trial_end * 1000) : null
+
         await supabase
           .from('profiles')
           .update({
             subscription_id: sub.id,
             stripe_subscription_status: sub.status,
-            cancel_at_period_end: sub.cancel_at_period_end
+            cancel_at_period_end: sub.cancel_at_period_end,
+            trial_start: trialStart ? trialStart.toISOString() : null,
+            trial_end: trialEnd ? trialEnd.toISOString() : null,
+            trial_active: sub.status === 'trialing',
           })
           .eq('stripe_id', sub.customer as string)
         break
@@ -81,8 +106,9 @@ export async function POST(req: NextRequest) {
       }
     }
     return NextResponse.json({ received: true })
-  } catch (err: any) {
-    console.error('❌ Webhook error:', err.message)
-    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Webhook Error'
+    console.error('❌ Webhook error:', message)
+    return new NextResponse(`Webhook Error: ${message}`, { status: 400 })
   }
 }

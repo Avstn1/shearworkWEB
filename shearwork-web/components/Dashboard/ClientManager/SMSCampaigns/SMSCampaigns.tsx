@@ -1,12 +1,15 @@
 'use client';
 
+const getCampaignErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Failed to process request';
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MessageSquare, Loader2, Coins, Send, Info, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
-import { SMSMessage, PhoneNumber } from './types';
+import { SMSMessage } from './types';
 import { supabase } from '@/utils/supabaseClient';
 
 import HowCampaignsWorkModal from './Modals/HowCampaignsWorkModal';
@@ -74,7 +77,28 @@ export default function SMSCampaigns() {
 
   const [algorithmType, setAlgorithmType] = useState<'campaign' | 'mass' | 'auto-nudge'>('campaign');
   const [maxClients, setMaxClients] = useState<number>(0);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{
+    full_name?: string | null
+    email?: string | null
+    phone?: string | null
+    available_credits?: number | null
+    trial_active?: boolean | null
+    trial_start?: string | null
+    trial_end?: string | null
+  } | null>(null);
+  const [isTrialUser, setIsTrialUser] = useState(false);
+
+  const isTrialProfileActive = (profileData?: {
+    trial_active?: boolean | null
+    trial_start?: string | null
+    trial_end?: string | null
+  } | null) => {
+    if (!profileData?.trial_active || !profileData.trial_start || !profileData.trial_end) return false;
+    const start = new Date(profileData.trial_start);
+    const end = new Date(profileData.trial_end);
+    const now = new Date();
+    return now >= start && now <= end;
+  };
   const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
   const [previewModalKey, setPreviewModalKey] = useState(0);
@@ -82,7 +106,7 @@ export default function SMSCampaigns() {
   const [totalUnselectedClients, setTotalUnselectedClients] = useState(0);
   const [limitMode, setLimitMode] = useState('predefined')
 
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<{ user: { id: string } } | null>(null);
 
   // Progress tracking state
   const [campaignProgress, setCampaignProgress] = useState<Record<string, {
@@ -180,7 +204,16 @@ export default function SMSCampaigns() {
         
         if (data.success && data.progress) {
           const progressMap: typeof campaignProgress = {};
-          data.progress.forEach((p: any) => {
+          data.progress.forEach((p: {
+            id: string;
+            success: number;
+            fail: number;
+            total: number;
+            expected: number;
+            percentage: number;
+            is_finished: boolean;
+            is_active: boolean;
+          }) => {
             progressMap[p.id] = p;
           });
           setCampaignProgress(progressMap);
@@ -232,13 +265,14 @@ export default function SMSCampaigns() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, available_credits')
+        .select('full_name, email, phone, available_credits, trial_active, trial_start, trial_end')
         .eq('user_id', user.id)
         .single();
 
       if (profile) {
         setAvailableCredits(profile.available_credits || 0);
         setProfile(profile);
+        setIsTrialUser(isTrialProfileActive(profile));
       }
     } catch (error) {
       console.error('Failed to fetch credits:', error);
@@ -257,9 +291,25 @@ export default function SMSCampaigns() {
       const data = await response.json();
       
       if (data.success && data.messages) {
-        const loadedMessages = data.messages.map((dbMsg: any) => {
+        const loadedMessages = data.messages.map((dbMsg: {
+          id: string;
+          title: string;
+          message: string;
+          status?: 'ACCEPTED' | 'DENIED' | 'DRAFT' | null;
+          schedule_date?: string | null;
+          hour?: number | null;
+          minute?: number | null;
+          period?: 'AM' | 'PM' | null;
+          enabled?: boolean | null;
+          is_saved?: boolean | null;
+          message_limit?: number | null;
+          client_limit?: number | null;
+          purpose?: SMSMessage['purpose'] | null;
+          validation_reason?: string | null;
+          cron?: string | null;
+        }) => {
           // Parse the ISO timestamp directly
-          const scheduleDateTime = new Date(dbMsg.cron);
+          const scheduleDateTime = new Date(dbMsg.cron || new Date().toISOString());
           const scheduleDate = scheduleDateTime.toISOString().split('T')[0];
           
           // Get local time components
@@ -717,7 +767,7 @@ export default function SMSCampaigns() {
 
       // Check for QStash scheduling errors
       if (data.results && Array.isArray(data.results)) {
-        const failedResult = data.results.find((r: any) => !r.success);
+        const failedResult = data.results.find((r: { success?: boolean }) => !r.success);
         if (failedResult?.error) {
           try {
             const errorObj = JSON.parse(failedResult.error);
@@ -786,10 +836,12 @@ export default function SMSCampaigns() {
         console.error('❌ SAVE FAILED:', data);
         toast.error(data.error || 'Failed to save the campaign schedule');
       }
-    } catch (err: any) {
-      console.error('❌ SAVE ERROR:', err);
-      toast.error(err.message || 'Failed to save SMS schedule');
+    } catch (err: unknown) {
+      const message = getCampaignErrorMessage(err);
+      console.error('Failed to save messages:', message);
+      toast.error(message);
     } finally {
+
       setIsSaving(false);
       setSavingMode(null);
     }
@@ -847,9 +899,10 @@ export default function SMSCampaigns() {
 
       toast.success('Test message sent successfully to your phone!');
       fetchTestMessageCount(); // Refresh test count
-    } catch (error: any) {
-      console.error('Test message error:', error);
-      toast.error(error.message || 'Failed to send test message');
+    } catch (error: unknown) {
+      const message = getCampaignErrorMessage(error);
+      console.error('Test message error:', message);
+      toast.error(message);
     }
   };
 
@@ -859,6 +912,20 @@ export default function SMSCampaigns() {
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-sky-300 animate-spin mx-auto mb-4" />
           <p className="text-[#bdbdbd]">Loading your messages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isTrialUser) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6 text-center">
+          <MessageSquare className="w-12 h-12 text-[#bdbdbd] mx-auto mb-4 opacity-60" />
+          <h2 className="text-xl font-semibold text-white mb-2">Campaigns are locked during your trial</h2>
+          <p className="text-sm text-[#bdbdbd]">
+            Upgrade to unlock SMS campaigns. You can explore weekly reports and the dashboard during your trial.
+          </p>
         </div>
       </div>
     );
@@ -1120,9 +1187,10 @@ export default function SMSCampaigns() {
                     } else {
                       toast.error(data.reason || 'Message was denied');
                     }
-                  } catch (error: any) {
-                    console.error('Validation error:', error);
-                    toast.error(error.message || 'Failed to validate message');
+                  } catch (error: unknown) {
+                    const message = getCampaignErrorMessage(error);
+                    console.error('Validation error:', message);
+                    toast.error(message);
                   } finally {
                     setValidatingId(null);
                   }
