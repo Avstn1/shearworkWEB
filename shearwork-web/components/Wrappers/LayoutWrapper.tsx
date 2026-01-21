@@ -20,7 +20,8 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
   // -----------------------------
   useEffect(() => {
     console.log('🟡 LayoutWrapper redirect effect:', { isLoading, pathname, user: !!user })
-    if (isLoading || (user && profileStatus === 'loading')) return
+    if (isLoading) return
+    if (user && profileStatus !== 'ready') return
 
     const role = profile?.role?.toLowerCase()
     const subStatus = profile?.stripe_subscription_status
@@ -74,7 +75,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#73aa57] mb-4"></div>
-          <p className="text-sm text-[#bdbdbd]">Loading...</p>
+          <p className="text-sm text-[#bdbdbd]">Loading profile...</p>
         </div>
       </div>
     )

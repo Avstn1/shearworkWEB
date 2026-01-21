@@ -11,7 +11,7 @@ import {
   useCallback
 } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { User, Session, PostgrestSingleResponse } from '@supabase/supabase-js'
+import { User, PostgrestSingleResponse } from '@supabase/supabase-js'
 
 interface Profile {
   role: string
@@ -35,8 +35,9 @@ interface AuthContextType {
   profileStatus: ProfileStatus
 }
 
-const SESSION_TIMEOUT_MS = 6000
-const PROFILE_TIMEOUT_MS = 7000
+const SESSION_TIMEOUT_MS = 8000
+const PROFILE_TIMEOUT_MS = 15000
+const PROFILE_RETRY_DELAY_MS = 800
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, label: string) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -75,19 +76,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // -----------------------------
   // LOAD PROFILE (SINGLE SOURCE)
   // -----------------------------
-  const loadProfile = useCallback(async (session: Session): Promise<void> => {
+  const loadProfile = useCallback(async (userId: string): Promise<void> => {
     if (profileFetchInFlight.current) return
     profileFetchInFlight.current = true
     setProfileStatus('loading')
 
     try {
-      const profilePromise = supabase
-        .from('profiles')
-        .select('role, stripe_subscription_status, full_name, trial_active, trial_start, trial_end, onboarded')
-        .eq('user_id', session.user.id)
-        .maybeSingle() as unknown as Promise<PostgrestSingleResponse<Profile>>
+      const fetchProfile = async (attempt: number): Promise<PostgrestSingleResponse<Profile>> => {
+        const profilePromise = supabase
+          .from('profiles')
+          .select('role, stripe_subscription_status, full_name, trial_active, trial_start, trial_end, onboarded')
+          .eq('user_id', userId)
+          .maybeSingle() as unknown as Promise<PostgrestSingleResponse<Profile>>
 
-      const { data, error } = await withTimeout(profilePromise, PROFILE_TIMEOUT_MS, 'Profile fetch')
+        const result = await withTimeout(profilePromise, PROFILE_TIMEOUT_MS, 'Profile fetch')
+
+        if (result.error && attempt === 0) {
+          await new Promise(resolve => setTimeout(resolve, PROFILE_RETRY_DELAY_MS))
+          return fetchProfile(1)
+        }
+
+        return result
+      }
+
+      const { data, error } = await fetchProfile(0)
 
       if (error) {
         console.error('Profile fetch error:', error)
@@ -119,6 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       type SessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>
       let sessionResult: SessionResult | null = null
+      type UserResult = Awaited<ReturnType<typeof supabase.auth.getUser>>
+      let userResult: UserResult | null = null
 
       try {
         sessionResult = await withTimeout(
@@ -137,6 +151,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sessionError = sessionResult?.error ?? null
 
       if (sessionError || !session?.user) {
+        try {
+          userResult = await withTimeout(
+            supabase.auth.getUser(),
+            SESSION_TIMEOUT_MS,
+            'User load'
+          )
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'User load failed'
+          console.error(message)
+        }
+
+        const fallbackUser = userResult?.data?.user ?? null
+
+        if (fallbackUser) {
+          setUser(fallbackUser)
+          setIsLoading(false)
+          void loadProfile(fallbackUser.id)
+          initInFlight.current = false
+          return
+        }
+
         setUser(null)
         setProfile(null)
         setProfileStatus('idle')
@@ -147,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(session.user)
       setIsLoading(false)
-      void loadProfile(session)
+      void loadProfile(session.user.id)
       initInFlight.current = false
     }
 
@@ -167,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
           setUser(session.user)
-          void loadProfile(session)
+          void loadProfile(session.user.id)
           setIsLoading(false)
         }
       }
