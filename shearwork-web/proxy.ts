@@ -8,7 +8,6 @@ export default async function middleware(request: NextRequest) {
   // -----------------------------
   // SPECIAL CASE: Mobile App Authentication Passthrough
   // -----------------------------
-  // Routes that can bypass auth when they have a 'code' query parameter
   const codePassthroughRoutes = ['/pricing', '/pricing/return', '/settings']
   
   if (codePassthroughRoutes.some(route => pathname.startsWith(route))) {
@@ -24,7 +23,6 @@ export default async function middleware(request: NextRequest) {
 
   // Handle unauthenticated users
   if (!user) {
-    // console.log('User not authenticated. Running public route check for path:', pathname)
     if (pathname === '/' || publicRoutes.some(path => pathname.startsWith(path))) {
       return NextResponse.next()
     }
@@ -83,4 +81,17 @@ export default async function middleware(request: NextRequest) {
   }
 
   return NextResponse.next()
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
