@@ -10,12 +10,17 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
 
   useEffect(() => {
     console.log('🟢 OnboardingGuard useEffect - isLoading:', isLoading, 'profile:', profile)
+    
+    // Don't check until we've finished loading
     if (isLoading) return
+    
+    // Don't check if no user
     if (!user) return
     
+    // Redirect to pricing/return if profile exists but onboarded is false
     if (profile && !profile.onboarded) {
-      console.log('🟢 Redirecting to onboarding - onboarded:', profile.onboarded)
-      router.replace('/onboarding')
+      console.log('🟢 Redirecting to pricing/return - onboarded:', profile.onboarded)
+      router.replace('/pricing/return')
     }
   }, [isLoading, user, profile, router])
 

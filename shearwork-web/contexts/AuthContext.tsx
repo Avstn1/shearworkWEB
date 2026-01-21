@@ -8,7 +8,10 @@ interface Profile {
   role: string
   stripe_subscription_status: string
   full_name?: string
-  [key: string]: any
+  trial_active?: boolean
+  trial_start?: string | null
+  trial_end?: string | null
+  [key: string]: unknown
 }
 
 interface AuthContextType {
@@ -130,9 +133,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         await loadSession(session)
         
-      } catch (error) {
-        console.error('🔵 getSession failed/timeout:', error)
-        // Don't clear user here - let onAuthStateChange handle it
+      } catch (error: any) {
+        if (error?.message === 'getSession timeout') {
+          console.log('🔵 getSession timeout - waiting for onAuthStateChange fallback')
+          // Give onAuthStateChange 500ms to fire, otherwise stop loading
+          setTimeout(() => {
+            if (!sessionHandled.current) {
+              console.log('🔵 onAuthStateChange did not fire, stopping loading')
+              setIsLoading(false)
+            }
+          }, 500)
+        } else {
+          console.error('🔵 getSession failed:', error)
+          setUser(null)
+          setIsLoading(false)
+        }
       }
     }
 

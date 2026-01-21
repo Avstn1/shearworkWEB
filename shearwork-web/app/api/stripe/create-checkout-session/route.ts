@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
 
-type Plan = 'monthly' | 'yearly'
+type Plan = 'trial' | 'monthly' | 'yearly'
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,9 +26,12 @@ export async function POST(req: NextRequest) {
     let plan: Plan = 'monthly'
     try {
       const body = await req.json()
-      if (body?.plan === 'yearly') {
-        plan = 'yearly'
-      }
+    if (body?.plan === 'yearly') {
+      plan = 'yearly'
+    } else if (body?.plan === 'trial') {
+      plan = 'trial'
+    }
+
     } catch {
       // no body / invalid JSON -> keep default 'monthly'
     }
@@ -74,6 +77,7 @@ export async function POST(req: NextRequest) {
         supabase_user_id: user.id,
         plan, // so you can see which plan they picked in Stripe
       },
+      ...(plan === 'trial' ? { subscription_data: { trial_period_days: 7 } } : {}),
     })
 
     if (!session.client_secret) {
@@ -84,10 +88,11 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ clientSecret: session.client_secret })
-  } catch (err: any) {
-    console.error('Stripe checkout session error:', err)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to create checkout session'
+    console.error('Stripe checkout session error:', message)
     return NextResponse.json(
-      { error: err.message || 'Failed to create checkout session' },
+      { error: message },
       { status: 500 },
     )
   }

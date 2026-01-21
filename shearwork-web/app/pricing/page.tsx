@@ -1,7 +1,7 @@
 // app/pricing/page.tsx
 'use client'
 
-import React, { useEffect, useState, useRef, Suspense } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   EmbeddedCheckout,
@@ -16,7 +16,7 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
 )
 
-type Plan = 'monthly' | 'yearly'
+type Plan = 'trial' | 'monthly' | 'yearly'
 
 type PriceInfo = {
   id: string
@@ -53,6 +53,9 @@ function PricingPageContent() {
   const [loadingPrices, setLoadingPrices] = useState(true)
   const [authenticating, setAuthenticating] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+
+
 
   // Handle authentication from mobile app code or existing session
   useEffect(() => {
@@ -103,9 +106,10 @@ function PricingPageContent() {
           setUserId(session.user.id)
           setAuthenticating(false) // Only set false when not using code flow
         }
-      } catch (err: any) {
-        console.error('Auth error:', err)
-        toast.error('Authentication failed')
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Authentication failed'
+        console.error('Auth error:', message)
+        toast.error(message)
         router.push('/login')
         setAuthenticating(false)
       }
@@ -128,9 +132,10 @@ function PricingPageContent() {
         }
 
         setPricing(data)
-      } catch (err: any) {
-        console.error(err)
-        toast.error(err.message || 'Could not load pricing')
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Could not load pricing'
+        console.error(message)
+        toast.error(message)
       } finally {
         setLoadingPrices(false)
       }
@@ -150,6 +155,7 @@ function PricingPageContent() {
     try {
       setLoading(true)
       setSelectedPlan(plan)
+      setShowCancelModal(false)
 
       const res = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
@@ -171,19 +177,25 @@ function PricingPageContent() {
       }
 
       setClientSecret(data.clientSecret)
-    } catch (err: any) {
-      console.error(err)
-      toast.error(err.message || 'Could not start checkout')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not start checkout'
+      console.error(message)
+      toast.error(message)
       setSelectedPlan(null)
+      setShowCancelModal(true)
     } finally {
       setLoading(false)
     }
   }
 
-  const closeCheckout = () => {
+  const closeCheckout = (wasCanceled = true) => {
     setClientSecret(null)
     setSelectedPlan(null)
+    if (wasCanceled) {
+      setShowCancelModal(true)
+    }
   }
+
 
   // Show loading state while authenticating
   if (authenticating) {
@@ -197,6 +209,7 @@ function PricingPageContent() {
 
   const monthly = pricing?.monthly
   const yearly = pricing?.yearly
+  const yearlyMonthlyEquivalent = yearly ? yearly.amount / 12 : null
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] px-4 pt-10">
@@ -210,13 +223,54 @@ function PricingPageContent() {
         </p>
 
         {/* Plans grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Trial plan */}
+          <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col justify-between">
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Corva Pro (Trial)</h2>
+
+              {loadingPrices || !monthly ? (
+                <div className="flex items-center gap-2 text-gray-400 text-sm mb-6">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading price…</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold mb-1">Free</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+                    7 days • billing info required
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    Start your 7-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
+                  </p>
+                </>
+              )}
+
+              <ul className="text-xs space-y-2 text-gray-200 mt-4">
+                <li>• Full revenue, expense & profit dashboards</li>
+                <li>• Weekly reports + analytics insights</li>
+                <li>• 10 SMS credits to try messaging</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={() => startCheckout('trial')}
+              disabled={loading || loadingPrices || !monthly}
+              className="mt-4 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading && selectedPlan === 'trial' && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              {loading && selectedPlan === 'trial'
+                ? 'Starting checkout…'
+                : 'Start Free Trial'}
+            </button>
+          </div>
+
           {/* Monthly plan */}
           <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col justify-between">
             <div>
-              <h2 className="text-lg font-semibold mb-2">
-                Corva Pro (Monthly)
-              </h2>
+              <h2 className="text-lg font-semibold mb-2">Corva Pro (Monthly)</h2>
 
               {loadingPrices || !monthly ? (
                 <div className="flex items-center gap-2 text-gray-400 text-sm mb-6">
@@ -258,9 +312,7 @@ function PricingPageContent() {
           {/* Yearly plan */}
           <div className="bg-white/5 rounded-2xl p-4 border border-[#f5e29a]/40 flex flex-col justify-between">
             <div>
-              <h2 className="text-lg font-semibold mb-2">
-                Corva Pro (Yearly)
-              </h2>
+              <h2 className="text-lg font-semibold mb-2">Corva Pro (Yearly)</h2>
 
               {loadingPrices || !yearly ? (
                 <div className="flex items-center gap-2 text-gray-400 text-sm mb-6">
@@ -278,6 +330,11 @@ function PricingPageContent() {
                   <p className="text-xs text-[#f5e29a] mb-4">
                     Best value for growing shops
                   </p>
+                  {yearlyMonthlyEquivalent && (
+                    <p className="text-xs text-[#f5e29a] mb-4">
+                      {formatAmount(yearlyMonthlyEquivalent, yearly.currency)} / month billed yearly
+                    </p>
+                  )}
                 </>
               )}
 
@@ -304,9 +361,9 @@ function PricingPageContent() {
         </div>
 
         <p className="mt-4 text-[11px] text-gray-400">
-          All payments are processed securely by Stripe. You can manage or cancel
-          your subscription at any time.
+          All payments are processed securely by Stripe. You can manage or cancel your subscription at any time.
         </p>
+
       </div>
 
       {/* Modal: embedded checkout */}
@@ -314,7 +371,7 @@ function PricingPageContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl">
             <button
-              onClick={closeCheckout}
+              onClick={() => closeCheckout(true)}
               className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition px-1.5 py-1.5"
               aria-label="Close checkout"
             >
@@ -325,6 +382,7 @@ function PricingPageContent() {
               Secure checkout
               {selectedPlan === 'monthly' && ' • Monthly plan'}
               {selectedPlan === 'yearly' && ' • Yearly plan'}
+              {selectedPlan === 'trial' && ' • Trial plan'}
             </h2>
 
             <EmbeddedCheckoutProvider
@@ -335,6 +393,26 @@ function PricingPageContent() {
                 <EmbeddedCheckout />
               </div>
             </EmbeddedCheckoutProvider>
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f0e] p-6 text-white shadow-2xl">
+            <h2 className="text-lg font-semibold mb-2">Checkout Canceled</h2>
+            <p className="text-sm text-gray-300 mb-4">
+              Your subscription was not completed. You have not been charged. You can return to our site to try again or choose a different plan.
+            </p>
+            <button
+              onClick={() => {
+                setShowCancelModal(false)
+                router.push('/pricing')
+              }}
+              className="w-full rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold py-2"
+            >
+              Return to pricing
+            </button>
           </div>
         </div>
       )}

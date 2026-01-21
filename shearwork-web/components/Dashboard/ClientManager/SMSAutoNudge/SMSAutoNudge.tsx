@@ -1,8 +1,11 @@
 'use client';
 
+const getSessionErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Failed to process request';
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle, Coins, Send, Info } from 'lucide-react';
+import { MessageSquare, Loader2, Users, X, Clock, Calendar, AlertCircle, Coins, Send, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
@@ -70,7 +73,30 @@ export default function SMSAutoNudge() {
   // Credits and test messages
   const [availableCredits, setAvailableCredits] = useState<number>(0);
   const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{
+    full_name?: string | null
+    email?: string | null
+    phone?: string | null
+    available_credits?: number | null
+    auto_nudge_schedule?: string | null
+    role?: string | null
+    trial_active?: boolean | null
+    trial_start?: string | null
+    trial_end?: string | null
+  } | null>(null);
+  const [isTrialUser, setIsTrialUser] = useState(false);
+
+  const isTrialProfileActive = (profileData?: {
+    trial_active?: boolean | null
+    trial_start?: string | null
+    trial_end?: string | null
+  } | null) => {
+    if (!profileData?.trial_active || !profileData.trial_start || !profileData.trial_end) return false;
+    const start = new Date(profileData.trial_start);
+    const end = new Date(profileData.trial_end);
+    const now = new Date();
+    return now >= start && now <= end;
+  };
   
   // Test message modal
   const [showTestConfirmModal, setShowTestConfirmModal] = useState(false);
@@ -260,13 +286,14 @@ export default function SMSAutoNudge() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, available_credits, auto_nudge_schedule')
+        .select('full_name, email, phone, available_credits, auto_nudge_schedule, trial_active, trial_start, trial_end')
         .eq('user_id', user.id)
         .single();
 
       if (profileData) {
         setAvailableCredits(profileData.available_credits || 0);
         setProfile(profileData);
+        setIsTrialUser(isTrialProfileActive(profileData));
       }
     } catch (error) {
       console.error('Failed to fetch credits:', error);
@@ -341,7 +368,17 @@ export default function SMSAutoNudge() {
       // First, process all saved messages from the database
       if (data.success && data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
         
-        data.messages.forEach((dbMsg: any) => {
+        data.messages.forEach((dbMsg: {
+          id: string;
+          title: string;
+          message: string;
+          visiting_type?: SMSMessage['visitingType'] | null;
+          status?: 'ACCEPTED' | 'DENIED' | 'DRAFT' | null;
+          cron: string;
+          enabled?: boolean;
+          is_saved?: boolean;
+          validation_reason?: string | null;
+        }) => {
           // Parse cron to extract time
           const cronParts = dbMsg.cron.split(' ');
           const minute = parseInt(cronParts[0]);
@@ -753,7 +790,7 @@ export default function SMSAutoNudge() {
       let endDate = null;
       
       if (profile?.auto_nudge_schedule) {
-        const parts = profile.auto_nudge_schedule.split('|').map((p: any) => p.trim());
+        const parts = profile.auto_nudge_schedule.split('|').map((part) => part.trim());
         if (parts.length === 3) {
           startDate = parts[1]; 
           endDate = parts[2];  
@@ -806,8 +843,9 @@ export default function SMSAutoNudge() {
       } else {
         toast.error('Failed to save');
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch (err: unknown) {
+      const message = getSessionErrorMessage(err);
+      console.error(message);
       toast.error('Failed to save SMS schedule');
     } finally {
       setIsSaving(false);
@@ -867,8 +905,9 @@ export default function SMSAutoNudge() {
       } else {
         toast.error('Failed to deactivate');
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch (err: unknown) {
+      const message = getSessionErrorMessage(err);
+      console.error(message);
       toast.error('Failed to deactivate message');
     } finally {
       setIsSaving(false);
@@ -929,9 +968,10 @@ export default function SMSAutoNudge() {
 
       toast.success('Test message sent successfully to your phone!');
       fetchTestMessageCount();
-    } catch (error: any) {
-      console.error('Test message error:', error);
-      toast.error(error.message || 'Failed to send test message');
+    } catch (error: unknown) {
+      const message = getSessionErrorMessage(error);
+      console.error('Test message error:', message);
+      toast.error(message);
     }
   };
 
@@ -941,6 +981,20 @@ export default function SMSAutoNudge() {
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-sky-300 animate-spin mx-auto mb-4" />
           <p className="text-[#bdbdbd]">Loading your messages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isTrialUser) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6 text-center">
+          <MessageSquare className="w-12 h-12 text-[#bdbdbd] mx-auto mb-4 opacity-60" />
+          <h2 className="text-xl font-semibold text-white mb-2">Auto-Nudge is locked during your trial</h2>
+          <p className="text-sm text-[#bdbdbd]">
+            Upgrade to unlock automated SMS nudges. You can explore weekly reports and the dashboard during your trial.
+          </p>
         </div>
       </div>
     );
@@ -1454,9 +1508,10 @@ export default function SMSAutoNudge() {
                   } else {
                     toast.error(data.reason || 'Message was denied');
                   }
-                } catch (error: any) {
-                  console.error('Validation error:', error);
-                  toast.error(error.message || 'Failed to validate message');
+                } catch (error: unknown) {
+                  const message = getSessionErrorMessage(error);
+                  console.error('Validation error:', message);
+                  toast.error(message);
                 } finally {
                   setValidatingId(null);
                 }
