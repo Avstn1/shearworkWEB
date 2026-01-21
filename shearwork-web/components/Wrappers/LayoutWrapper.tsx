@@ -64,7 +64,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     }
 
     authenticateUser()
-  }, [code, router])
+  }, [searchParams, router])
 
   // Handle redirections after auth is loaded
   useEffect(() => {
