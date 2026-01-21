@@ -12,7 +12,7 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
   useEffect(() => {
     const checkOnboarding = async () => {
       if (!profile?.onboarded) {
-        router.replace('/pricing')
+        router.replace('/pricing/return')
       }
     }
 
