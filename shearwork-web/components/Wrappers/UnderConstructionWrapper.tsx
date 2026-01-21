@@ -11,16 +11,20 @@ interface UnderConstructionWrapperProps {
 export default function UnderConstructionWrapper({ children }: UnderConstructionWrapperProps) {
   const [isTestAccount, setIsTestAccount] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.user?.id) {
+        setHasSession(false);
         setIsTestAccount(false);
         setLoading(false);
         return;
       }
+
+      setHasSession(true);
 
       const { data, error } = await supabase
         .from('profiles')
@@ -44,6 +48,10 @@ export default function UnderConstructionWrapper({ children }: UnderConstruction
 
   if (loading) {
     return <div className="flex items-center justify-center h-full">{children}</div>;
+  }
+
+  if (!hasSession) {
+    return <>{children}</>;
   }
 
   if (isTestAccount) {
