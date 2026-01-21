@@ -37,8 +37,8 @@ interface AuthContextType {
 
 const SESSION_TIMEOUT_MS = 8000
 const PROFILE_TIMEOUT_MS = 15000
-const PROFILE_RETRY_DELAY_MS = 1000
-const PROFILE_CACHE_TTL_MS = 10 * 60 * 1000
+const PROFILE_RETRY_DELAY_MS = 1200
+const MAX_PROFILE_RETRIES = 2
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, label: string) => {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const profileFetchInFlight = useRef(false)
   const initInFlight = useRef(false)
+  const profileRetryCount = useRef(0)
 
   // -----------------------------
   // LOAD PROFILE (SINGLE SOURCE)
@@ -83,19 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfileStatus('loading')
 
     try {
-      const cacheKey = `profile_cache_${userId}`
-      const cached = sessionStorage.getItem(cacheKey)
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached) as { data: Profile; cachedAt: number }
-          if (parsed?.cachedAt && Date.now() - parsed.cachedAt < PROFILE_CACHE_TTL_MS) {
-            setProfile(parsed.data)
-          }
-        } catch {
-          sessionStorage.removeItem(cacheKey)
-        }
-      }
-
       const fetchProfile = async (attempt: number): Promise<PostgrestSingleResponse<Profile>> => {
         const profilePromise = supabase
           .from('profiles')
@@ -118,19 +106,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('Profile fetch error:', error)
         setProfile(null)
+        if (profileRetryCount.current < MAX_PROFILE_RETRIES) {
+          profileRetryCount.current += 1
+          setProfileStatus('loading')
+          return
+        }
         setProfileStatus('error')
       } else {
+        profileRetryCount.current = 0
         setProfile(data)
-        sessionStorage.setItem(cacheKey, JSON.stringify({ data, cachedAt: Date.now() }))
         setProfileStatus('ready')
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Profile fetch failed'
       console.error(message)
       setProfile(null)
+      if (profileRetryCount.current < MAX_PROFILE_RETRIES) {
+        profileRetryCount.current += 1
+        setProfileStatus('loading')
+        return
+      }
       setProfileStatus('error')
     } finally {
       profileFetchInFlight.current = false
+    }
+
+    if (profileRetryCount.current > 0 && profileRetryCount.current <= MAX_PROFILE_RETRIES) {
+      setTimeout(() => {
+        void loadProfile(userId)
+      }, PROFILE_RETRY_DELAY_MS)
     }
   }, [])
 
@@ -165,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const session = sessionResult?.data?.session ?? null
       const sessionError = sessionResult?.error ?? null
 
-      if (sessionError || !session?.user) {
+        if (sessionError || !session?.user) {
         try {
           userResult = await withTimeout(
             supabase.auth.getUser(),
@@ -190,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null)
         setProfile(null)
         setProfileStatus('idle')
+        profileRetryCount.current = 0
         setIsLoading(false)
         initInFlight.current = false
         return
@@ -211,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null)
           setProfile(null)
           setProfileStatus('idle')
+          profileRetryCount.current = 0
           setIsLoading(false)
           return
         }

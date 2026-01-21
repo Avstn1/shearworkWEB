@@ -76,7 +76,6 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#73aa57] mb-4"></div>
           <p className="text-sm text-[#bdbdbd]">Loading profile...</p>
-          <p className="mt-2 text-xs text-[#8f8f8f]">If this takes too long, refresh the page.</p>
         </div>
       </div>
     )
