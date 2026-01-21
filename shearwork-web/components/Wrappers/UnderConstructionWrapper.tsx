@@ -63,13 +63,16 @@ export default function UnderConstructionWrapper({ children }: UnderConstruction
               </div>
             </div>
           </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent mb-3">
+          {/* <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent mb-3">
             Under Construction
-          </h2>
+          </h2> */}
           {/* <p className="text-[#bdbdbd] text-sm leading-relaxed">
             This feature is currently being built and will be available soon. 
             We're working hard to bring you an amazing experience!
           </p> */}
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent mb-3">
+            Under Maintenance
+          </h2>
           <p className="text-[#bdbdbd] text-sm leading-relaxed">
             The site is currently undergoing maintenance and updates.
             We appreciate your patience and understanding during this time.
