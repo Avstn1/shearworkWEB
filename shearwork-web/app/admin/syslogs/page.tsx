@@ -96,8 +96,10 @@ export default function SystemLogsPage() {
         )
       }
 
+      console.log('Fetching logs with query params:', { statusFilter, sourceFilter, range, search: debouncedSearchQuery, sortField, sortOrder })
       query = query.order(sortField, { ascending: sortOrder === 'asc' })
       const { data, error } = await query
+      console.log(`Fetched ${data?.length || 0} logs`)  
       if (error) throw error
       setLogs(data || [])
       setCurrentPage(1)
@@ -105,6 +107,7 @@ export default function SystemLogsPage() {
       console.error('Error fetching logs:', err)
       toast.error(`Failed to fetch system logs${err.message ? `: ${err.message}` : ''}`)
     } finally {
+      console.log('Finished fetching logs')
       setLoading(false)
     }
   }

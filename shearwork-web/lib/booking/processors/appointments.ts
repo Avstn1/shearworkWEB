@@ -204,15 +204,53 @@ export class AppointmentProcessor {
     }
 
     // Delete canceled appointments from the database
+    console.log('Appointments to delete: ' + this.appointmentIDsToDelete)
+    console.log('Number of appointments to delete: ' + this.appointmentIDsToDelete.length)
+
+    // if (this.appointmentIDsToDelete.length > 0) {
+    //   console.log('Deleting canceled appointments...')
+    //   const { data: deletedRows, error: deleteError } = await this.supabase
+    //     .from(this.tableName)
+    //     .delete()
+    //     .eq('user_id', this.userId)
+    //     .in('acuity_appointment_id', this.appointmentIDsToDelete)
+    //     .select()
+
+    //   if (deleteError) {
+    //     throw deleteError
+    //   }
+
+    //   console.log('Deleted rows:', deletedRows)
+    //   console.log('Number of rows deleted:', deletedRows?.length || 0)
+    // }
+
     if (this.appointmentIDsToDelete.length > 0) {
-      const { error: deleteError } = await this.supabase
+      // First, check what actually exists in the database
+      const { data: existingRows, error: checkError } = await this.supabase
         .from(this.tableName)
-        .delete()
+        .select('*')
         .eq('user_id', this.userId)
         .in('acuity_appointment_id', this.appointmentIDsToDelete)
 
-      if (deleteError) {
-        throw deleteError
+      console.log('Existing rows that match:', existingRows)
+      console.log('Number of matching rows:', existingRows?.length || 0)
+
+      if (existingRows && existingRows.length > 0) {
+        const { data: deletedRows, error: deleteError } = await this.supabase
+          .from(this.tableName)
+          .delete()
+          .eq('user_id', this.userId)
+          .in('acuity_appointment_id', this.appointmentIDsToDelete)
+          .select()
+
+        if (deleteError) {
+          throw deleteError
+        }
+
+        console.log('Deleted rows:', deletedRows)
+        console.log('Number of rows deleted:', deletedRows?.length || 0)
+      } else {
+        console.log('No matching rows found to delete')
       }
     }
 
