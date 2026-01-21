@@ -67,15 +67,26 @@ function getInitialSession(): User | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   console.log('🔵 AuthProvider mounting')
-  const [user, setUser] = useState<User | null>(getInitialSession) // Initialize from localStorage
+  const [user, setUser] = useState<User | null>(null) // Start null, will load from localStorage in useEffect
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const sessionHandled = useRef(false)
+  const isClient = useRef(false)
 
   console.log('🔵 AuthProvider render - isLoading:', isLoading, 'user:', !!user)
 
   useEffect(() => {
     console.log('🔵 useEffect starting')
+    
+    // On first client mount, try to load from localStorage immediately
+    if (!isClient.current) {
+      isClient.current = true
+      const cachedUser = getInitialSession()
+      if (cachedUser) {
+        console.log('🔵 Found cached user in localStorage')
+        setUser(cachedUser)
+      }
+    }
     
     const loadSession = async (session: Session) => {
       console.log('🔵 loadSession called with session:', !!session)
