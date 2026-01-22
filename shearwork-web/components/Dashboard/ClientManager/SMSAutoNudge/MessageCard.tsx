@@ -37,6 +37,7 @@ interface MessageCardProps {
   testMessagesUsed: number;
   isLocked?: boolean;
   autoNudgeCampaignProgress?: AutoNudgeCampaignProgress;
+  isTrialPreview?: boolean;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onEnableEdit?: (id: string) => void;
   onCancelEdit: (id: string) => void;
@@ -64,6 +65,7 @@ export function MessageCard({
   phoneNumbers,
   isLocked = false,
   autoNudgeCampaignProgress,
+  isTrialPreview = false,
   onUpdate,
   onEnableEdit,
   onCancelEdit,
@@ -466,17 +468,18 @@ export function MessageCard({
           className="overflow-hidden"
         >
           <div className="p-3 border-t border-white/10">
-            <MessageContent
-              message={msg}
-              validatingId={validatingId}
-              testMessagesUsed={testMessagesUsed}
-              profile={profile}
-              onUpdate={onUpdate}
-              onValidate={onValidate}
-              onRequestTest={onRequestTest}
-              isFullLock={isFullLock}
-              isPartialLock={isPartialLock}
-            />
+              <MessageContent
+                message={msg}
+                validatingId={validatingId}
+                testMessagesUsed={testMessagesUsed}
+                profile={profile}
+                onUpdate={onUpdate}
+                onValidate={onValidate}
+                onRequestTest={onRequestTest}
+                isTrialPreview={isTrialPreview}
+                isFullLock={isFullLock}
+                isPartialLock={isPartialLock}
+              />
           </div>
         </motion.div>
       )}
@@ -518,6 +521,7 @@ export function MessageCard({
                       onCancelEdit={onCancelEdit}
                       isFullLock={isFullLock}
                       isPartialLock={isPartialLock}
+                      isTrialPreview={isTrialPreview}
                     />
                   </div>
                 </motion.div>
@@ -562,6 +566,7 @@ export function MessageCard({
                         onUpdate={onUpdate}
                         onValidate={onValidate}
                         onRequestTest={onRequestTest}
+                        isTrialPreview={isTrialPreview}
                         isFullLock={isFullLock}
                         isPartialLock={isPartialLock}
                       />
@@ -572,11 +577,12 @@ export function MessageCard({
                         phoneNumbers={phoneNumbers}
                         isSaving={isSaving}
                         savingMode={savingMode}
-                        onSave={onSave}
-                        onCancelEdit={onCancelEdit}
-                        isFullLock={isFullLock}
-                        isPartialLock={isPartialLock}
-                      />
+                      onSave={onSave}
+                      onCancelEdit={onCancelEdit}
+                      isFullLock={isFullLock}
+                      isPartialLock={isPartialLock}
+                      isTrialPreview={isTrialPreview}
+                    />
                     </div>
                   </div>
                 </motion.div>

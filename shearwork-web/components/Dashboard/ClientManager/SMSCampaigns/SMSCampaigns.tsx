@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { MessageCard } from './MessageCard';
 import { SMSMessage } from './types';
 import { supabase } from '@/utils/supabaseClient';
+import { isTrialActive } from '@/utils/trial';
 
 import HowCampaignsWorkModal from './Modals/HowCampaignsWorkModal';
 import CampaignHistoryModal from './Modals/CampaignHistoryModal';
@@ -88,17 +89,6 @@ export default function SMSCampaigns() {
   } | null>(null);
   const [isTrialUser, setIsTrialUser] = useState(false);
 
-  const isTrialProfileActive = (profileData?: {
-    trial_active?: boolean | null
-    trial_start?: string | null
-    trial_end?: string | null
-  } | null) => {
-    if (!profileData?.trial_active || !profileData.trial_start || !profileData.trial_end) return false;
-    const start = new Date(profileData.trial_start);
-    const end = new Date(profileData.trial_end);
-    const now = new Date();
-    return now >= start && now <= end;
-  };
   const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
   const [previewModalKey, setPreviewModalKey] = useState(0);
@@ -272,7 +262,7 @@ export default function SMSCampaigns() {
       if (profile) {
         setAvailableCredits(profile.available_credits || 0);
         setProfile(profile);
-        setIsTrialUser(isTrialProfileActive(profile));
+        setIsTrialUser(isTrialActive(profile));
       }
     } catch (error) {
       console.error('Failed to fetch credits:', error);
@@ -851,6 +841,11 @@ export default function SMSCampaigns() {
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
 
+    if (availableCredits < 1) {
+      toast.error('Insufficient credits to send a test message');
+      return;
+    }
+
     try {
       const response = await fetch(`/api/client-messaging/qstash-sms-send?messageId=${msg.id}&action=test`, {
         method: 'POST',
@@ -865,35 +860,43 @@ export default function SMSCampaigns() {
 
       setTestMessagesUsed(testMessagesUsed + 1);
 
-      // If this is a paid test (over 10 free tests), log transaction
-      if (testMessagesUsed >= 10) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('available_credits, reserved_credits')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile) {
+          const oldAvailable = profile.available_credits || 0;
+          const newAvailable = oldAvailable - 1;
+          const oldReserved = profile.reserved_credits || 0;
+          const newReserved = oldReserved;
+
+          const { error: creditUpdateError } = await supabase
             .from('profiles')
-            .select('available_credits, reserved_credits')
-            .eq('user_id', user.id)
-            .single();
-          
-          if (profile) {
-            const oldAvailable = profile.available_credits || 0;
-            const newAvailable = oldAvailable - 1;
-            const oldReserved = profile.reserved_credits || 0;
-            const newReserved = oldReserved; // No change to reserved for test messages
-            
-            await supabase
-              .from('credit_transactions')
-              .insert({
-                user_id: user.id,
-                action: `Paid test message - ${msg.title}`,
-                old_available: oldAvailable,
-                new_available: newAvailable,
-                old_reserved: oldReserved,
-                new_reserved: newReserved,
-                reference_id: msg.id, 
-                created_at: new Date().toISOString()
-              });
+            .update({ available_credits: newAvailable })
+            .eq('user_id', user.id);
+
+          if (creditUpdateError) {
+            console.error('Failed to update credits:', creditUpdateError);
           }
+
+          await supabase
+            .from('credit_transactions')
+            .insert({
+              user_id: user.id,
+              action: `Test message - ${msg.title}`,
+              old_available: oldAvailable,
+              new_available: newAvailable,
+              old_reserved: oldReserved,
+              new_reserved: newReserved,
+              reference_id: msg.id,
+              created_at: new Date().toISOString()
+            });
+
+          setAvailableCredits(newAvailable);
         }
       }
 
@@ -917,22 +920,16 @@ export default function SMSCampaigns() {
     );
   }
 
-  if (isTrialUser) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6 text-center">
-          <MessageSquare className="w-12 h-12 text-[#bdbdbd] mx-auto mb-4 opacity-60" />
-          <h2 className="text-xl font-semibold text-white mb-2">Campaigns are locked during your trial</h2>
-          <p className="text-sm text-[#bdbdbd]">
-            Upgrade to unlock SMS campaigns. You can explore weekly reports and the dashboard during your trial.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4 sm:space-y-6">
+      {isTrialUser && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#bdbdbd]">
+          <p className="text-white font-semibold mb-1">Trial credits unlocked</p>
+          <p>
+            You have 10 credits to test SMS campaigns during your trial.
+          </p>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl sm:rounded-2xl shadow-xl p-3 sm:p-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 sm:mb-4 gap-3 sm:gap-4">
@@ -978,15 +975,11 @@ export default function SMSCampaigns() {
                 </span>
               </div>
               
-              <div className={`px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 ${
-                testMessagesUsed >= 10 
-                  ? 'bg-rose-300/10 border border-rose-300/20'
-                  : 'bg-sky-300/10 border border-sky-300/20'
-              }`}>
-                <Send className={`w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`} />
-                <span className={`text-[10px] sm:text-sm font-semibold truncate ${testMessagesUsed >= 10 ? 'text-rose-300' : 'text-sky-300'}`}>
-                  <span className="hidden sm:inline">{10 - testMessagesUsed} free tests left today</span>
-                  <span className="sm:hidden">{10 - testMessagesUsed}</span>
+              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 bg-sky-300/10 border border-sky-300/20">
+                <Send className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 text-sky-300" />
+                <span className="text-[10px] sm:text-sm font-semibold truncate text-sky-300">
+                  <span className="hidden sm:inline">Test messages cost 1 credit</span>
+                  <span className="sm:hidden">1 credit/test</span>
                 </span>
               </div>
 

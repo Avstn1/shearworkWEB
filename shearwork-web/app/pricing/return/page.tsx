@@ -29,6 +29,7 @@ function PricingReturnContent() {
   const { refreshProfile } = useAuth()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<BillingSummary | null>(null)
+  const [sessionStatus, setSessionStatus] = useState<'open' | 'complete' | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileStepComplete, setProfileStepComplete] = useState(false)
   const [profile, setProfile] = useState<{
@@ -54,13 +55,33 @@ function PricingReturnContent() {
 
     const fetchSummary = async () => {
       try {
-        const res = await fetch('/api/stripe/billing-summary')
-        const data = await res.json()
-        if (!res.ok) {
-          console.error('Failed to load billing summary on return page:', data)
+        const summaryRequest = fetch('/api/stripe/billing-summary')
+        const statusRequest = sessionId
+          ? fetch(`/api/stripe/session-status?session_id=${sessionId}`)
+          : null
+
+        const [summaryRes, statusRes] = await Promise.all([
+          summaryRequest,
+          statusRequest,
+        ])
+
+        const summaryData = await summaryRes.json()
+        if (!summaryRes.ok) {
+          console.error('Failed to load billing summary on return page:', summaryData)
           setSummary(null)
         } else {
-          setSummary(data)
+          setSummary(summaryData)
+        }
+
+        if (statusRes) {
+          const statusData = await statusRes.json()
+          if (!statusRes.ok) {
+            console.error('Failed to load Stripe session status:', statusData)
+          } else {
+            setSessionStatus(statusData.status ?? null)
+          }
+        } else {
+          setSessionStatus(null)
         }
       } catch (err) {
         console.error('Error loading billing summary on return page:', err)
@@ -127,7 +148,8 @@ function PricingReturnContent() {
 
   const hasSub = summary?.hasSubscription ?? false
   const trialActive = isTrialActive(profile)
-  const hasAccess = hasSub || trialActive
+  const hasCheckoutComplete = sessionStatus === 'complete'
+  const hasAccess = hasSub || trialActive || hasCheckoutComplete
   const interval = summary?.price?.interval
   const intervalLabel =
     interval === 'year' ? 'yearly' : interval === 'month' ? 'monthly' : 'recurring'
@@ -180,7 +202,7 @@ function PricingReturnContent() {
 
       const { data: currentProfile, error: currentProfileError } = await supabase
         .from('profiles')
-        .select('trial_start, available_credits')
+        .select('trial_start, available_credits, reserved_credits')
         .eq('user_id', user.id)
         .single()
 
@@ -194,9 +216,22 @@ function PricingReturnContent() {
         profileUpdate.trial_start = now.toISOString()
         profileUpdate.trial_end = trialEnd.toISOString()
         profileUpdate.trial_active = true
+      }
 
-        const existingCredits = currentProfile?.available_credits || 0
-        profileUpdate.available_credits = existingCredits + 10
+      const { data: trialBonus } = await supabase
+        .from('credit_transactions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('action', 'trial_bonus')
+        .maybeSingle()
+
+      const existingCredits = currentProfile?.available_credits || 0
+      const existingReserved = currentProfile?.reserved_credits || 0
+      const shouldGrantTrialCredits = !trialBonus
+      const trialCreditAmount = 10
+
+      if (shouldGrantTrialCredits) {
+        profileUpdate.available_credits = existingCredits + trialCreditAmount
       }
 
       const { error: updateError } = await supabase
@@ -205,6 +240,24 @@ function PricingReturnContent() {
         .eq('user_id', user.id)
 
       if (updateError) throw updateError
+
+      if (shouldGrantTrialCredits) {
+        const { error: creditError } = await supabase
+          .from('credit_transactions')
+          .insert({
+            user_id: user.id,
+            action: 'trial_bonus',
+            old_available: existingCredits,
+            new_available: existingCredits + trialCreditAmount,
+            old_reserved: existingReserved,
+            new_reserved: existingReserved,
+            created_at: new Date().toISOString(),
+          })
+
+        if (creditError) {
+          console.error('Failed to log trial credits:', creditError)
+        }
+      }
 
       setProfileStepComplete(true)
       setProfile(prev => (prev ? { ...prev, onboarded: true } : prev))
@@ -231,34 +284,49 @@ function PricingReturnContent() {
               Processing your subscription…
             </p>
           </div>
-        ) : hasSub ? (
+        ) : hasSub || hasCheckoutComplete ? (
           <>
             <p className="text-lg font-semibold">Thanks for subscribing 🎉</p>
-            <p className="text-sm text-gray-300">
-              You&apos;re now on the{' '}
-              <span className="font-semibold">Corva Pro</span>{' '}
-              <span className="font-semibold">{intervalLabel}</span> plan.
-            </p>
-            <p className="text-sm text-gray-300">
-              Your current period ends on{' '}
-              <span className="font-semibold">
-                {endDateText ?? 'the current billing period end date'}
-              </span>
-              .
-            </p>
-            <p className="text-sm text-gray-400">
-              You&apos;ll be charged{' '}
-              <span className="font-semibold">
-                {amountText ?? 'your plan price'}
-              </span>{' '}
-              per {interval === 'year' ? 'year' : 'month'} unless you cancel.
-            </p>
+            {hasSub ? (
+              <>
+                <p className="text-sm text-gray-300">
+                  You&apos;re now on the{' '}
+                  <span className="font-semibold">Corva Pro</span>{' '}
+                  <span className="font-semibold">{intervalLabel}</span> plan.
+                </p>
+                <p className="text-sm text-gray-300">
+                  Your current period ends on{' '}
+                  <span className="font-semibold">
+                    {endDateText ?? 'the current billing period end date'}
+                  </span>
+                  .
+                </p>
+                <p className="text-sm text-gray-400">
+                  You&apos;ll be charged{' '}
+                  <span className="font-semibold">
+                    {amountText ?? 'your plan price'}
+                  </span>{' '}
+                  per {interval === 'year' ? 'year' : 'month'} unless you cancel.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-300">
+                Your subscription is processing. This page will update once Stripe confirms the payment.
+              </p>
+            )}
           </>
         ) : trialActive ? (
           <>
             <p className="text-lg font-semibold">Your free trial is active 🎉</p>
             <p className="text-sm text-gray-300">
               Complete your profile to start using Corva Pro and connect your calendar.
+            </p>
+          </>
+        ) : sessionStatus === 'open' ? (
+          <>
+            <p className="text-lg font-semibold">Checkout not completed</p>
+            <p className="text-sm text-gray-300">
+              Please return to pricing to finish checkout and activate your plan.
             </p>
           </>
         ) : (
