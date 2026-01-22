@@ -27,9 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <AppProvider>
             <Navbar/>
               <LayoutWrapper>
-                <UnderConstructionWrapper>
                 {children}
-                </UnderConstructionWrapper>
               </LayoutWrapper>
             
             <Toaster
