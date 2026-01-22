@@ -23,11 +23,11 @@ export async function POST(req: NextRequest) {
     // You MUST have stored the customer's stripe ID after subscription
     const { data: dbUser } = await supabase
       .from('profiles')
-      .select('stripe_customer_id')
+      .select('stripe_id')
       .eq('user_id', user.id)
       .single()
 
-    if (!dbUser?.stripe_customer_id) {
+    if (!dbUser?.stripe_id) {
       return NextResponse.json(
         { error: 'No Stripe customer found' },
         { status: 400 }
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: dbUser.stripe_customer_id,
+      customer: dbUser.stripe_id,
       return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/settings?tab=billing`,
     })
 

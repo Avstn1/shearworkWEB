@@ -1,18 +1,17 @@
 import { motion } from 'framer-motion';
 import { Shield, AlertCircle, Send, Sparkles } from 'lucide-react';
 import { SMSMessage } from './types';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { supabase } from '@/utils/supabaseClient';
 
 interface MessageContentProps {
   message: SMSMessage;
   validatingId: string | null;
-  testMessagesUsed: number;
   profile: any;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onValidate: (msgId: string) => void;
   onRequestTest: (msgId: string) => void;
+  isTrialPreview?: boolean;
   isFullLock?: boolean;
   isPartialLock?: boolean;
 }
@@ -21,44 +20,15 @@ export function MessageContent({
   profile,
   message: msg,
   validatingId,
-  testMessagesUsed,
   onUpdate,
   onValidate,
   onRequestTest, 
+  isTrialPreview = false,
   isFullLock = false,
   isPartialLock = false,
 }: MessageContentProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [testsUsedToday, setTestsUsedToday] = useState(0);
-  const DAILY_TEST_LIMIT = 10;
-
-  useEffect(() => {
-    loadTestCount();
-  }, []);
-
-  const loadTestCount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { count, error } = await supabase
-        .from('sms_sent')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('purpose', 'test_message')
-        .eq('is_sent', true)
-        .gte('created_at', today.toISOString());
-
-      if (error) throw error;
-      setTestsUsedToday(count || 0);
-    } catch (error) {
-      console.error('Failed to load test count:', error);
-    }
-  };
 
   const handleGenerateTemplate = async () => {
     setIsGenerating(true);
@@ -203,19 +173,11 @@ export function MessageContent({
         </div>
       )}
 
-      {/* Test Limit Info - Only show when saved AND validated */}
+      {/* Test Cost Info - Only show when saved AND validated */}
       {msg.isSaved && msg.isValidated && (
         <div className="p-2.5 sm:p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
           <p className="text-xs sm:text-sm text-sky-300">
-            {testsUsedToday >= DAILY_TEST_LIMIT ? (
-              <>
-                You've used all {DAILY_TEST_LIMIT} free tests today. Additional tests cost 1 credit each.
-              </>
-            ) : (
-              <>
-                Free tests remaining today: <span className="font-semibold">{DAILY_TEST_LIMIT - testsUsedToday}/{DAILY_TEST_LIMIT}</span>
-              </>
-            )}
+            Test messages cost 1 credit each.
           </p>
         </div>
       )}
@@ -315,6 +277,10 @@ export function MessageContent({
                   toast.error('Message must be at least 100 characters');
                   return;
                 }
+                if (isTrialPreview) {
+                  toast.error('Auto-Nudge tests are available after upgrading');
+                  return;
+                }
                 onRequestTest(msg.id);
               }}
               disabled={
@@ -324,7 +290,8 @@ export function MessageContent({
                 msg.validationStatus !== 'DRAFT' ||
                 !msg.message.trim() ||
                 msg.message.length < 100 ||
-                isFullLock
+                isFullLock ||
+                isTrialPreview
               }
               className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-base font-semibold transition-all duration-300 ${
                 isTesting ||
@@ -333,7 +300,8 @@ export function MessageContent({
                 msg.validationStatus !== 'DRAFT' ||
                 !msg.message.trim() ||
                 msg.message.length < 100 ||
-                isFullLock
+                isFullLock ||
+                isTrialPreview
                   ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600/50'
                   : 'bg-sky-300/20 border border-sky-300/30 text-sky-300 hover:bg-sky-300/30'
               }`}
@@ -357,10 +325,7 @@ export function MessageContent({
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
               <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                {testMessagesUsed >= 10 
-                  ? 'Send test to your phone (1 credit)' 
-                  : `Send test to your phone (${10 - testMessagesUsed} free left)`
-                }
+                Send test to your phone (1 credit)
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                   <div className="border-4 border-transparent border-t-[#0a0a0a]" />
                 </div>

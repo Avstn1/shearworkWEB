@@ -3,15 +3,13 @@
 import { motion } from 'framer-motion';
 import { Shield, AlertCircle, Send, Sparkles } from 'lucide-react';
 import { SMSMessage } from './types';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { supabase } from '@/utils/supabaseClient';
 
 interface MessageContentProps {
   profile: any;
   message: SMSMessage;
   validatingId: string | null;
-  testMessagesUsed: number;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onValidate: (msgId: string) => void;
   onRequestTest: (msgId: string) => void;
@@ -21,44 +19,12 @@ export function MessageContent({
   profile,
   message: msg,
   validatingId,
-  testMessagesUsed,
   onUpdate,
   onValidate,
   onRequestTest, 
 }: MessageContentProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [testsUsedToday, setTestsUsedToday] = useState(0);
-  const DAILY_TEST_LIMIT = 10;
-
-  // Load test count on mount
-  useEffect(() => {
-    loadTestCount();
-  }, []);
-
-  const loadTestCount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get start of today in user's timezone
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { count, error } = await supabase
-        .from('sms_sent')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('purpose', 'test_message')
-        .eq('is_sent', true)
-        .gte('created_at', today.toISOString());
-
-      if (error) throw error;
-      setTestsUsedToday(count || 0);
-    } catch (error) {
-      console.error('Failed to load test count:', error);
-    }
-  };
 
   const handleGenerateTemplate = async () => {
     setIsGenerating(true);
@@ -206,19 +172,11 @@ export function MessageContent({
         </div>
       )}
 
-      {/* Test Limit Info */}
+      {/* Test Cost Info */}
       {msg.isSaved && msg.isValidated && msg.validationStatus === 'DRAFT' && (
         <div className="p-2.5 sm:p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg sm:rounded-xl">
           <p className="text-xs sm:text-sm text-sky-300">
-            {testsUsedToday >= DAILY_TEST_LIMIT ? (
-              <>
-                You've used all {DAILY_TEST_LIMIT} free tests today. Additional tests cost 1 credit each.
-              </>
-            ) : (
-              <>
-                Free tests remaining today: <span className="font-semibold">{DAILY_TEST_LIMIT - testsUsedToday}/{DAILY_TEST_LIMIT}</span>
-              </>
-            )}
+            Test messages cost 1 credit each.
           </p>
         </div>
       )}
@@ -347,10 +305,7 @@ export function MessageContent({
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
               <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                {testMessagesUsed >= 10 
-                  ? 'Send test to your phone (1 credit)' 
-                  : `Send test to your phone (${10 - testMessagesUsed} free left)`
-                }
+                Send test to your phone (1 credit)
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                   <div className="border-4 border-transparent border-t-[#0a0a0a]" />
                 </div>

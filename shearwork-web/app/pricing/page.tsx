@@ -54,6 +54,8 @@ function PricingPageContent() {
   const [authenticating, setAuthenticating] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [trialUsed, setTrialUsed] = useState(false)
+  const [trialStatusLoading, setTrialStatusLoading] = useState(true)
 
 
 
@@ -144,6 +146,34 @@ function PricingPageContent() {
     fetchPricing()
   }, [userId])
 
+  useEffect(() => {
+    if (!userId) return
+
+    const fetchTrialStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('trial_start, stripe_subscription_status')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (error) throw error
+
+        const status = data?.stripe_subscription_status ?? ''
+        const hasUsedTrial = Boolean(data?.trial_start)
+        const hasActiveSub = status === 'active' || status === 'trialing'
+        setTrialUsed(hasUsedTrial || hasActiveSub)
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to load trial status'
+        console.error(message)
+      } finally {
+        setTrialStatusLoading(false)
+      }
+    }
+
+    fetchTrialStatus()
+  }, [userId])
+
   const formatAmount = (amount: number, currency: string) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -210,6 +240,7 @@ function PricingPageContent() {
   const monthly = pricing?.monthly
   const yearly = pricing?.yearly
   const yearlyMonthlyEquivalent = yearly ? yearly.amount / 12 : null
+  const showTrial = !trialStatusLoading && !trialUsed
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] px-4 pt-10">
@@ -223,49 +254,51 @@ function PricingPageContent() {
         </p>
 
         {/* Plans grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 ${showTrial ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
           {/* Trial plan */}
-          <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col justify-between">
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Corva Pro (Trial)</h2>
+          {showTrial && (
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col justify-between">
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Corva Pro (Trial)</h2>
 
-              {loadingPrices || !monthly ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm mb-6">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading price…</span>
-                </div>
-              ) : (
-                <>
-                  <p className="text-3xl font-bold mb-1">Free</p>
-                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
-                    7 days • billing info required
-                  </p>
-                  <p className="text-xs text-gray-300">
-                    Start your 7-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
-                  </p>
-                </>
-              )}
+                {loadingPrices || !monthly ? (
+                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-6">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading price…</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-3xl font-bold mb-1">Free</p>
+                    <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+                      7 days • billing info required
+                    </p>
+                    <p className="text-xs text-gray-300">
+                      Start your 7-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
+                    </p>
+                  </>
+                )}
 
-              <ul className="text-xs space-y-2 text-gray-200 mt-4">
-                <li>• Full revenue, expense & profit dashboards</li>
-                <li>• Weekly reports + analytics insights</li>
-                <li>• 10 SMS credits to try messaging</li>
-              </ul>
+                <ul className="text-xs space-y-2 text-gray-200 mt-4">
+                  <li>• Full revenue, expense & profit dashboards</li>
+                  <li>• Weekly reports + analytics insights</li>
+                  <li>• 10 SMS credits to try messaging</li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => startCheckout('trial')}
+                disabled={loading || loadingPrices || !monthly}
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading && selectedPlan === 'trial' && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                {loading && selectedPlan === 'trial'
+                  ? 'Starting checkout…'
+                  : 'Start Free Trial'}
+              </button>
             </div>
-
-            <button
-              onClick={() => startCheckout('trial')}
-              disabled={loading || loadingPrices || !monthly}
-              className="mt-4 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading && selectedPlan === 'trial' && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              {loading && selectedPlan === 'trial'
-                ? 'Starting checkout…'
-                : 'Start Free Trial'}
-            </button>
-          </div>
+          )}
 
           {/* Monthly plan */}
           <div className="bg-white/5 rounded-2xl p-4 border border-white/10 flex flex-col justify-between">

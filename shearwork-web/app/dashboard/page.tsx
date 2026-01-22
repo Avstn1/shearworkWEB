@@ -7,8 +7,6 @@ import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-import Layout from '@/components/Layout'
-import Navbar from '@/components/Navbar'
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 import SignOutButton from '@/components/SignOutButton'
 
@@ -30,20 +28,11 @@ import ServiceBreakdownChart from '@/components/Dashboard/ServiceBreakdownChart'
 import MarketingFunnelsChart from '@/components/Dashboard/MarketingFunnelsChart'
 import ProfitLossDashboard from '@/components/Dashboard/ProfitLossDashboard'
 import YearlyDashboard from '@/components/Dashboard/YearlyDashboard'
-
-import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
+import GettingStartedTips from '@/components/Dashboard/GettingStartedTips'
 
 import { useAuth } from '@/contexts/AuthContext'
-
-const isTrialProfileActive = (profile: any) => {
-  if (!profile?.trial_active || !profile?.trial_start || !profile?.trial_end) return false
-  const start = new Date(profile.trial_start)
-  const end = new Date(profile.trial_end)
-  const now = new Date()
-  return now >= start && now <= end
-}
-
 import { supabase } from '@/utils/supabaseClient'
+import { isTrialActive } from '@/utils/trial'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
 const MONTHS = [
@@ -82,9 +71,10 @@ export default function DashboardPage() {
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const hasSyncedInitially = useRef(false)
-  const isTrialUser = isTrialProfileActive(profile)
+  const isTrialUser = isTrialActive(profile)
   const firstSyncAfterConnect = useRef(false)
   const isSyncing = useRef(false)
+  const showGettingStarted = isTrialUser
 
 
   const cardClass =
@@ -185,6 +175,24 @@ export default function DashboardPage() {
     } finally {
       setIsRefreshing(false)
     }
+  }
+
+  const scrollToWeeklyReports = () => {
+    if (dashboardView !== 'monthly') {
+      setDashboardView('monthly')
+      setTimeout(() => {
+        document.getElementById('weekly-reports')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }, 300)
+      return
+    }
+
+    document.getElementById('weekly-reports')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
   }
 
 
@@ -327,22 +335,18 @@ export default function DashboardPage() {
 
       {/* RIGHT COLUMN */}
       <div className="flex flex-col gap-4 pl-1">
-        {!isTrialUser && (
-          <motion.div variants={fadeInUp} className={cardClass}>
-            <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
-            <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-          </motion.div>
-        )}
         <motion.div variants={fadeInUp} className={cardClass}>
+          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
+          <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+        </motion.div>
+        <motion.div id="weekly-reports" variants={fadeInUp} className={cardClass}>
           <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
           <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
-        {!isTrialUser && (
-          <motion.div variants={fadeInUp} className={cardClass}>
-            <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
-            <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-          </motion.div>
-        )}
+        <motion.div variants={fadeInUp} className={cardClass}>
+          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
+          <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+        </motion.div>
       </div>
     </motion.div>
   )
@@ -351,6 +355,13 @@ export default function DashboardPage() {
   const content = (
     <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
       <DashboardHeader />
+      {showGettingStarted && (
+        <GettingStartedTips
+          userId={user.id}
+          onSync={syncAcuityData}
+          onOpenWeeklyReports={scrollToWeeklyReports}
+        />
+      )}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={dashboardView}

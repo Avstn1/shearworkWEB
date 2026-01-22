@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
+import { useAuth } from '@/contexts/AuthContext'
 import EditableAvatar from '@/components/EditableAvatar'
 import ConnectAcuityButton from '@/components/ConnectAcuityButton'
 import ConnectSquareButton from '@/components/ConnectSquareButton'
+import { isTrialActive } from '@/utils/trial'
 
 type BillingSummary = {
   hasSubscription: boolean
@@ -24,12 +26,17 @@ type BillingSummary = {
 function PricingReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { refreshProfile } = useAuth()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<BillingSummary | null>(null)
+  const [sessionStatus, setSessionStatus] = useState<'open' | 'complete' | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileStepComplete, setProfileStepComplete] = useState(false)
   const [profile, setProfile] = useState<{
     onboarded?: boolean | null
+    trial_active?: boolean | null
+    trial_start?: string | null
+    trial_end?: string | null
   } | null>(null)
   const [fullName, setFullName] = useState('')
   const [selectedRole, setSelectedRole] = useState({
@@ -48,13 +55,33 @@ function PricingReturnContent() {
 
     const fetchSummary = async () => {
       try {
-        const res = await fetch('/api/stripe/billing-summary')
-        const data = await res.json()
-        if (!res.ok) {
-          console.error('Failed to load billing summary on return page:', data)
+        const summaryRequest = fetch('/api/stripe/billing-summary')
+        const statusRequest = sessionId
+          ? fetch(`/api/stripe/session-status?session_id=${sessionId}`)
+          : null
+
+        const [summaryRes, statusRes] = await Promise.all([
+          summaryRequest,
+          statusRequest,
+        ])
+
+        const summaryData = await summaryRes.json()
+        if (!summaryRes.ok) {
+          console.error('Failed to load billing summary on return page:', summaryData)
           setSummary(null)
         } else {
-          setSummary(data)
+          setSummary(summaryData)
+        }
+
+        if (statusRes) {
+          const statusData = await statusRes.json()
+          if (!statusRes.ok) {
+            console.error('Failed to load Stripe session status:', statusData)
+          } else {
+            setSessionStatus(statusData.status ?? null)
+          }
+        } else {
+          setSessionStatus(null)
         }
       } catch (err) {
         console.error('Error loading billing summary on return page:', err)
@@ -74,7 +101,7 @@ function PricingReturnContent() {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('onboarded, full_name, role, barber_type, commission_rate, avatar_url')
+          .select('onboarded, full_name, role, barber_type, commission_rate, avatar_url, trial_active, trial_start, trial_end')
           .eq('user_id', user.id)
           .single()
 
@@ -119,7 +146,10 @@ function PricingReturnContent() {
     })
   }
 
-  const hasSub = summary?.hasSubscription
+  const hasSub = summary?.hasSubscription ?? false
+  const trialActive = isTrialActive(profile)
+  const hasCheckoutComplete = sessionStatus === 'complete'
+  const hasAccess = hasSub || trialActive || hasCheckoutComplete
   const interval = summary?.price?.interval
   const intervalLabel =
     interval === 'year' ? 'yearly' : interval === 'month' ? 'monthly' : 'recurring'
@@ -172,7 +202,7 @@ function PricingReturnContent() {
 
       const { data: currentProfile, error: currentProfileError } = await supabase
         .from('profiles')
-        .select('trial_start, available_credits')
+        .select('trial_start, available_credits, reserved_credits')
         .eq('user_id', user.id)
         .single()
 
@@ -186,9 +216,22 @@ function PricingReturnContent() {
         profileUpdate.trial_start = now.toISOString()
         profileUpdate.trial_end = trialEnd.toISOString()
         profileUpdate.trial_active = true
+      }
 
-        const existingCredits = currentProfile?.available_credits || 0
-        profileUpdate.available_credits = existingCredits + 10
+      const { data: trialBonus } = await supabase
+        .from('credit_transactions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('action', 'trial_bonus')
+        .maybeSingle()
+
+      const existingCredits = currentProfile?.available_credits || 0
+      const existingReserved = currentProfile?.reserved_credits || 0
+      const shouldGrantTrialCredits = !trialBonus
+      const trialCreditAmount = 10
+
+      if (shouldGrantTrialCredits) {
+        profileUpdate.available_credits = existingCredits + trialCreditAmount
       }
 
       const { error: updateError } = await supabase
@@ -198,8 +241,28 @@ function PricingReturnContent() {
 
       if (updateError) throw updateError
 
+      if (shouldGrantTrialCredits) {
+        const { error: creditError } = await supabase
+          .from('credit_transactions')
+          .insert({
+            user_id: user.id,
+            action: 'trial_bonus',
+            old_available: existingCredits,
+            new_available: existingCredits + trialCreditAmount,
+            old_reserved: existingReserved,
+            new_reserved: existingReserved,
+            created_at: new Date().toISOString(),
+          })
+
+        if (creditError) {
+          console.error('Failed to log trial credits:', creditError)
+        }
+      }
+
       setProfileStepComplete(true)
+      setProfile(prev => (prev ? { ...prev, onboarded: true } : prev))
       toast.success('Profile saved')
+      await refreshProfile()
       router.push('/dashboard')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save profile'
@@ -221,27 +284,49 @@ function PricingReturnContent() {
               Processing your subscription…
             </p>
           </div>
-        ) : hasSub ? (
+        ) : hasSub || hasCheckoutComplete ? (
           <>
             <p className="text-lg font-semibold">Thanks for subscribing 🎉</p>
+            {hasSub ? (
+              <>
+                <p className="text-sm text-gray-300">
+                  You&apos;re now on the{' '}
+                  <span className="font-semibold">Corva Pro</span>{' '}
+                  <span className="font-semibold">{intervalLabel}</span> plan.
+                </p>
+                <p className="text-sm text-gray-300">
+                  Your current period ends on{' '}
+                  <span className="font-semibold">
+                    {endDateText ?? 'the current billing period end date'}
+                  </span>
+                  .
+                </p>
+                <p className="text-sm text-gray-400">
+                  You&apos;ll be charged{' '}
+                  <span className="font-semibold">
+                    {amountText ?? 'your plan price'}
+                  </span>{' '}
+                  per {interval === 'year' ? 'year' : 'month'} unless you cancel.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-300">
+                Your subscription is processing. This page will update once Stripe confirms the payment.
+              </p>
+            )}
+          </>
+        ) : trialActive ? (
+          <>
+            <p className="text-lg font-semibold">Your free trial is active 🎉</p>
             <p className="text-sm text-gray-300">
-              You&apos;re now on the{' '}
-              <span className="font-semibold">Corva Pro</span>{' '}
-              <span className="font-semibold">{intervalLabel}</span> plan.
+              Complete your profile to start using Corva Pro and connect your calendar.
             </p>
+          </>
+        ) : sessionStatus === 'open' ? (
+          <>
+            <p className="text-lg font-semibold">Checkout not completed</p>
             <p className="text-sm text-gray-300">
-              Your current period ends on{' '}
-              <span className="font-semibold">
-                {endDateText ?? 'the current billing period end date'}
-              </span>
-              .
-            </p>
-            <p className="text-sm text-gray-400">
-              You&apos;ll be charged{' '}
-              <span className="font-semibold">
-                {amountText ?? 'your plan price'}
-              </span>{' '}
-              per {interval === 'year' ? 'year' : 'month'} unless you cancel.
+              Please return to pricing to finish checkout and activate your plan.
             </p>
           </>
         ) : (
@@ -254,15 +339,15 @@ function PricingReturnContent() {
         )}
 
         <button
-          onClick={() => router.push(hasSub ? '/dashboard' : '/pricing')}
+          onClick={() => router.push(hasAccess ? '/dashboard' : '/pricing')}
           className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold w-full"
         >
-          {hasSub ? 'Go to dashboard' : 'Return to pricing'}
+          {hasAccess ? 'Go to dashboard' : 'Return to pricing'}
         </button>
 
         </div>
 
-        {!loading && hasSub && !profile?.onboarded && (
+        {!loading && hasAccess && !profile?.onboarded && (
           <div className="mt-8 border border-white/10 rounded-3xl bg-black/30 shadow-2xl p-6 md:p-8">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>

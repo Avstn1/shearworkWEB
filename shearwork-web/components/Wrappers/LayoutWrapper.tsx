@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
 import MobileAuthHandler from './MobileAuthHandler'
+import { isTrialActive } from '@/utils/trial'
 
 function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -25,16 +26,17 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
     const role = profile?.role?.toLowerCase()
     const subStatus = profile?.stripe_subscription_status
+    const hasTrialAccess = isTrialActive(profile)
 
     // Redirect active/trial users away from /pricing
-    if ((subStatus === 'active' || subStatus === 'trialing') && pathname === '/pricing') {
+    if ((subStatus === 'active' || hasTrialAccess) && pathname === '/pricing') {
       router.push('/dashboard')
       return
     }
 
     // Premium access check for protected routes
     const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses']
-    const hasPremiumAccess = subStatus === 'active' || subStatus === 'trialing'
+    const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
     
     if (
       user &&

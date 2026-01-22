@@ -5,7 +5,6 @@ interface TestMessageConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  testMessagesUsed: number;
   availableCredits: number;
   profilePhone: string | null;
 }
@@ -14,12 +13,10 @@ export default function TestMessageConfirmModal({
   isOpen,
   onClose,
   onConfirm,
-  testMessagesUsed,
   availableCredits,
   profilePhone
 }: TestMessageConfirmModalProps) {
-  const isPaidTest = testMessagesUsed >= 10;
-  const hasInsufficientCredits = isPaidTest && availableCredits < 1;
+  const hasInsufficientCredits = availableCredits < 1;
 
   return (
     <AnimatePresence>
@@ -39,54 +36,31 @@ export default function TestMessageConfirmModal({
             className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
           >
             <div className="flex items-start gap-3 md:gap-4 mb-4">
-              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                isPaidTest
-                  ? 'bg-amber-300/20 text-amber-300'
-                  : 'bg-sky-300/20 text-sky-300'
-              }`}>
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-amber-300/20 text-amber-300">
                 <Send className="w-5 h-5 md:w-6 md:h-6" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                  {isPaidTest ? (
-                    <>
-                      <span className="hidden sm:inline">Send Paid Test Message</span>
-                      <span className="sm:hidden">Paid Test Message</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="hidden sm:inline">Send Free Test Message</span>
-                      <span className="sm:hidden">Free Test Message</span>
-                    </>
-                  )}
+                  <span className="hidden sm:inline">Send Test Message</span>
+                  <span className="sm:hidden">Test Message</span>
                 </h3>
                 <p className="text-xs md:text-sm text-[#bdbdbd]">
-                  {isPaidTest ? (
-                    <>
-                      You've used all your free test messages today. This test will cost{' '}
-                      <span className="text-amber-300 font-semibold">1 credit</span>.
-                    </>
-                  ) : (
-                    <>
-                      You have{' '}
-                      <span className="text-sky-300 font-semibold">{10 - testMessagesUsed} free tests</span>{' '}
-                      remaining today. After that, tests cost 1 credit each.
-                    </>
-                  )}
+                  Each test message costs <span className="text-amber-300 font-semibold">1 credit</span>.
                 </p>
               </div>
             </div>
 
-            {isPaidTest && (
-              <div className="p-2.5 md:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-                <div className="flex items-center gap-2 text-xs md:text-sm text-amber-300">
-                  <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                  <p>
-                    Available credits: <span className="font-semibold">{availableCredits}</span>
-                  </p>
-                </div>
+            <div className="p-2.5 md:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
+              <div className="flex items-center gap-2 text-xs md:text-sm text-amber-300">
+                <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                <p>
+                  Available credits: <span className="font-semibold">{availableCredits}</span>
+                </p>
+                {hasInsufficientCredits && (
+                  <span className="text-rose-300">• Insufficient credits</span>
+                )}
               </div>
-            )}
+            </div>
 
             <div className="p-3 md:p-4 bg-white/5 border border-white/10 rounded-lg mb-4 md:mb-6">
               <p className="text-xs md:text-sm text-white mb-1.5 md:mb-2">
@@ -107,14 +81,8 @@ export default function TestMessageConfirmModal({
                 disabled={hasInsufficientCredits}
                 className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isPaidTest ? (
-                  <>
-                    <span className="hidden sm:inline">Send (1 Credit)</span>
-                    <span className="sm:hidden">Send</span>
-                  </>
-                ) : (
-                  'Send Test'
-                )}
+                <span className="hidden sm:inline">Send (1 Credit)</span>
+                <span className="sm:hidden">Send</span>
               </button>
             </div>
           </motion.div>

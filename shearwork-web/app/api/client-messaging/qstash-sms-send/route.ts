@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 import { qstashClient } from '@/lib/qstashClient'
 import pMap from "p-map"
+import { isTrialActive } from '@/utils/trial'
 
 export type Recipients = {
   phone_normalized: string;
@@ -73,6 +74,42 @@ async function handler(request: Request) {
       )
     }
 
+    let profile: { 
+      phone: string | null
+      full_name: string | null
+      available_credits: number | null
+      trial_active?: boolean | null
+      trial_start?: string | null
+      trial_end?: string | null
+      stripe_subscription_status?: string | null
+    } | null = null
+
+    if (isTest || scheduledMessage.purpose === 'auto-nudge') {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('phone, full_name, available_credits, trial_active, trial_start, trial_end, stripe_subscription_status')
+        .eq('user_id', scheduledMessage.user_id)
+        .single()
+
+      if (profileError || !profileData) {
+        console.error('❌ Failed to fetch profile:', profileError)
+        return NextResponse.json(
+          { success: false, error: 'User profile not found' },
+          { status: 404 }
+        )
+      }
+
+      profile = profileData
+    }
+
+    const isTrialUser = isTrialActive(profile ?? undefined)
+    if (isTrialUser && scheduledMessage.purpose === 'auto-nudge') {
+      return NextResponse.json(
+        { success: false, error: 'Auto-Nudge is available after upgrading' },
+        { status: 403 }
+      )
+    }
+
   const torontoNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
   const todayToronto = new Date(torontoNow.getFullYear(), torontoNow.getMonth(), torontoNow.getDate())
 
@@ -108,18 +145,52 @@ async function handler(request: Request) {
     if (isTest) {
       // Test mode: Send only to the message creator
       purpose = 'test_message'
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('phone, full_name')
-        .eq('user_id', scheduledMessage.user_id)
-        .single()
-
-      if (profileError || !profile || !profile.phone) {
-        console.error('❌ Failed to fetch user profile or phone not set:', profileError)
+      if (!profile?.phone) {
+        console.error('❌ Failed to fetch user profile or phone not set')
         return NextResponse.json(
           { success: false, error: 'User phone number not found. Please set your phone number in profile settings.' },
           { status: 404 }
         )
+      }
+
+      if ((profile.available_credits ?? 0) < 1) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient credits' },
+          { status: 402 }
+        )
+      }
+
+      const oldAvailable = profile.available_credits || 0
+      const newAvailable = oldAvailable - 1
+
+      const { error: creditUpdateError } = await supabase
+        .from('profiles')
+        .update({ available_credits: newAvailable })
+        .eq('user_id', scheduledMessage.user_id)
+
+      if (creditUpdateError) {
+        console.error('❌ Failed to update credits:', creditUpdateError)
+        return NextResponse.json(
+          { success: false, error: 'Failed to update credits' },
+          { status: 500 }
+        )
+      }
+
+      const { error: transactionError } = await supabase
+        .from('credit_transactions')
+        .insert({
+          user_id: scheduledMessage.user_id,
+          action: `Test message - ${scheduledMessage.title || 'Message'}`,
+          old_available: oldAvailable,
+          new_available: newAvailable,
+          old_reserved: 0,
+          new_reserved: 0,
+          reference_id: scheduledMessage.id,
+          created_at: new Date().toISOString(),
+        })
+
+      if (transactionError) {
+        console.error('❌ Failed to log test message transaction:', transactionError)
       }
 
       recipients = [{

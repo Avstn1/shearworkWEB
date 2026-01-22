@@ -11,6 +11,7 @@ interface MessageClientListProps {
   onCancelEdit: (id: string) => void;
   isFullLock?: boolean;
   isPartialLock?: boolean;
+  isTrialPreview?: boolean;
 }
 
 export function MessageClientList({
@@ -21,7 +22,8 @@ export function MessageClientList({
   onSave,
   onCancelEdit,
   isFullLock = false,
-  isPartialLock = false
+  isPartialLock = false,
+  isTrialPreview = false
 }: MessageClientListProps) {
   
   
@@ -117,7 +119,7 @@ export function MessageClientList({
             <div className="relative group">
               <button
                 onClick={() => {
-                  if (!isPartialLock) {
+                  if (!isPartialLock && !isTrialPreview) {
                     onSave(msg.id, 'activate');
                   }
                 }}
@@ -125,11 +127,12 @@ export function MessageClientList({
                   isSaving ||
                   msg.message.length < 100 ||
                   !msg.isValidated ||
-                  isPartialLock
+                  isPartialLock ||
+                  isTrialPreview
                 }
                 className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-base transition-all duration-300 ${
                   // Check if button should be disabled
-                  isSaving || msg.message.length < 100 || !msg.isValidated || isPartialLock
+                  isSaving || msg.message.length < 100 || !msg.isValidated || isPartialLock || isTrialPreview
                     ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600/50'
                     : 'bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)]'
                 }`}
@@ -152,10 +155,10 @@ export function MessageClientList({
                   </>
                 )}
               </button>
-              {isPartialLock && (
+              {(isPartialLock || isTrialPreview) && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
                   <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                    Can be activated again next month
+                    {isTrialPreview ? 'Activation available after upgrading' : 'Can be activated again next month'}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                       <div className="border-4 border-transparent border-t-[#0a0a0a]" />
                     </div>

@@ -62,6 +62,7 @@ export default function ConnectAcuityButton({ onConnectSuccess }: ConnectAcuityB
 
   return connected ? (
     <button
+      type="button"
       onClick={handleDisconnect}
       className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
     >
@@ -69,6 +70,7 @@ export default function ConnectAcuityButton({ onConnectSuccess }: ConnectAcuityB
     </button>
   ) : (
     <button
+      type="button"
       onClick={handleConnect}
       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
     >

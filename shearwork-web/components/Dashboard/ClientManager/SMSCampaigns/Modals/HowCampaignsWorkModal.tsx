@@ -183,7 +183,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                         </button>
                       </h4>
                       <p className="text-xs sm:text-sm text-[#bdbdbd]">
-                        <span className="font-semibold text-cyan-300">Crucial step!</span> Preview exactly how your message will appear to clients. You get 10 free tests daily and after that, each test costs 1 credit. Don't worry, you'll be notified before any charges.
+                        <span className="font-semibold text-cyan-300">Crucial step!</span> Preview exactly how your message will appear to clients. Test messages cost 1 credit each.
                       </p>
                     </div>
                   </div>
