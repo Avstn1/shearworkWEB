@@ -41,26 +41,39 @@ export default function SignUpPage() {
     }
 
     setLoading(true);
-    const { data: userProfile, error } = await supabase.auth.signUp({ email, password });
 
-    const { error: insertError } = await supabase
-    .from('system_logs')
-    .insert({
-        source: userProfile.user?.id,
-        action: 'user_signup',
-        status: 'success',
-        details: `User ${userProfile.user?.email} signed up.`,
-    })
+    try {
+      const { data: userProfile, error } = await supabase.auth.signUp({ email, password });
 
-    if (insertError) throw insertError
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
 
-    if (error) toast.error(error.message);
-    else {
+      if (userProfile.user?.id) {
+        const { error: insertError } = await supabase
+          .from('system_logs')
+          .insert({
+            source: userProfile.user.id,
+            action: 'user_signup',
+            status: 'success',
+            details: `User ${userProfile.user.email ?? email} signed up.`,
+          });
+
+        if (insertError) {
+          console.warn('Signup log error:', insertError);
+        }
+      }
+
       toast.success('Check your email to confirm your account!');
       router.push('/pricing');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Signup failed';
+      console.error('Signup error:', message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const passwordMatch = password && confirmPassword && password === confirmPassword;
