@@ -9,6 +9,7 @@ import ReportModal from './ReportModal';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 type WeeklyComparisonReport = {
   id: string;
@@ -44,39 +45,22 @@ function getMondaysInMonth(month: number, year: number): number[] {
   return mondays
 }
 
-async function logWeeklyComparisonReportOpen(user_id: string, r: any) {
-  const { data: { session }, error: sessionError, } = await supabase.auth.getSession()
+async function logWeeklyComparisonReportOpen(user_id: string, r: any, role: string | null) {
+  if (!role || role === 'Admin') return
 
   const monthIndex = new Date(`${r.month} 1, ${r.year}`).getMonth();
   const week_number = r.week_number ?? getMondaysInMonth(monthIndex, r.year).length
 
-  if (sessionError) {
-    console.error('Error fetching session:', sessionError.message)
-    return
-  }
+  const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+      source: user_id,
+      action: 'opened_wkComparison_report',
+      status: 'success',
+      details: `Opened Report: Week #${week_number}, ${r.month} ${r.year}`,
+    });
 
-  if (session?.user) {
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', session.user.id)
-      .single()
-
-    if (profileError) throw profileError
-    
-    if (profileData?.role != "Admin") {
-      const { error: insertError } = await supabase
-        .from('system_logs')
-        .insert({
-          source: user_id,
-          action: 'opened_wkComparison_report',
-          status: 'success',
-          details: `Opened Report: Week #${week_number}, ${r.month} ${r.year}`,
-        });
-
-      if (insertError) throw insertError;
-    }
-  }
+  if (insertError) throw insertError;
 }
 
 export default function WeeklyComparisonReports({
@@ -92,6 +76,8 @@ export default function WeeklyComparisonReports({
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const { reportToOpen, setReportToOpen, refreshTrigger } = useApp();  // ADD refreshTrigger
+  const { profile } = useAuth();
+  const role = profile?.role ?? null
 
   const fetchReports = async () => {
     if (!userId) return;
@@ -123,11 +109,11 @@ export default function WeeklyComparisonReports({
       if (report) {
         setSelectedReport(report)
         setIsEditing(false)
-        logWeeklyComparisonReportOpen(userId, report)
+        logWeeklyComparisonReportOpen(userId, report, role)
         setReportToOpen(null)
       }
     }
-  }, [reportToOpen, reports, userId, setReportToOpen])
+  }, [reportToOpen, reports, role, setReportToOpen, userId])
 
   const filteredReports = reports.filter((r) => {
     return (!filterMonth || r.month === filterMonth) &&
@@ -203,7 +189,7 @@ export default function WeeklyComparisonReports({
                 <div
                   onClick={() => {
                     setSelectedReport(r);
-                    logWeeklyComparisonReportOpen(userId, r);
+                    logWeeklyComparisonReportOpen(userId, r, role);
                     setIsEditing(false);
                   }}
                   className="flex-1 flex flex-col gap-1"

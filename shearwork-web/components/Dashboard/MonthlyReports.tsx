@@ -9,6 +9,7 @@ import ReportModal from './ReportModal'
 import toast from 'react-hot-toast'
 import { createPortal } from 'react-dom'
 import { useApp } from '@/contexts/AppContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 type MonthlyReport = {
   id: string
@@ -26,36 +27,19 @@ interface MonthlyReportsProps {
   isAdmin?: boolean
 }
 
-async function logMonthlyReportOpen(user_id: string, r: any) {
-  const { data: { session }, error: sessionError, } = await supabase.auth.getSession()
+async function logMonthlyReportOpen(user_id: string, r: any, role: string | null) {
+  if (!role || role === 'Admin') return
 
-  if (sessionError) {
-    console.error('Error fetching session:', sessionError.message)
-    return
-  }
+  const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+      source: user_id,
+      action: 'opened_monthly_report',
+      status: 'success',
+      details: `Opened Report: ${r.month} ${r.year}`,
+    })
 
-  if (session?.user) {
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', session.user.id)
-      .single()
-
-    if (profileError) throw profileError
-    
-    if (profileData?.role != "Admin") {
-      const { error: insertError } = await supabase
-        .from('system_logs')
-        .insert({
-          source: user_id,
-          action: 'opened_monthly_report',
-          status: 'success',
-          details: `Opened Report: ${r.month} ${r.year}`,
-        });
-
-      if (insertError) throw insertError;
-    }
-  }
+  if (insertError) throw insertError
 }
 
 export default function MonthlyReports({
@@ -71,6 +55,8 @@ export default function MonthlyReports({
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const { reportToOpen, setReportToOpen, refreshTrigger } = useApp()  // ADD refreshTrigger
+  const { profile } = useAuth()
+  const role = profile?.role ?? null
 
   const fetchMonthlyReports = async () => {
     if (!userId) return
@@ -105,11 +91,11 @@ export default function MonthlyReports({
       if (report) {
         setSelectedReport(report)
         setIsEditing(false)
-        logMonthlyReportOpen(userId, report)
+        logMonthlyReportOpen(userId, report, role)
         setReportToOpen(null)
       }
     }
-  }, [reportToOpen, reports, userId, setReportToOpen])
+  }, [reportToOpen, reports, role, setReportToOpen, userId])
 
   const filteredReports = reports.filter((r) => {
     return (!filterMonth || r.month === filterMonth) &&
@@ -183,7 +169,7 @@ export default function MonthlyReports({
               }}
               onClick={() => {
                 setSelectedReport(r)
-                logMonthlyReportOpen(userId, r);
+                logMonthlyReportOpen(userId, r, role)
                 setIsEditing(false)
               }}
             >

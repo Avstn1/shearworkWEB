@@ -8,10 +8,10 @@ import {
   useRef,
   ReactNode,
   useMemo,
-  useCallback
+  useCallback,
 } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { User, PostgrestSingleResponse } from '@supabase/supabase-js'
+import type { AuthChangeEvent, PostgrestSingleResponse, Session, User } from '@supabase/supabase-js'
 
 interface Profile {
   role: string
@@ -21,6 +21,8 @@ interface Profile {
   trial_start?: string | null
   trial_end?: string | null
   onboarded?: boolean | null
+  special_access?: boolean | null
+  last_read_feature_updates?: string | null
   [key: string]: unknown
 }
 
@@ -35,7 +37,6 @@ interface AuthContextType {
   profileStatus: ProfileStatus
 }
 
-const SESSION_TIMEOUT_MS = 8000
 const PROFILE_TIMEOUT_MS = 15000
 const PROFILE_RETRY_DELAY_MS = 1200
 const MAX_PROFILE_RETRIES = 2
@@ -62,7 +63,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: false,
   isAdmin: false,
   isPremiumUser: false,
-  profileStatus: 'idle'
+  profileStatus: 'idle',
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -72,12 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>('idle')
 
   const profileFetchInFlight = useRef(false)
-  const initInFlight = useRef(false)
   const profileRetryCount = useRef(0)
+  const initialProfileLoaded = useRef(false)
+  const sessionCleanupTriggered = useRef(false)
+  const initialSessionResolved = useRef(false)
 
-  // -----------------------------
-  // LOAD PROFILE (SINGLE SOURCE)
-  // -----------------------------
+  const resetAuthState = useCallback(() => {
+    setUser(null)
+    setProfile(null)
+    setProfileStatus('idle')
+    profileRetryCount.current = 0
+    setIsLoading(false)
+    initialProfileLoaded.current = true
+  }, [])
+
   const loadProfile = useCallback(async (userId: string): Promise<void> => {
     if (profileFetchInFlight.current) return
     profileFetchInFlight.current = true
@@ -87,7 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fetchProfile = async (attempt: number): Promise<PostgrestSingleResponse<Profile>> => {
         const profilePromise = supabase
           .from('profiles')
-          .select('role, stripe_subscription_status, full_name, trial_active, trial_start, trial_end, onboarded')
+          .select(
+            'role, stripe_subscription_status, full_name, trial_active, trial_start, trial_end, onboarded, special_access, last_read_feature_updates'
+          )
           .eq('user_id', userId)
           .maybeSingle() as unknown as Promise<PostgrestSingleResponse<Profile>>
 
@@ -138,108 +149,93 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // -----------------------------
-  // INITIAL SESSION LOAD
-  // -----------------------------
   useEffect(() => {
     let mounted = true
 
-    const init = async () => {
-      if (initInFlight.current) return
-      initInFlight.current = true
-
-      type SessionResult = Awaited<ReturnType<typeof supabase.auth.getSession>>
-      let sessionResult: SessionResult | null = null
-      type UserResult = Awaited<ReturnType<typeof supabase.auth.getUser>>
-      let userResult: UserResult | null = null
-
-      try {
-        sessionResult = await withTimeout(
-          supabase.auth.getSession(),
-          SESSION_TIMEOUT_MS,
-          'Session load'
-        )
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Session load failed'
-        console.error(message)
-      }
-
+    const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return
 
-      const session = sessionResult?.data?.session ?? null
-      const sessionError = sessionResult?.error ?? null
+      if (event === 'INITIAL_SESSION') {
+        initialSessionResolved.current = true
+        if (session?.user) {
+          if (!session.refresh_token) {
+            if (!sessionCleanupTriggered.current) {
+              sessionCleanupTriggered.current = true
+              try {
+                await supabase.auth.signOut({ scope: 'local' })
+              } catch (error) {
+                console.error('Auth cleanup failed:', error)
+              }
+            }
+            resetAuthState()
+            return
+          }
 
-        if (sessionError || !session?.user) {
-        try {
-          userResult = await withTimeout(
-            supabase.auth.getUser(),
-            SESSION_TIMEOUT_MS,
-            'User load'
-          )
-        } catch (err) {
-          const message = err instanceof Error ? err.message : 'User load failed'
-          console.error(message)
-        }
-
-        const fallbackUser = userResult?.data?.user ?? null
-
-        if (fallbackUser) {
-          setUser(fallbackUser)
-          setIsLoading(false)
-          void loadProfile(fallbackUser.id)
-          initInFlight.current = false
+          setUser(session.user)
           return
         }
 
-        setUser(null)
-        setProfile(null)
-        setProfileStatus('idle')
-        profileRetryCount.current = 0
-        setIsLoading(false)
-        initInFlight.current = false
+        resetAuthState()
         return
       }
 
-      setUser(session.user)
-      setIsLoading(false)
-      void loadProfile(session.user.id)
-      initInFlight.current = false
+      if (event === 'SIGNED_OUT') {
+        resetAuthState()
+        return
+      }
+
+      if (
+        (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') &&
+        session?.user
+      ) {
+        setUser(session.user)
+      }
     }
 
-    init()
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return
-
-        if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setProfile(null)
-          setProfileStatus('idle')
-          profileRetryCount.current = 0
-          setIsLoading(false)
-          return
-        }
-
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-          setUser(session.user)
-          void loadProfile(session.user.id)
-          setIsLoading(false)
-        }
-      }
-    )
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      void handleAuthChange(event, session)
+    })
 
     return () => {
       mounted = false
       subscription.subscription.unsubscribe()
     }
-  }, [loadProfile])
+  }, [resetAuthState])
 
-  // -----------------------------
-  // DERIVED FLAGS (UNCHANGED)
-  // -----------------------------
-  const isAdmin =
-    profile?.role === 'Admin' || profile?.role === 'Owner'
+  useEffect(() => {
+    let active = true
+
+    if (!user?.id) {
+      if (!initialSessionResolved.current) {
+        return
+      }
+      setProfile(null)
+      setProfileStatus('idle')
+      profileRetryCount.current = 0
+      if (!initialProfileLoaded.current) {
+        setIsLoading(false)
+        initialProfileLoaded.current = true
+      }
+      return
+    }
+
+    const run = async () => {
+      await loadProfile(user.id)
+      if (!active) return
+      if (!initialProfileLoaded.current) {
+        setIsLoading(false)
+        initialProfileLoaded.current = true
+      }
+    }
+
+    run()
+
+    return () => {
+      active = false
+    }
+  }, [user?.id, loadProfile])
+
+  const isAdmin = profile?.role === 'Admin' || profile?.role === 'Owner'
 
   const isPremiumUser =
     profile?.stripe_subscription_status === 'active' ||
@@ -252,7 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAdmin,
       isPremiumUser,
-      profileStatus
+      profileStatus,
     }),
     [user, profile, isLoading, isAdmin, isPremiumUser, profileStatus]
   )

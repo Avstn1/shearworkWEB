@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { format } from 'date-fns'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface SummaryData {
   date: string
@@ -18,23 +19,22 @@ export default function DashboardSummary() {
   const [summary, setSummary] = useState<SummaryData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchSummary = async () => {
+      if (!user?.id) {
+        setSummary([])
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          setSummary([])
-          return
-        }
-
-        const userId = session.user.id
-
         const { data, error } = await supabase
           .from('barber_summary')
           .select('*')
-          .eq('user_id', userId)
+          .eq('user_id', user.id)
           .order('date', { ascending: false })
 
         if (error) throw error
@@ -48,7 +48,7 @@ export default function DashboardSummary() {
     }
 
     fetchSummary()
-  }, [])
+  }, [user?.id])
 
   if (loading) return <p className="text-gray-400">Loading summary...</p>
   if (error) return <p className="text-red-400 bg-gray-800 p-2 rounded">{error}</p>
