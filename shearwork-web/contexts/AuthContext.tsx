@@ -11,6 +11,7 @@ import {
   useCallback,
 } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import { isTrialActive } from '@/utils/trial'
 import type { AuthChangeEvent, PostgrestSingleResponse, Session, User } from '@supabase/supabase-js'
 
 interface Profile {
@@ -35,6 +36,7 @@ interface AuthContextType {
   isAdmin: boolean
   isPremiumUser: boolean
   profileStatus: ProfileStatus
+  refreshProfile: () => Promise<void>
 }
 
 const PROFILE_TIMEOUT_MS = 15000
@@ -64,6 +66,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isPremiumUser: false,
   profileStatus: 'idle',
+  refreshProfile: async () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -235,11 +238,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id, loadProfile])
 
+  const refreshProfile = useCallback(async () => {
+    if (!user?.id) return
+    await loadProfile(user.id)
+  }, [loadProfile, user?.id])
+
   const isAdmin = profile?.role === 'Admin' || profile?.role === 'Owner'
 
   const isPremiumUser =
     profile?.stripe_subscription_status === 'active' ||
-    profile?.stripe_subscription_status === 'trialing'
+    isTrialActive(profile)
 
   const value = useMemo(
     () => ({
@@ -249,8 +257,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin,
       isPremiumUser,
       profileStatus,
+      refreshProfile,
     }),
-    [user, profile, isLoading, isAdmin, isPremiumUser, profileStatus]
+    [user, profile, isLoading, isAdmin, isPremiumUser, profileStatus, refreshProfile]
   )
 
   return (

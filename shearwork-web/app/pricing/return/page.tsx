@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
+import { useAuth } from '@/contexts/AuthContext'
 import EditableAvatar from '@/components/EditableAvatar'
 import ConnectAcuityButton from '@/components/ConnectAcuityButton'
 import ConnectSquareButton from '@/components/ConnectSquareButton'
+import { isTrialActive } from '@/utils/trial'
 
 type BillingSummary = {
   hasSubscription: boolean
@@ -24,6 +26,7 @@ type BillingSummary = {
 function PricingReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { refreshProfile } = useAuth()
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<BillingSummary | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
@@ -122,21 +125,9 @@ function PricingReturnContent() {
     })
   }
 
-  const isTrialProfileActive = (profileData?: {
-    trial_active?: boolean | null
-    trial_start?: string | null
-    trial_end?: string | null
-  } | null) => {
-    if (!profileData?.trial_active || !profileData.trial_start || !profileData.trial_end) return false
-    const start = new Date(profileData.trial_start)
-    const end = new Date(profileData.trial_end)
-    const now = new Date()
-    return now >= start && now <= end
-  }
-
   const hasSub = summary?.hasSubscription ?? false
-  const isTrialActive = isTrialProfileActive(profile)
-  const hasAccess = hasSub || isTrialActive
+  const trialActive = isTrialActive(profile)
+  const hasAccess = hasSub || trialActive
   const interval = summary?.price?.interval
   const intervalLabel =
     interval === 'year' ? 'yearly' : interval === 'month' ? 'monthly' : 'recurring'
@@ -216,7 +207,9 @@ function PricingReturnContent() {
       if (updateError) throw updateError
 
       setProfileStepComplete(true)
+      setProfile(prev => (prev ? { ...prev, onboarded: true } : prev))
       toast.success('Profile saved')
+      await refreshProfile()
       router.push('/dashboard')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save profile'
@@ -261,7 +254,7 @@ function PricingReturnContent() {
               per {interval === 'year' ? 'year' : 'month'} unless you cancel.
             </p>
           </>
-        ) : isTrialActive ? (
+        ) : trialActive ? (
           <>
             <p className="text-lg font-semibold">Your free trial is active 🎉</p>
             <p className="text-sm text-gray-300">

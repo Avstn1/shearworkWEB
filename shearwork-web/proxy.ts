@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { isTrialActive } from '@/utils/trial'
 
 export default async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
@@ -40,17 +41,18 @@ export default async function middleware(request: NextRequest) {
   // -----------------------------
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, stripe_subscription_status, cancel_at_period_end, onboarded')
+    .select('role, stripe_subscription_status, cancel_at_period_end, onboarded, trial_active, trial_start, trial_end')
     .eq('user_id', user.id)
     .maybeSingle()
 
   const role = profile?.role?.toLowerCase()
   const subStatus = profile?.stripe_subscription_status
+  const hasTrialAccess = isTrialActive(profile)
 
   // -----------------------------
   // ACTIVE/TRIAL REDIRECTS
   // -----------------------------
-  if (subStatus === 'active' || subStatus === 'trialing') {
+  if (subStatus === 'active' || hasTrialAccess) {
     if (pathname === '/pricing') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
@@ -71,7 +73,7 @@ export default async function middleware(request: NextRequest) {
   ]
 
   const hasPremiumAccess =
-    subStatus === 'active' || subStatus === 'trialing'
+    subStatus === 'active' || hasTrialAccess
 
   if (
     role !== 'admin' &&
