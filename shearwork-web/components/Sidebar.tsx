@@ -264,7 +264,7 @@ export default function Sidebar() {
               ©
             </div>
             <div className="text-xs text-white/40 text-center hidden group-hover:block">
-              © 2025 Corva
+              © {new Date().getFullYear()} Corva
             </div>
           </div>
         </div>

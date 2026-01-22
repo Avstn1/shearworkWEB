@@ -230,11 +230,14 @@ export default function MarketingFunnelsChart({
               <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#E8EDC7" hide />
               
               <YAxis
+                yAxisId="hidden"
                 type="category"
                 dataKey="source"
-                stroke="#E8EDC7"
-                width={60}   
-                style={{ fontSize: labelFontSize }}
+                axisLine={false}
+                tick={false}
+                tickLine={false}
+                width={0}
+                hide={true}
               />
 
               <Tooltip
