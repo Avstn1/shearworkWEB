@@ -42,7 +42,6 @@ interface MessageCardProps {
   tempTitle: string;
   previewCount?: number;
   loadingPreview: boolean;
-  testMessagesUsed: number; 
   campaignProgress?: CampaignProgress;
   onLoadPreview: (limit: number) => void;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
@@ -52,7 +51,6 @@ interface MessageCardProps {
   onSave: (msgId: string, mode: 'draft' | 'activate') => void;
   onValidate: (msgId: string) => void;
   onRequestTest: (msgId: string) => void;
-  onTestComplete: () => void;
   onStartEditingTitle: (id: string, currentTitle: string) => void;
   onSaveTitle: (id: string) => void;
   onCancelEditTitle: () => void;
@@ -68,7 +66,6 @@ export function MessageCard({
   message: msg,
   index,
   isSaving,
-  testMessagesUsed,
   savingMode,
   validatingId,
   editingTitleId,
@@ -448,15 +445,14 @@ export function MessageCard({
                     className="overflow-hidden"
                   >
                     <div className="p-3 border-t border-white/10">
-                      <MessageContent
-                        profile={profile}
-                        message={msg}
-                        validatingId={validatingId}
-                        testMessagesUsed={testMessagesUsed} 
-                        onUpdate={onUpdate}
-                        onValidate={onValidate}
-                        onRequestTest={onRequestTest} 
-                      />
+                    <MessageContent
+                      profile={profile}
+                      message={msg}
+                      validatingId={validatingId}
+                      onUpdate={onUpdate}
+                      onValidate={onValidate}
+                      onRequestTest={onRequestTest}
+                    />
                     </div>
                   </motion.div>
                 )}
@@ -538,15 +534,14 @@ export function MessageCard({
                     <div className="p-3 sm:p-4 lg:p-6 border-t border-white/10">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                         {/* LEFT: Message Content (50%) */}
-                        <MessageContent
-                          profile={profile}
-                          message={msg}
-                          validatingId={validatingId}
-                          testMessagesUsed={testMessagesUsed} 
-                          onUpdate={onUpdate}
-                          onValidate={onValidate}
-                          onRequestTest={onRequestTest} 
-                        />
+                          <MessageContent
+                            profile={profile}
+                            message={msg}
+                            validatingId={validatingId}
+                            onUpdate={onUpdate}
+                            onValidate={onValidate}
+                            onRequestTest={onRequestTest}
+                          />
 
                         {/* RIGHT: Schedule Settings (50%) */}
                         <MessageSchedule

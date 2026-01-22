@@ -89,7 +89,6 @@ export default function SMSCampaigns() {
   } | null>(null);
   const [isTrialUser, setIsTrialUser] = useState(false);
 
-  const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
   const [pendingTestMessageId, setPendingTestMessageId] = useState<string | null>(null);
   const [previewModalKey, setPreviewModalKey] = useState(0);
   const [previewLimit, setPreviewLimit] = useState(50);
@@ -150,7 +149,6 @@ export default function SMSCampaigns() {
   useEffect(() => {
     loadMessages();
     fetchCredits();
-    fetchTestMessageCount();
   }, []);
 
   // Load preview counts for all messages
@@ -219,34 +217,6 @@ export default function SMSCampaigns() {
 
     return () => clearInterval(interval);
   }, [messages, campaignProgress]);
-
-  const fetchTestMessageCount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get start of today in user's timezone
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { data, error } = await supabase
-        .from('sms_sent')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('purpose', 'test_message')
-        .eq('is_sent', true)
-        .gte('created_at', today.toISOString());
-
-      if (error) {
-        console.error('Failed to fetch test message count:', error);
-        return;
-      }
-
-      setTestMessagesUsed(data?.length || 0);
-    } catch (error) {
-      console.error('Failed to fetch test message count:', error);
-    }
-  };
 
   const fetchCredits = async () => {
     try {
@@ -858,50 +828,9 @@ export default function SMSCampaigns() {
         throw new Error(data.error || 'Failed to send test message');
       }
 
-      setTestMessagesUsed(testMessagesUsed + 1);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('available_credits, reserved_credits')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profile) {
-          const oldAvailable = profile.available_credits || 0;
-          const newAvailable = oldAvailable - 1;
-          const oldReserved = profile.reserved_credits || 0;
-          const newReserved = oldReserved;
-
-          const { error: creditUpdateError } = await supabase
-            .from('profiles')
-            .update({ available_credits: newAvailable })
-            .eq('user_id', user.id);
-
-          if (creditUpdateError) {
-            console.error('Failed to update credits:', creditUpdateError);
-          }
-
-          await supabase
-            .from('credit_transactions')
-            .insert({
-              user_id: user.id,
-              action: `Test message - ${msg.title}`,
-              old_available: oldAvailable,
-              new_available: newAvailable,
-              old_reserved: oldReserved,
-              new_reserved: newReserved,
-              reference_id: msg.id,
-              created_at: new Date().toISOString()
-            });
-
-          setAvailableCredits(newAvailable);
-        }
-      }
+      setAvailableCredits(prev => Math.max(0, prev - 1));
 
       toast.success('Test message sent successfully to your phone!');
-      fetchTestMessageCount(); // Refresh test count
     } catch (error: unknown) {
       const message = getCampaignErrorMessage(error);
       console.error('Test message error:', message);
@@ -1042,7 +971,6 @@ export default function SMSCampaigns() {
             setPendingTestMessageId(null);
           }
         }}
-        testMessagesUsed={testMessagesUsed}
         availableCredits={availableCredits}
         profilePhone={profile?.phone || null}
       />
@@ -1122,7 +1050,6 @@ export default function SMSCampaigns() {
               <MessageCard
                 setLimitMode={setLimitMode}
                 maxClients={maxClients}
-                testMessagesUsed={testMessagesUsed}
                 profile={profile}
                 setAlgorithmType={setAlgorithmType}
                 availableCredits={availableCredits}
@@ -1208,7 +1135,6 @@ export default function SMSCampaigns() {
                   setPendingTestMessageId(msgId);
                   setShowTestConfirmModal(true);
                 }}
-                onTestComplete={() => fetchTestMessageCount()} 
               />
             ))}
           </div>

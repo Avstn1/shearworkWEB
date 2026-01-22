@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 interface MessageContentProps {
   message: SMSMessage;
   validatingId: string | null;
-  testMessagesUsed: number;
   profile: any;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onValidate: (msgId: string) => void;

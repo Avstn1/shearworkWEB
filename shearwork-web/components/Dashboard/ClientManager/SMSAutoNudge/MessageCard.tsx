@@ -34,7 +34,6 @@ interface MessageCardProps {
   editingTitleId: string | null;
   tempTitle: string;
   phoneNumbers: PhoneNumber[];
-  testMessagesUsed: number;
   isLocked?: boolean;
   autoNudgeCampaignProgress?: AutoNudgeCampaignProgress;
   isTrialPreview?: boolean;
@@ -57,7 +56,6 @@ export function MessageCard({
   message: msg,
   index,
   isSaving,
-  testMessagesUsed,
   savingMode,
   validatingId,
   editingTitleId,
@@ -471,7 +469,6 @@ export function MessageCard({
               <MessageContent
                 message={msg}
                 validatingId={validatingId}
-                testMessagesUsed={testMessagesUsed}
                 profile={profile}
                 onUpdate={onUpdate}
                 onValidate={onValidate}
@@ -561,7 +558,6 @@ export function MessageCard({
                       <MessageContent
                         message={msg}
                         validatingId={validatingId}
-                        testMessagesUsed={testMessagesUsed}
                         profile={profile}
                         onUpdate={onUpdate}
                         onValidate={onValidate}

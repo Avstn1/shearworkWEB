@@ -335,22 +335,18 @@ export default function DashboardPage() {
 
       {/* RIGHT COLUMN */}
       <div className="flex flex-col gap-4 pl-1">
-        {!isTrialUser && (
-          <motion.div variants={fadeInUp} className={cardClass}>
-            <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
-            <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-          </motion.div>
-        )}
+        <motion.div variants={fadeInUp} className={cardClass}>
+          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
+          <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+        </motion.div>
         <motion.div id="weekly-reports" variants={fadeInUp} className={cardClass}>
           <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
           <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
-        {!isTrialUser && (
-          <motion.div variants={fadeInUp} className={cardClass}>
-            <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
-            <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-          </motion.div>
-        )}
+        <motion.div variants={fadeInUp} className={cardClass}>
+          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
+          <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+        </motion.div>
       </div>
     </motion.div>
   )

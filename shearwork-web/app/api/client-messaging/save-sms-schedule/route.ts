@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { qstashClient } from '@/lib/qstashClient'
+import { isTrialActive } from '@/utils/trial'
 
 // Helper function to generate multiple cron expressions for days 29-31
 function generateCronExpressions(
@@ -240,6 +241,30 @@ export async function POST(request: Request) {
         { success: false, error: 'No messages provided' },
         { status: 400 }
       )
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('trial_active, trial_start, trial_end, stripe_subscription_status')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError) {
+      return NextResponse.json({ success: false, error: profileError.message }, { status: 500 })
+    }
+
+    const isTrialUser = isTrialActive(profile)
+    if (isTrialUser) {
+      const hasAutoNudgeActivation = messages.some(
+        (msg: any) => msg.purpose === 'auto-nudge' && msg.validationStatus === 'ACCEPTED'
+      )
+
+      if (hasAutoNudgeActivation) {
+        return NextResponse.json(
+          { success: false, error: 'Auto-Nudge activation is available after upgrading' },
+          { status: 403 }
+        )
+      }
     }
 
     // Validate messages based on their status

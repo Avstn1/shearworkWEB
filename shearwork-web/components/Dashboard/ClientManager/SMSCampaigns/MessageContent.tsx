@@ -10,7 +10,6 @@ interface MessageContentProps {
   profile: any;
   message: SMSMessage;
   validatingId: string | null;
-  testMessagesUsed: number;
   onUpdate: (id: string, updates: Partial<SMSMessage>) => void;
   onValidate: (msgId: string) => void;
   onRequestTest: (msgId: string) => void;

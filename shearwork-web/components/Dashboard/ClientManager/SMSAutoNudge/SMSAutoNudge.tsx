@@ -73,7 +73,6 @@ export default function SMSAutoNudge() {
 
   // Credits and test messages
   const [availableCredits, setAvailableCredits] = useState<number>(0);
-  const [testMessagesUsed, setTestMessagesUsed] = useState<number>(0);
   const [profile, setProfile] = useState<{
     full_name?: string | null
     email?: string | null
@@ -119,7 +118,6 @@ export default function SMSAutoNudge() {
       await loadMessages();
       await loadClientPreview();
       await fetchCredits();
-      await fetchTestMessageCount();
       setIsLoading(false); // Only after everything loads
     };
     
@@ -287,34 +285,6 @@ export default function SMSAutoNudge() {
       }
     } catch (error) {
       console.error('Failed to fetch credits:', error);
-    }
-  };
-
-  const fetchTestMessageCount = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get start of today in user's timezone
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const { data, error } = await supabase
-        .from('sms_sent')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('purpose', 'test_message')
-        .eq('is_sent', true)
-        .gte('created_at', today.toISOString());
-
-      if (error) {
-        console.error('Failed to fetch test message count:', error);
-        return;
-      }
-
-      setTestMessagesUsed(data?.length || 0);
-    } catch (error) {
-      console.error('Failed to fetch test message count:', error);
     }
   };
 
@@ -936,49 +906,9 @@ export default function SMSAutoNudge() {
         throw new Error(data.error || 'Failed to send test message');
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('available_credits, reserved_credits')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profile) {
-          const oldAvailable = profile.available_credits || 0;
-          const newAvailable = oldAvailable - 1;
-          const oldReserved = profile.reserved_credits || 0;
-          const newReserved = oldReserved;
-
-          const { error: creditUpdateError } = await supabase
-            .from('profiles')
-            .update({ available_credits: newAvailable })
-            .eq('user_id', user.id);
-
-          if (creditUpdateError) {
-            console.error('Failed to update credits:', creditUpdateError);
-          }
-
-          await supabase
-            .from('credit_transactions')
-            .insert({
-              user_id: user.id,
-              action: `Test message - ${msg.title}`,
-              old_available: oldAvailable,
-              new_available: newAvailable,
-              old_reserved: oldReserved,
-              new_reserved: newReserved,
-              reference_id: msg.id,
-              created_at: new Date().toISOString()
-            });
-
-          // Update local credits
-          setAvailableCredits(newAvailable);
-        }
-      }
+      setAvailableCredits(prev => Math.max(0, prev - 1));
 
       toast.success('Test message sent successfully to your phone!');
-      fetchTestMessageCount();
     } catch (error: unknown) {
       const message = getSessionErrorMessage(error);
       console.error('Test message error:', message);
@@ -1161,7 +1091,6 @@ export default function SMSAutoNudge() {
             setPendingTestMessageId(null);
           }
         }}
-        testMessagesUsed={testMessagesUsed}
         availableCredits={availableCredits}
         profilePhone={profile?.phone || null}
       />
@@ -1466,7 +1395,6 @@ export default function SMSAutoNudge() {
               editingTitleId={editingTitleId}
               tempTitle={tempTitle}
               phoneNumbers={phoneNumbersByType[msg.visitingType || 'consistent'] || []}
-              testMessagesUsed={testMessagesUsed}
               availableCredits={availableCredits}
               profile={profile}
               onUpdate={updateMessage}

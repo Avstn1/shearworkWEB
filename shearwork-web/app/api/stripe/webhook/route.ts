@@ -70,6 +70,59 @@ export async function POST(req: NextRequest) {
             trial_end: trialEnd ? trialEnd.toISOString() : null,
             trial_active: subscription?.status === 'trialing',
           })
+
+        if (session.metadata?.plan === 'trial') {
+          const { data: existingBonus, error: bonusError } = await supabase
+            .from('credit_transactions')
+            .select('id')
+            .eq('user_id', supabaseUserId)
+            .eq('action', 'trial_bonus')
+            .maybeSingle()
+
+          if (bonusError) {
+            console.error('Failed to check trial bonus:', bonusError)
+            break
+          }
+
+          if (!existingBonus) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('available_credits, reserved_credits')
+              .eq('user_id', supabaseUserId)
+              .single()
+
+            const oldAvailable = profile?.available_credits ?? 0
+            const oldReserved = profile?.reserved_credits ?? 0
+            const newAvailable = oldAvailable + 10
+
+            const { error: creditUpdateError } = await supabase
+              .from('profiles')
+              .update({ available_credits: newAvailable })
+              .eq('user_id', supabaseUserId)
+
+            if (creditUpdateError) {
+              console.error('Failed to apply trial credits:', creditUpdateError)
+              break
+            }
+
+            const { error: transactionError } = await supabase
+              .from('credit_transactions')
+              .insert({
+                user_id: supabaseUserId,
+                action: 'trial_bonus',
+                old_available: oldAvailable,
+                new_available: newAvailable,
+                old_reserved: oldReserved,
+                new_reserved: oldReserved,
+                reference_id: session.id,
+                created_at: new Date().toISOString(),
+              })
+
+            if (transactionError) {
+              console.error('Failed to log trial bonus:', transactionError)
+            }
+          }
+        }
         break
       }
 

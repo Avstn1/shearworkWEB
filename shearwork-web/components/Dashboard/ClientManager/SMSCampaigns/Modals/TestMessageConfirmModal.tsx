@@ -5,7 +5,6 @@ interface TestMessageConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  testMessagesUsed: number;
   availableCredits: number;
   profilePhone: string | null;
 }
