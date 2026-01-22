@@ -8,6 +8,7 @@ import ReportModal from './ReportModal'
 import toast from 'react-hot-toast'
 import { createPortal } from 'react-dom'
 import { useApp } from '@/contexts/AppContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 type WeeklyReport = {
   id: string
@@ -26,36 +27,19 @@ interface WeeklyReportsProps {
   isAdmin?: boolean
 }
 
-async function logWeeklyReportOpen(user_id: string, r: any) {
-  const { data: { session }, error: sessionError, } = await supabase.auth.getSession()
+async function logWeeklyReportOpen(user_id: string, r: any, role: string | null) {
+  if (!role || role === 'Admin') return
 
-  if (sessionError) {
-    console.error('Error fetching session:', sessionError.message)
-    return
-  }
+  const { error: insertError } = await supabase
+    .from('system_logs')
+    .insert({
+      source: user_id,
+      action: 'opened_weekly_report',
+      status: 'success',
+      details: `Opened Report: Week #${r.week_number}, ${r.month} ${r.year}`,
+    })
 
-  if (session?.user) {
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', session.user.id)
-      .single()
-
-    if (profileError) throw profileError
-    
-    if (profileData?.role != "Admin") {
-      const { error: insertError } = await supabase
-        .from('system_logs')
-        .insert({
-        source: user_id,
-        action: 'opened_weekly_report',
-        status: 'success',
-        details: `Opened Report: Week #${r.week_number}, ${r.month} ${r.year}`,
-      });
-
-      if (insertError) throw insertError;
-    }
-  }
+  if (insertError) throw insertError
 }
 
 export default function WeeklyReports({
@@ -75,6 +59,8 @@ export default function WeeklyReports({
   const [isEditing, setIsEditing] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const { reportToOpen, setReportToOpen, refreshTrigger } = useApp()  // ADD refreshTrigger
+  const { profile } = useAuth()
+  const role = profile?.role ?? null
 
   const fetchReports = async () => {
     const { data, error } = await supabase
@@ -104,11 +90,11 @@ export default function WeeklyReports({
       if (report) {
         setSelectedReport(report)
         setIsEditing(false)
-        logWeeklyReportOpen(userId, report)
+        logWeeklyReportOpen(userId, report, role)
         setReportToOpen(null)
       }
     }
-  }, [reportToOpen, reports, userId, setReportToOpen])
+  }, [reportToOpen, reports, role, setReportToOpen, userId])
 
   const filteredReports = reports.filter(
     (r) =>
@@ -162,7 +148,7 @@ export default function WeeklyReports({
               }}
               onClick={() => {
                 setSelectedReport(r)
-                logWeeklyReportOpen(userId, r);
+                logWeeklyReportOpen(userId, r, role)
                 setIsEditing(false)
               }}
             >

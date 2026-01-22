@@ -1,68 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase } from '@/utils/supabaseClient';
 import { Construction } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UnderConstructionWrapperProps {
   children: React.ReactNode;
 }
 
 export default function UnderConstructionWrapper({ children }: UnderConstructionWrapperProps) {
-  const [isTestAccount, setIsTestAccount] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
+  const { user, profile, isLoading } = useAuth();
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+  const hasSession = !!user;
+  const isTestAccount = Boolean(profile?.special_access);
 
-      if (!session?.user?.id) {
-        setHasSession(false);
-        setIsTestAccount(false);
-        setLoading(false);
-        return;
-      }
-
-      setHasSession(true);
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('special_access')
-        .eq('user_id', session.user.id)
-        .single();
-
-      if (error) {
-        console.error('Failed to fetch special_access:', error);
-        setIsTestAccount(false);
-      } else {
-        setIsTestAccount(Boolean(data?.special_access));
-      }
-
-      setLoading(false);
-    };
-
-    checkSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
-      checkSession();
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
-
-
-  if (loading) {
+  if (isLoading) {
     return <div className="flex items-center justify-center h-full">{children}</div>;
   }
 
-  if (!hasSession) {
-    return <>{children}</>;
-  }
-
-  if (isTestAccount) {
+  if (!hasSession || isTestAccount) {
     return <>{children}</>;
   }
 

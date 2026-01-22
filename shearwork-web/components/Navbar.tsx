@@ -11,6 +11,7 @@ import Tooltip from '@/components/Wrappers/Tooltip'
 import NotificationsDropdown from '@/components/NotificationsDropdown'
 import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 import CreditsModal from '@/components/Dashboard/CreditsModal'
+import { useAuth } from '@/contexts/AuthContext'
 
 // Color palette matching React Native app
 const COLORS = {
@@ -29,77 +30,12 @@ const COLORS = {
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [showCreditsModal, setShowCreditsModal] = useState(false)
   const [showFeaturesModal, setShowFeaturesModal] = useState(false)
   const [hasUnreadFeatures, setHasUnreadFeatures] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-
-  // Fetch user role helper
-  const fetchUserRole = async (userId: string) => {
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('user_id', userId)
-        .single()
-
-      if (profileError) throw profileError
-      setUserRole(profileData.role)
-    } catch (err: any) {
-      console.error('Error fetching user role:', err.message)
-    }
-  }
-
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession()
-
-        if (sessionError) {
-          console.error('Error fetching session:', sessionError.message)
-          setUser(null)
-          return
-        }
-
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          await fetchUserRole(session.user.id)
-        }
-      } catch (err: any) {
-        console.error('Unexpected error fetching user:', err.message)
-        setUser(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    getUser()
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
-        setUser(session?.user || null)
-        
-        // Fetch role when signing in
-        if (session?.user) {
-          await fetchUserRole(session.user.id)
-        }
-      }
-      
-      if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setUserRole(null)
-      }
-    })
-
-    return () => subscription.subscription.unsubscribe()
-  }, [])
+  const { user, profile } = useAuth()
+  const userRole = profile?.role ?? null
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -115,29 +51,21 @@ export default function Navbar() {
 
   useEffect(() => {
     checkUnreadFeatures()
-  }, [user])
+  }, [user?.id, profile?.last_read_feature_updates])
 
   useEffect(() => {
     if (hasUnreadFeatures && user?.id) {
       setShowFeaturesModal(true)
     }
-
-    checkUnreadFeatures()
   }, [hasUnreadFeatures, user?.id])
 
   const checkUnreadFeatures = async () => {
-    if (!user?.id) return
+    if (!user?.id) {
+      setHasUnreadFeatures(false)
+      return
+    }
 
     try {
-      // Get user's last read timestamp
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('last_read_feature_updates')
-        .eq('user_id', user.id)
-        .single()
-
-      if (profileError) throw profileError
-
       // Get most recent published feature update
       const { data: latestFeature, error: featureError } = await supabase
         .from('feature_updates')
@@ -155,7 +83,7 @@ export default function Navbar() {
         return
       }
 
-      const lastRead = profileData?.last_read_feature_updates
+      const lastRead = profile?.last_read_feature_updates
       const latestUpdate = latestFeature.updated_at
 
       setHasUnreadFeatures(!lastRead || new Date(lastRead) < new Date(latestUpdate))

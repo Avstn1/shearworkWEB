@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import SignOutButton from '@/components/SignOutButton'
-import { supabase } from '@/utils/supabaseClient'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 
 const navLinksBase = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -23,10 +23,9 @@ const navItemVariants = {
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [loadingRole, setLoadingRole] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const { user, profile, isLoading, isAdmin } = useAuth()
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -36,36 +35,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    const fetchUserRoleAndOnboarding = async () => {
-      try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError) throw authError
-        if (!user) return
+    if (isLoading) return
+    if (!user?.id) return
 
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, onboarded')
-          .eq('user_id', user.id)
-          .maybeSingle()
-        if (profileError) throw profileError
-
-        const publicPages = ['/login', '/signup', '/pricing', '/pricing/return']
-        if (profile && profile.onboarded === false && !publicPages.includes(pathname)) {
-          router.push('/pricing/return')
-        }
-
-        if (profile?.role?.toLowerCase() === 'admin' || profile?.role?.toLowerCase() === 'owner') {
-          setIsAdmin(true)
-        }
-      } catch (err) {
-        console.error('Error fetching user role or onboarding status:', err)
-      } finally {
-        setLoadingRole(false)
-      }
+    const publicPages = ['/login', '/signup', '/pricing', '/pricing/return']
+    if (profile?.onboarded === false && !publicPages.includes(pathname)) {
+      router.push('/pricing/return')
     }
-
-    fetchUserRoleAndOnboarding()
-  }, [pathname, router])
+  }, [isLoading, pathname, profile?.onboarded, router, user?.id])
 
   const navLinks = isAdmin
     ? navLinksBase.filter(link => link.href !== '/dashboard').concat({
@@ -74,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       })
     : navLinksBase
 
-  if (loadingRole) return <p>Loading components/layout...</p>
+  if (isLoading) return <p>Loading components/layout...</p>
 
   return (
     <div className="flex flex-col sm:flex-row min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">

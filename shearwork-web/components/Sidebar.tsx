@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   Grid, 
   UserCog, 
@@ -22,6 +23,7 @@ const COLORS = {
 }
 
 export default function Sidebar() {
+  const { user, profile } = useAuth()
   const [hasSession, setHasSession] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [hasUnreadFeatures, setHasUnreadFeatures] = useState(false)
@@ -30,23 +32,15 @@ export default function Sidebar() {
   const pathname = usePathname()
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setHasSession(!!session)
-      setUserId(session?.user?.id || null)
-      
-      if (session?.user?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('special_access')
-          .eq('user_id', session.user.id)
-          .single()
-        
-        setSpecialAccess(profile?.special_access || false)
-        checkUnreadFeatures(session.user.id)
-      }
+    setHasSession(!!user)
+    setUserId(user?.id || null)
+    setSpecialAccess(Boolean(profile?.special_access))
+
+    if (user?.id && profile) {
+      checkUnreadFeatures(profile?.last_read_feature_updates)
+    } else {
+      setHasUnreadFeatures(false)
     }
-    checkSession()
 
     // Set CSS variable for main content offset
     const updateSidebarWidth = () => {
@@ -61,18 +55,10 @@ export default function Sidebar() {
     window.addEventListener('resize', updateSidebarWidth)
     
     return () => window.removeEventListener('resize', updateSidebarWidth)
-  }, [])
+  }, [user?.id, profile?.special_access, profile?.last_read_feature_updates])
 
-  const checkUnreadFeatures = async (uid: string) => {
+  const checkUnreadFeatures = async (lastRead?: string | null) => {
     try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('last_read_feature_updates')
-        .eq('user_id', uid)
-        .single()
-
-      if (profileError) throw profileError
-
       const { data: latestFeature, error: featureError } = await supabase
         .from('feature_updates')
         .select('updated_at')
@@ -88,7 +74,6 @@ export default function Sidebar() {
         return
       }
 
-      const lastRead = profileData?.last_read_feature_updates
       const latestUpdate = latestFeature.updated_at
 
       const hasUnread = !lastRead || new Date(lastRead) < new Date(latestUpdate)
