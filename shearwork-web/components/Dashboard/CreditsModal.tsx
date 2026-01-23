@@ -184,6 +184,20 @@ export default function CreditsModal({
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const className = 'tutorial-hide-credits';
+    if (isOpen) {
+      document.body.classList.add(className);
+    } else {
+      document.body.classList.remove(className);
+    }
+
+    return () => {
+      document.body.classList.remove(className);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     if (isOpen) {
       fetchCredits();
       fetchPricing();

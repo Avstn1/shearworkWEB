@@ -15,6 +15,9 @@ import LogoutTab from '@/components/Settings/LogoutTab'
 import BillingSection from '@/components/Settings/BillingSection'
 import CreditsModal from '@/components/Dashboard/CreditsModal'
 import SquareTab from '@/components/Settings/SquareTab'
+import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
+import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
+import { SETTINGS_TUTORIAL_STEPS } from '@/lib/tutorials/settings'
 
 const fadeInUp: Variants = {
 	hidden: { opacity: 0, y: 20 },
@@ -202,9 +205,23 @@ function SettingsPageContent() {
         )}
         
         <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-white">Settings</h1>
+              <TutorialLauncher
+                pageKey="settings"
+                steps={SETTINGS_TUTORIAL_STEPS}
+                context={{ setActiveTab }}
+                renderTrigger={(openTutorial) => (
+                  <TutorialInfoButton onClick={openTutorial} label="Settings tutorial" />
+                )}
+              />
+            </div>
+            <p className="text-xs text-[#bdbdbd]">Manage your profile, billing, and integrations.</p>
+          </div>
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Desktop Sidebar */}
-            <div className="hidden lg:flex w-64 flex-shrink-0">
+            <div data-tutorial-id="settings-tabs" className="hidden lg:flex w-64 flex-shrink-0">
               <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
 
@@ -225,6 +242,7 @@ function SettingsPageContent() {
               initial="hidden"
               animate="visible"
               exit="exit"
+              data-tutorial-id={`settings-tab-${activeTab}`}
               className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-xl min-h-[600px]"
             >
               <AnimatePresence mode="wait">{renderTab()}</AnimatePresence>
