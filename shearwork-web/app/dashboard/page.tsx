@@ -78,6 +78,7 @@ export default function DashboardPage() {
   const firstSyncAfterConnect = useRef(false)
   const isSyncing = useRef(false)
   const showGettingStarted = isTrialUser
+  const showTrialNote = isTrialUser && !profile?.onboarded
 
 
   const cardClass =
@@ -367,6 +368,12 @@ export default function DashboardPage() {
   const content = (
     <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
       <DashboardHeader />
+      {showTrialNote && (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[#bdbdbd]">
+          <span className="font-semibold text-white">Getting started:</span> Data will populate after your first sync.
+          Use the Re‑sync button above after connecting your calendar.
+        </div>
+      )}
       {showGettingStarted && (
         <GettingStartedTips
           userId={user.id}

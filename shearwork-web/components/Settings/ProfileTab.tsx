@@ -380,22 +380,31 @@ export default function ProfileTab() {
       {/* Avatar + User Info Card */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
         <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-          <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-            <EditableAvatar
-              avatarUrl={profile.avatar_url || '/default-avatar.png'}
-              fullName={profile.full_name}
-              size={96}
-            />
-            <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <Upload className="w-6 h-6 text-white" />
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+              <EditableAvatar
+                avatarUrl={profile.avatar_url || '/default-avatar.png'}
+                fullName={profile.full_name}
+                size={96}
+              />
+              <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Upload className="w-6 h-6 text-white" />
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarChange}
-            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-full px-4 py-1 hover:border-white/20"
+            >
+              Change photo
+            </button>
           </div>
 
           <div className="space-y-2 flex-1">

@@ -17,9 +17,9 @@ export default function LogoutTab() {
 
   return (
     <div className="flex flex-col items-center justify-center py-12 space-y-8">
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-md w-full space-y-6 text-center">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-md w-full space-y-6 text-center shadow-xl">
         <div className="flex justify-center">
-          <div className="p-4 bg-rose-500/20 rounded-full border border-rose-500/30">
+          <div className="p-4 bg-rose-500/15 rounded-full border border-rose-500/30">
             <AlertTriangle className="w-8 h-8 text-rose-400" />
           </div>
         </div>
@@ -33,7 +33,7 @@ export default function LogoutTab() {
 
         <button 
           onClick={logout} 
-          className="w-full px-6 py-3 bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-rose-500/20 transition-all flex items-center justify-center gap-2"
+          className="w-full px-6 py-3 bg-rose-500/20 border border-rose-500/30 text-rose-100 font-semibold rounded-xl hover:bg-rose-500/30 transition-all flex items-center justify-center gap-2"
         >
           <LogOut className="w-5 h-5" />
           Sign Out

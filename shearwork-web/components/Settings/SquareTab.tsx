@@ -35,6 +35,7 @@ const MONTHS = [
 export default function SquareTab() {
 	const [loading, setLoading] = useState(true)
 	const [connected, setConnected] = useState(false)
+	const [acuityConnected, setAcuityConnected] = useState(false)
 	const [locations, setLocations] = useState<SquareLocation[]>([])
 	const [initialLocationIds, setInitialLocationIds] = useState<string[]>([])
 	const [loadingLocations, setLoadingLocations] = useState(false)
@@ -100,6 +101,10 @@ export default function SquareTab() {
 			const res = await fetch('/api/square/status', { cache: 'no-store' })
 			const body = await res.json()
 
+			const acuityRes = await fetch('/api/acuity/status', { cache: 'no-store' })
+			const acuityData = acuityRes.ok ? await acuityRes.json() : null
+			setAcuityConnected(Boolean(acuityData?.connected))
+
 			if (res.ok && body?.connected) {
 				setConnected(true)
 				await loadLocations()
@@ -111,12 +116,26 @@ export default function SquareTab() {
 			}
 		} catch (e) {
 			setConnected(false)
+			setAcuityConnected(false)
 			setLocations([])
 			setInitialLocationIds([])
 			setConfirmingLocationChange(false)
 		} finally {
 			setLoading(false)
 		}
+	}
+
+	const handleBeforeConnect = async () => {
+		if (!acuityConnected) return true
+		const toastId = toast.loading('Disconnecting Acuity...')
+		const res = await fetch('/api/acuity/disconnect', { method: 'POST' })
+		if (!res.ok) {
+			toast.error('Failed to disconnect Acuity', { id: toastId })
+			return false
+		}
+		toast.success('Acuity disconnected', { id: toastId })
+		setAcuityConnected(false)
+		return true
 	}
 
 	const handleDisconnect = async () => {
@@ -278,7 +297,14 @@ export default function SquareTab() {
 						Disconnect Square
 					</button>
 				) : (
-					<ConnectSquareButton onConnectSuccess={loadStatus} />
+					<div className="space-y-2">
+						<ConnectSquareButton onConnectSuccess={loadStatus} onBeforeConnect={handleBeforeConnect} />
+						{acuityConnected && (
+							<p className="text-xs text-amber-200">
+								Connecting Square will disconnect Acuity to keep one active provider.
+							</p>
+						)}
+					</div>
 				)}
 			</div>
 

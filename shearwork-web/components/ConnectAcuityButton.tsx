@@ -4,11 +4,20 @@ import { useEffect, useState } from 'react'
 
 interface ConnectAcuityButtonProps {
   onConnectSuccess?: () => void
+  onBeforeConnect?: () => Promise<boolean | void>
+  disabled?: boolean
+  disabledReason?: string
 }
 
-export default function ConnectAcuityButton({ onConnectSuccess }: ConnectAcuityButtonProps) {
+export default function ConnectAcuityButton({
+  onConnectSuccess,
+  onBeforeConnect,
+  disabled = false,
+  disabledReason,
+}: ConnectAcuityButtonProps) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
+  const [preparing, setPreparing] = useState(false)
 
   // Track initial connection state
   const [initialConnected, setInitialConnected] = useState<boolean | null>(null)
@@ -31,8 +40,24 @@ export default function ConnectAcuityButton({ onConnectSuccess }: ConnectAcuityB
   }, [])
 
   const handleConnect = async () => {
-    // Redirect to Acuity OAuth
-    window.location.href = '/api/acuity/authorize'
+    if (disabled || preparing) return
+    setPreparing(true)
+
+    try {
+      if (onBeforeConnect) {
+        const result = await onBeforeConnect()
+        if (result === false) {
+          setPreparing(false)
+          return
+        }
+      }
+
+      // Redirect to Acuity OAuth
+      window.location.href = '/api/acuity/authorize'
+    } catch (err) {
+      console.error('Acuity connect error:', err)
+      setPreparing(false)
+    }
   }
 
   const handleDisconnect = async () => {
@@ -72,9 +97,13 @@ export default function ConnectAcuityButton({ onConnectSuccess }: ConnectAcuityB
     <button
       type="button"
       onClick={handleConnect}
-      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      disabled={disabled || preparing}
+      title={disabledReason}
+      className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${
+        disabled || preparing ? 'opacity-60 cursor-not-allowed' : ''
+      }`}
     >
-      Connect to Acuity
+      {preparing ? 'Preparing...' : 'Connect to Acuity'}
     </button>
   )
 }
