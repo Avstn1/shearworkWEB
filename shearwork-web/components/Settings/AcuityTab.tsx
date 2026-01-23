@@ -62,7 +62,8 @@ export default function AcuityTab() {
 
       const res = await fetch('/api/acuity/calendar')
       if (!res.ok)
-        throw new Error((await res.json()).error || 'Failed to fetch calendars')
+        console.log('Failed to fetch calendars.')
+        // throw new Error((await res.json()).error || 'Failed to fetch calendars')
       const data = await res.json()
       setCalendars(data.calendars || [])
     } catch (err: any) {
