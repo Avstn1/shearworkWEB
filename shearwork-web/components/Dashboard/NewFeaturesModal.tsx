@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, Bell, ChevronDown, ChevronUp, Eye, Shield } from 'lucide-react'
+import { X, Bell, ChevronDown, ChevronUp, Eye, Shield } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import Select from '@/components/UI/Select'
 
 interface FeatureUpdate {
   id: string
@@ -219,27 +220,11 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
     return colors[category as keyof typeof colors] || colors.feature
   }
 
-  const handlePrevious = () => {
-    const newPage = Math.max(0, currentPage - 1)
+  const handleMajorChange = (value: string) => {
+    const newPage = majorVersions.findIndex(group => group.majorVersion === value)
+    if (newPage === -1) return
     setCurrentPage(newPage)
-    
-    // Only auto-expand if this page has the globally latest version
-    const newGroup = majorVersions[newPage]
-    if (newGroup) {
-      const latestMinor = newGroup.minorGroups.find(g => g.isLatest)
-      if (latestMinor) {
-        setExpandedMinorVersion(`${newGroup.majorVersion}.${latestMinor.minorVersion}`)
-      } else {
-        setExpandedMinorVersion(null)
-      }
-    }
-  }
 
-  const handleNext = () => {
-    const newPage = Math.min(majorVersions.length - 1, currentPage + 1)
-    setCurrentPage(newPage)
-    
-    // Only auto-expand if this page has the globally latest version
     const newGroup = majorVersions[newPage]
     if (newGroup) {
       const latestMinor = newGroup.minorGroups.find(g => g.isLatest)
@@ -254,6 +239,10 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
   if (!isOpen) return null
 
   const currentGroup = majorVersions[currentPage]
+  const majorOptions = majorVersions.map((group) => ({
+    value: group.majorVersion,
+    label: `Version ${group.majorVersion}`,
+  }))
 
   return (
     <motion.div
@@ -311,6 +300,16 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                   <Shield className="w-3.5 h-3.5" />
                   Admin View
                 </button>
+              </div>
+            )}
+
+            {majorOptions.length > 1 && currentGroup && (
+              <div className="w-44">
+                <Select
+                  options={majorOptions}
+                  value={currentGroup.majorVersion}
+                  onChange={handleMajorChange}
+                />
               </div>
             )}
 
@@ -491,51 +490,6 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
           ) : null}
         </div>
 
-        {/* Footer Navigation */}
-        {majorVersions.length > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-[#55694b]/30 bg-[#1a1f1b]/50 flex-shrink-0">
-            <button
-              onClick={handlePrevious}
-              disabled={currentPage === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#55694b]/40 hover:bg-[#6b8e4e]/50 text-[#F1F5E9] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm font-medium">Next</span>
-            </button>
-
-            <div className="flex items-center gap-2">
-              {majorVersions.map((group, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setCurrentPage(index)
-                    // Only auto-expand if this page has the globally latest version
-                    const latestMinor = group.minorGroups.find(g => g.isLatest)
-                    if (latestMinor) {
-                      setExpandedMinorVersion(`${group.majorVersion}.${latestMinor.minorVersion}`)
-                    } else {
-                      setExpandedMinorVersion(null)
-                    }
-                  }}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    index === currentPage 
-                      ? 'w-8 bg-lime-400' 
-                      : 'bg-gray-600 hover:bg-gray-500'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={handleNext}
-              disabled={currentPage === majorVersions.length - 1}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#55694b]/40 hover:bg-[#6b8e4e]/50 text-[#F1F5E9] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300"
-            >
-              <span className="text-sm font-medium">Previous</span>
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
       </motion.div>
     </motion.div>
   )

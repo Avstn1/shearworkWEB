@@ -32,12 +32,12 @@ export default function AcuityTab() {
   const [profile, setProfile] = useState<any>(null)
   const [calendars, setCalendars] = useState<CalendarItem[]>([])
   const [selectedCalendar, setSelectedCalendar] = useState<string>('')
-  const [isEditingCalendar, setIsEditingCalendar] = useState(false)
-  const [confirmingChange, setConfirmingChange] = useState(false)
+  const [squareConnected, setSquareConnected] = useState(false)
   const [loading, setLoading] = useState(false)
   const [year, setYear] = useState(new Date().getFullYear().toString())
   const [syncingClients, setSyncingClients] = useState(false)
   const [syncingAppointments, setSyncingAppointments] = useState(false)
+  const hasCalendarChange = selectedCalendar !== (profile?.calendar ?? '')
 
   useEffect(() => {
     loadData()
@@ -66,6 +66,10 @@ export default function AcuityTab() {
         // throw new Error((await res.json()).error || 'Failed to fetch calendars')
       const data = await res.json()
       setCalendars(data.calendars || [])
+
+      const squareRes = await fetch('/api/square/status', { cache: 'no-store' })
+      const squareData = squareRes.ok ? await squareRes.json() : null
+      setSquareConnected(Boolean(squareData?.connected))
     } catch (err: any) {
       console.error(err)
     } finally {
@@ -93,8 +97,6 @@ export default function AcuityTab() {
       if (error) throw error
 
       toast.success('Calendar updated!')
-      setIsEditingCalendar(false)
-      setConfirmingChange(false)
       loadData()
     } catch (err: any) {
       console.error(err)
@@ -103,12 +105,20 @@ export default function AcuityTab() {
   }
 
   const handleCalendarChangeRequest = (val: string) => {
-    if (profile?.calendar && profile.calendar !== val) {
-      setSelectedCalendar(val)
-      setConfirmingChange(true)
-    } else {
-      setSelectedCalendar(val)
+    setSelectedCalendar(val)
+  }
+
+  const handleBeforeConnect = async () => {
+    if (!squareConnected) return true
+    const toastId = toast.loading('Disconnecting Square...')
+    const res = await fetch('/api/square/disconnect', { method: 'POST' })
+    if (!res.ok) {
+      toast.error('Failed to disconnect Square', { id: toastId })
+      return false
     }
+    toast.success('Square disconnected', { id: toastId })
+    setSquareConnected(false)
+    return true
   }
 
   const generateYearOptions = () => {
@@ -212,7 +222,14 @@ export default function AcuityTab() {
         </p>
       </div>
 
-      <ConnectAcuityButton onConnectSuccess={loadData} />
+      <div className="space-y-2">
+        <ConnectAcuityButton onConnectSuccess={loadData} onBeforeConnect={handleBeforeConnect} />
+        {squareConnected && (
+          <p className="text-xs text-amber-200">
+            Connecting Acuity will disconnect Square to keep one active provider.
+          </p>
+        )}
+      </div>
 
       {/* Calendar Selection */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
@@ -230,24 +247,15 @@ export default function AcuityTab() {
               ]}
               value={selectedCalendar}
               onChange={(val) => handleCalendarChangeRequest(val as string)}
-              disabled={!isEditingCalendar}
+              disabled={calendars.length === 0}
             />
           </div>
 
-          {!isEditingCalendar ? (
-            <button
-              onClick={() => setIsEditingCalendar(true)}
-              className="px-6 py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium whitespace-nowrap"
-            >
-              Change
-            </button>
-          ) : (
+          {hasCalendarChange && (
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   setSelectedCalendar(profile?.calendar || '')
-                  setIsEditingCalendar(false)
-                  setConfirmingChange(false)
                 }}
                 className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
               >
@@ -263,34 +271,9 @@ export default function AcuityTab() {
           )}
         </div>
 
-        {confirmingChange && (
-          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-3">
-            <p className="text-sm text-amber-200">
-              Changing your calendar will sync all data for this calendar.
-              Confirm if you want to continue.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setConfirmingChange(false)
-                  setIsEditingCalendar(false)
-                  setSelectedCalendar(profile?.calendar || '')
-                }}
-                className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={() => saveCalendar(selectedCalendar)}
-                className="px-6 py-2 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all"
-              >
-                Confirm Change
-              </button>
-            </div>
-          </div>
-        )}
+        <p className="text-xs text-gray-400">
+          Changing calendars will resync appointments for the selected calendar.
+        </p>
       </div>
 
       {/* Sync Section */}

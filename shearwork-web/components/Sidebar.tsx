@@ -79,10 +79,6 @@ export default function Sidebar() {
       const hasUnread = !lastRead || new Date(lastRead) < new Date(latestUpdate)
       setHasUnreadFeatures(hasUnread)
       
-      // Auto-open modal if there are unread features
-      if (hasUnread) {
-        setShowFeaturesModal(true)
-      }
     } catch (error) {
       console.error('Error checking unread features:', error)
     }

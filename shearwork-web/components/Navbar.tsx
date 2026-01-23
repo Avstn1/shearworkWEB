@@ -53,12 +53,6 @@ export default function Navbar() {
     checkUnreadFeatures()
   }, [user?.id, profile?.last_read_feature_updates])
 
-  useEffect(() => {
-    if (hasUnreadFeatures && user?.id) {
-      setShowFeaturesModal(true)
-    }
-  }, [hasUnreadFeatures, user?.id])
-
   const checkUnreadFeatures = async () => {
     if (!user?.id) {
       setHasUnreadFeatures(false)
