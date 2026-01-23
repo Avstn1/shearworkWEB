@@ -77,6 +77,12 @@ body {
   font-family: var(--font-sans);
 }
 
+body.tutorial-hide-credits .tutorial-info-button,
+body.tutorial-hide-profile .tutorial-info-button {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 html {
   scroll-behavior: smooth;
 }

@@ -29,11 +29,14 @@ import MarketingFunnelsChart from '@/components/Dashboard/MarketingFunnelsChart'
 import ProfitLossDashboard from '@/components/Dashboard/ProfitLossDashboard'
 import YearlyDashboard from '@/components/Dashboard/YearlyDashboard'
 import GettingStartedTips from '@/components/Dashboard/GettingStartedTips'
+import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
+import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/utils/supabaseClient'
 import { isTrialActive } from '@/utils/trial'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { DASHBOARD_TUTORIAL_STEPS } from '@/lib/tutorials/dashboard'
 
 const MONTHS = [
   'January','February','March','April','May','June',
@@ -217,7 +220,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Controls — stacked nicely on mobile */}
-        <div className="flex gap-1 w-full sm:w-auto bg-[#1a1a1a] rounded-full p-1">
+        <div data-tutorial-id="dashboard-view-switcher" className="flex gap-1 w-full sm:w-auto bg-[#1a1a1a] rounded-full p-1">
           <button
             onClick={() => setDashboardView('monthly')}
             className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
@@ -249,11 +252,20 @@ export default function DashboardPage() {
             Profit/Loss
           </button>
         </div>
-        <ManageTipsButton />
+        <div className="flex items-center gap-2">
+          <ManageTipsButton />
+          <TutorialLauncher
+            pageKey="dashboard"
+            steps={DASHBOARD_TUTORIAL_STEPS}
+            renderTrigger={(openTutorial) => (
+              <TutorialInfoButton onClick={openTutorial} label="Dashboard tutorial" />
+            )}
+          />
+        </div>
       </div>
 
       {/* Month + Year Selector */}
-      <div className="flex flex-col flex-row sm:flex-row sm:items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+      <div data-tutorial-id="dashboard-date-controls" className="flex flex-col flex-row sm:flex-row sm:items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
         <button
           onClick={() => {
             syncAcuityData()
@@ -335,15 +347,15 @@ export default function DashboardPage() {
 
       {/* RIGHT COLUMN */}
       <div className="flex flex-col gap-4 pl-1">
-        <motion.div variants={fadeInUp} className={cardClass}>
+        <motion.div data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className={cardClass}>
           <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
           <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
-        <motion.div id="weekly-reports" variants={fadeInUp} className={cardClass}>
+        <motion.div id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className={cardClass}>
           <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
           <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
-        <motion.div variants={fadeInUp} className={cardClass}>
+        <motion.div data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className={cardClass}>
           <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
           <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>

@@ -9,6 +9,9 @@ import SMSCampaigns from '@/components/Dashboard/ClientManager/SMSCampaigns/SMSC
 import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 import FAQModal from '@/components/Dashboard/ClientManager/FAQModal';
+import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
+import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
+import { CLIENT_MANAGER_TUTORIAL_STEPS } from '@/lib/tutorials/client-manager'
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -46,7 +49,7 @@ export default function ClientManagerPage() {
             </div>
 
             {/* View Switcher */}
-            <div className="flex gap-1 bg-[#1a1a1a] rounded-full p-1">
+            <div data-tutorial-id="client-manager-tabs" className="flex gap-1 bg-[#1a1a1a] rounded-full p-1">
               <button
                 onClick={() => setActiveView('sheets')}
                 className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
@@ -83,27 +86,39 @@ export default function ClientManagerPage() {
             </div>
           </div>
 
-          {/* FAQ Button */}
-          <button
-            onClick={() => setShowFAQ(true)}
-            className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 active:scale-95 sm:hover:scale-105 whitespace-nowrap"
-          >
-            <svg 
-              className="w-3.5 h-3.5 sm:w-4 sm:h-4" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+          <div className="flex flex-wrap items-center gap-2">
+            <TutorialLauncher
+              pageKey="client-manager"
+              steps={CLIENT_MANAGER_TUTORIAL_STEPS}
+              context={{
+                setActiveView: (view) => setActiveView(view as 'sheets' | 'sms' | 'sms-campaign'),
+              }}
+              renderTrigger={(openTutorial) => (
+                <TutorialInfoButton onClick={openTutorial} label="Client Manager tutorial" />
+              )}
+            />
+            {/* FAQ Button */}
+            <button
+              onClick={() => setShowFAQ(true)}
+              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 active:scale-95 sm:hover:scale-105 whitespace-nowrap"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-              />
-            </svg>
-            <span className="hidden xs:inline">Frequently Asked Questions</span>
-            <span className="xs:hidden">Frequently Asked Questions</span>
-          </button>
+              <svg 
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                />
+              </svg>
+              <span className="hidden xs:inline">Frequently Asked Questions</span>
+              <span className="xs:hidden">Frequently Asked Questions</span>
+            </button>
+          </div>
         </motion.div>
 
         {/* Content Area */}
@@ -117,17 +132,21 @@ export default function ClientManagerPage() {
             className="flex-1"
           >
               {activeView === 'sheets' && (
-                <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 h-full">
+                <div data-tutorial-id="client-manager-sheets" className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-4 md:p-6 lg:p-8 h-full">
                   <ClientSheets />
                 </div>
               )}
 
             {activeView === 'sms' && (
-              <SMSAutoNudge />
+              <div data-tutorial-id="client-manager-auto-nudge">
+                <SMSAutoNudge />
+              </div>
             )}
 
             {activeView === 'sms-campaign' && (
-              <SMSCampaigns />
+              <div data-tutorial-id="client-manager-campaigns">
+                <SMSCampaigns />
+              </div>
             )}
           </motion.div>
         </AnimatePresence>

@@ -18,6 +18,20 @@ export default function UserProfile() {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const className = 'tutorial-hide-profile'
+    if (open) {
+      document.body.classList.add(className)
+    } else {
+      document.body.classList.remove(className)
+    }
+
+    return () => {
+      document.body.classList.remove(className)
+    }
+  }, [open])
+
   // 🔹 Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
