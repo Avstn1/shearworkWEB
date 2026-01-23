@@ -7,6 +7,7 @@ interface ConnectAcuityButtonProps {
   onBeforeConnect?: () => Promise<boolean | void>
   disabled?: boolean
   disabledReason?: string
+  className?: string
 }
 
 export default function ConnectAcuityButton({
@@ -14,6 +15,7 @@ export default function ConnectAcuityButton({
   onBeforeConnect,
   disabled = false,
   disabledReason,
+  className = '',
 }: ConnectAcuityButtonProps) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
@@ -89,7 +91,7 @@ export default function ConnectAcuityButton({
     <button
       type="button"
       onClick={handleDisconnect}
-      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+      className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${className}`}
     >
       Disconnect Acuity
     </button>
@@ -101,7 +103,7 @@ export default function ConnectAcuityButton({
       title={disabledReason}
       className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${
         disabled || preparing ? 'opacity-60 cursor-not-allowed' : ''
-      }`}
+      } ${className}`}
     >
       {preparing ? 'Preparing...' : 'Connect to Acuity'}
     </button>

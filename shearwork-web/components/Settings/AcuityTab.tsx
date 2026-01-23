@@ -32,6 +32,7 @@ export default function AcuityTab() {
   const [profile, setProfile] = useState<any>(null)
   const [calendars, setCalendars] = useState<CalendarItem[]>([])
   const [selectedCalendar, setSelectedCalendar] = useState<string>('')
+  const [acuityConnected, setAcuityConnected] = useState(false)
   const [squareConnected, setSquareConnected] = useState(false)
   const [loading, setLoading] = useState(false)
   const [year, setYear] = useState(new Date().getFullYear().toString())
@@ -60,12 +61,21 @@ export default function AcuityTab() {
       setProfile(profileData)
       setSelectedCalendar(profileData?.calendar || '')
 
-      const res = await fetch('/api/acuity/calendar')
-      if (!res.ok)
-        console.log('Failed to fetch calendars.')
-        // throw new Error((await res.json()).error || 'Failed to fetch calendars')
-      const data = await res.json()
-      setCalendars(data.calendars || [])
+      const statusRes = await fetch('/api/acuity/status', { cache: 'no-store' })
+      const statusData = statusRes.ok ? await statusRes.json() : null
+      const connected = Boolean(statusData?.connected)
+      setAcuityConnected(connected)
+
+      if (connected) {
+        const res = await fetch('/api/acuity/calendar')
+        if (!res.ok)
+          console.log('Failed to fetch calendars.')
+          // throw new Error((await res.json()).error || 'Failed to fetch calendars')
+        const data = await res.json()
+        setCalendars(data.calendars || [])
+      } else {
+        setCalendars([])
+      }
 
       const squareRes = await fetch('/api/square/status', { cache: 'no-store' })
       const squareData = squareRes.ok ? await squareRes.json() : null
@@ -229,6 +239,11 @@ export default function AcuityTab() {
             Connecting Acuity will disconnect Square to keep one active provider.
           </p>
         )}
+        {!acuityConnected && (
+          <p className="text-xs text-gray-400">
+            Connect Acuity to load your calendars.
+          </p>
+        )}
       </div>
 
       {/* Calendar Selection */}
@@ -247,7 +262,7 @@ export default function AcuityTab() {
               ]}
               value={selectedCalendar}
               onChange={(val) => handleCalendarChangeRequest(val as string)}
-              disabled={calendars.length === 0}
+              disabled={!acuityConnected || calendars.length === 0}
             />
           </div>
 

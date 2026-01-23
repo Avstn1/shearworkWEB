@@ -90,6 +90,20 @@ export default function TutorialLauncher({
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const className = 'tutorial-overlay-open'
+    if (isOpen) {
+      document.body.classList.add(className)
+    } else {
+      document.body.classList.remove(className)
+    }
+
+    return () => {
+      document.body.classList.remove(className)
+    }
+  }, [isOpen])
+
   const markOpened = useCallback(async () => {
     try {
       await fetch('/api/tutorials/opened', {

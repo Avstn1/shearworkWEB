@@ -9,6 +9,7 @@ interface ConnectSquareButtonProps {
 	onBeforeConnect?: () => Promise<boolean | void>
 	disabled?: boolean
 	disabledReason?: string
+	className?: string
 }
 
 export default function ConnectSquareButton({
@@ -16,6 +17,7 @@ export default function ConnectSquareButton({
 	onBeforeConnect,
 	disabled = false,
 	disabledReason,
+	className = '',
 }: ConnectSquareButtonProps) {
 	const [connecting, setConnecting] = useState(false)
 
@@ -46,7 +48,7 @@ export default function ConnectSquareButton({
 			title={disabledReason}
 			className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${
 				connecting || disabled ? 'opacity-60 cursor-not-allowed' : ''
-			}`}
+			} ${className}`}
 		>
 			{connecting ? 'Connecting...' : 'Connect to Square'}
 		</button>
