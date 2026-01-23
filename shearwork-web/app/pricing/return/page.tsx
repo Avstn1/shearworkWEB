@@ -594,8 +594,8 @@ function PricingReturnContent() {
                       We use this to sync appointments and populate your reports.
                     </p>
                     <div className="mt-3 flex flex-col gap-3">
-                      <div className={`rounded-xl border p-3 ${calendarStatus.acuity ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-black/20'}`}>
-                        <div className="flex items-center justify-between gap-3">
+                      <div className={`rounded-xl border p-4 ${calendarStatus.acuity ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-black/20'}`}>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-sm font-semibold text-white">Acuity</p>
                             <p className="text-xs text-gray-400">Best if you manage bookings in Acuity Scheduling.</p>
@@ -604,11 +604,12 @@ function PricingReturnContent() {
                             onBeforeConnect={handleBeforeConnectAcuity}
                             disabled={calendarStatus.loading}
                             disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
+                            className="w-full sm:w-auto"
                           />
                         </div>
                       </div>
-                      <div className={`rounded-xl border p-3 ${calendarStatus.square ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-black/20'}`}>
-                        <div className="flex items-center justify-between gap-3">
+                      <div className={`rounded-xl border p-4 ${calendarStatus.square ? 'border-emerald-400/40 bg-emerald-400/10' : 'border-white/10 bg-black/20'}`}>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-sm font-semibold text-white">Square</p>
                             <p className="text-xs text-gray-400">Best if you manage payments and bookings in Square.</p>
@@ -617,6 +618,7 @@ function PricingReturnContent() {
                             onBeforeConnect={handleBeforeConnectSquare}
                             disabled={calendarStatus.loading}
                             disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
+                            className="w-full sm:w-auto"
                           />
                         </div>
                       </div>

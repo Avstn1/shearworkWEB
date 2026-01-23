@@ -30,6 +30,7 @@ export default function GettingStartedTips({
   const [syncComplete, setSyncComplete] = useState(false)
   const [weeklyComplete, setWeeklyComplete] = useState(false)
   const [settingsComplete, setSettingsComplete] = useState(false)
+  const [ready, setReady] = useState(false)
   const [hideUntil, setHideUntil] = useState<number | null>(null)
   const [showAllSteps, setShowAllSteps] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -40,7 +41,10 @@ export default function GettingStartedTips({
   const hideUntilKey = `getting-started-hide-until:${userId}`
 
   useEffect(() => {
-    if (!userId) return
+    if (!userId) {
+      setReady(true)
+      return
+    }
     setSyncComplete(localStorage.getItem(syncKey) === 'true')
     setWeeklyComplete(localStorage.getItem(weeklyKey) === 'true')
     setSettingsComplete(localStorage.getItem(settingsKey) === 'true')
@@ -52,6 +56,7 @@ export default function GettingStartedTips({
         setHideUntil(parsedHideUntil)
       }
     }
+    setReady(true)
   }, [hideUntilKey, settingsKey, syncKey, userId, weeklyKey])
 
   useEffect(() => {
@@ -162,12 +167,12 @@ export default function GettingStartedTips({
   const nextStep = steps.find(step => !step.done) ?? steps[0]
   const isHidden = hideUntil !== null && Date.now() < hideUntil
 
-  if (isHidden || steps.length === 0 || completedCount === steps.length) {
+  if (!ready || isHidden || steps.length === 0 || completedCount === steps.length) {
     return null
   }
 
   return (
-    <div className="mb-4 rounded-2xl border border-white/10 bg-black/30 p-4 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.8)] md:p-5">
+    <div className="getting-started-checklist mb-4 rounded-2xl border border-white/10 bg-black/30 p-4 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.8)] md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#9ca3af]">Getting started</p>
