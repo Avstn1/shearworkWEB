@@ -130,7 +130,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     return null
   }
 
-  const showSidebar = user && !isAdmin && isPremiumUser
+  const showSidebar = user && !isAdmin && isPremiumUser && pathname !== '/pricing/return'
 
   return (
     <>

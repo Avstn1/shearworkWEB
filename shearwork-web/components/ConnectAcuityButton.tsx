@@ -8,6 +8,7 @@ interface ConnectAcuityButtonProps {
   disabled?: boolean
   disabledReason?: string
   className?: string
+  variant?: 'primary' | 'secondary'
 }
 
 export default function ConnectAcuityButton({
@@ -16,6 +17,7 @@ export default function ConnectAcuityButton({
   disabled = false,
   disabledReason,
   className = '',
+  variant = 'primary',
 }: ConnectAcuityButtonProps) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
@@ -87,6 +89,11 @@ export default function ConnectAcuityButton({
     return <button className="px-4 py-2 bg-gray-400 text-white rounded-lg">Loading connect acuity button...</button>
   }
 
+  const baseClass =
+    variant === 'secondary'
+      ? 'bg-white/10 border border-white/20 text-white hover:bg-white/15'
+      : 'bg-blue-600 text-white hover:bg-blue-700'
+
   return connected ? (
     <button
       type="button"
@@ -101,7 +108,7 @@ export default function ConnectAcuityButton({
       onClick={handleConnect}
       disabled={disabled || preparing}
       title={disabledReason}
-      className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${
+      className={`px-4 py-2 rounded-lg ${baseClass} ${
         disabled || preparing ? 'opacity-60 cursor-not-allowed' : ''
       } ${className}`}
     >
