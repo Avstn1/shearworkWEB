@@ -78,7 +78,8 @@ body {
 }
 
 body.tutorial-hide-credits .tutorial-info-button,
-body.tutorial-hide-profile .tutorial-info-button {
+body.tutorial-hide-profile .tutorial-info-button,
+body.tutorial-hide-features .tutorial-info-button {
   visibility: hidden;
   pointer-events: none;
 }

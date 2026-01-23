@@ -42,6 +42,7 @@ export default function TutorialLauncher({
   const [isOpen, setIsOpen] = useState(false)
   const [activeStep, setActiveStep] = useState(0)
   const [forceModal, setForceModal] = useState(false)
+  const [overlayBlocked, setOverlayBlocked] = useState(false)
 
   const totalSteps = steps.length
   const step = steps[activeStep]
@@ -71,6 +72,23 @@ export default function TutorialLauncher({
     if (isLoading) return
     void fetchStatus()
   }, [fetchStatus, isLoading])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const update = () => {
+      const body = document.body
+      const blocked =
+        body.classList.contains('tutorial-hide-credits') ||
+        body.classList.contains('tutorial-hide-profile') ||
+        body.classList.contains('tutorial-hide-features')
+      setOverlayBlocked(blocked)
+    }
+
+    update()
+    const observer = new MutationObserver(update)
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   const markOpened = useCallback(async () => {
     try {
@@ -121,11 +139,11 @@ export default function TutorialLauncher({
   }, [context, steps])
 
   const openTutorial = useCallback(async () => {
-    if (!user?.id || totalSteps === 0) return
+    if (!user?.id || totalSteps === 0 || overlayBlocked) return
     await markOpened()
     setIsOpen(true)
     await goToStep(0)
-  }, [goToStep, markOpened, totalSteps, user?.id])
+  }, [goToStep, markOpened, overlayBlocked, totalSteps, user?.id])
 
   const closeTutorial = useCallback(async () => {
     setIsOpen(false)
@@ -140,10 +158,10 @@ export default function TutorialLauncher({
   }, [markCompleted])
 
   useEffect(() => {
-    if (!status.loaded || status.seen || isOpen) return
+    if (!status.loaded || status.seen || isOpen || overlayBlocked) return
     if (!user?.id || totalSteps === 0) return
     void openTutorial()
-  }, [isOpen, openTutorial, status.loaded, status.seen, totalSteps, user?.id])
+  }, [isOpen, openTutorial, overlayBlocked, status.loaded, status.seen, totalSteps, user?.id])
 
   const useModal = isMobile || forceModal || !step?.selector
 

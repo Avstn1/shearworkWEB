@@ -48,6 +48,20 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
   const [expandedMinorVersion, setExpandedMinorVersion] = useState<string | null>(null)
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+    const className = 'tutorial-hide-features'
+    if (isOpen) {
+      document.body.classList.add(className)
+    } else {
+      document.body.classList.remove(className)
+    }
+
+    return () => {
+      document.body.classList.remove(className)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
     if (isOpen) {
       fetchFeatures()
       
