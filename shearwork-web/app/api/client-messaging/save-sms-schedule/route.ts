@@ -182,13 +182,19 @@ export async function DELETE(request: Request) {
       // One-time messages have ISO date format in cron field (e.g., "2025-01-15T10:00:00Z")
       const isOneTime = message.cron && /^\d{4}-\d{2}-\d{2}T/.test(message.cron)
       
-      if (isOneTime) {
-        console.log('🗑️ Deleting one-time messages:', message.qstash_schedule_ids)
-        await deleteMultipleQStashMessages(message.qstash_schedule_ids)
-      } else {
-        console.log('🗑️ Deleting recurring schedules:', message.qstash_schedule_ids)
-        await deleteMultipleQStashSchedules(message.qstash_schedule_ids)
+      try {
+        if (isOneTime) {
+          console.log('🗑️ Deleting one-time messages:', message.qstash_schedule_ids)
+          await deleteMultipleQStashMessages(message.qstash_schedule_ids)
+        } else {
+          console.log('🗑️ Deleting recurring schedules:', message.qstash_schedule_ids)
+          await deleteMultipleQStashSchedules(message.qstash_schedule_ids)
+        }
+      } catch (error) {
+        console.error('❌ Failed to delete QStash schedules/messages:', error)
+        // Proceed with deletion in database even if QStash deletion fails
       }
+
     }
 
     // Determine whether to soft delete or hard delete

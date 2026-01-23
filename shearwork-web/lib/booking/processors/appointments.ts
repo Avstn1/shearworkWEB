@@ -204,8 +204,6 @@ export class AppointmentProcessor {
     }
 
     // Delete canceled appointments from the database
-    console.log('Appointments to delete: ' + this.appointmentIDsToDelete)
-    console.log('Number of appointments to delete: ' + this.appointmentIDsToDelete.length)
 
     // if (this.appointmentIDsToDelete.length > 0) {
     //   console.log('Deleting canceled appointments...')
@@ -236,11 +234,8 @@ export class AppointmentProcessor {
         .in('acuity_appointment_id', appointmentIds)
 
       if (checkError) {
-        console.log('Error checking existing appointments for deletion:', checkError)
+        // console.log('Error checking existing appointments for deletion:', checkError)
       }
-
-      console.log('Existing rows that match:', existingRows)
-      console.log('Number of matching rows:', existingRows?.length || 0)
 
       if (existingRows && existingRows.length > 0) {
         const { data: deletedRows, error: deleteError } = await this.supabase
@@ -254,8 +249,8 @@ export class AppointmentProcessor {
           throw deleteError
         }
 
-        console.log('Deleted rows:', deletedRows)
-        console.log('Number of rows deleted:', deletedRows?.length || 0)
+        // console.log('Deleted rows:', deletedRows)
+        // console.log('Number of rows deleted:', deletedRows?.length || 0)
 
         // Now handle client updates/deletions
         const clientIds = new Set(deletedRows.map(row => row.client_id).filter(Boolean))
@@ -284,7 +279,7 @@ export class AppointmentProcessor {
             if (deleteClientError) {
               console.error('Error deleting client:', clientId, deleteClientError)
             } else {
-              console.log('Deleted client:', clientId)
+              // console.log('Deleted client:', clientId)
             }
           } else {
             // Update total_appointments and potentially last_appt
@@ -334,12 +329,12 @@ export class AppointmentProcessor {
             if (updateClientError) {
               console.error('Error updating client:', clientId, updateClientError)
             } else {
-              console.log('Updated client:', clientId, updateData)
+              // console.log('Updated client:', clientId, updateData)
             }
           }
         }
       } else {
-        console.log('No matching rows found to delete')
+        // console.log('No matching rows found to delete')
       }
     }
 
