@@ -43,6 +43,9 @@ export default function TutorialLauncher({
   const [activeStep, setActiveStep] = useState(0)
   const [forceModal, setForceModal] = useState(false)
   const [overlayBlocked, setOverlayBlocked] = useState(false)
+  const [fadeOutSpotlight, setFadeOutSpotlight] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [previousUseModal, setPreviousUseModal] = useState<boolean | null>(null)
 
   const totalSteps = steps.length
   const step = steps[activeStep]
@@ -145,11 +148,41 @@ export default function TutorialLauncher({
   const goToStep = useCallback(async (index: number) => {
     const nextStep = steps[index]
     if (!nextStep) return
+    
+    // Fade out spotlight immediately when navigation starts
+    setFadeOutSpotlight(true)
+    
+    // Small delay to let fade out start
+    await new Promise(resolve => setTimeout(resolve, 50))
+    
+    // Run beforeStep if it exists FIRST
     if (nextStep.beforeStep) {
       await nextStep.beforeStep(context)
+      
+      // Wait for React to flush updates and DOM to settle
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // If there's a selector, wait for it to appear in DOM
+      if (nextStep.selector) {
+        let attempts = 0
+        const maxAttempts = 20
+        while (attempts < maxAttempts) {
+          const element = document.querySelector(nextStep.selector)
+          if (element) {
+            // Wait an additional 500ms after finding to ensure everything is stable
+            await new Promise(resolve => setTimeout(resolve, 500))
+            break
+          }
+          await new Promise(resolve => setTimeout(resolve, 100))
+          attempts++
+        }
+      }
     }
+    
+    // Then update the step (this will trigger fade in)
     setActiveStep(index)
     setForceModal(false)
+    setFadeOutSpotlight(false)
   }, [context, steps])
 
   const openTutorial = useCallback(async () => {
@@ -177,50 +210,82 @@ export default function TutorialLauncher({
     void openTutorial()
   }, [isOpen, openTutorial, overlayBlocked, status.loaded, status.seen, totalSteps, user?.id])
 
-  const useModal = isMobile || forceModal || !step?.selector
+  const useModal = isMobile || forceModal || !step?.selector || !!step?.videoSrc
 
   const handleMissingTarget = useCallback(() => {
     setForceModal(true)
   }, [])
 
+  // Handle transitions between modal and overlay
+  useEffect(() => {
+    if (previousUseModal !== null && previousUseModal !== useModal) {
+      // Component is switching, trigger transition
+      setIsTransitioning(true)
+      const timer = setTimeout(() => {
+        setIsTransitioning(false)
+        setPreviousUseModal(useModal)
+      }, 300) // Match transition duration
+      return () => clearTimeout(timer)
+    } else if (previousUseModal === null) {
+      // Initial render
+      setPreviousUseModal(useModal)
+    }
+  }, [useModal, previousUseModal])
+
   const content = useMemo(() => {
     if (!isOpen || !step) return null
+    
+    const componentOpacity = isTransitioning ? 0 : 1
+    const transitionStyle = {
+      opacity: componentOpacity,
+      transition: 'opacity 300ms ease-in-out',
+    }
+    
     if (useModal) {
       return (
-        <TutorialModal
-          isOpen={isOpen}
-          step={step}
-          stepIndex={activeStep}
-          totalSteps={totalSteps}
-          onNext={() => goToStep(Math.min(activeStep + 1, totalSteps - 1))}
-          onPrev={() => goToStep(Math.max(activeStep - 1, 0))}
-          onClose={closeTutorial}
-          onFinish={finishTutorial}
-        />
+        <div style={transitionStyle}>
+          <TutorialModal
+            isOpen={isOpen}
+            step={step}
+            stepIndex={activeStep}
+            allSteps={steps}
+            totalSteps={totalSteps}
+            onNext={() => goToStep(Math.min(activeStep + 1, totalSteps - 1))}
+            onPrev={() => goToStep(Math.max(activeStep - 1, 0))}
+            onClose={closeTutorial}
+            onFinish={finishTutorial}
+          />
+        </div>
       )
     }
 
     return (
-      <TutorialOverlay
-        isOpen={isOpen}
-        step={step}
-        stepIndex={activeStep}
-        totalSteps={totalSteps}
-        onNext={() => goToStep(Math.min(activeStep + 1, totalSteps - 1))}
-        onPrev={() => goToStep(Math.max(activeStep - 1, 0))}
-        onClose={closeTutorial}
-        onFinish={finishTutorial}
-        onMissingTarget={handleMissingTarget}
-      />
+      <div style={transitionStyle}>
+        <TutorialOverlay
+          isOpen={isOpen}
+          step={step}
+          stepIndex={activeStep}
+          totalSteps={totalSteps}
+          fadeOutSpotlight={fadeOutSpotlight}
+          onNext={() => goToStep(Math.min(activeStep + 1, totalSteps - 1))}
+          onPrev={() => goToStep(Math.max(activeStep - 1, 0))}
+          onClose={closeTutorial}
+          onFinish={finishTutorial}
+          onMissingTarget={handleMissingTarget}
+        />
+      </div>
     )
   }, [
     activeStep,
     closeTutorial,
+    fadeOutSpotlight,
     finishTutorial,
     goToStep,
     handleMissingTarget,
     isOpen,
+    isTransitioning,
     step,
+    steps,
     totalSteps,
     useModal,
   ])

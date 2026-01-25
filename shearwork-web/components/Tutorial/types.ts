@@ -10,5 +10,6 @@ export type TutorialStep = {
   selector?: string
   imageSrc?: string
   placement?: 'top' | 'right' | 'bottom' | 'left'
+  videoSrc?: string
   beforeStep?: (context?: TutorialContext) => void | Promise<void>
 }

@@ -10,6 +10,7 @@ type TutorialOverlayProps = {
   step: TutorialStep
   stepIndex: number
   totalSteps: number
+  fadeOutSpotlight: boolean
   onNext: () => void
   onPrev: () => void
   onClose: () => void
@@ -33,6 +34,7 @@ export default function TutorialOverlay({
   step,
   stepIndex,
   totalSteps,
+  fadeOutSpotlight,
   onNext,
   onPrev,
   onClose,
@@ -43,6 +45,7 @@ export default function TutorialOverlay({
   const titleId = useId()
   const descriptionId = useId()
   const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null)
+  const [spotlightOpacity, setSpotlightOpacity] = useState(0)
   const [reduceMotion, setReduceMotion] = useState(false)
 
   useEffect(() => {
@@ -100,23 +103,38 @@ export default function TutorialOverlay({
   }, [isOpen, onClose, onFinish, onNext, onPrev, stepIndex, totalSteps])
 
   useEffect(() => {
-    if (!isOpen || !step.selector) {
-      setSpotlightRect(null)
+    // Fade out spotlight when flag is set
+    if (fadeOutSpotlight) {
+      setSpotlightOpacity(0)
       return
+    }
+    
+    // Clear spotlight when closed or no selector
+    if (!isOpen || !step?.selector) {
+      setSpotlightOpacity(0)
+      const timer = setTimeout(() => {
+        setSpotlightRect(null)
+      }, 300)
+      return () => clearTimeout(timer)
     }
 
     const selector = step.selector
-
-    let frameId = 0
     let timeoutId: ReturnType<typeof setTimeout>
+    let intervalId: ReturnType<typeof setInterval>
+    let found = false
+    let initialDelayComplete = false
 
     const updateRect = () => {
+      if (found || !initialDelayComplete) return
+      
       const target = document.querySelector(selector) as HTMLElement | null
       if (!target) {
-        setSpotlightRect(null)
-        onMissingTarget()
         return
       }
+
+      found = true
+      clearInterval(intervalId)
+      clearTimeout(timeoutId)
 
       const rect = target.getBoundingClientRect()
       const inView = rect.top >= 0 && rect.bottom <= window.innerHeight
@@ -127,22 +145,51 @@ export default function TutorialOverlay({
         })
       }
       setSpotlightRect(rect)
+      
+      // Fade in the spotlight after setting the rect
+      requestAnimationFrame(() => {
+        setSpotlightOpacity(1)
+      })
     }
 
-    frameId = window.requestAnimationFrame(updateRect)
-    timeoutId = setTimeout(updateRect, 150)
+    // Wait 200ms before starting to look - gives goToStep time to complete
+    setTimeout(() => {
+      initialDelayComplete = true
+      // Try immediately after delay
+      updateRect()
+      
+      // Then keep trying every 100ms
+      intervalId = setInterval(updateRect, 100)
+    }, 200)
+    
+    // Give up after 5 seconds total
+    timeoutId = setTimeout(() => {
+      if (!found) {
+        clearInterval(intervalId)
+        setSpotlightRect(null)
+        onMissingTarget()
+      }
+    }, 5000)
 
-    const handleResize = () => updateRect()
+    const handleResize = () => {
+      if (!found) return
+      const target = document.querySelector(selector) as HTMLElement | null
+      if (target) {
+        const rect = target.getBoundingClientRect()
+        setSpotlightRect(rect)
+      }
+    }
+    
     window.addEventListener('resize', handleResize)
     window.addEventListener('scroll', handleResize, true)
 
     return () => {
-      window.cancelAnimationFrame(frameId)
+      clearInterval(intervalId)
       clearTimeout(timeoutId)
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('scroll', handleResize, true)
     }
-  }, [isOpen, onMissingTarget, reduceMotion, step.selector])
+  }, [fadeOutSpotlight, isOpen, onMissingTarget, reduceMotion, step?.selector, stepIndex])
 
   if (!isOpen) return null
 
@@ -167,8 +214,8 @@ export default function TutorialOverlay({
     >
       {spotlightStyle && (
         <div
-          className="fixed rounded-2xl border border-white/30 shadow-[0_0_0_9999px_rgba(0,0,0,0.65)]"
-          style={spotlightStyle}
+          className="fixed rounded-2xl border border-white/30 shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] transition-opacity duration-300"
+          style={{ ...spotlightStyle, opacity: spotlightOpacity }}
         />
       )}
 
