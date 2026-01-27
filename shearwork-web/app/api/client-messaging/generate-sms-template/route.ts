@@ -14,6 +14,13 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { prompt } = body
 
+    const maxMessageLength = 240 - (
+      (body.profile?.full_name?.length || 0) + 
+      (body.profile?.email?.length || 0) + 
+      (body.profile?.phone?.length || 0) + 
+      (body.profile?.booking_link?.length || 0)
+    )
+
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
       return NextResponse.json(
         { success: false, error: 'Prompt is required' },
@@ -26,7 +33,7 @@ export async function POST(req: Request) {
                           Your task is to generate professional, engaging SMS marketing messages for barbers.
 
                           Requirements:
-                          1. Message length: EXACTLY 180-220 characters (not words - characters!)
+                          1. Message length: LESS THAN ${maxMessageLength} characters (not words - characters!). THIS IS A STRICT REQUIREMENT
                           2. Use proper formatting with line breaks for readability
                           4. Allow friendly and funny tones. No need to keep it professional as we're building a relationship with clients.
                           6. Make it appropriate for SMS (no emojis)
@@ -39,8 +46,10 @@ export async function POST(req: Request) {
                         Full Name: ${body.profile?.full_name || 'N/A'}
                         Email: ${body.profile?.email || 'N/A'}
                         Phone: ${body.profile?.phone || 'N/A'}
-                        Remember: 180-220 characters total, and format with line breaks for readability. 
-                        THE LIMIT IS 220 CHARACTERS. DO NOT EXCEED THIS LIMIT.`
+                        Booking Link: ${body.profile?.booking_link || 'N/A'}
+
+                        Remember: ${maxMessageLength} characters total, and format with line breaks for readability. 
+                        THE LIMIT IS ${maxMessageLength} CHARACTERS. DO NOT EXCEED THIS LIMIT.`
 
     // Call OpenAI to generate the template
     const response = await openai.chat.completions.create({

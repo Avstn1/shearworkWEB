@@ -42,6 +42,7 @@ export function MessageContent({
             full_name: profile?.full_name || '',
             email: profile?.email || '',
             phone: profile?.phone || '',
+            booking_link: profile?.booking_link
           }
         }),
       });
@@ -177,7 +178,7 @@ export function MessageContent({
       {msg.isSaved && msg.isValidated && (
         <div className="p-2.5 sm:p-3 bg-sky-500/10 border border-sky-500/20 rounded-xl">
           <p className="text-xs sm:text-sm text-sky-300">
-            Test messages cost 1 credit each.
+            Test messages cost 1 credit each once your free tests are used up.
           </p>
         </div>
       )}
