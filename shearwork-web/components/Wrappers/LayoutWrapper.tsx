@@ -20,7 +20,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
   // Keep your redirect logic exactly as before
   // -----------------------------
   useEffect(() => {
-    console.log('🟡 LayoutWrapper redirect effect:', { isLoading, pathname, user: !!user })
+    // console.log('🟡 LayoutWrapper redirect effect:', { isLoading, pathname, user: !!user })
     if (isLoading) return
     if (user && profileStatus !== 'ready') return
 
