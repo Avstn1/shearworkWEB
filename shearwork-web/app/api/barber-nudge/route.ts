@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     
     // Update client engagement status
     await supabase
-      .from('acuity_clients')
+      .from('test_acuity_clients')
       .update({ 
         last_response_at: new Date().toISOString(),
         is_engaged: true,
