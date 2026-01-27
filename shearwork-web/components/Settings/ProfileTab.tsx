@@ -375,6 +375,29 @@ export default function ProfileTab() {
       setIsVerifyingPhone(false)
     }
   }
+  
+  const handleVerifyPhoneNoOTP = async () => {
+    const e164Phone = getE164PhoneNumber(editedPhone)
+    console.log(e164Phone)
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ 
+        phone: e164Phone,
+        phone_verified: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', profile.user_id)
+
+    if (updateError) {
+      console.log(updateError)
+    }
+
+    toast.success('Phone verified successfully!')
+    setShowPhoneModal(false)
+    setPhoneVerificationCode('')
+    fetchProfile()
+  }
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile) return
@@ -692,8 +715,8 @@ export default function ProfileTab() {
         </Modal>
       )}
 
-      {/* Phone Modal */}
-      {showPhoneModal && (
+      {/* Phone Modal with phone verification */}
+      {/* {showPhoneModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
             <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
@@ -789,7 +812,75 @@ export default function ProfileTab() {
             </div>
           </div>
         </Modal>
+      )} */}
+
+      {/* Phone Modal without phone verification */}
+      {showPhoneModal && (
+        <Modal>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Update Phone Number</h3>
+                <button
+                  onClick={() => setShowPhoneModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Phone Number
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium">
+                      +1
+                    </div>
+                    <input
+                      type="tel"
+                      value={editedPhone}
+                      onChange={handlePhoneInput}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+                      placeholder="(647) 111-2222"
+                      maxLength={14}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Enter your 10-digit phone number
+                  </p>
+                </div>
+
+                {profile.phone && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">Current:</span>
+                    <span className="text-sm font-medium">{profile.phone}</span>
+                  </div>
+                )}
+
+                {!profile.phone && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                    <p className="text-sm text-rose-300">
+                      Phone number is required for SMS marketing features
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleVerifyPhoneNoOTP}
+                  disabled={editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save Phone Number
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
+
+
 
       {/* Booking Link Modal */}
       {showBookingLinkModal && (
