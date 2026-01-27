@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
@@ -8,10 +7,14 @@ import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 import { qstashClient } from '@/lib/qstashClient'
 import pMap from "p-map"
 import { isTrialActive } from '@/utils/trial'
+import { pullAvailability } from '@/lib/booking/availability/orchestrator'
+import { DEFAULT_PRIMARY_SERVICE, normalizeServiceName } from '@/lib/booking/serviceNormalization'
 
 export type Recipients = {
   phone_normalized: string;
   full_name: string;
+  client_id?: string | null;
+  primary_service?: string | null;
 };
 
 const supabase = createClient(
@@ -275,6 +278,21 @@ async function handler(request: Request) {
         })
       }
 
+      if (scheduledMessage.purpose === 'auto-nudge') {
+        recipients = await filterRecipientsByAvailability(scheduledMessage.user_id, recipients)
+
+        if (recipients.length === 0) {
+          console.warn('⚠️ No recipients with matching availability');
+          return NextResponse.json({
+            success: true,
+            message: 'No recipients with matching availability',
+            messageId,
+            recipientCount: 0,
+            timestamp: new Date().toISOString(),
+          })
+        }
+      }
+
       console.log('📱 Sending to', recipients.length, 'recipients');
     }
     
@@ -317,6 +335,62 @@ async function handler(request: Request) {
       { success: false, error: err.message || 'Unknown error' },
       { status: 500 }
     )
+  }
+}
+
+async function filterRecipientsByAvailability(
+  userId: string,
+  recipients: Recipients[]
+): Promise<Recipients[]> {
+  if (recipients.length === 0) return recipients
+
+  try {
+    const availability = await pullAvailability(supabase, userId, { forceRefresh: true })
+
+    if (!availability.success) {
+      console.error('Availability refresh failed:', availability.errors)
+      return recipients
+    }
+
+    const { data: slots, error } = await supabase
+      .from('availability_slots')
+      .select('appointment_type_name')
+      .eq('user_id', userId)
+      .eq('source', 'acuity')
+      .eq('fetched_at', availability.fetchedAt)
+      .gte('slot_date', availability.range.startDate)
+      .lte('slot_date', availability.range.endDate)
+
+    if (error) {
+      console.error('Failed to load availability slots:', error)
+      return recipients
+    }
+
+    if (!slots || slots.length === 0) {
+      return []
+    }
+
+    const availabilityByService = new Map<string, number>()
+
+    for (const slot of slots) {
+      const serviceName = normalizeServiceName(slot.appointment_type_name)
+      availabilityByService.set(serviceName, (availabilityByService.get(serviceName) || 0) + 1)
+    }
+
+    const haircutCount = availabilityByService.get(DEFAULT_PRIMARY_SERVICE) || 0
+
+    return recipients.filter((recipient) => {
+      const serviceName = normalizeServiceName(recipient.primary_service ?? DEFAULT_PRIMARY_SERVICE)
+      const serviceCount = availabilityByService.get(serviceName) || 0
+
+      if (serviceCount > 0) return true
+      if (haircutCount > 0) return true
+
+      return false
+    })
+  } catch (error) {
+    console.error('Failed to filter recipients by availability:', error)
+    return recipients
   }
 }
 
