@@ -1,10 +1,24 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import EditableAvatar from '@/components/EditableAvatar'
 import { Mail, Phone, Upload, Check, X } from 'lucide-react'
+
+// Modal Portal Component - defined outside to prevent re-creation
+const Modal = ({ children }: { children: React.ReactNode }) => {
+  const [isMounted, setIsMounted] = useState(false)
+  
+  useEffect(() => {
+    setIsMounted(true)
+    return () => setIsMounted(false)
+  }, [])
+  
+  if (!isMounted) return null
+  return createPortal(children, document.body)
+}
 
 export default function ProfileTab() {
   const [profile, setProfile] = useState<any>(null)
@@ -15,12 +29,20 @@ export default function ProfileTab() {
   // Modal states
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [showBookingLinkModal, setShowBookingLinkModal] = useState(false)
+
   const [editedEmail, setEditedEmail] = useState('')
   const [editedPhone, setEditedPhone] = useState('')
+
+  const [editedBookingLink, setEditedBookingLink] = useState('')
+
   const [originalPhone, setOriginalPhone] = useState('')
   const [isSendingEmailCode, setIsSendingEmailCode] = useState(false)
   const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false)
+  const [isUpdatingBookingLink, setIsUpdatingBookingLink] = useState(false)
+
   const [isSaving, setIsSaving] = useState(false)
+
   const [emailVerificationCode, setEmailVerificationCode] = useState('')
   const [phoneVerificationCode, setPhoneVerificationCode] = useState('')
   const [isVerifyingEmail, setIsVerifyingEmail] = useState(false)
@@ -122,6 +144,7 @@ export default function ProfileTab() {
         const formattedPhone = initializeEditedPhone(data.phone || '');
         setEditedPhone(formattedPhone);
         setOriginalPhone(formattedPhone);
+        setEditedBookingLink(data.booking_link || 'No booking link set.')
       }
     } catch (err) {
       console.error(err)
@@ -131,15 +154,12 @@ export default function ProfileTab() {
   const updateCommission = async () => {
     if (!profile) return
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       const value = commission === '' ? null : Number(commission) / 100
 
       const { error } = await supabase
         .from('profiles')
         .update({ commission_rate: value })
-        .eq('user_id', user.id)
+        .eq('user_id', profile.user_id)
 
       if (error) {
         toast.error('Failed updating commission')
@@ -154,17 +174,16 @@ export default function ProfileTab() {
   }
 
   const handleSendEmailCode = async () => {
+    if (!profile) return
+    
     setIsSendingEmailCode(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       const response = await fetch('/api/otp/generate-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           email: editedEmail,
-          user_id: user.id 
+          user_id: profile.user_id 
         }),
       })
 
@@ -184,6 +203,8 @@ export default function ProfileTab() {
   }
 
   const handleVerifyEmail = async () => {
+    if (!profile) return
+    
     if (!emailVerificationCode.trim()) {
       toast.error('Please enter verification code')
       return
@@ -191,15 +212,12 @@ export default function ProfileTab() {
 
     setIsVerifyingEmail(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       const response = await fetch('/api/otp/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           code: emailVerificationCode,
-          user_id: user.id,
+          user_id: profile.user_id,
           email: editedEmail
         }),
       })
@@ -216,7 +234,7 @@ export default function ProfileTab() {
           email: editedEmail,
           email_verified: true
         })
-        .eq('user_id', user.id)
+        .eq('user_id', profile.user_id)
 
       if (updateError) {
         throw new Error('Failed to save email')
@@ -234,7 +252,41 @@ export default function ProfileTab() {
     }
   }
 
+  const handleUpdateBookingLink = async () => {
+    if (!profile) return
+    
+    if (!editedBookingLink.trim()) {
+      toast.error('Please enter a booking link')
+      return
+    }
+
+    setIsUpdatingBookingLink(true)
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          booking_link: editedBookingLink
+        })
+        .eq('user_id', profile.user_id)
+
+      if (updateError) {
+        throw new Error('Failed to update booking link')
+      }
+
+      toast.success('Booking link updated successfully!')
+      setShowBookingLinkModal(false)
+      fetchProfile()
+    } catch (error: any) {
+      console.error('Booking link update error:', error)
+      toast.error(error.message || 'Failed to update booking link')
+    } finally {
+      setIsUpdatingBookingLink(false)
+    }
+  }
+
   const handleSendPhoneCode = async () => {
+    if (!profile) return
+    
     setIsSendingPhoneCode(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -277,6 +329,8 @@ export default function ProfileTab() {
   }
 
   const handleVerifyPhone = async () => {
+    if (!profile) return
+    
     if (!phoneVerificationCode.trim()) {
       toast.error('Please enter verification code')
       return
@@ -323,15 +377,14 @@ export default function ProfileTab() {
   }
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!profile) return
+    
     const file = e.target.files?.[0]
     if (!file) return
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return toast.error('Not logged in')
-
       const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}.${fileExt}`
+      const fileName = `${profile.user_id}.${fileExt}`
       const filePath = `avatars/${fileName}`
 
       const { error: uploadError } = await supabase.storage
@@ -352,7 +405,7 @@ export default function ProfileTab() {
       const { error: updateErr } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
-        .eq('user_id', user.id)
+        .eq('user_id', profile.user_id)
 
       if (updateErr) {
         console.error(updateErr)
@@ -513,6 +566,28 @@ export default function ProfileTab() {
         </div>
       </div>
 
+      {/* Booking link Section */}
+      <div className="space-y-3">
+        <label className="text-sm font-medium text-gray-300">Booking Link</label>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={profile.booking_link || 'No booking link set.'}
+            disabled
+            className="flex-1 px-4 py-3 rounded-xl border bg-white/5 border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:cursor-not-allowed"
+          />
+          <button
+            onClick={() => {
+              setEditedBookingLink(profile.booking_link || '')
+              setShowBookingLinkModal(true)
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
+          >
+            Update
+          </button>
+        </div>
+      </div>
+
       {/* Commission */}
       {profile.barber_type === 'commission' && (
         <div className="space-y-3">
@@ -537,179 +612,225 @@ export default function ProfileTab() {
 
       {/* Email Modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-          <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold">Update Email</h3>
-              <button
-                onClick={() => {
-                  setShowEmailModal(false)
-                  setEmailVerificationCode('')
-                }}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={editedEmail}
-                  onChange={(e) => setEditedEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-                  placeholder="Enter email address"
-                />
+        <Modal>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Update Email</h3>
+                <button
+                  onClick={() => {
+                    setShowEmailModal(false)
+                    setEmailVerificationCode('')
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Current Status:</span>
-                {profile.email_verified ? (
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
-                    Verified
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full">
-                    Not Verified
-                  </span>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={editedEmail}
+                    onChange={(e) => setEditedEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-400">Current Status:</span>
+                  {profile.email_verified ? (
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full">
+                      Not Verified
+                    </span>
+                  )}
+                </div>
+
+                {!profile.email_verified && (
+                  <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Verification Code
+                    </label>
+                    <input
+                      type="text"
+                      value={emailVerificationCode}
+                      onChange={(e) => setEmailVerificationCode(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                      placeholder="Enter 6-digit code"
+                      maxLength={6}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSendEmailCode}
+                        disabled={isSendingEmailCode}
+                        className="flex-1 px-4 py-3 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl font-semibold hover:bg-amber-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSendingEmailCode ? 'Sending...' : 'Send Code'}
+                      </button>
+                      <button
+                        onClick={handleVerifyEmail}
+                        disabled={isVerifyingEmail || !emailVerificationCode.trim()}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isVerifyingEmail ? 'Verifying...' : 'Verify'}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
 
-              {!profile.email_verified && (
+      {/* Phone Modal */}
+      {showPhoneModal && (
+        <Modal>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Update Phone Number</h3>
+                <button
+                  onClick={() => {
+                    setShowPhoneModal(false)
+                    setPhoneVerificationCode('')
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Phone Number
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium">
+                      +1
+                    </div>
+                    <input
+                      type="tel"
+                      value={editedPhone}
+                      onChange={handlePhoneInput}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+                      placeholder="(647) 111-2222"
+                      maxLength={14}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Enter your 10-digit phone number
+                  </p>
+                </div>
+
+                {profile.phone && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">Current Status:</span>
+                    {profile.phone_verified ? (
+                      <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full">
+                        Not Verified
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {!profile.phone && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                    <p className="text-sm text-rose-300">
+                      Phone number is required for SMS marketing features
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-xl">
                   <label className="block text-sm font-medium text-gray-300">
                     Verification Code
                   </label>
                   <input
                     type="text"
-                    value={emailVerificationCode}
-                    onChange={(e) => setEmailVerificationCode(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                    value={phoneVerificationCode}
+                    onChange={(e) => setPhoneVerificationCode(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
                     placeholder="Enter 6-digit code"
                     maxLength={6}
                   />
                   <div className="flex gap-2">
                     <button
-                      onClick={handleSendEmailCode}
-                      disabled={isSendingEmailCode}
-                      className="flex-1 px-4 py-3 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl font-semibold hover:bg-amber-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleSendPhoneCode}
+                      disabled={isSendingPhoneCode || editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
+                      className="flex-1 px-4 py-3 bg-lime-500/20 text-lime-300 border border-lime-500/30 rounded-xl font-semibold hover:bg-lime-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSendingEmailCode ? 'Sending...' : 'Send Code'}
+                      {isSendingPhoneCode ? 'Sending...' : 'Send Code'}
                     </button>
                     <button
-                      onClick={handleVerifyEmail}
-                      disabled={isVerifyingEmail || !emailVerificationCode.trim()}
+                      onClick={handleVerifyPhone}
+                      disabled={isVerifyingPhone || !phoneVerificationCode.trim()}
                       className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isVerifyingEmail ? 'Verifying...' : 'Verify'}
+                      {isVerifyingPhone ? 'Verifying...' : 'Verify'}
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
-      {/* Phone Modal */}
-      {showPhoneModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-          <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold">Update Phone Number</h3>
-              <button
-                onClick={() => {
-                  setShowPhoneModal(false)
-                  setPhoneVerificationCode('')
-                }}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Phone Number
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium">
-                    +1
-                  </div>
-                  <input
-                    type="tel"
-                    value={editedPhone}
-                    onChange={handlePhoneInput}
-                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-                    placeholder="(647) 111-2222"
-                    maxLength={14}
-                  />
-                </div>
-                <p className="text-xs text-gray-400 mt-2">
-                  Enter your 10-digit phone number
-                </p>
+      {/* Booking Link Modal */}
+      {showBookingLinkModal && (
+        <Modal>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Update Booking Link</h3>
+                <button
+                  onClick={() => setShowBookingLinkModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
 
-              {profile.phone && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">Current Status:</span>
-                  {profile.phone_verified ? (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full">
-                      Not Verified
-                    </span>
-                  )}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Booking URL
+                  </label>
+                  <input
+                    type="url"
+                    value={editedBookingLink}
+                    onChange={(e) => setEditedBookingLink(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+                    placeholder="https://your-booking-site.com"
+                  />
                 </div>
-              )}
 
-              {!profile.phone && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
-                  <p className="text-sm text-rose-300">
-                    Phone number is required for SMS marketing features
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-xl">
-                <label className="block text-sm font-medium text-gray-300">
-                  Verification Code
-                </label>
-                <input
-                  type="text"
-                  value={phoneVerificationCode}
-                  onChange={(e) => setPhoneVerificationCode(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-                  placeholder="Enter 6-digit code"
-                  maxLength={6}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSendPhoneCode}
-                    disabled={isSendingPhoneCode || editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
-                    className="flex-1 px-4 py-3 bg-lime-500/20 text-lime-300 border border-lime-500/30 rounded-xl font-semibold hover:bg-lime-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSendingPhoneCode ? 'Sending...' : 'Send Code'}
-                  </button>
-                  <button
-                    onClick={handleVerifyPhone}
-                    disabled={isVerifyingPhone || !phoneVerificationCode.trim()}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isVerifyingPhone ? 'Verifying...' : 'Verify'}
-                  </button>
-                </div>
+                <button
+                  onClick={handleUpdateBookingLink}
+                  disabled={isUpdatingBookingLink || !editedBookingLink.trim()}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isUpdatingBookingLink ? 'Updating...' : 'Update Booking Link'}
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
