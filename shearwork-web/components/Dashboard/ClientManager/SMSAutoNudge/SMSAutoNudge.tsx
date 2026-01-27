@@ -274,7 +274,7 @@ export default function SMSAutoNudge() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, available_credits, auto_nudge_schedule, trial_active, trial_start, trial_end')
+        .select('full_name, email, phone, available_credits, auto_nudge_schedule, trial_active, trial_start, trial_end, booking_link')
         .eq('user_id', user.id)
         .single();
 
