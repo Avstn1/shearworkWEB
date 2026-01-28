@@ -155,32 +155,52 @@ function buildDailySummaries(
   slots: AvailabilitySlotRecord[],
   fetchedAt: string
 ): AvailabilityDailySummaryRecord[] {
-  const summaryMap = new Map<string, AvailabilityDailySummaryRecord>()
+  // Track unique 30-minute blocks per day to calculate true capacity.
+  // Multiple services (e.g., KIDS HAIRCUT + Lineup) can share the same block,
+  // but a barber can only serve one client per 30-minute window.
+  const summaryMap = new Map<
+    string,
+    {
+      summary: AvailabilityDailySummaryRecord
+      blocks: Set<string>
+    }
+  >()
 
   for (const slot of slots) {
-    const key = `${slot.user_id}|${slot.source}|${slot.slot_date}`
+    const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
+    const block = getHalfHourBlock(slot)
     const revenue = roundCurrency(slot.estimated_revenue ?? 0)
 
-    const current = summaryMap.get(key)
+    const current = summaryMap.get(dayKey)
     if (current) {
-      current.slot_count += 1
-      current.estimated_revenue = roundCurrency(current.estimated_revenue + revenue)
+      // Only count unique 30-minute blocks for capacity.
+      if (block && !current.blocks.has(block)) {
+        current.blocks.add(block)
+        current.summary.slot_count += 1
+      }
+      current.summary.estimated_revenue = roundCurrency(current.summary.estimated_revenue + revenue)
       continue
     }
 
-    summaryMap.set(key, {
-      user_id: slot.user_id,
-      source: slot.source,
-      slot_date: slot.slot_date,
-      slot_count: 1,
-      estimated_revenue: revenue,
-      timezone: slot.timezone ?? null,
-      fetched_at: fetchedAt,
-      updated_at: fetchedAt,
+    const blocks = new Set<string>()
+    if (block) blocks.add(block)
+
+    summaryMap.set(dayKey, {
+      summary: {
+        user_id: slot.user_id,
+        source: slot.source,
+        slot_date: slot.slot_date,
+        slot_count: block ? 1 : 0,
+        estimated_revenue: revenue,
+        timezone: slot.timezone ?? null,
+        fetched_at: fetchedAt,
+        updated_at: fetchedAt,
+      },
+      blocks,
     })
   }
 
-  return Array.from(summaryMap.values())
+  return Array.from(summaryMap.values()).map((entry) => entry.summary)
 }
 
 function buildHourlyBuckets(slots: AvailabilitySlotRecord[]): AvailabilityHourlyBucket[] {
