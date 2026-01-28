@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { } from '@/lib/client_nudge_from_barber_nudge/index'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+// Callback function that gets activated when a barber replies
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
@@ -67,6 +69,8 @@ export async function POST(request: Request) {
     if (updateError) {
       console.error('Failed to update profile engagement:', updateError)
     }
+
+    
     
     return NextResponse.json({ success: true })
   } catch (error) {

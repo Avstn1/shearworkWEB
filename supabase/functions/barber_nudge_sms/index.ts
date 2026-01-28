@@ -11,31 +11,35 @@ const supabase = createClient(
 
 const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID")
 const authToken = Deno.env.get("TWILIO_AUTH_TOKEN")
-const messagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID")
+const messagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID_BARBERS")
 const siteUrl = Deno.env.get("NEXT_PUBLIC_SITE_URL")
 
 const twilio_client = twilio(accountSid, authToken)
 
 // Message templates
 const messageTemplates = [
-  "How's it going {name}? It's Corva. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Hey {name}, it's Corva. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "What's up {name}? Corva here. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Hi {name}, it's Corva. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Hey there {name}! It's Corva. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Good morning {name}! Corva here. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Hello {name}, it's Corva. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Yo {name}! Corva here. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Hi there {name}, it's Corva. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
-  "Hey {name}! Corva here. You have {slots} empty slots this week. Want me to help fill them? Est. Return: ${return}",
+  "How's it going {name}? It's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Hey {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "What's up {name}? Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Hi {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Hey there {name}! It's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Good morning {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Hello {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Yo {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Hi there {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "Hey {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
 ]
 
-function getRandomMessage(name: string): string {
+function getFirstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0]
+}
+
+function getRandomMessage(name: string, empty_slots: number, estimatedReturn: number): string {
   const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)]
   return template
-    .replace('{name}', name)
-    .replace('{slots}', '{EMPTY_SLOTS}')
-    .replace('{return}', '{EST_RETURN}')
+    .replace('{name}', getFirstName(name))
+    .replace('{slots}', empty_slots.toString())
+    .replace('{return}', estimatedReturn.toString())
 }
 
 Deno.serve(async (req) => {
@@ -69,14 +73,14 @@ Deno.serve(async (req) => {
 
     for (const barber of barbers) {
       try {
-        const message = getRandomMessage(barber.full_name || 'there')
+        const message = getRandomMessage(barber.full_name || 'there', 3, 135) // Change 1 and 45 later
         
         const callbackUrl = new URL(statusCallbackUrl)
         callbackUrl.searchParams.set('user_id', barber.user_id)
         callbackUrl.searchParams.set('message', message)
         
         const twilioMessage = await twilio_client.messages.create({
-          body: `${message}\n\nReply STOP to unsubscribe.`,
+          body: `${message}\n\nReply YES to continue and STOP to unsubscribe.`,
           messagingServiceSid: messagingServiceSid,
           to: barber.phone,
           statusCallback: callbackUrl.toString()
