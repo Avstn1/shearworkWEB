@@ -8,50 +8,65 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
+    const formData = await request.formData()
     
     // Extract Twilio webhook data
-    const from = body.From // Customer's phone number
-    const to = body.To // Your Twilio number
-    const messageBody = body.Body // The reply text
-    const messageSid = body.MessageSid
+    const from = formData.get('From') as string 
+    const to = formData.get('To') as string 
+    const messageBody = formData.get('Body') as string 
+    const messageSid = formData.get('MessageSid') as string
     
-    // Normalize phone number (remove +1 prefix and any formatting)
-    const normalizedPhone = from.replace(/^\+1/, '').replace(/\D/g, '')
+    // Only process if the reply is "yes" (case-insensitive)
+    if (messageBody.trim().toLowerCase() !== 'yes') {
+      console.log('Reply is not "yes", ignoring:', messageBody)
+      return NextResponse.json({ success: true, ignored: true })
+    }
     
-    // Find the client by normalized phone number
-    const { data: client } = await supabase
-      .from('test_acuity_clients')
-      .select('client_id, user_id, first_name, last_name')
-      .eq('phone_normalized', normalizedPhone)
+    // Ensure phone number is in E.164 format (+1XXXXXXXXXX)
+    const digitsOnly = from.replace(/\D/g, '')
+    const normalizedPhone = digitsOnly.startsWith('1') ? `+${digitsOnly}` : `+1${digitsOnly}`
+    
+    // Find the profile by normalized phone number
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('phone', normalizedPhone)
       .single()
     
-    if (!client) {
-      console.log('Client not found for phone:', normalizedPhone)
-      return NextResponse.json({ success: false, error: 'Client not found' })
+    if (!profile) {
+      console.log('Barber not found for phone:', normalizedPhone)
+      return NextResponse.json({ success: false, error: 'Barber not found' })
     }
     
     // Log the reply in your database
-    await supabase
+    const { error: insertError } = await supabase
       .from('sms_replies')
       .insert({
-        client_id: client.client_id,
-        barber_id: client.user_id,
+        user_id: profile.user_id,
         phone_number: normalizedPhone,
-        message: messageBody,
+        message: messageBody.trim().toLowerCase(),
+        source: 'barber-nudge',
         message_sid: messageSid,
         received_at: new Date().toISOString()
       })
     
-    // Update client engagement status
-    await supabase
-      .from('test_acuity_clients')
+    if (insertError) {
+      console.error('Failed to insert SMS reply:', insertError)
+      return NextResponse.json({ error: 'Failed to log reply' }, { status: 500 })
+    }
+    
+    // Update profile engagement status
+    const { error: updateError } = await supabase
+      .from('profiles')
       .update({ 
-        last_response_at: new Date().toISOString(),
-        is_engaged: true,
+        last_sms_engaged: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('client_id', client.client_id)
+      .eq('user_id', profile.user_id)
+    
+    if (updateError) {
+      console.error('Failed to update profile engagement:', updateError)
+    }
     
     return NextResponse.json({ success: true })
   } catch (error) {
