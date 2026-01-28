@@ -217,6 +217,9 @@ function buildCapacityBuckets(slots: AvailabilitySlotRecord[]): AvailabilityCapa
   for (const slot of slots) {
     if (slot.source !== 'acuity') continue
 
+    const effectiveDuration = slot.duration_minutes ?? 30
+    if (effectiveDuration < 30) continue
+
     const block = getHalfHourBlock(slot)
     if (!block) continue
 
