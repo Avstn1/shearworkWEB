@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
@@ -8,11 +7,30 @@ import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 import { qstashClient } from '@/lib/qstashClient'
 import pMap from "p-map"
 import { isTrialActive } from '@/utils/trial'
+import { pullAvailability } from '@/lib/booking/availability/orchestrator'
+import { DEFAULT_PRIMARY_SERVICE, normalizeServiceName } from '@/lib/booking/serviceNormalization'
 
 export type Recipients = {
   phone_normalized: string;
   full_name: string;
+  client_id?: string | null;
+  primary_service?: string | null;
 };
+
+type AvailabilitySlotRow = {
+  appointment_type_name?: string | null
+  slot_date: string
+  start_time: string
+  start_at?: string | null
+  timezone?: string | null
+}
+
+type AvailabilityLookup = {
+  availabilityCount: Map<string, number>
+  slotsByService: Map<string, AvailabilitySlotRow[]>
+}
+
+const SLOT_SUGGESTION_LIMIT = 3
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -139,8 +157,10 @@ async function handler(request: Request) {
     }
   }
 
-    // Fetch recipients based on mode
+    // Fetch recipients based on mode (test vs scheduled message send).
     let recipients: Recipients[] = []
+    // Lazily loaded availability lookup used for auto-nudge filtering and slot suggestions.
+    let availabilityLookup: AvailabilityLookup | null = null
 
     if (isTest) {
       // Test mode: Send only to the message creator
@@ -273,6 +293,23 @@ async function handler(request: Request) {
         })
       }
 
+      if (scheduledMessage.purpose === 'auto-nudge') {
+        // Auto-nudge: pull availability once and reuse it for filtering + message suggestions.
+        availabilityLookup = await loadAvailabilityForNudges(scheduledMessage.user_id)
+        recipients = filterRecipientsByAvailability(recipients, availabilityLookup)
+
+        if (recipients.length === 0) {
+          console.warn('⚠️ No recipients with matching availability');
+          return NextResponse.json({
+            success: true,
+            message: 'No recipients with matching availability',
+            messageId,
+            recipientCount: 0,
+            timestamp: new Date().toISOString(),
+          })
+        }
+      }
+
       console.log('📱 Sending to', recipients.length, 'recipients');
     }
     
@@ -293,7 +330,10 @@ async function handler(request: Request) {
           body: {
             user_id: scheduledMessage.user_id,
             messageId: scheduledMessage.id,
-            message: scheduledMessage.message,
+            // Auto-nudge messages get slot suggestions appended per recipient.
+            message: scheduledMessage.purpose === 'auto-nudge'
+              ? buildMessageWithSuggestions(scheduledMessage.message, recipient, availabilityLookup)
+              : scheduledMessage.message,
             phone_normalized: recipient.phone_normalized,
             purpose: purpose
           }
@@ -316,6 +356,173 @@ async function handler(request: Request) {
       { status: 500 }
     )
   }
+}
+
+// Loads the freshest availability so we can:
+// 1) avoid nudging when no slots exist, and
+// 2) attach a few suggested times to each nudge.
+async function loadAvailabilityForNudges(userId: string): Promise<AvailabilityLookup | null> {
+  try {
+    const availability = await pullAvailability(supabase, userId, { forceRefresh: true })
+
+    if (!availability.success) {
+      console.error('Availability refresh failed:', availability.errors)
+      return null
+    }
+
+    const acuityFetchedAt = availability.sources?.acuity?.fetchedAt || availability.fetchedAt
+
+    // Auto-nudge currently runs on Acuity clients, so we only load Acuity slots here.
+    // This avoids mixing Square availability with Acuity client services.
+    const { data: slots, error } = await supabase
+      .from('availability_slots')
+      .select('appointment_type_name, slot_date, start_time, start_at, timezone')
+      .eq('user_id', userId)
+      .eq('source', 'acuity')
+      .eq('fetched_at', acuityFetchedAt)
+      .gte('slot_date', availability.range.startDate)
+      .lte('slot_date', availability.range.endDate)
+
+    if (error) {
+      console.error('Failed to load availability slots:', error)
+      return null
+    }
+
+    return buildAvailabilityLookup(slots || [])
+  } catch (error) {
+    console.error('Failed to load availability for nudges:', error)
+    return null
+  }
+}
+
+// Converts raw slot rows into quick lookup maps for filtering + suggestions.
+function buildAvailabilityLookup(slots: AvailabilitySlotRow[]): AvailabilityLookup {
+  const availabilityCount = new Map<string, number>()
+  const slotsByService = new Map<string, AvailabilitySlotRow[]>()
+  const seenByService = new Map<string, Set<string>>()
+
+  for (const slot of slots) {
+    const serviceName = normalizeServiceName(slot.appointment_type_name)
+    const key = `${slot.slot_date}|${slot.start_time}`
+    const seen = seenByService.get(serviceName) ?? new Set<string>()
+
+    // Collapse duplicate time entries per service so suggestions stay clean.
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    seenByService.set(serviceName, seen)
+    availabilityCount.set(serviceName, (availabilityCount.get(serviceName) || 0) + 1)
+
+    const serviceSlots = slotsByService.get(serviceName) ?? []
+    serviceSlots.push(slot)
+    slotsByService.set(serviceName, serviceSlots)
+  }
+
+  // Sort each service's slots so we can safely take the first N.
+  for (const serviceSlots of slotsByService.values()) {
+    serviceSlots.sort((a, b) => getSlotSortValue(a) - getSlotSortValue(b))
+  }
+
+  return { availabilityCount, slotsByService }
+}
+
+// Returns only recipients who have availability for their primary service,
+// falling back to Haircut if their service has no slots.
+function filterRecipientsByAvailability(
+  recipients: Recipients[],
+  availabilityLookup: AvailabilityLookup | null
+): Recipients[] {
+  if (recipients.length === 0) return recipients
+  if (!availabilityLookup) return recipients
+  if (availabilityLookup.availabilityCount.size === 0) return []
+
+  // Fall back to default Haircut availability if a client's primary service is unavailable.
+  const haircutCount = availabilityLookup.availabilityCount.get(DEFAULT_PRIMARY_SERVICE) || 0
+
+  return recipients.filter((recipient) => {
+    const serviceName = normalizeServiceName(recipient.primary_service ?? DEFAULT_PRIMARY_SERVICE)
+    const serviceCount = availabilityLookup.availabilityCount.get(serviceName) || 0
+
+    if (serviceCount > 0) return true
+    if (haircutCount > 0) return true
+
+    return false
+  })
+}
+
+// Appends a compact slot suggestion string to the user's configured message.
+function buildMessageWithSuggestions(
+  baseMessage: string,
+  recipient: Recipients,
+  availabilityLookup: AvailabilityLookup | null
+): string {
+  if (!availabilityLookup) return baseMessage
+
+  const labels = getSuggestedSlotLabels(recipient, availabilityLookup)
+  if (labels.length === 0) return baseMessage
+
+  // Append suggestions instead of replacing the user's configured message.
+  return `${baseMessage}\nSuggested times: ${labels.join(', ')}`
+}
+
+// Picks the top N slots for this recipient's service (or Haircut fallback).
+function getSuggestedSlotLabels(
+  recipient: Recipients,
+  availabilityLookup: AvailabilityLookup
+): string[] {
+  const serviceName = normalizeServiceName(recipient.primary_service ?? DEFAULT_PRIMARY_SERVICE)
+  const serviceSlots = availabilityLookup.slotsByService.get(serviceName) || []
+  const fallbackSlots = availabilityLookup.slotsByService.get(DEFAULT_PRIMARY_SERVICE) || []
+  const slots = serviceSlots.length > 0 ? serviceSlots : fallbackSlots
+
+  return slots
+    .slice(0, SLOT_SUGGESTION_LIMIT)
+    .map((slot) => formatSlotLabel(slot))
+    .filter((label): label is string => Boolean(label))
+}
+
+// Formats a single slot label for SMS (short weekday + time).
+function formatSlotLabel(slot: AvailabilitySlotRow): string | null {
+  const date = slot.start_at
+    ? new Date(slot.start_at)
+    : new Date(`${slot.slot_date}T${slot.start_time}:00`)
+
+  if (Number.isNaN(date.getTime())) {
+    return `${slot.slot_date} ${slot.start_time}`
+  }
+
+  const formatOptions: Intl.DateTimeFormatOptions = {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }
+
+  if (slot.timezone) {
+    formatOptions.timeZone = slot.timezone
+  }
+
+  try {
+    return date.toLocaleString('en-US', formatOptions)
+  } catch {
+    return date.toLocaleString('en-US', {
+      weekday: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+  }
+}
+
+// Provides a stable sort value so the earliest slots come first.
+function getSlotSortValue(slot: AvailabilitySlotRow): number {
+  if (slot.start_at) {
+    const startAtValue = Date.parse(slot.start_at)
+    if (!Number.isNaN(startAtValue)) return startAtValue
+  }
+
+  const fallbackValue = Date.parse(`${slot.slot_date}T${slot.start_time}:00`)
+  return Number.isNaN(fallbackValue) ? Number.MAX_SAFE_INTEGER : fallbackValue
 }
 
 // Export POST with conditional signature verification

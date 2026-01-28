@@ -3,7 +3,6 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getAuthenticatedUser } from '@/utils/api-auth'
 
 import { selectClientsForSMS_AutoNudge } from '@/lib/clientSmsSelectionAlgorithm_AutoNudge' 
 import { selectClientsForSMS_Campaign } from '@/lib/clientSmsSelectionAlgorithm_Campaign'
@@ -68,7 +67,9 @@ export async function GET(request: Request) {
     // Extract phone numbers
     const phoneNumbers = selectedClients.map(client => ({
       full_name: `${client.first_name || ''} ${client.last_name || ''}`.trim(),
-      phone_normalized: client.phone_normalized
+      phone_normalized: client.phone_normalized,
+      client_id: client.client_id ?? null,
+      primary_service: (client as { primary_service?: string | null }).primary_service ?? null,
     }))
 
     // Calculate statistics
@@ -109,10 +110,11 @@ export async function GET(request: Request) {
       maxClient: result?.totalAvailableClients
     })
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('❌ Error previewing SMS recipients:', err)
+    const message = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(
-      { success: false, error: err.message || 'Unknown error' },
+      { success: false, error: message },
       { status: 500 }
     )
   }

@@ -8,6 +8,7 @@ export interface AcuityClient {
   phone_normalized: string | null;
   first_appt: string | null;
   last_appt: string | null;
+  primary_service: string | null;
   visiting_type: 'new' | 'consistent' | 'semi-consistent' | 'easy-going' | 'rare' | null;
   avg_weekly_visits: number | null;
   total_appointments: number;
