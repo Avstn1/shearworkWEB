@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // ✅ Delivered → update last SMS sent timestamp AND handle credits
+  // ✅ Delivered → update last SMS sent timestamp
   if (messageStatus === 'delivered') {
     // Fetch message and cron from sms_scheduled_messages
     const { data: scheduledMessage } = await supabase
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // 🔴 Failed delivery → refund credits
+  // 🔴 Failed delivery
   if (messageStatus === 'failed' || messageStatus === 'undelivered') {
     const failureReason = errorCode 
       ? TWILIO_ERROR_CODES[errorCode] || `Unknown error (code: ${errorCode})`
