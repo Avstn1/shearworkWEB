@@ -48,6 +48,7 @@ export async function pullAvailability(
     .eq('user_id', userId)
     .maybeSingle()
 
+  // Build the adapter list up front so each source can be handled consistently.
   const sourceConfigs: Array<{ adapter: AvailabilityAdapter; enabled: boolean }> = [
     { adapter: new AcuityAvailabilityAdapter(), enabled: Boolean(acuityToken?.access_token) },
     { adapter: new SquareAvailabilityAdapter(), enabled: Boolean(squareToken?.access_token) },
@@ -59,10 +60,12 @@ export async function pullAvailability(
 
   let effectiveFetchedAt = fetchedAt
 
+  // Process each enabled source independently so a failure doesn't block others.
   for (const { adapter, enabled } of sourceConfigs) {
     if (!enabled) continue
 
     try {
+      // Pull per-source availability with cache handling and slot deduping.
       const result = await pullAvailabilityForSource({
         supabase,
         userId,
@@ -101,6 +104,7 @@ export async function pullAvailability(
     errors.push('No booking sources connected')
   }
 
+  // Aggregate deduped slots into hour buckets for reporting/analysis.
   const hourlyBuckets = buildHourlyBuckets(outputSlots)
   const cacheHit = cacheHitFlags.length > 0 && cacheHitFlags.every(Boolean)
 
@@ -297,6 +301,7 @@ async function pullAvailabilityForSource(params: {
   options: AvailabilityPullOptions
 }): Promise<SourceAvailabilityResult> {
   const { supabase, userId, adapter, dateRange, fetchedAt, options } = params
+  // Reuse cached slots when possible to avoid hammering external APIs.
   const cached = options.forceRefresh
     ? null
     : await getCachedAvailability(supabase, userId, adapter.name, dateRange)
@@ -313,6 +318,7 @@ async function pullAvailabilityForSource(params: {
     }
   }
 
+  // Fetch fresh slots directly from the provider.
   const slots = await adapter.fetchAvailabilitySlots(supabase, userId, dateRange)
   const rawSlots = applyFetchedAtToSlots(slots, fetchedAt)
   const dedupedSlots = dedupeSlotsByTime(rawSlots)

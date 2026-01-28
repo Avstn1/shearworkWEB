@@ -157,8 +157,9 @@ async function handler(request: Request) {
     }
   }
 
-    // Fetch recipients based on mode
+    // Fetch recipients based on mode (test vs scheduled message send).
     let recipients: Recipients[] = []
+    // Lazily loaded availability lookup used for auto-nudge filtering and slot suggestions.
     let availabilityLookup: AvailabilityLookup | null = null
 
     if (isTest) {
@@ -295,6 +296,7 @@ async function handler(request: Request) {
       }
 
       if (scheduledMessage.purpose === 'auto-nudge') {
+        // Auto-nudge: pull availability once and reuse it for filtering + message suggestions.
         availabilityLookup = await loadAvailabilityForNudges(scheduledMessage.user_id)
         recipients = filterRecipientsByAvailability(recipients, availabilityLookup)
 
@@ -330,6 +332,7 @@ async function handler(request: Request) {
           body: {
             user_id: scheduledMessage.user_id,
             messageId: scheduledMessage.id,
+            // Auto-nudge messages get slot suggestions appended per recipient.
             message: scheduledMessage.purpose === 'auto-nudge'
               ? buildMessageWithSuggestions(scheduledMessage.message, recipient, availabilityLookup)
               : scheduledMessage.message,
@@ -357,6 +360,9 @@ async function handler(request: Request) {
   }
 }
 
+// Loads the freshest availability so we can:
+// 1) avoid nudging when no slots exist, and
+// 2) attach a few suggested times to each nudge.
 async function loadAvailabilityForNudges(userId: string): Promise<AvailabilityLookup | null> {
   try {
     const availability = await pullAvailability(supabase, userId, { forceRefresh: true })
@@ -368,7 +374,8 @@ async function loadAvailabilityForNudges(userId: string): Promise<AvailabilityLo
 
     const acuityFetchedAt = availability.sources?.acuity?.fetchedAt || availability.fetchedAt
 
-    // Auto-nudge runs on Acuity clients today, so we only load Acuity slots here.
+    // Auto-nudge currently runs on Acuity clients, so we only load Acuity slots here.
+    // This avoids mixing Square availability with Acuity client services.
     const { data: slots, error } = await supabase
       .from('availability_slots')
       .select('appointment_type_name, slot_date, start_time, start_at, timezone')
@@ -390,6 +397,7 @@ async function loadAvailabilityForNudges(userId: string): Promise<AvailabilityLo
   }
 }
 
+// Converts raw slot rows into quick lookup maps for filtering + suggestions.
 function buildAvailabilityLookup(slots: AvailabilitySlotRow[]): AvailabilityLookup {
   const availabilityCount = new Map<string, number>()
   const slotsByService = new Map<string, AvailabilitySlotRow[]>()
@@ -412,6 +420,7 @@ function buildAvailabilityLookup(slots: AvailabilitySlotRow[]): AvailabilityLook
     slotsByService.set(serviceName, serviceSlots)
   }
 
+  // Sort each service's slots so we can safely take the first N.
   for (const serviceSlots of slotsByService.values()) {
     serviceSlots.sort((a, b) => getSlotSortValue(a) - getSlotSortValue(b))
   }
@@ -419,6 +428,8 @@ function buildAvailabilityLookup(slots: AvailabilitySlotRow[]): AvailabilityLook
   return { availabilityCount, slotsByService }
 }
 
+// Returns only recipients who have availability for their primary service,
+// falling back to Haircut if their service has no slots.
 function filterRecipientsByAvailability(
   recipients: Recipients[],
   availabilityLookup: AvailabilityLookup | null
@@ -441,6 +452,7 @@ function filterRecipientsByAvailability(
   })
 }
 
+// Appends a compact slot suggestion string to the user's configured message.
 function buildMessageWithSuggestions(
   baseMessage: string,
   recipient: Recipients,
@@ -455,6 +467,7 @@ function buildMessageWithSuggestions(
   return `${baseMessage}\nSuggested times: ${labels.join(', ')}`
 }
 
+// Picks the top N slots for this recipient's service (or Haircut fallback).
 function getSuggestedSlotLabels(
   recipient: Recipients,
   availabilityLookup: AvailabilityLookup
@@ -470,6 +483,7 @@ function getSuggestedSlotLabels(
     .filter((label): label is string => Boolean(label))
 }
 
+// Formats a single slot label for SMS (short weekday + time).
 function formatSlotLabel(slot: AvailabilitySlotRow): string | null {
   const date = slot.start_at
     ? new Date(slot.start_at)
@@ -502,6 +516,7 @@ function formatSlotLabel(slot: AvailabilitySlotRow): string | null {
   }
 }
 
+// Provides a stable sort value so the earliest slots come first.
 function getSlotSortValue(slot: AvailabilitySlotRow): number {
   if (slot.start_at) {
     const startAtValue = Date.parse(slot.start_at)

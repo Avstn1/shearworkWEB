@@ -44,6 +44,7 @@ export class SquareAvailabilityAdapter implements AvailabilityAdapter {
     userId: string,
     dateRange: AvailabilityDateRange
   ): Promise<AvailabilitySlotRecord[]> {
+    // Reuse the existing Square adapter for auth + location selection.
     const squareAdapter = new SquareAdapter()
     const accessToken = await squareAdapter.ensureValidToken(supabase, userId)
     const calendarId = await squareAdapter.getCalendarId(accessToken, supabase, userId)
@@ -54,12 +55,14 @@ export class SquareAvailabilityAdapter implements AvailabilityAdapter {
 
     if (activeLocations.length === 0) return []
 
+    // Collect service variations (appointment types) from Square Catalog.
     const serviceVariations = await fetchServiceVariations(accessToken)
     const limitedVariations = serviceVariations.slice(0, MAX_SERVICE_VARIATIONS)
 
     if (limitedVariations.length === 0) return []
 
     const slots: AvailabilitySlotRecord[] = []
+    // Square availability uses a date range filter; chunk to stay within limits.
     const dateChunks = buildDateChunks(dateRange.startDate, dateRange.endDate, MAX_SQUARE_RANGE_DAYS)
     const seen = new Set<string>()
 
@@ -300,5 +303,6 @@ function roundCurrency(value: number): number {
 }
 
 function delay(ms: number): Promise<void> {
+  // Small pacing delay to reduce API burst risk.
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
