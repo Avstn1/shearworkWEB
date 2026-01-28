@@ -6,6 +6,7 @@ import { isDefaultServiceName } from '@/lib/booking/serviceNormalization'
 import type {
   AvailabilityDailySummaryRecord,
   AvailabilityDateRange,
+  AvailabilityCapacityBucket,
   AvailabilityHourlyBucket,
   AvailabilityPullOptions,
   AvailabilityPullResult,
@@ -106,6 +107,8 @@ export async function pullAvailability(
 
   // Aggregate deduped slots into hour buckets for reporting/analysis.
   const hourlyBuckets = buildHourlyBuckets(outputSlots)
+  // Build 30-minute capacity buckets for Acuity (source-specific, mutually exclusive).
+  const capacityBuckets = buildCapacityBuckets(outputSlots)
   const cacheHit = cacheHitFlags.length > 0 && cacheHitFlags.every(Boolean)
 
   return {
@@ -118,6 +121,7 @@ export async function pullAvailability(
     slots: outputSlots,
     summaries: outputSummaries,
     hourlyBuckets,
+    capacityBuckets,
     sources,
     errors: errors.length > 0 ? errors : undefined,
   }
@@ -207,6 +211,41 @@ function buildHourlyBuckets(slots: AvailabilitySlotRecord[]): AvailabilityHourly
   return Array.from(bucketMap.values())
 }
 
+function buildCapacityBuckets(slots: AvailabilitySlotRecord[]): AvailabilityCapacityBucket[] {
+  const bucketMap = new Map<string, { bucket: AvailabilityCapacityBucket; calendars: Set<string> }>()
+
+  for (const slot of slots) {
+    if (slot.source !== 'acuity') continue
+
+    const block = getHalfHourBlock(slot)
+    if (!block) continue
+
+    const key = `${slot.user_id}|${slot.source}|${slot.slot_date}|${block}`
+    const calendarId = slot.calendar_id || 'unknown'
+
+    const current = bucketMap.get(key)
+    if (current) {
+      current.calendars.add(calendarId)
+      current.bucket.capacity = current.calendars.size
+      continue
+    }
+
+    bucketMap.set(key, {
+      bucket: {
+        user_id: slot.user_id,
+        source: slot.source,
+        slot_date: slot.slot_date,
+        block,
+        capacity: 1,
+        timezone: slot.timezone ?? null,
+      },
+      calendars: new Set([calendarId]),
+    })
+  }
+
+  return Array.from(bucketMap.values()).map((entry) => entry.bucket)
+}
+
 function extractSlotHour(slot: AvailabilitySlotRecord): string | null {
   const timeValue = slot.start_time || ''
   const timeMatch = timeValue.match(/^(\d{1,2})/)
@@ -222,6 +261,33 @@ function extractSlotHour(slot: AvailabilitySlotRecord): string | null {
     const date = new Date(slot.start_at)
     if (!Number.isNaN(date.getTime())) {
       return `${String(date.getHours()).padStart(2, '0')}:00`
+    }
+  }
+
+  return null
+}
+
+function getHalfHourBlock(slot: AvailabilitySlotRecord): string | null {
+  const timeValue = slot.start_time || ''
+  const timeMatch = timeValue.match(/^(\d{1,2}):(\d{2})/)
+
+  if (timeMatch) {
+    const hour = Number(timeMatch[1])
+    const minutes = Number(timeMatch[2])
+
+    if (!Number.isNaN(hour) && !Number.isNaN(minutes)) {
+      const blockMinutes = minutes >= 30 ? 30 : 0
+      return `${String(hour).padStart(2, '0')}:${blockMinutes === 0 ? '00' : '30'}`
+    }
+  }
+
+  // Fallback to start_at only if start_time is missing/unparseable.
+  if (slot.start_at) {
+    const date = new Date(slot.start_at)
+    if (!Number.isNaN(date.getTime())) {
+      const hour = date.getHours()
+      const minutes = date.getMinutes() >= 30 ? 30 : 0
+      return `${String(hour).padStart(2, '0')}:${minutes === 0 ? '00' : '30'}`
     }
   }
 
