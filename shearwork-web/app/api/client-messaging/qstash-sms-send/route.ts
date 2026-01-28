@@ -17,6 +17,21 @@ export type Recipients = {
   primary_service?: string | null;
 };
 
+type AvailabilitySlotRow = {
+  appointment_type_name?: string | null
+  slot_date: string
+  start_time: string
+  start_at?: string | null
+  timezone?: string | null
+}
+
+type AvailabilityLookup = {
+  availabilityCount: Map<string, number>
+  slotsByService: Map<string, AvailabilitySlotRow[]>
+}
+
+const SLOT_SUGGESTION_LIMIT = 3
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -144,6 +159,7 @@ async function handler(request: Request) {
 
     // Fetch recipients based on mode
     let recipients: Recipients[] = []
+    let availabilityLookup: AvailabilityLookup | null = null
 
     if (isTest) {
       // Test mode: Send only to the message creator
@@ -279,7 +295,8 @@ async function handler(request: Request) {
       }
 
       if (scheduledMessage.purpose === 'auto-nudge') {
-        recipients = await filterRecipientsByAvailability(scheduledMessage.user_id, recipients)
+        availabilityLookup = await loadAvailabilityForNudges(scheduledMessage.user_id)
+        recipients = filterRecipientsByAvailability(recipients, availabilityLookup)
 
         if (recipients.length === 0) {
           console.warn('⚠️ No recipients with matching availability');
@@ -313,7 +330,9 @@ async function handler(request: Request) {
           body: {
             user_id: scheduledMessage.user_id,
             messageId: scheduledMessage.id,
-            message: scheduledMessage.message,
+            message: scheduledMessage.purpose === 'auto-nudge'
+              ? buildMessageWithSuggestions(scheduledMessage.message, recipient, availabilityLookup)
+              : scheduledMessage.message,
             phone_normalized: recipient.phone_normalized,
             purpose: purpose
           }
@@ -338,60 +357,159 @@ async function handler(request: Request) {
   }
 }
 
-async function filterRecipientsByAvailability(
-  userId: string,
-  recipients: Recipients[]
-): Promise<Recipients[]> {
-  if (recipients.length === 0) return recipients
-
+async function loadAvailabilityForNudges(userId: string): Promise<AvailabilityLookup | null> {
   try {
     const availability = await pullAvailability(supabase, userId, { forceRefresh: true })
 
     if (!availability.success) {
       console.error('Availability refresh failed:', availability.errors)
-      return recipients
+      return null
     }
 
+    const acuityFetchedAt = availability.sources?.acuity?.fetchedAt || availability.fetchedAt
+
+    // Auto-nudge runs on Acuity clients today, so we only load Acuity slots here.
     const { data: slots, error } = await supabase
       .from('availability_slots')
-      .select('appointment_type_name')
+      .select('appointment_type_name, slot_date, start_time, start_at, timezone')
       .eq('user_id', userId)
       .eq('source', 'acuity')
-      .eq('fetched_at', availability.fetchedAt)
+      .eq('fetched_at', acuityFetchedAt)
       .gte('slot_date', availability.range.startDate)
       .lte('slot_date', availability.range.endDate)
 
     if (error) {
       console.error('Failed to load availability slots:', error)
-      return recipients
+      return null
     }
 
-    if (!slots || slots.length === 0) {
-      return []
-    }
-
-    const availabilityByService = new Map<string, number>()
-
-    for (const slot of slots) {
-      const serviceName = normalizeServiceName(slot.appointment_type_name)
-      availabilityByService.set(serviceName, (availabilityByService.get(serviceName) || 0) + 1)
-    }
-
-    const haircutCount = availabilityByService.get(DEFAULT_PRIMARY_SERVICE) || 0
-
-    return recipients.filter((recipient) => {
-      const serviceName = normalizeServiceName(recipient.primary_service ?? DEFAULT_PRIMARY_SERVICE)
-      const serviceCount = availabilityByService.get(serviceName) || 0
-
-      if (serviceCount > 0) return true
-      if (haircutCount > 0) return true
-
-      return false
-    })
+    return buildAvailabilityLookup(slots || [])
   } catch (error) {
-    console.error('Failed to filter recipients by availability:', error)
-    return recipients
+    console.error('Failed to load availability for nudges:', error)
+    return null
   }
+}
+
+function buildAvailabilityLookup(slots: AvailabilitySlotRow[]): AvailabilityLookup {
+  const availabilityCount = new Map<string, number>()
+  const slotsByService = new Map<string, AvailabilitySlotRow[]>()
+  const seenByService = new Map<string, Set<string>>()
+
+  for (const slot of slots) {
+    const serviceName = normalizeServiceName(slot.appointment_type_name)
+    const key = `${slot.slot_date}|${slot.start_time}`
+    const seen = seenByService.get(serviceName) ?? new Set<string>()
+
+    // Collapse duplicate time entries per service so suggestions stay clean.
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    seenByService.set(serviceName, seen)
+    availabilityCount.set(serviceName, (availabilityCount.get(serviceName) || 0) + 1)
+
+    const serviceSlots = slotsByService.get(serviceName) ?? []
+    serviceSlots.push(slot)
+    slotsByService.set(serviceName, serviceSlots)
+  }
+
+  for (const serviceSlots of slotsByService.values()) {
+    serviceSlots.sort((a, b) => getSlotSortValue(a) - getSlotSortValue(b))
+  }
+
+  return { availabilityCount, slotsByService }
+}
+
+function filterRecipientsByAvailability(
+  recipients: Recipients[],
+  availabilityLookup: AvailabilityLookup | null
+): Recipients[] {
+  if (recipients.length === 0) return recipients
+  if (!availabilityLookup) return recipients
+  if (availabilityLookup.availabilityCount.size === 0) return []
+
+  // Fall back to default Haircut availability if a client's primary service is unavailable.
+  const haircutCount = availabilityLookup.availabilityCount.get(DEFAULT_PRIMARY_SERVICE) || 0
+
+  return recipients.filter((recipient) => {
+    const serviceName = normalizeServiceName(recipient.primary_service ?? DEFAULT_PRIMARY_SERVICE)
+    const serviceCount = availabilityLookup.availabilityCount.get(serviceName) || 0
+
+    if (serviceCount > 0) return true
+    if (haircutCount > 0) return true
+
+    return false
+  })
+}
+
+function buildMessageWithSuggestions(
+  baseMessage: string,
+  recipient: Recipients,
+  availabilityLookup: AvailabilityLookup | null
+): string {
+  if (!availabilityLookup) return baseMessage
+
+  const labels = getSuggestedSlotLabels(recipient, availabilityLookup)
+  if (labels.length === 0) return baseMessage
+
+  // Append suggestions instead of replacing the user's configured message.
+  return `${baseMessage}\nSuggested times: ${labels.join(', ')}`
+}
+
+function getSuggestedSlotLabels(
+  recipient: Recipients,
+  availabilityLookup: AvailabilityLookup
+): string[] {
+  const serviceName = normalizeServiceName(recipient.primary_service ?? DEFAULT_PRIMARY_SERVICE)
+  const serviceSlots = availabilityLookup.slotsByService.get(serviceName) || []
+  const fallbackSlots = availabilityLookup.slotsByService.get(DEFAULT_PRIMARY_SERVICE) || []
+  const slots = serviceSlots.length > 0 ? serviceSlots : fallbackSlots
+
+  return slots
+    .slice(0, SLOT_SUGGESTION_LIMIT)
+    .map((slot) => formatSlotLabel(slot))
+    .filter((label): label is string => Boolean(label))
+}
+
+function formatSlotLabel(slot: AvailabilitySlotRow): string | null {
+  const date = slot.start_at
+    ? new Date(slot.start_at)
+    : new Date(`${slot.slot_date}T${slot.start_time}:00`)
+
+  if (Number.isNaN(date.getTime())) {
+    return `${slot.slot_date} ${slot.start_time}`
+  }
+
+  const formatOptions: Intl.DateTimeFormatOptions = {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }
+
+  if (slot.timezone) {
+    formatOptions.timeZone = slot.timezone
+  }
+
+  try {
+    return date.toLocaleString('en-US', formatOptions)
+  } catch {
+    return date.toLocaleString('en-US', {
+      weekday: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+  }
+}
+
+function getSlotSortValue(slot: AvailabilitySlotRow): number {
+  if (slot.start_at) {
+    const startAtValue = Date.parse(slot.start_at)
+    if (!Number.isNaN(startAtValue)) return startAtValue
+  }
+
+  const fallbackValue = Date.parse(`${slot.slot_date}T${slot.start_time}:00`)
+  return Number.isNaN(fallbackValue) ? Number.MAX_SAFE_INTEGER : fallbackValue
 }
 
 // Export POST with conditional signature verification

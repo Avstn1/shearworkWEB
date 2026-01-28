@@ -34,10 +34,20 @@ export type AvailabilityDailySummaryRecord = {
   updated_at?: string
 }
 
+export type AvailabilityHourlyBucket = {
+  user_id: string
+  source: string
+  slot_date: string
+  hour: string
+  slot_count: number
+  timezone?: string | null
+}
+
 export type AvailabilitySourceResult = {
   slotCount: number
   dayCount: number
   estimatedRevenue: number
+  fetchedAt?: string
   errors?: string[]
 }
 
@@ -50,6 +60,7 @@ export type AvailabilityPullResult = {
   totalEstimatedRevenue: number
   slots: AvailabilitySlotRecord[]
   summaries: AvailabilityDailySummaryRecord[]
+  hourlyBuckets: AvailabilityHourlyBucket[]
   sources: Record<string, AvailabilitySourceResult>
   errors?: string[]
 }

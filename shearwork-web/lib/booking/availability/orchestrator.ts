@@ -1,9 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AcuityAvailabilityAdapter } from '@/lib/booking/availability/adapters/acuity'
+import { SquareAvailabilityAdapter } from '@/lib/booking/availability/adapters/square'
+import type { AvailabilityAdapter } from '@/lib/booking/availability/adapters/AvailabilityAdapter'
 import { isDefaultServiceName } from '@/lib/booking/serviceNormalization'
 import type {
   AvailabilityDailySummaryRecord,
   AvailabilityDateRange,
+  AvailabilityHourlyBucket,
   AvailabilityPullOptions,
   AvailabilityPullResult,
   AvailabilitySlotRecord,
@@ -16,6 +19,13 @@ type AvailabilityCache = {
   slots: AvailabilitySlotRecord[]
 }
 
+type SourceAvailabilityResult = {
+  slots: AvailabilitySlotRecord[]
+  summaries: AvailabilityDailySummaryRecord[]
+  fetchedAt: string
+  cacheHit: boolean
+}
+
 export async function pullAvailability(
   supabase: SupabaseClient,
   userId: string,
@@ -26,63 +36,59 @@ export async function pullAvailability(
   const errors: string[] = []
   const sources: AvailabilityPullResult['sources'] = {}
 
-  let cacheHit = false
-  let outputSlots: AvailabilitySlotRecord[] = []
-  let outputSummaries: AvailabilityDailySummaryRecord[] = []
-  let effectiveFetchedAt = fetchedAt
-
   const { data: acuityToken } = await supabase
     .from('acuity_tokens')
     .select('access_token')
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (acuityToken?.access_token) {
-    const adapter = new AcuityAvailabilityAdapter()
+  const { data: squareToken } = await supabase
+    .from('square_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const sourceConfigs: Array<{ adapter: AvailabilityAdapter; enabled: boolean }> = [
+    { adapter: new AcuityAvailabilityAdapter(), enabled: Boolean(acuityToken?.access_token) },
+    { adapter: new SquareAvailabilityAdapter(), enabled: Boolean(squareToken?.access_token) },
+  ]
+
+  const outputSlots: AvailabilitySlotRecord[] = []
+  const outputSummaries: AvailabilityDailySummaryRecord[] = []
+  const cacheHitFlags: boolean[] = []
+
+  let effectiveFetchedAt = fetchedAt
+
+  for (const { adapter, enabled } of sourceConfigs) {
+    if (!enabled) continue
 
     try {
-      const cached = options.forceRefresh
-        ? null
-        : await getCachedAvailability(supabase, userId, adapter.name, dateRange)
+      const result = await pullAvailabilityForSource({
+        supabase,
+        userId,
+        adapter,
+        dateRange,
+        fetchedAt,
+        options,
+      })
 
-      if (cached) {
-        cacheHit = true
-        effectiveFetchedAt = cached.fetchedAt
-        outputSlots = dedupeSlotsByTime(cached.slots)
-        outputSummaries = buildDailySummaries(outputSlots, cached.fetchedAt)
-      } else {
-        const slots = await adapter.fetchAvailabilitySlots(supabase, userId, dateRange)
-        const rawSlots = applyFetchedAtToSlots(slots, fetchedAt)
-        const dedupedSlots = dedupeSlotsByTime(rawSlots)
-        const summaries = buildDailySummaries(dedupedSlots, fetchedAt)
+      outputSlots.push(...result.slots)
+      outputSummaries.push(...result.summaries)
+      cacheHitFlags.push(result.cacheHit)
+      effectiveFetchedAt = pickMostRecentFetchedAt(effectiveFetchedAt, result.fetchedAt)
 
-        outputSlots = dedupedSlots
-        outputSummaries = summaries
-
-        if (!options.dryRun) {
-          await upsertSlots(supabase, rawSlots)
-          await upsertSummaries(supabase, summaries)
-          await cleanupAvailabilityCache(
-            supabase,
-            userId,
-            adapter.name,
-            dateRange,
-            fetchedAt
-          )
-        }
-      }
-
-      const sourceRevenue = sumEstimatedRevenue(outputSummaries)
+      const sourceRevenue = sumEstimatedRevenue(result.summaries)
 
       sources[adapter.name] = {
-        slotCount: outputSlots.length,
-        dayCount: outputSummaries.length,
+        slotCount: result.slots.length,
+        dayCount: result.summaries.length,
         estimatedRevenue: roundCurrency(sourceRevenue),
+        fetchedAt: result.fetchedAt,
       }
     } catch (err) {
       const message = formatErrorMessage(err)
-      errors.push(`Acuity: ${message}`)
-      sources.acuity = {
+      errors.push(`${formatSourceName(adapter.name)}: ${message}`)
+      sources[adapter.name] = {
         slotCount: 0,
         dayCount: 0,
         estimatedRevenue: 0,
@@ -95,6 +101,9 @@ export async function pullAvailability(
     errors.push('No booking sources connected')
   }
 
+  const hourlyBuckets = buildHourlyBuckets(outputSlots)
+  const cacheHit = cacheHitFlags.length > 0 && cacheHitFlags.every(Boolean)
+
   return {
     success: errors.length === 0,
     fetchedAt: effectiveFetchedAt,
@@ -104,6 +113,7 @@ export async function pullAvailability(
     totalEstimatedRevenue: roundCurrency(sumEstimatedRevenue(outputSummaries)),
     slots: outputSlots,
     summaries: outputSummaries,
+    hourlyBuckets,
     sources,
     errors: errors.length > 0 ? errors : undefined,
   }
@@ -163,6 +173,55 @@ function buildDailySummaries(
   }
 
   return Array.from(summaryMap.values())
+}
+
+function buildHourlyBuckets(slots: AvailabilitySlotRecord[]): AvailabilityHourlyBucket[] {
+  const bucketMap = new Map<string, AvailabilityHourlyBucket>()
+
+  for (const slot of slots) {
+    const hour = extractSlotHour(slot)
+    if (!hour) continue
+
+    const key = `${slot.user_id}|${slot.source}|${slot.slot_date}|${hour}`
+    const current = bucketMap.get(key)
+
+    if (current) {
+      current.slot_count += 1
+      continue
+    }
+
+    bucketMap.set(key, {
+      user_id: slot.user_id,
+      source: slot.source,
+      slot_date: slot.slot_date,
+      hour,
+      slot_count: 1,
+      timezone: slot.timezone ?? null,
+    })
+  }
+
+  return Array.from(bucketMap.values())
+}
+
+function extractSlotHour(slot: AvailabilitySlotRecord): string | null {
+  const timeValue = slot.start_time || ''
+  const timeMatch = timeValue.match(/^(\d{1,2})/)
+
+  if (timeMatch) {
+    const hour = Number(timeMatch[1])
+    if (!Number.isNaN(hour) && hour >= 0 && hour <= 23) {
+      return `${String(hour).padStart(2, '0')}:00`
+    }
+  }
+
+  if (slot.start_at) {
+    const date = new Date(slot.start_at)
+    if (!Number.isNaN(date.getTime())) {
+      return `${String(date.getHours()).padStart(2, '0')}:00`
+    }
+  }
+
+  return null
 }
 
 function dedupeSlotsByTime(slots: AvailabilitySlotRecord[]): AvailabilitySlotRecord[] {
@@ -227,6 +286,51 @@ function applyFetchedAtToSlots(
     fetched_at: fetchedAt,
     updated_at: fetchedAt,
   }))
+}
+
+async function pullAvailabilityForSource(params: {
+  supabase: SupabaseClient
+  userId: string
+  adapter: AvailabilityAdapter
+  dateRange: AvailabilityDateRange
+  fetchedAt: string
+  options: AvailabilityPullOptions
+}): Promise<SourceAvailabilityResult> {
+  const { supabase, userId, adapter, dateRange, fetchedAt, options } = params
+  const cached = options.forceRefresh
+    ? null
+    : await getCachedAvailability(supabase, userId, adapter.name, dateRange)
+
+  if (cached) {
+    const dedupedSlots = dedupeSlotsByTime(cached.slots)
+    const summaries = buildDailySummaries(dedupedSlots, cached.fetchedAt)
+
+    return {
+      slots: dedupedSlots,
+      summaries,
+      fetchedAt: cached.fetchedAt,
+      cacheHit: true,
+    }
+  }
+
+  const slots = await adapter.fetchAvailabilitySlots(supabase, userId, dateRange)
+  const rawSlots = applyFetchedAtToSlots(slots, fetchedAt)
+  const dedupedSlots = dedupeSlotsByTime(rawSlots)
+  const summaries = buildDailySummaries(dedupedSlots, fetchedAt)
+
+  if (!options.dryRun) {
+    // Store raw slots for service-specific filtering, but return deduped slots for summaries/UI.
+    await upsertSlots(supabase, rawSlots)
+    await upsertSummaries(supabase, summaries)
+    await cleanupAvailabilityCache(supabase, userId, adapter.name, dateRange, fetchedAt)
+  }
+
+  return {
+    slots: dedupedSlots,
+    summaries,
+    fetchedAt,
+    cacheHit: false,
+  }
 }
 
 async function getCachedAvailability(
@@ -387,6 +491,14 @@ async function cleanupAvailabilityCache(
 
 function sumEstimatedRevenue(summaries: AvailabilityDailySummaryRecord[]): number {
   return summaries.reduce((total, row) => total + row.estimated_revenue, 0)
+}
+
+function pickMostRecentFetchedAt(current: string, candidate: string): string {
+  return candidate > current ? candidate : current
+}
+
+function formatSourceName(value: string): string {
+  return value ? value[0].toUpperCase() + value.slice(1) : 'Source'
 }
 
 function formatDate(date: Date): string {
