@@ -28,8 +28,6 @@ export async function POST(req: Request) {
       )
     }
     
-    console.log(`From generate-sms-template: ${body.profile?.booking_link}`)
-
     const systemPrompt = `You are an expert SMS marketing copywriter specializing in barbering. There is no barbershop - you're writing for an individual barber.
 
                           Your task is to generate professional, engaging SMS marketing messages for barbers.
