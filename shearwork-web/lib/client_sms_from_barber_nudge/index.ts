@@ -125,8 +125,8 @@ async function generateSMSMessage(
 }
 
 function addTokenToBookingLink(message: string, token: string, username: string): string {
-  const pattern = `${siteUrl}/book?profile=${username}`
-  return message.replace(pattern, `${siteUrl}/book?profile=${username}&t=${token}`)
+  const pattern = `${siteUrl}book?profile=${username}`
+  return message.replace(pattern, `${siteUrl}book?profile=${username}&t=${token}`)
 }
 
 export async function ClientSMSFromBarberNudge(
