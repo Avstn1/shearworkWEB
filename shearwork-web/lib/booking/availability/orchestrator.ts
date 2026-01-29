@@ -2,7 +2,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { AcuityAvailabilityAdapter } from '@/lib/booking/availability/adapters/acuity'
 import { SquareAvailabilityAdapter } from '@/lib/booking/availability/adapters/square'
 import type { AvailabilityAdapter } from '@/lib/booking/availability/adapters/AvailabilityAdapter'
-import { isDefaultServiceName } from '@/lib/booking/serviceNormalization'
+import {
+  DEFAULT_PRIMARY_SERVICE,
+  isDefaultServiceName,
+  normalizeServiceName,
+} from '@/lib/booking/serviceNormalization'
 import type {
   AvailabilityDailySummaryRecord,
   AvailabilityDateRange,
@@ -155,9 +159,11 @@ function buildDailySummaries(
   slots: AvailabilitySlotRecord[],
   fetchedAt: string
 ): AvailabilityDailySummaryRecord[] {
+  const defaultService = resolveDefaultServiceContext(slots)
+
   // Track unique 30-minute blocks per day to calculate true capacity.
-  // Multiple services (e.g., KIDS HAIRCUT + Lineup) can share the same block,
-  // but a barber can only serve one client per 30-minute window.
+  // Multiple services can share the same block, but only default-service
+  // availability should define capacity.
   const summaryMap = new Map<
     string,
     {
@@ -167,40 +173,152 @@ function buildDailySummaries(
   >()
 
   for (const slot of slots) {
-    const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
-    const block = getHalfHourBlock(slot)
-    const revenue = roundCurrency(slot.estimated_revenue ?? 0)
+    const normalizedName = getNormalizedServiceName(slot.appointment_type_name)
+    if (!normalizedName || normalizedName !== defaultService.normalizedName) continue
 
+    const effectiveDuration = slot.duration_minutes ?? 30
+    if (effectiveDuration < 30) continue
+
+    const block = getHalfHourBlock(slot)
+    if (!block) continue
+
+    const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
     const current = summaryMap.get(dayKey)
+
     if (current) {
-      // Only count unique 30-minute blocks for capacity.
-      if (block && !current.blocks.has(block)) {
+      if (!current.blocks.has(block)) {
         current.blocks.add(block)
         current.summary.slot_count += 1
       }
-      current.summary.estimated_revenue = roundCurrency(current.summary.estimated_revenue + revenue)
       continue
     }
-
-    const blocks = new Set<string>()
-    if (block) blocks.add(block)
 
     summaryMap.set(dayKey, {
       summary: {
         user_id: slot.user_id,
         source: slot.source,
         slot_date: slot.slot_date,
-        slot_count: block ? 1 : 0,
-        estimated_revenue: revenue,
+        slot_count: 1,
+        estimated_revenue: 0,
         timezone: slot.timezone ?? null,
         fetched_at: fetchedAt,
         updated_at: fetchedAt,
       },
-      blocks,
+      blocks: new Set([block]),
     })
   }
 
+  for (const entry of summaryMap.values()) {
+    entry.summary.estimated_revenue = roundCurrency(
+      entry.summary.slot_count * defaultService.price
+    )
+  }
+
   return Array.from(summaryMap.values()).map((entry) => entry.summary)
+}
+
+type ServiceUsage = {
+  name: string
+  normalizedName: string
+  count: number
+  minPrice: number
+}
+
+type DefaultServiceContext = {
+  normalizedName: string
+  price: number
+}
+
+function resolveDefaultServiceContext(
+  slots: AvailabilitySlotRecord[]
+): DefaultServiceContext {
+  const haircutUsage = collectServiceUsage(slots, (slot) => {
+    if (!slot.appointment_type_name?.trim()) return false
+    return isDefaultServiceName(slot.appointment_type_name)
+  })
+
+  const fallbackUsage = collectServiceUsage(slots, (slot) =>
+    Boolean(slot.appointment_type_name?.trim())
+  )
+
+  const selected = pickMostUsedService(haircutUsage) ?? pickMostUsedService(fallbackUsage)
+
+  if (!selected) {
+    return {
+      normalizedName: DEFAULT_PRIMARY_SERVICE,
+      price: 0,
+    }
+  }
+
+  return {
+    normalizedName: selected.normalizedName,
+    price: Number.isFinite(selected.minPrice) ? selected.minPrice : 0,
+  }
+}
+
+function collectServiceUsage(
+  slots: AvailabilitySlotRecord[],
+  predicate: (slot: AvailabilitySlotRecord) => boolean
+): ServiceUsage[] {
+  const usageMap = new Map<string, ServiceUsage>()
+
+  for (const slot of slots) {
+    if (!predicate(slot)) continue
+
+    const rawName = slot.appointment_type_name?.trim()
+    if (!rawName) continue
+
+    const key = rawName.toLowerCase()
+    const normalizedName = normalizeServiceName(rawName)
+    const price = getSlotPrice(slot)
+
+    const current = usageMap.get(key)
+    if (current) {
+      current.count += 1
+      if (price !== null) {
+        current.minPrice = Math.min(current.minPrice, price)
+      }
+      continue
+    }
+
+    usageMap.set(key, {
+      name: rawName,
+      normalizedName,
+      count: 1,
+      minPrice: price ?? Number.POSITIVE_INFINITY,
+    })
+  }
+
+  return Array.from(usageMap.values())
+}
+
+function pickMostUsedService(usage: ServiceUsage[]): ServiceUsage | null {
+  if (usage.length === 0) return null
+
+  return usage.reduce((best, current) => {
+    if (!best) return current
+    if (current.count > best.count) return current
+    if (current.count < best.count) return best
+
+    const currentPrice = current.minPrice
+    const bestPrice = best.minPrice
+
+    if (currentPrice < bestPrice) return current
+    if (currentPrice > bestPrice) return best
+
+    return best
+  }, usage[0])
+}
+
+function getNormalizedServiceName(value?: string | null): string | null {
+  if (!value || !value.trim()) return null
+  return normalizeServiceName(value)
+}
+
+function getSlotPrice(slot: AvailabilitySlotRecord): number | null {
+  const direct = normalizePrice(slot.price)
+  if (direct !== null) return direct
+  return normalizePrice(slot.estimated_revenue)
 }
 
 function buildHourlyBuckets(slots: AvailabilitySlotRecord[]): AvailabilityHourlyBucket[] {
