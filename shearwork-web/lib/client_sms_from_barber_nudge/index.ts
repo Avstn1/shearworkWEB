@@ -75,7 +75,7 @@ async function generateSMSMessage(
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     // Generate booking link without token
-    const bookingLink = `${siteUrl}/book?profile=${profile.username}`
+    const bookingLink = `${siteUrl}book?profile=${profile.username}`
 
     // Generate SMS template
     const templateResponse = await fetch(`${siteUrl}/api/client-messaging/generate-sms-template`, {
@@ -172,7 +172,7 @@ export async function ClientSMSFromBarberNudge(
 
     for (let i = 0; i < previewData.phoneNumbers.length; i++) {
       const client = previewData.clients[i]
-      const phoneNumber = previewData.phoneNumbers[i]
+      const phoneNumber = client.phone
       const client_id = client?.client_id || null
 
       // Add unique token to the message
