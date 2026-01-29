@@ -11,6 +11,8 @@ export default async function BookingRedirectPage({ searchParams }: PageProps) {
   const profileUsername = params.profile?.toLowerCase()
   const linkToken = params.t
 
+  console.log(linkToken)
+
   if (!profileUsername) {
     return <BarberSearch />
   }
@@ -34,7 +36,6 @@ export default async function BookingRedirectPage({ searchParams }: PageProps) {
       .from('acuity_clients')
       .update({ last_date_clicked_link: new Date().toISOString() })
       .eq('link_token', linkToken)
-      .eq('user_id', profile.user_id)
       .then(() => {}) // Fire and forget
   }
 
