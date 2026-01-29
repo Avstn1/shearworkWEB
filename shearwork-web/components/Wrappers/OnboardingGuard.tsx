@@ -9,8 +9,6 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
   const { user, profile, isLoading } = useAuth()
 
   useEffect(() => {
-    console.log('🟢 OnboardingGuard useEffect - isLoading:', isLoading, 'profile:', profile)
-    
     // Don't check until we've finished loading
     if (isLoading) return
     

@@ -33,6 +33,8 @@ export function MessageContent({
   const handleGenerateTemplate = async () => {
     setIsGenerating(true);
     try {
+      const bookingLink = `${process.env.NEXT_PUBLIC_SITE_URL}book?profile=${profile.username}`
+
       const response = await fetch('/api/client-messaging/generate-sms-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,7 +44,7 @@ export function MessageContent({
             full_name: profile?.full_name || '',
             email: profile?.email || '',
             phone: profile?.phone || '',
-            booking_link: profile?.booking_link
+            booking_link: bookingLink
           }
         }),
       });

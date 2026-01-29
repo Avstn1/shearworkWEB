@@ -13,7 +13,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const { user, profile, isAdmin, isPremiumUser, isLoading, profileStatus } = useAuth()
 
   // Public routes that don't need authentication
-  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings']
+  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings', '/book']
   const isPublicRoute = publicRoutes.includes(pathname)
 
   // -----------------------------

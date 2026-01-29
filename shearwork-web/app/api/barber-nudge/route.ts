@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ClientSMSFromBarberNudge } from '@/lib/client_sms_from_barber_nudge/index'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+// Callback function that gets activated when a barber replies
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
@@ -67,8 +69,50 @@ export async function POST(request: Request) {
     if (updateError) {
       console.error('Failed to update profile engagement:', updateError)
     }
+
+    // Activate ClientSMSFromBarberNudge - fetch full profile data
+    const { data: fullProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, email, phone, username, booking_link')
+      .eq('user_id', profile.user_id)
+      .single()
+
+    if (profileError || !fullProfile) {
+      console.error('Failed to fetch full profile:', profileError)
+      return NextResponse.json({ 
+        success: true, 
+        warning: 'Reply logged but failed to trigger SMS campaign' 
+      })
+    }
+
+    // Trigger the client SMS campaign
+    console.log(`Triggering ClientSMSFromBarberNudge for ${fullProfile.full_name}`)
     
-    return NextResponse.json({ success: true })
+    const smsResult = await ClientSMSFromBarberNudge(profile.user_id, {
+      full_name: fullProfile.full_name,
+      email: fullProfile.email,
+      phone: fullProfile.phone,
+      username: fullProfile.username,
+      booking_link: fullProfile.booking_link
+    })
+
+    if (!smsResult.success) {
+      console.error('ClientSMSFromBarberNudge failed:', smsResult.error)
+      return NextResponse.json({ 
+        success: true, 
+        warning: 'Reply logged but SMS campaign failed',
+        campaignError: smsResult.error
+      })
+    }
+
+    console.log(`ClientSMSFromBarberNudge completed: ${smsResult.sent} sent, ${smsResult.failed} failed`)
+    
+    return NextResponse.json({ 
+      success: true,
+      campaignTriggered: true,
+      sent: smsResult.sent,
+      failed: smsResult.failed
+    })
   } catch (error) {
     console.error('Webhook error:', error)
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })

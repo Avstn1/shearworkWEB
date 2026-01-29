@@ -38,7 +38,7 @@ export async function selectClientsForSMS_AutoNudge(
   // Fetch eligible clients
   let query = supabase
     // acuity_clients change for testing
-    .from('acuity_clients')
+    .from('test_acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -63,6 +63,9 @@ export async function selectClientsForSMS_AutoNudge(
   if (!clients || clients.length === 0) {
     return [];
   }
+
+  // console.log("Clients:")
+  // console.log(JSON.stringify(clients))
 
   // Score and filter clients
   const allScoredClients: ScoredClient[] = clients
@@ -101,8 +104,6 @@ export async function selectClientsForSMS_AutoNudge(
     c => c.visiting_type !== 'consistent' && c.visiting_type !== 'semi-consistent'
   );
 
-  console.log(`📊 Available clients: Consistent/Semi=${consistentAndSemiConsistent.length}, Others=${others.length}`);
-
   // Target 90% consistent/semi-consistent
   const targetConsistentCount = Math.floor(limit * 0.9);
   
@@ -123,7 +124,8 @@ export async function selectClientsForSMS_AutoNudge(
     selectedClients.push(...consistentAndSemiConsistent.slice(targetConsistentCount, targetConsistentCount + additionalNeeded));
   }
 
-  console.log(`✅ Selected ${selectedClients.length} clients`);
+  console.log("Selected Clients:")
+  console.log(selectedClients[0])
 
   return selectedClients;
 }
@@ -216,7 +218,7 @@ export async function markClientsAsMessaged(
 ): Promise<void> {
   const { error } = await supabase
     // acuity_clients change for testing
-    .from('acuity_clients')
+    .from('test_acuity_clients')
     .update({ date_last_sms_sent: new Date().toISOString() })
     .in('client_id', clientIds);
 

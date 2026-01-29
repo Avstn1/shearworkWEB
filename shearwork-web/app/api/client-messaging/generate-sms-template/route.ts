@@ -8,8 +8,8 @@ import { openai } from '@/lib/openaiClient'
 
 export async function POST(req: Request) {
   try {
-    const { user, supabase } = await getAuthenticatedUser(req)
-    if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+    // const { user, supabase } = await getAuthenticatedUser(req)
+    // if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
     const body = await req.json()
     const { prompt } = body
@@ -27,6 +27,8 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
+    
+    console.log(`From generate-sms-template: ${body.profile?.booking_link}`)
 
     const systemPrompt = `You are an expert SMS marketing copywriter specializing in barbering. There is no barbershop - you're writing for an individual barber.
 
@@ -49,7 +51,8 @@ export async function POST(req: Request) {
                         Booking Link: ${body.profile?.booking_link || 'N/A'}
 
                         Remember: ${maxMessageLength} characters total, and format with line breaks for readability. 
-                        THE LIMIT IS ${maxMessageLength} CHARACTERS. DO NOT EXCEED THIS LIMIT.`
+                        THE LIMIT IS ${maxMessageLength} CHARACTERS. DO NOT EXCEED THIS LIMIT.
+                        STRICTLY NO EMOJIS. NOT EVEN ONE.`
 
     // Call OpenAI to generate the template
     const response = await openai.chat.completions.create({

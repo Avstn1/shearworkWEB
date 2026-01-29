@@ -228,13 +228,11 @@ async function handler(request: Request) {
           : 'auto-nudge';
       const limit = scheduledMessage.message_limit || 100;
 
-      console.log(`📊 Fetching recipients with ${algorithm} algorithm, limit: ${limit}`);
+      // console.log(`📊 Fetching recipients with ${algorithm} algorithm, limit: ${limit}`);
 
       const apiUrl = scheduledMessage.visiting_type 
         ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}&algorithm=${algorithm}`
         : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}&messageId=${messageId}`;
-        
-      console.log('🔗 API URL:', apiUrl);
       
       const response = await fetch(apiUrl);
       
@@ -245,11 +243,11 @@ async function handler(request: Request) {
       }
 
       const data = await response.json();
-      console.log('✅ Recipients fetched:', {
-        count: data.phoneNumbers?.length || 0,
-        algorithm,
-        limit
-      });
+      // console.log('✅ Recipients fetched:', {
+      //   count: data.phoneNumbers?.length || 0,
+      //   algorithm,
+      //   limit
+      // });
 
       const { error: finalClientsToMessageError } = await supabase
         .from('sms_scheduled_messages')
