@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
     const user_id = url.searchParams.get('user_id')
     const client_id = url.searchParams.get('client_id')
     const message = url.searchParams.get('message')
+    const message_id = url.searchParams.get('message_id')
 
     // Normalize phone to E.164 format
     const phoneNormalized = normalizePhone(to)
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
         .insert({
           user_id: user_id,
           client_id: client_id,
+          message_id: message_id,
           is_sent: true,
           purpose: 'client_sms_barber_nudge',
           reason: null,
