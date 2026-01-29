@@ -15,10 +15,6 @@ Deno.serve(async (_req) => {
   try {
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
     const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
-
-    // Get current date
-    const now = new Date()
-    console.log(`STARTING AVAILABILITY PULL. CURRENT TIME: ${now}`)
     
     const CONCURRENCY_LIMIT = 100
 
@@ -31,7 +27,17 @@ Deno.serve(async (_req) => {
 
     if (profileError) throw profileError
 
-    console.log(`Users to pull availability for: ${profiles?.length || 0}`)
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ 
+        sms_engaged_current_week: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('sms_engaged_current_week', true)
+    
+    if (updateError) {
+      console.error('Failed to update profile engagement:', updateError)
+    }
 
     // Build all requests to be made (one per user)
     const allRequests: { userId: string; fullName: string }[] = []
@@ -78,7 +84,6 @@ Deno.serve(async (_req) => {
                   })
                 } else {
                   const data = await response.json()
-                  console.log(`✓ ${request.fullName} (${request.userId}): ${data.slotsUpserted || 0} slots upserted`)
                   results.push({ 
                     userId: request.userId,
                     fullName: request.fullName,
@@ -115,7 +120,6 @@ Deno.serve(async (_req) => {
     const failCount = results.filter(r => !r.success).length
 
     console.log(`All requests completed. Success: ${successCount}, Failed: ${failCount}`)
-    console.log(`SYNC ENDED. CURRENT TIME: ${new Date()}`)
 
     return new Response(JSON.stringify({ 
       message: 'Availability pull completed',

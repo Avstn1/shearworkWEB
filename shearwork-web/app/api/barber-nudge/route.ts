@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
-        last_sms_engaged: new Date().toISOString(),
+        sms_engaged_current_week: true,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', profile.user_id)

@@ -1,4 +1,5 @@
 import twilio from 'twilio'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -124,6 +125,25 @@ async function generateSMSMessage(
   }
 }
 
+function getISOWeek() {
+  const now = new Date(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Toronto',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
+  )
+
+  const day = now.getDay() || 7
+  now.setDate(now.getDate() + 4 - day)
+
+  const yearStart = new Date(now.getFullYear(), 0, 1)
+  const week = Math.ceil(((+now - +yearStart) / 86400000 + 1) / 7)
+
+  return week
+}
+
 function addTokenToBookingLink(message: string, token: string, username: string): string {
   const pattern = `${siteUrl}book?profile=${username}`
   return message.replace(pattern, `${siteUrl}book?profile=${username}&t=${token}`)
@@ -139,6 +159,8 @@ export async function ClientSMSFromBarberNudge(
     username: string
   }
 ) {
+  const supabase = await createSupabaseServerClient()
+
   try {
     // Calculate limit based on Mondays in current month
     const mondaysCount = getMondaysInCurrentMonth()
@@ -166,6 +188,27 @@ export async function ClientSMSFromBarberNudge(
 
     const baseMessage = messageResult.message
 
+    // Create a row in sms_scheduled_messages
+    const { data: scheduledMessage, error: scheduledMessageInsertError } = await supabase
+      .from('sms_scheduled_messages')
+      .insert({
+        user_id: user_id,
+        title: `${user_id}_${getISOWeek()}`,
+        message: baseMessage,
+        status: 'ACCEPTED',
+        purpose: 'auto-nudge',
+        message_limit: limit,
+        final_clients_to_message: previewData.phoneNumbers.length,
+        is_running: true
+      })
+      .select()
+      .single()
+
+    if (scheduledMessageInsertError) {
+      console.error('Failed to insert SMS Scheduled Message:', scheduledMessageInsertError)
+      return { success: false, error: scheduledMessageInsertError || 'Failed to insert sms_scheduled_message' }
+    }
+
     // Send SMS to all recipients
     const statusCallbackUrl = `${siteUrl}/api/barber-nudge/sms-status-client`
     const results = []
@@ -183,6 +226,7 @@ export async function ClientSMSFromBarberNudge(
         callbackUrl.searchParams.set('user_id', user_id)
         callbackUrl.searchParams.set('client_id', client_id || '')
         callbackUrl.searchParams.set('message', messageWithToken)
+        callbackUrl.searchParams.set('message_id', scheduledMessage.id)
 
         const twilioMessage = await twilio_client.messages.create({
           body: `${messageWithToken}\n\nReply STOP to unsubscribe.`,
