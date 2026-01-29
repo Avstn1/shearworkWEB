@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
         })
 
         console.log(`Message sent to ${barber.full_name} (${barber.phone}): ${twilioMessage.sid}`)
-        console.log(`  Availability: ${availability.slots} slots, $${availability.revenue} revenue`)
+        console.log(`Availability: ${availability.slots} slots, $${availability.revenue} revenue`)
         
         results.push({
           user_id: barber.user_id,
