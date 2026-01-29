@@ -170,8 +170,6 @@ async fetchAppointments(
 
       const data = await response.json()
 
-      console.log('appt ex: ' + JSON.stringify(data[0]))
-
       if (!Array.isArray(data) || data.length === 0) break
 
       for (const raw of data) {

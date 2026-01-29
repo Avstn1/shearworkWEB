@@ -90,8 +90,6 @@ export async function selectClientsForSMS(
     c => c.visiting_type !== 'consistent' && c.visiting_type !== 'semi-consistent'
   );
 
-  console.log(`📊 Available clients: Consistent/Semi=${consistentAndSemiConsistent.length}, Others=${others.length}`);
-
   // Target 90% consistent/semi-consistent
   const targetConsistentCount = Math.floor(limit * 0.9);
   
@@ -111,8 +109,6 @@ export async function selectClientsForSMS(
     const additionalNeeded = limit - selectedClients.length;
     selectedClients.push(...consistentAndSemiConsistent.slice(targetConsistentCount, targetConsistentCount + additionalNeeded));
   }
-
-  console.log(`✅ Selected ${selectedClients.length} clients`);
 
   return selectedClients;
 }

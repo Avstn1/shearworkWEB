@@ -42,6 +42,72 @@ function getRandomMessage(name: string, empty_slots: number, estimatedReturn: nu
     .replace('{return}', estimatedReturn.toString())
 }
 
+function getISOWeekDates(date: Date): { start: Date; end: Date } {
+  const currentDate = new Date(date)
+  const dayOfWeek = currentDate.getDay()
+  
+  // Calculate days to Monday (1 = Monday, 0 = Sunday)
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  
+  const monday = new Date(currentDate)
+  monday.setDate(currentDate.getDate() + daysToMonday)
+  monday.setHours(0, 0, 0, 0)
+  
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
+  
+  return { start: monday, end: sunday }
+}
+
+async function getBarberAvailability(userId: string): Promise<{ slots: number; revenue: number }> {
+  const now = new Date()
+  const { start, end } = getISOWeekDates(now)
+  
+  const startDate = start.toISOString().split('T')[0]
+  const endDate = end.toISOString().split('T')[0]
+  
+  const { data, error } = await supabase
+    .from('availability_daily_summary')
+    .select('slot_count')
+    .eq('user_id', userId)
+    .gte('slot_date', startDate)
+    .lte('slot_date', endDate)
+    
+  if (error) {
+    console.error(`Error fetching availability for user ${userId}:`, error)
+    return { slots: 0, revenue: 0 }
+  }
+
+  const { data: haircutCost, error: haircutCostError } = await supabase
+    .from('acuity_appointments')
+    .select('revenue')
+    .eq('user_id', userId)
+    .eq('service_type', 'Haircut')
+    .order('appointment_date', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (haircutCostError) {
+    console.error(`Error fetching availability for user ${userId}:`, haircutCostError)
+    return { slots: 0, revenue: 0 }
+  }
+  
+  console.log(haircutCost)
+
+  if (!data || data.length === 0) {
+    return { slots: 0, revenue: 0 }
+  }
+  
+  const totalSlots = data.reduce((sum, row) => sum + (row.slot_count || 0), 0)
+  const totalRevenue = totalSlots * (haircutCost?.revenue || 0)
+  
+  return {
+    slots: totalSlots,
+    revenue: Math.round(totalRevenue)
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     // Get barbers matching the criteria
@@ -73,7 +139,14 @@ Deno.serve(async (req) => {
 
     for (const barber of barbers) {
       try {
-        const message = getRandomMessage(barber.full_name || 'there', 3, 135) // Change 1 and 45 later
+        // Get actual availability data for this barber
+        const availability = await getBarberAvailability(barber.user_id)
+        
+        const message = getRandomMessage(
+          barber.full_name || 'there',
+          availability.slots,
+          availability.revenue
+        )
         
         const callbackUrl = new URL(statusCallbackUrl)
         callbackUrl.searchParams.set('user_id', barber.user_id)
@@ -87,11 +160,14 @@ Deno.serve(async (req) => {
         })
 
         console.log(`Message sent to ${barber.full_name} (${barber.phone}): ${twilioMessage.sid}`)
+        console.log(`  Availability: ${availability.slots} slots, $${availability.revenue} revenue`)
         
         results.push({
           user_id: barber.user_id,
           phone: barber.phone,
           message_sid: twilioMessage.sid,
+          slots: availability.slots,
+          revenue: availability.revenue,
           status: 'sent'
         })
       } catch (error) {
