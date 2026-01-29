@@ -51,7 +51,8 @@ export async function POST(req: Request) {
                         Booking Link: ${body.profile?.booking_link || 'N/A'}
 
                         Remember: ${maxMessageLength} characters total, and format with line breaks for readability. 
-                        THE LIMIT IS ${maxMessageLength} CHARACTERS. DO NOT EXCEED THIS LIMIT.`
+                        THE LIMIT IS ${maxMessageLength} CHARACTERS. DO NOT EXCEED THIS LIMIT.
+                        STRICTLY NO EMOJIS. NOT EVEN ONE.`
 
     // Call OpenAI to generate the template
     const response = await openai.chat.completions.create({
