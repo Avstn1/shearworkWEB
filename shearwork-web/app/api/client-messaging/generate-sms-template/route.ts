@@ -27,6 +27,8 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
+    
+    console.log(`From generate-sms-template: ${body.profile?.booking_link}`)
 
     const systemPrompt = `You are an expert SMS marketing copywriter specializing in barbering. There is no barbershop - you're writing for an individual barber.
 

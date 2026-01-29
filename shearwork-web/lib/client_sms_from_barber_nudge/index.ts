@@ -25,21 +25,11 @@ function getMondaysInCurrentMonth(): number {
   return mondayCount
 }
 
-export async function ClientSMSFromBarberNudge(
+async function fetchPreviewRecipients(
   user_id: string,
-  profile: {
-    full_name: string
-    email: string
-    phone: string
-    booking_link?: string
-  }
-) {
+  limit: number
+): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    // Calculate limit based on Mondays in current month
-    const mondaysCount = getMondaysInCurrentMonth()
-    const limit = mondaysCount === 5 ? 8 : 10
-
-    // Fetch preview recipients
     const previewResponse = await fetch(
       `${siteUrl}/api/client-messaging/preview-recipients?limit=${limit}&userId=${user_id}&algorithm=auto-nudge`
     )
@@ -58,10 +48,34 @@ export async function ClientSMSFromBarberNudge(
       console.log('No clients to message')
       return {
         success: true,
-        sent: 0,
-        message: 'No clients to message'
+        data: null
       }
     }
+
+    return {
+      success: true,
+      data: previewData
+    }
+  } catch (error: any) {
+    console.error('Error fetching preview recipients:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+async function generateSMSMessage(
+  profile: {
+    full_name: string
+    email: string
+    phone: string
+    username: string
+  }
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    // Generate booking link without token
+    const bookingLink = `${siteUrl}/book?profile=${profile.username}`
 
     // Generate SMS template
     const templateResponse = await fetch(`${siteUrl}/api/client-messaging/generate-sms-template`, {
@@ -73,7 +87,7 @@ export async function ClientSMSFromBarberNudge(
           full_name: profile.full_name || '',
           email: profile.email || '',
           phone: profile.phone || '',
-          booking_link: profile.booking_link
+          booking_link: bookingLink
         }
       }),
     })
@@ -97,23 +111,81 @@ export async function ClientSMSFromBarberNudge(
       }
     }
 
+    return {
+      success: true,
+      message
+    }
+  } catch (error: any) {
+    console.error('Error generating SMS message:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+function addTokenToBookingLink(message: string, token: string, username: string): string {
+  const pattern = `${siteUrl}/book?profile=${username}`
+  return message.replace(pattern, `${siteUrl}/book?profile=${username}&t=${token}`)
+}
+
+export async function ClientSMSFromBarberNudge(
+  user_id: string,
+  profile: {
+    full_name: string
+    email: string
+    phone: string
+    booking_link?: string
+    username: string
+  }
+) {
+  try {
+    // Calculate limit based on Mondays in current month
+    const mondaysCount = getMondaysInCurrentMonth()
+    const limit = mondaysCount === 5 ? 8 : 10
+
+    // Fetch preview recipients
+    const previewResult = await fetchPreviewRecipients(user_id, limit)
+
+    if (!previewResult.success) {
+      return { success: false, error: previewResult.error }
+    }
+
+    if (!previewResult.data) {
+      return { success: true, sent: 0, message: 'No clients to message'}
+    }
+
+    const previewData = previewResult.data
+
+    // Generate SMS message once (without token)
+    const messageResult = await generateSMSMessage(profile)
+
+    if (!messageResult.success || !messageResult.message) {
+      return { success: false, error: messageResult.error || 'Failed to generate message' }
+    }
+
+    const baseMessage = messageResult.message
+
     // Send SMS to all recipients
     const statusCallbackUrl = `${siteUrl}/api/barber-nudge/sms-status-client`
     const results = []
 
     for (let i = 0; i < previewData.phoneNumbers.length; i++) {
-      const phoneNumber = previewData.phoneNumbers[i]
       const client = previewData.clients[i]
+      const phoneNumber = previewData.phoneNumbers[i]
       const client_id = client?.client_id || null
+
+      // Add unique token to the message
+      const messageWithToken = addTokenToBookingLink(baseMessage, client.link_token, profile.username)
 
       try {
         const callbackUrl = new URL(statusCallbackUrl)
         callbackUrl.searchParams.set('user_id', user_id)
         callbackUrl.searchParams.set('client_id', client_id || '')
-        callbackUrl.searchParams.set('message', message)
+        callbackUrl.searchParams.set('message', messageWithToken)
 
         const twilioMessage = await twilio_client.messages.create({
-          body: `${message}\n\nReply STOP to unsubscribe.`,
+          body: `${messageWithToken}\n\nReply STOP to unsubscribe.`,
           messagingServiceSid: messagingServiceSid,
           to: phoneNumber,
           statusCallback: callbackUrl.toString()

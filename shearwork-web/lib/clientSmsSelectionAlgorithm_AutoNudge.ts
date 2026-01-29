@@ -125,6 +125,8 @@ export async function selectClientsForSMS_AutoNudge(
 
   console.log(`✅ Selected ${selectedClients.length} clients`);
 
+  console.log(JSON.stringify(selectedClients))
+
   return selectedClients;
 }
 

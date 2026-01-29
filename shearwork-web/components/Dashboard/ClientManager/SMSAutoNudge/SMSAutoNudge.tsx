@@ -77,6 +77,7 @@ export default function SMSAutoNudge() {
   const [availableCredits, setAvailableCredits] = useState<number>(0);
   const [profile, setProfile] = useState<{
     full_name?: string | null
+    username?: string | null
     email?: string | null
     phone?: string | null
     available_credits?: number | null
@@ -276,7 +277,7 @@ export default function SMSAutoNudge() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, available_credits, auto_nudge_schedule, trial_active, trial_start, trial_end, booking_link')
+        .select('full_name, username, email, phone, available_credits, auto_nudge_schedule, trial_active, trial_start, trial_end, booking_link')
         .eq('user_id', user.id)
         .single();
 

@@ -225,7 +225,7 @@ export default function SMSCampaigns() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, available_credits, trial_active, trial_start, trial_end')
+        .select('full_name, username, email, phone, available_credits, trial_active, trial_start, trial_end')
         .eq('user_id', user.id)
         .single();
 
