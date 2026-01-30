@@ -12,9 +12,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const dryRun = searchParams.get('dryRun') === 'true'
   const forceRefresh = searchParams.get('forceRefresh') === 'true'
+  const updateMode = searchParams.get('mode') === 'update'
 
   try {
-    const result = await pullAvailability(supabase, user.id, { dryRun, forceRefresh })
+    const result = await pullAvailability(supabase, user.id, { dryRun, forceRefresh, updateMode })
 
     return NextResponse.json({
       endpoint: 'availability',

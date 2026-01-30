@@ -78,4 +78,5 @@ export type AvailabilityPullResult = {
 export type AvailabilityPullOptions = {
   dryRun?: boolean
   forceRefresh?: boolean
+  updateMode?: boolean
 }

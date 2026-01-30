@@ -18,16 +18,16 @@ const twilio_client = twilio(accountSid, authToken)
 
 // Message templates
 const messageTemplates = [
-  "How's it going {name}? It's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Hey {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "What's up {name}? Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Hi {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Hey there {name}! It's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Good morning {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Hello {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Yo {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Hi there {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
-  "Hey {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them? Est. Return: ${return}",
+  "How's it going {name}? It's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Hey {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "What's up {name}? Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Hi {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Hey there {name}! It's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Good morning {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Hello {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Yo {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Hi there {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "Hey {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
 ]
 
 function getFirstName(fullName: string): string {
@@ -39,7 +39,6 @@ function getRandomMessage(name: string, empty_slots: number, estimatedReturn: nu
   return template
     .replace('{name}', getFirstName(name))
     .replace('{slots}', empty_slots.toString())
-    .replace('{return}', estimatedReturn.toString())
 }
 
 function getISOWeekDates(date: Date): { start: Date; end: Date } {
@@ -69,7 +68,8 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; r
   
   const { data, error } = await supabase
     .from('availability_daily_summary')
-    .select('slot_count, estimated_revenue')
+    .select('slot_count')
+    // .select('slot_count, estimated_revenue')
     .eq('user_id', userId)
     .gte('slot_date', startDate)
     .lte('slot_date', endDate)
@@ -84,7 +84,7 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; r
   }
   
   const totalSlots = data.reduce((sum, row) => sum + (row.slot_count || 0), 0)
-  const totalRevenue = data.reduce((sum, row) => sum + (row.estimated_revenue || 0), 0)
+  // const totalRevenue = data.reduce((sum, row) => sum + (row.estimated_revenue || 0), 0)
   
   return {
     slots: totalSlots,
