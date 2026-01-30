@@ -89,7 +89,9 @@ async function getAcuityAppointments(
   url.searchParams.set('maxDate', maxDate)
   url.searchParams.set('offset', '0')
   url.searchParams.set('calendarID', calendarId)
-  url.searchParams.set('phone', phone)
+  url.searchParams.set('phone', phone.toString())
+
+  // console.log("Phone: " + phone)
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -101,6 +103,9 @@ async function getAcuityAppointments(
   }
 
   const data = await response.json()
+
+  console.log(JSON.stringify(data))
+
   return Array.isArray(data) ? data : []
 }
 
@@ -143,7 +148,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     .filter(msg => msg.phone_normalized)
     .map(msg => ({
       phone: msg.phone_normalized!,
-      createdAt: new Date(msg.created_at),
+      createdAt: new Date(msg.created_at).toLocaleString('en-CA', { timeZone: 'America/Toronto' }),
       isSent: msg.is_sent
     }))
 
@@ -159,22 +164,28 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
 
     // Check if any appointment was created after SMS was sent
     const hasAppointmentAfterSMS = appointments.some(appt => {
-      const dateCreated = parseDateCreated(appt.dateCreated)
-      return dateCreated && dateCreated > createdAt
+      // console.log('dateCreated (appt created date): ' + appt.datetimeCreated)
+      // console.log('created at (msg sent): ' + createdAt)
+
+      return appt.datetimeCreated && appt.datetimeCreated > createdAt
     })
 
     if (hasAppointmentAfterSMS) {
       appointmentsFound = true
 
+      console.log("Client's phone: " + phone)
+
       // Get client info
       const { data: client } = await supabase
-        .from('acuity_clients')
+        .from('test_acuity_clients')
         .select('client_id, last_date_clicked_link')
         .eq('user_id', userId)
         .eq('phone_normalized', phone)
         .single()
 
       if (client) {
+        console.log(client)
+
         clientIdsToAdd.push(client.client_id)
 
         // Check if they clicked the link
