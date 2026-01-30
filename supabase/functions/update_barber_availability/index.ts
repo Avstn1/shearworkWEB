@@ -11,6 +11,10 @@ const supabase = createClient(
 
 const siteUrl = Deno.env.get("NEXT_PUBLIC_SITE_URL")
 
+const torontoToday = new Date(
+  new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
+)
+
 Deno.serve(async (_req) => {
   try {
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
@@ -55,7 +59,12 @@ Deno.serve(async (_req) => {
       let active = 0
       let index = 0
 
+      // CHANGE TO DYNAMIC LATER ON 
+      // day === 3 is wednesday so when it runs on a wednesday, update = true
+      // const day = torontoToday.getDay()
+      // const update = day === 3
       const update = true;
+      
       let url;
 
       if (!update) {

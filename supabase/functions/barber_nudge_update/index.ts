@@ -17,19 +17,19 @@ const twilio_client = twilio(accountSid, authToken)
 
 // Message templates
 const messageTemplates = [
-  "Update: {filled} of {total} empty slots were filled by Corva. \n\nEst Recovery: ${recovery}",
-  "Hello! {filled} of {total} slots were filled this week by Corva. \n\nEst Recovery: ${recovery}",
-  "Progress update: {filled}/{total} slots were filled by Corva. \n\nEst Recovery: ${recovery}",
-  "Week update: {filled} of {total} empty slots were booked by Corva. \n\nEst Recovery: ${recovery}",
-  "Good news! {filled} out of {total} slots were filled by Corva. \n\nEst Recovery: ${recovery}",
+  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
+  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
+  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
+  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
 ]
 
-function getRandomMessage(filled: number, total: number, recovery: number): string {
+function getRandomMessage(filled: number, total: number, takenSlots: number, recovery: number): string {
   const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)]
   return template
     .replace('{filled}', filled.toString())
     .replace('{total}', total.toString())
     .replace('{recovery}', recovery.toString())
+    .replace('{takenSlots}', takenSlots.toString())
 }
 
 function getISOWeek(): string {
@@ -79,7 +79,7 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; r
   
   const { data, error } = await supabase
     .from('availability_daily_summary')
-    .select('slot_count, estimated_revenue')
+    .select('slot_count, slot_count_update, estimated_revenue')
     .eq('user_id', userId)
     .gte('slot_date', startDate)
     .lte('slot_date', endDate)
@@ -94,10 +94,15 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; r
   }
   
   const totalSlots = data.reduce((sum, row) => sum + (row.slot_count || 0), 0)
+  const totalSlotsUpdate = data.reduce((sum, row) => sum + (row.slot_count_update || 0), 0)
+  
+  const takenSlots = totalSlots - totalSlotsUpdate;
+
   const totalRevenue = data.reduce((sum, row) => sum + (parseFloat(row.estimated_revenue?.toString() || '0')), 0)
   
   return {
     slots: totalSlots,
+    taken_slots: takenSlots,
     revenue: Math.round(totalRevenue)
   }
 }
@@ -182,10 +187,11 @@ Deno.serve(async (req) => {
 
         const filledSlots = nudgeSuccess.clientIds.length
         const totalSlots = availability.slots
+        const takenSlots = availability.taken_slots
         const revenuePerSlot = totalSlots > 0 ? availability.revenue / totalSlots : 0
         const estimatedRecovery = Math.round(revenuePerSlot * filledSlots)
         
-        const message = getRandomMessage(filledSlots, totalSlots, estimatedRecovery)
+        const message = getRandomMessage(filledSlots, totalSlots, takenSlots, estimatedRecovery)
         
         const twilioMessage = await twilio_client.messages.create({
           body: `${message}\n\nReply STOP to unsubscribe.`,
