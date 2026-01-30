@@ -565,7 +565,7 @@ async function pullAvailabilityForSource(params: {
   if (!options.dryRun) {
     // Store raw slots for service-specific filtering, but return deduped slots for summaries/UI.
     await upsertSlots(supabase, rawSlots)
-    await upsertSummaries(supabase, summaries)
+    await upsertSummaries(supabase, summaries, options)
     await cleanupAvailabilityCache(supabase, userId, adapter.name, dateRange, fetchedAt)
   }
 
@@ -640,25 +640,47 @@ async function upsertSlots(
 
 async function upsertSummaries(
   supabase: SupabaseClient,
-  summaries: AvailabilityDailySummaryRecord[]
+  summaries: AvailabilityDailySummaryRecord[],
+  options: AvailabilityPullOptions,
 ) {
   if (summaries.length === 0) return
 
-  const { error } = await supabase
-    .from('availability_daily_summary')
-    .upsert(summaries, {
-      onConflict: 'user_id,source,slot_date',
-    })
+  if (options.updateMode) {
+    // In update mode, only update slot_count_update field
+    const updates = summaries.map(summary => ({
+      user_id: summary.user_id,
+      source: summary.source,
+      slot_date: summary.slot_date,
+      slot_count_update: summary.slot_count,
+      updated_at: new Date().toISOString()
+    }))
 
-  if (error) {
-    throw new Error(`Failed to upsert availability daily summary: ${error.message}`)
+    const { error } = await supabase
+      .from('availability_daily_summary')
+      .upsert(updates, {
+        onConflict: 'user_id,source,slot_date',
+      })
+
+    if (error) {
+      throw new Error(`Failed to update availability daily summary: ${error.message}`)
+    }
+  } else {
+    const { error } = await supabase
+      .from('availability_daily_summary')
+      .upsert(summaries, {
+        onConflict: 'user_id,source,slot_date',
+      })
+
+    if (error) {
+      throw new Error(`Failed to upsert availability daily summary: ${error.message}`)
+    }
   }
 }
 
 async function cleanupAvailabilityCache(
   supabase: SupabaseClient,
   userId: string,
-  source: string,
+  source: string, 
   range: AvailabilityDateRange,
   fetchedAt: string
 ) {
