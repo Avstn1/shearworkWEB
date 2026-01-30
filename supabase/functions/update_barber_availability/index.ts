@@ -55,14 +55,21 @@ Deno.serve(async (_req) => {
       let active = 0
       let index = 0
 
+      const update = true;
+      let url;
+
+      if (!update) {
+        url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false`
+      } else {
+        url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false&mode=update`
+      }
+
       return new Promise<void>(resolve => {
         function next() {
           while (active < limit && index < items.length) {
             const request = items[index++]
             active++
 
-            const url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false`
-            
             fetch(url, {
               method: 'GET',
               headers: {

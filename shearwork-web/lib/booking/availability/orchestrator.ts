@@ -566,7 +566,11 @@ async function pullAvailabilityForSource(params: {
     // Store raw slots for service-specific filtering, but return deduped slots for summaries/UI.
     await upsertSlots(supabase, rawSlots)
     await upsertSummaries(supabase, summaries, options)
-    await cleanupAvailabilityCache(supabase, userId, adapter.name, dateRange, fetchedAt)
+    
+    // Only cleanup cache when doing a full refresh, not in updateMode
+    if (!options.updateMode) {
+      await cleanupAvailabilityCache(supabase, userId, adapter.name, dateRange, fetchedAt)
+    }
   }
 
   return {
@@ -646,7 +650,9 @@ async function upsertSummaries(
   if (summaries.length === 0) return
 
   if (options.updateMode) {
-    // In update mode, only update slot_count_update field
+    console.log('Update mode - summaries count:', summaries.length)
+    console.log('First summary:', summaries[0])
+    
     const updates = summaries.map(summary => ({
       user_id: summary.user_id,
       source: summary.source,
@@ -654,16 +660,19 @@ async function upsertSummaries(
       slot_count_update: summary.slot_count,
       updated_at: new Date().toISOString()
     }))
+    
+    console.log('Updates to apply:', updates.length)
+    console.log('First update:', updates[0])
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('availability_daily_summary')
       .upsert(updates, {
         onConflict: 'user_id,source,slot_date',
       })
-
-    if (error) {
-      throw new Error(`Failed to update availability daily summary: ${error.message}`)
-    }
+      .select()
+    
+    console.log('Upsert result data:', data)
+    console.log('Upsert result error:', error)
   } else {
     const { error } = await supabase
       .from('availability_daily_summary')
