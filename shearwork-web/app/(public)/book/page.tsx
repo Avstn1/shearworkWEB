@@ -33,7 +33,7 @@ export default async function BookingRedirectPage({ searchParams }: PageProps) {
   // Update click tracking if token exists
   if (linkToken) {
     supabase
-      .from('acuity_clients')
+      .from('test_acuity_clients')
       .update({ last_date_clicked_link: new Date().toISOString() })
       .eq('link_token', linkToken)
       .then(() => {}) // Fire and forget
