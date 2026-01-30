@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     // Find the profile by normalized phone number
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_id')
+      .select('user_id, sms_engaged_current_week')
       .eq('phone', normalizedPhone)
       .single()
     
@@ -39,6 +39,11 @@ export async function POST(request: Request) {
       console.log('Barber not found for phone:', normalizedPhone)
       return NextResponse.json({ success: false, error: 'Barber not found' })
     }
+
+    // If the barber already said yes this week then don't run the nudge again. REMOVED FOR TESTING PURPOSES
+    // if (profile.sms_engaged_current_week) {
+    //   return NextResponse.json({ success: true, ignored: true })
+    // }
     
     // Log the reply in your database
     const { error: insertError } = await supabase

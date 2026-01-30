@@ -125,7 +125,7 @@ async function generateSMSMessage(
   }
 }
 
-function getISOWeek() {
+function getISOWeek(): string {
   const now = new Date(
     new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Toronto',
@@ -140,8 +140,9 @@ function getISOWeek() {
 
   const yearStart = new Date(now.getFullYear(), 0, 1)
   const week = Math.ceil(((+now - +yearStart) / 86400000 + 1) / 7)
+  const year = now.getFullYear()
 
-  return week
+  return `${year}-W${week.toString().padStart(2, '0')}`
 }
 
 function addTokenToBookingLink(message: string, token: string, username: string): string {
