@@ -161,14 +161,14 @@ function buildDailySummaries(
 ): AvailabilityDailySummaryRecord[] {
   const defaultService = resolveDefaultServiceContext(slots)
 
-  // Track unique 30-minute blocks per day to calculate true capacity.
-  // Multiple services can share the same block, but only default-service
-  // availability should define capacity.
+  // Track unique slot times per day to calculate true capacity.
+  // Only count slots for the default service with duration >= 30 min.
+  // Use exact start_time instead of rounding to avoid over/undercounting.
   const summaryMap = new Map<
     string,
     {
       summary: AvailabilityDailySummaryRecord
-      blocks: Set<string>
+      slotTimes: Set<string>
     }
   >()
 
@@ -179,15 +179,15 @@ function buildDailySummaries(
     const effectiveDuration = slot.duration_minutes ?? 30
     if (effectiveDuration < 30) continue
 
-    const block = getHalfHourBlock(slot)
-    if (!block) continue
+    const slotTime = slot.start_time
+    if (!slotTime) continue
 
     const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
     const current = summaryMap.get(dayKey)
 
     if (current) {
-      if (!current.blocks.has(block)) {
-        current.blocks.add(block)
+      if (!current.slotTimes.has(slotTime)) {
+        current.slotTimes.add(slotTime)
         current.summary.slot_count += 1
       }
       continue
@@ -204,7 +204,7 @@ function buildDailySummaries(
         fetched_at: fetchedAt,
         updated_at: fetchedAt,
       },
-      blocks: new Set([block]),
+      slotTimes: new Set([slotTime]),
     })
   }
 
@@ -241,7 +241,9 @@ function resolveDefaultServiceContext(
     Boolean(slot.appointment_type_name?.trim())
   )
 
-  const selected = pickMostUsedService(haircutUsage) ?? pickMostUsedService(fallbackUsage)
+  const usagePool = haircutUsage.length > 0 ? haircutUsage : fallbackUsage
+  const selected = pickMostUsedService(usagePool)
+  const averagePrice = getAverageServicePrice(pickTopServices(usagePool, 2))
 
   if (!selected) {
     return {
@@ -252,7 +254,7 @@ function resolveDefaultServiceContext(
 
   return {
     normalizedName: selected.normalizedName,
-    price: Number.isFinite(selected.minPrice) ? selected.minPrice : 0,
+    price: averagePrice,
   }
 }
 
@@ -308,6 +310,35 @@ function pickMostUsedService(usage: ServiceUsage[]): ServiceUsage | null {
 
     return best
   }, usage[0])
+}
+
+function pickTopServices(usage: ServiceUsage[], limit: number): ServiceUsage[] {
+  if (limit <= 0 || usage.length === 0) return []
+
+  const sorted = [...usage].sort((a, b) => {
+    if (a.count !== b.count) return b.count - a.count
+
+    const priceA = a.minPrice
+    const priceB = b.minPrice
+
+    if (priceA < priceB) return -1
+    if (priceA > priceB) return 1
+
+    return 0
+  })
+
+  return sorted.slice(0, limit)
+}
+
+function getAverageServicePrice(services: ServiceUsage[]): number {
+  const prices = services
+    .map((service) => service.minPrice)
+    .filter((price) => Number.isFinite(price)) as number[]
+
+  if (prices.length === 0) return 0
+
+  const total = prices.reduce((sum, price) => sum + price, 0)
+  return total / prices.length
 }
 
 function getNormalizedServiceName(value?: string | null): string | null {
