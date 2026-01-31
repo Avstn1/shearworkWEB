@@ -53,6 +53,41 @@ export default function LoginPage() {
     }
     else {
       toast.success('Logged in successfully!');
+
+      let deviceId = localStorage.getItem('device_id');
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem('device_id', deviceId);
+      }
+
+      const ua = navigator.userAgent;
+      const browser = ua.includes('Chrome') ? 'Chrome' : 
+                      ua.includes('Safari') ? 'Safari' : 
+                      ua.includes('Firefox') ? 'Firefox' : 
+                      ua.includes('Edge') ? 'Edge' : 'Browser';
+      const os = ua.includes('Mac') ? 'Mac' : 
+                ua.includes('Windows') ? 'Windows' : 
+                ua.includes('Linux') ? 'Linux' : 'Unknown';
+
+      // Get the actual session UUID using the RPC function
+      const { data: sessionId, error: sessionError } = await supabase
+        .rpc('get_current_session_id')
+
+      console.log('Session ID from RPC:', sessionId)
+
+      await supabase.from('user_devices').upsert({
+        user_id: userProfile.user.id,
+        device_type: 'web',
+        device_id: deviceId,
+        device_name: `${browser} on ${os}`,
+        session_id: sessionId || userProfile.session?.access_token, // Use session UUID from RPC
+        last_login: new Date().toISOString(),
+        last_active: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+      }, {
+        onConflict: 'user_id,device_id'
+      });
+
       router.refresh();
       router.push('/dashboard');
       

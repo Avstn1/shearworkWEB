@@ -126,9 +126,10 @@ ${JSON.stringify(minimalDataset, null, 2)}
           : '<td>--</td><td>--</td>'
       }
     </tr>
+
     <tr>
       <td>Expenses</td>
-      ${weeklyExpensesDataTotals.map(total => `<td>$${total.toFixed(2)}</td>`).join('')}
+      ${weeklyExpensesDataTotals.slice(-2).map(total => `<td>$${total.toFixed(2)}</td>`).join('')}
 
       <!-- Delta + Percent (exactly 2 cells) -->
       ${(() => {
@@ -144,6 +145,7 @@ ${JSON.stringify(minimalDataset, null, 2)}
         return `<td>$${delta.toFixed(2)}</td><td>${pct}%</td>`;
       })()}
     </tr>
+
     <tr>
       <td>Net Profit</td>
       ${minimalDataset.weekly_rows

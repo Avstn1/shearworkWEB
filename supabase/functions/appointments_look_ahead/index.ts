@@ -52,11 +52,19 @@ function stripE164(phone: string): string {
   return phone.replace(/^\+1/, '')
 }
 
-function parseDateCreated(dateStr: string): Date | null {
+function parseToUTCTimestamp(datetimeStr: string): string {
+  // Parse Acuity datetime format (e.g., "2026-02-01T16:30:00-0500") to UTC timestamptz
   try {
-    return new Date(dateStr)
-  } catch {
-    return null
+    const date = new Date(datetimeStr)
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date')
+    }
+    // Format as PostgreSQL timestamptz: "2026-01-31 21:30:00+00"
+    return date.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '+00')
+  } catch (error) {
+    console.error('Error parsing datetime:', datetimeStr, error)
+    // Return current time as fallback
+    return new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '+00')
   }
 }
 
@@ -84,14 +92,11 @@ async function getAcuityAppointments(
   const maxDate = getTwoMonthsFromNow()
 
   const url = new URL(`${apiBase}/appointments`)
-  url.searchParams.set('showall', 'true')
   url.searchParams.set('minDate', today)
   url.searchParams.set('maxDate', maxDate)
   url.searchParams.set('offset', '0')
   url.searchParams.set('calendarID', calendarId)
   url.searchParams.set('phone', phone.toString())
-
-  // console.log("Phone: " + phone)
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -103,9 +108,6 @@ async function getAcuityAppointments(
   }
 
   const data = await response.json()
-
-  console.log(JSON.stringify(data))
-
   return Array.isArray(data) ? data : []
 }
 
@@ -154,6 +156,8 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
 
   let appointmentsFound = false
   const clientIdsToAdd: string[] = []
+  const servicesToAdd: string[] = []
+  const appointmentDatesToAdd: string[] = []
   let clickedLinkCount = 0
   const messagesDelivered = sentMessages.filter(msg => msg.is_sent).length
 
@@ -162,16 +166,18 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     const nonE164Phone = stripE164(phone)
     const appointments = await getAcuityAppointments(accessToken, calendar, nonE164Phone)
 
-    // Check if any appointment was created after SMS was sent
-    const hasAppointmentAfterSMS = appointments.some(appt => {
-      // console.log('dateCreated (appt created date): ' + appt.datetimeCreated)
-      // console.log('created at (msg sent): ' + createdAt)
+    // Find all appointments created after SMS was sent, sorted by appointment datetime
+    const appointmentsAfterSMS = appointments
+      .filter(appt => appt.datetimeCreated && appt.datetimeCreated > createdAt)
+      .sort((a, b) => {
+        const dateA = new Date(a.datetime || a.datetimeCreated).getTime()
+        const dateB = new Date(b.datetime || b.datetimeCreated).getTime()
+        return dateA - dateB
+      })
 
-      return appt.datetimeCreated && appt.datetimeCreated > createdAt
-    })
-
-    if (hasAppointmentAfterSMS) {
+    if (appointmentsAfterSMS.length > 0) {
       appointmentsFound = true
+      const firstAppt = appointmentsAfterSMS[0]
 
       console.log("Client's phone: " + phone)
 
@@ -187,6 +193,11 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         console.log(client)
 
         clientIdsToAdd.push(client.client_id)
+        servicesToAdd.push(firstAppt.type || 'Unknown')
+        
+        // Parse appointment datetime to UTC timestamptz format
+        const apptDatetime = parseToUTCTimestamp(firstAppt.datetime)
+        appointmentDatesToAdd.push(apptDatetime)
 
         // Check if they clicked the link
         if (client.last_date_clicked_link) {
@@ -208,15 +219,33 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
   // Check if record exists
   const { data: existing } = await supabase
     .from('barber_nudge_success')
-    .select('id, client_ids')
+    .select('id, client_ids, services, appointment_dates')
     .eq('user_id', userId)
     .eq('iso_week_number', isoWeek)
     .single()
 
   if (existing) {
-    // Update existing record
+    // Update existing record - merge arrays while maintaining index alignment
     const existingClientIds = existing.client_ids || []
-    const mergedClientIds = Array.from(new Set([...existingClientIds, ...clientIdsToAdd]))
+    const existingServices = existing.services || []
+    const existingAppointmentDates = existing.appointment_dates || []
+    
+    // Add new clients and services, avoiding duplicates
+    const mergedClientIds = [...existingClientIds]
+    const mergedServices = [...existingServices]
+    const mergedAppointmentDates = [...existingAppointmentDates]
+    
+    for (let i = 0; i < clientIdsToAdd.length; i++) {
+      const clientId = clientIdsToAdd[i]
+      const service = servicesToAdd[i]
+      const appointmentDate = appointmentDatesToAdd[i]
+      
+      if (!existingClientIds.includes(clientId)) {
+        mergedClientIds.push(clientId)
+        mergedServices.push(service)
+        mergedAppointmentDates.push(appointmentDate)
+      }
+    }
 
     await supabase
       .from('barber_nudge_success')
@@ -224,6 +253,8 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         messages_delivered: messagesDelivered,
         clicked_link: clickedLinkCount,
         client_ids: mergedClientIds,
+        services: mergedServices,
+        appointment_dates: mergedAppointmentDates,
         updated_at: new Date().toISOString()
       })
       .eq('id', existing.id)
@@ -238,7 +269,9 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         iso_week_number: isoWeek,
         messages_delivered: messagesDelivered,
         clicked_link: clickedLinkCount,
-        client_ids: clientIdsToAdd
+        client_ids: clientIdsToAdd,
+        services: servicesToAdd,
+        appointment_dates: appointmentDatesToAdd
       })
 
     console.log(`Created barber_nudge_success for user ${userId}`)

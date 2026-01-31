@@ -17,21 +17,24 @@ interface BarberNudgeCampaign {
   date_sent: string;
 }
 
-interface ClientBooked {
-  client_id: string;
+interface SMSRecipient {
+  client_id: string | null;
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
   phone_normalized: string | null;
+  status: 'booked' | 'pending';
+  service?: string;
+  appointment_date?: string;
 }
 
 export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudgeHistoryModalProps) {
   const [view, setView] = useState<'list' | 'details'>('list');
   const [campaigns, setCampaigns] = useState<BarberNudgeCampaign[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<BarberNudgeCampaign | null>(null);
-  const [clients, setClients] = useState<ClientBooked[]>([]);
+  const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingClients, setLoadingClients] = useState(false);
+  const [loadingRecipients, setLoadingRecipients] = useState(false);
 
   // Fetch campaigns on modal open
   useEffect(() => {
@@ -45,7 +48,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
     if (!isOpen) {
       setView('list');
       setSelectedCampaign(null);
-      setClients([]);
+      setRecipients([]);
     }
   }, [isOpen]);
 
@@ -164,8 +167,8 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
     }
   };
 
-  const fetchClients = async (campaign: BarberNudgeCampaign) => {
-    setLoadingClients(true);
+  const fetchRecipients = async (campaign: BarberNudgeCampaign) => {
+    setLoadingRecipients(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -173,59 +176,115 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
         return;
       }
 
-      // Get client_ids from barber_nudge_success
+      // Get all SMS sent for this message
+      const { data: smsSent, error: smsError } = await supabase
+        .from('sms_sent')
+        .select('client_id, phone_normalized')
+        .eq('message_id', campaign.message_id)
+        .eq('is_sent', true)
+        .order('created_at', { ascending: true });
+
+      if (smsError) {
+        console.error('Error fetching SMS sent:', smsError);
+        setRecipients([]);
+        return;
+      }
+
+      if (!smsSent || smsSent.length === 0) {
+        setRecipients([]);
+        return;
+      }
+
+      // Get barber_nudge_success data
       const { data: successData, error: successError } = await supabase
         .from('barber_nudge_success')
-        .select('client_ids')
+        .select('client_ids, services, appointment_dates')
         .eq('user_id', user.id)
         .eq('iso_week_number', campaign.iso_week_number)
         .single();
 
-      if (successError || !successData || !successData.client_ids) {
-        console.error('Error fetching success data:', successError);
-        setClients([]);
-        return;
-      }
+      const bookedClientIds = successData?.client_ids || [];
+      const services = successData?.services || [];
+      const appointmentDates = successData?.appointment_dates || [];
 
-      const clientIds = successData.client_ids;
+      // Get all unique client IDs and phone numbers from SMS sent
+      const allClientIds = smsSent
+        .map(sms => sms.client_id)
+        .filter((id): id is string => id !== null);
+      
+      const allPhoneNumbers = smsSent
+        .map(sms => sms.phone_normalized)
+        .filter((phone): phone is string => phone !== null);
 
-      if (clientIds.length === 0) {
-        setClients([]);
-        return;
-      }
-
-      // Fetch clients from test_acuity_clients
+      // Fetch client details
       const { data: clientsData, error: clientsError } = await supabase
         .from('test_acuity_clients')
         .select('client_id, first_name, last_name, phone, phone_normalized')
         .eq('user_id', user.id)
-        .in('client_id', clientIds);
+        .or(`client_id.in.(${allClientIds.join(',')}),phone_normalized.in.(${allPhoneNumbers.map(p => `"${p}"`).join(',')})`);
 
       if (clientsError) {
         console.error('Error fetching clients:', clientsError);
-        setClients([]);
-        return;
       }
 
-      setClients(clientsData || []);
+      const clientsMap = new Map(
+        (clientsData || []).map(client => [
+          client.client_id || client.phone_normalized,
+          client
+        ])
+      );
+
+      // Build recipients list
+      const recipientsList: SMSRecipient[] = smsSent.map(sms => {
+        const clientKey = sms.client_id || sms.phone_normalized;
+        const client = clientKey ? clientsMap.get(clientKey) : null;
+        
+        const bookedIndex = sms.client_id ? bookedClientIds.indexOf(sms.client_id) : -1;
+        const isBooked = bookedIndex !== -1;
+
+        return {
+          client_id: sms.client_id,
+          first_name: client?.first_name || null,
+          last_name: client?.last_name || null,
+          phone: client?.phone || null,
+          phone_normalized: sms.phone_normalized,
+          status: isBooked ? 'booked' : 'pending',
+          service: isBooked ? services[bookedIndex] : undefined,
+          appointment_date: isBooked ? appointmentDates[bookedIndex] : undefined,
+        };
+      });
+
+      // Sort: booked first (by appointment date), then pending (by send order)
+      const sortedRecipients = recipientsList.sort((a, b) => {
+        if (a.status === 'booked' && b.status === 'booked') {
+          const dateA = new Date(a.appointment_date!).getTime();
+          const dateB = new Date(b.appointment_date!).getTime();
+          return dateA - dateB;
+        }
+        if (a.status === 'booked') return -1;
+        if (b.status === 'booked') return 1;
+        return 0; // Maintain send order for pending
+      });
+
+      setRecipients(sortedRecipients);
       setView('details');
     } catch (error) {
-      console.error('Failed to fetch clients:', error);
-      setClients([]);
+      console.error('Failed to fetch recipients:', error);
+      setRecipients([]);
     } finally {
-      setLoadingClients(false);
+      setLoadingRecipients(false);
     }
   };
 
   const handleCampaignClick = (campaign: BarberNudgeCampaign) => {
     setSelectedCampaign(campaign);
-    fetchClients(campaign);
+    fetchRecipients(campaign);
   };
 
   const handleBack = () => {
     setView('list');
     setSelectedCampaign(null);
-    setClients([]);
+    setRecipients([]);
   };
 
   const formatDate = (dateString: string) => {
@@ -252,6 +311,24 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
     return phone;
   };
 
+  const formatAppointmentDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  const capitalizeName = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -267,7 +344,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[70vw] max-w-5xl h-[80vh] flex flex-col overflow-hidden"
+            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[70vw] max-w-5xl h-[70vh] sm:h-[80vh] flex flex-col overflow-hidden"
           >
             <AnimatePresence mode="wait">
               {view === 'list' && (
@@ -406,41 +483,65 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                     </div>
                   </div>
 
-                  {/* Clients List */}
+                  {/* Recipients List */}
                   <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                    {loadingClients ? (
+                    {loadingRecipients ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
-                        <p className="text-base text-[#bdbdbd]">Loading clients...</p>
+                        <p className="text-base text-[#bdbdbd]">Loading recipients...</p>
                       </div>
-                    ) : clients.length === 0 ? (
+                    ) : recipients.length === 0 ? (
                       <div className="text-center py-8">
                         <Users className="w-10 h-10 text-[#bdbdbd] mx-auto mb-2 opacity-50" />
-                        <p className="text-sm text-[#bdbdbd]">No clients found</p>
+                        <p className="text-sm text-[#bdbdbd]">No recipients found</p>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        {clients.map((client) => (
+                      <div className="space-y-3">
+                        {recipients.map((recipient, index) => (
                           <div
-                            key={client.client_id}
-                            className="p-3 rounded-lg border bg-lime-300/5 border-lime-300/20 hover:bg-lime-300/10 transition-colors"
+                            key={`${recipient.client_id || recipient.phone_normalized}-${index}`}
+                            className={`p-4 rounded-xl border transition-all duration-200 ${
+                              recipient.status === 'booked'
+                                ? 'bg-gradient-to-br from-lime-300/10 to-lime-300/5 border-lime-300/30 hover:border-lime-300/50 hover:shadow-lg hover:shadow-lime-300/10'
+                                : 'bg-gradient-to-br from-amber-300/10 to-amber-300/5 border-amber-300/30 hover:border-amber-300/50 hover:shadow-lg hover:shadow-amber-300/10'
+                            }`}
                           >
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start justify-between gap-2 sm:gap-4 mb-3">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  {client.first_name && client.last_name ? (
-                                    <h4 className="font-semibold text-white text-sm truncate">
-                                      {client.first_name} {client.last_name}
-                                    </h4>
-                                  ) : (
-                                    <h4 className="font-semibold text-[#bdbdbd] text-sm">Unknown Client</h4>
-                                  )}
-                                </div>
-                                <p className="text-xs text-[#bdbdbd] mt-0.5">
-                                  {formatPhoneNumber(client.phone_normalized || client.phone)}
+                                {recipient.first_name && recipient.last_name ? (
+                                  <h4 className="font-bold text-white text-sm sm:text-base mb-1">
+                                    {capitalizeName(`${recipient.first_name} ${recipient.last_name}`)}
+                                  </h4>
+                                ) : (
+                                  <h4 className="font-bold text-[#bdbdbd] text-sm sm:text-base mb-1">Unknown Client</h4>
+                                )}
+                                <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                                  {formatPhoneNumber(recipient.phone_normalized || recipient.phone)}
                                 </p>
                               </div>
+                              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap flex-shrink-0 ${
+                                recipient.status === 'booked'
+                                  ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
+                                  : 'bg-amber-300/20 text-amber-300 border border-amber-300/30'
+                              }`}>
+                                {recipient.status === 'booked' ? '✓ Booked' : '○ Pending'}
+                              </span>
                             </div>
+                            
+                            {recipient.status === 'booked' && recipient.service && recipient.appointment_date && (
+                              <div className="pt-3 border-t border-white/10">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Service</p>
+                                    <p className="text-sm font-semibold text-lime-300 truncate">{recipient.service}</p>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Appointment</p>
+                                    <p className="text-xs sm:text-sm font-semibold text-white break-words">{formatAppointmentDate(recipient.appointment_date)}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
