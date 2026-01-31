@@ -170,7 +170,7 @@ function buildDailySummaries(
 
     const durationMinutes = slot.duration_minutes ?? 30
     if (!isHaircutServiceName(slot.appointment_type_name)) continue
-    if (!Number.isFinite(durationMinutes) || durationMinutes < slotLengthMinutes) continue
+    if (!Number.isFinite(durationMinutes) || durationMinutes !== slotLengthMinutes) continue
 
     const price = getSlotPrice(slot) ?? fallbackPrice
     const timeKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${slotTime}`
@@ -288,7 +288,8 @@ function resolveSlotLengthMinutes(slots: AvailabilitySlotRecord[]): number {
   if (topServices.length === 0) return 30
 
   const total = topServices.reduce((sum, service) => sum + service.durationMinutes, 0)
-  return total / topServices.length
+  const average = total / topServices.length
+  return normalizeSlotLengthMinutes(average)
 }
 
 function collectServiceUsage(
@@ -402,7 +403,7 @@ function pickTopDurationServices(
 
   const sorted = [...usage].sort((a, b) => {
     if (a.count !== b.count) return b.count - a.count
-    if (a.durationMinutes !== b.durationMinutes) return b.durationMinutes - a.durationMinutes
+    if (a.durationMinutes !== b.durationMinutes) return a.durationMinutes - b.durationMinutes
     return a.name.localeCompare(b.name)
   })
 
@@ -431,6 +432,12 @@ function isHaircutServiceName(value?: string | null): boolean {
   if (!name) return false
   if (/\bkid/.test(name)) return false
   return name.includes('haircut') || name.includes('scissor')
+}
+
+function normalizeSlotLengthMinutes(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 30
+  const normalized = Math.floor(value / 15) * 15
+  return normalized < 30 ? 30 : normalized
 }
 
 function getSlotPrice(slot: AvailabilitySlotRecord): number | null {
