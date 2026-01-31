@@ -34,10 +34,10 @@ Deno.serve(async (_req) => {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
-        sms_engaged_current_week: false,
+        sms_engaged_current_week: true,
         updated_at: new Date().toISOString()
       })
-      .eq('sms_engaged_current_week', true)
+      .eq('sms_engaged_current_week', false)
     
     if (updateError) {
       console.error('Failed to update profile engagement:', updateError)
@@ -61,9 +61,11 @@ Deno.serve(async (_req) => {
 
       // Monday (day 1) = normal mode to set baseline slot_count
       // Tue-Sun = update mode to set slot_count_update (current availability)
-      const day = torontoToday.getDay()
-      const isMonday = day === 1
-      const update = !isMonday
+      // const day = torontoToday.getDay()
+      // const isMonday = day === 1
+      // const update = !isMonday
+
+      const update = true;
       
       let url;
 
