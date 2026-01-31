@@ -156,8 +156,7 @@ function buildDailySummaries(
   slots: AvailabilitySlotRecord[],
   fetchedAt: string
 ): AvailabilityDailySummaryRecord[] {
-  const defaultService = resolveDefaultServiceContext(slots)
-
+  const fallbackPrice = resolveHaircutFallbackPrice(slots)
   const slotLengthMinutes = resolveSlotLengthMinutes(slots)
 
   // Count only slots that can fit the slot length threshold.
@@ -170,9 +169,10 @@ function buildDailySummaries(
     if (!slotTime) continue
 
     const durationMinutes = slot.duration_minutes ?? 30
+    if (!isHaircutServiceName(slot.appointment_type_name)) continue
     if (!Number.isFinite(durationMinutes) || durationMinutes < slotLengthMinutes) continue
 
-    const price = getSlotPrice(slot) ?? defaultService.price
+    const price = getSlotPrice(slot) ?? fallbackPrice
     const timeKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${slotTime}`
     const current = timeMap.get(timeKey)
 
@@ -268,8 +268,18 @@ function resolveDefaultServiceContext(
   }
 }
 
+function resolveHaircutFallbackPrice(slots: AvailabilitySlotRecord[]): number {
+  const usage = collectServiceUsage(slots, (slot) =>
+    isHaircutServiceName(slot.appointment_type_name)
+  )
+  if (usage.length === 0) return 0
+  return getAverageServicePrice(pickTopServices(usage, 2))
+}
+
 function resolveSlotLengthMinutes(slots: AvailabilitySlotRecord[]): number {
-  const usage = collectServiceDurationUsage(slots)
+  const usage = collectServiceDurationUsage(slots, (slot) =>
+    isHaircutServiceName(slot.appointment_type_name)
+  )
   const eligible = usage.filter((service) => service.durationMinutes >= 30)
 
   if (eligible.length === 0) return 30
@@ -318,11 +328,13 @@ function collectServiceUsage(
 }
 
 function collectServiceDurationUsage(
-  slots: AvailabilitySlotRecord[]
+  slots: AvailabilitySlotRecord[],
+  predicate: (slot: AvailabilitySlotRecord) => boolean
 ): ServiceDurationUsage[] {
   const usageMap = new Map<string, ServiceDurationUsage>()
 
   for (const slot of slots) {
+    if (!predicate(slot)) continue
     const rawName = slot.appointment_type_name?.trim()
     if (!rawName) continue
 
@@ -411,6 +423,14 @@ function getAverageServicePrice(services: ServiceUsage[]): number {
 function getNormalizedServiceName(value?: string | null): string | null {
   if (!value || !value.trim()) return null
   return normalizeServiceName(value)
+}
+
+function isHaircutServiceName(value?: string | null): boolean {
+  if (!value) return false
+  const name = value.trim().toLowerCase()
+  if (!name) return false
+  if (/\bkid/.test(name)) return false
+  return name.includes('haircut') || name.includes('scissor')
 }
 
 function getSlotPrice(slot: AvailabilitySlotRecord): number | null {
