@@ -25,6 +25,7 @@ interface SMSRecipient {
   phone_normalized: string | null;
   status: 'booked' | 'pending';
   service?: string;
+  price?: string;
   appointment_date?: string;
 }
 
@@ -198,13 +199,14 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
       // Get barber_nudge_success data
       const { data: successData, error: successError } = await supabase
         .from('barber_nudge_success')
-        .select('client_ids, services, appointment_dates')
+        .select('client_ids, services, prices, appointment_dates')
         .eq('user_id', user.id)
         .eq('iso_week_number', campaign.iso_week_number)
         .single();
 
       const bookedClientIds = successData?.client_ids || [];
       const services = successData?.services || [];
+      const prices = successData?.prices || []
       const appointmentDates = successData?.appointment_dates || [];
 
       // Get all unique client IDs and phone numbers from SMS sent
@@ -250,6 +252,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
           phone_normalized: sms.phone_normalized,
           status: isBooked ? 'booked' : 'pending',
           service: isBooked ? services[bookedIndex] : undefined,
+          price: isBooked ? prices [bookedIndex] : undefined, 
           appointment_date: isBooked ? appointmentDates[bookedIndex] : undefined,
         };
       });
@@ -539,6 +542,12 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                                     <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Appointment</p>
                                     <p className="text-xs sm:text-sm font-semibold text-white break-words">{formatAppointmentDate(recipient.appointment_date)}</p>
                                   </div>
+                                  {recipient.price && (
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Price</p>
+                                      <p className="text-sm font-semibold text-lime-300">${recipient.price}</p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}
