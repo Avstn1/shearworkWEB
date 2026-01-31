@@ -17,10 +17,10 @@ const twilio_client = twilio(accountSid, authToken)
 
 // Message templates
 const messageTemplates = [
-  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
-  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
-  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
-  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
+  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
+  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
+  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
+  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
 ]
 
 function getRandomMessage(filled: number, total: number, takenSlots: number, recovery: number): string {
@@ -110,7 +110,7 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; r
 async function getBarberNudgeSuccess(userId: string, isoWeek: string): Promise<{ clientIds: string[] } | null> {
   const { data, error } = await supabase
     .from('barber_nudge_success')
-    .select('client_ids')
+    .select('client_ids, prices')
     .eq('user_id', userId)
     .eq('iso_week_number', isoWeek)
     .single()
@@ -120,7 +120,8 @@ async function getBarberNudgeSuccess(userId: string, isoWeek: string): Promise<{
   }
 
   return {
-    clientIds: data.client_ids || []
+    clientIds: data.client_ids || [],
+    prices: data.prices || []
   }
 }
 
@@ -188,8 +189,10 @@ Deno.serve(async (req) => {
         const filledSlots = nudgeSuccess.clientIds.length
         const totalSlots = availability.slots
         const takenSlots = availability.taken_slots
-        const revenuePerSlot = totalSlots > 0 ? availability.revenue / totalSlots : 0
-        const estimatedRecovery = Math.round(revenuePerSlot * filledSlots)
+        const estimatedRecovery = nudgeSuccess.prices.reduce(
+          (sum, price) => sum + Number(price),
+          0
+        )
         
         const message = getRandomMessage(filledSlots, totalSlots, takenSlots, estimatedRecovery)
         

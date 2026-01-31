@@ -100,9 +100,6 @@ async function getAllAcuityAppointments(
   url.searchParams.set('maxDate', maxDate)
   url.searchParams.set('offset', '0')
   url.searchParams.set('calendarID', calendarId)
-  // url.searchParams.set('phone', phone)
-  // url.searchParams.set('firstName', 'carlo')
-  // url.searchParams.set('lastName', '*')
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -182,22 +179,19 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     appointmentsByPhone.get(normalized)!.push(appt)
   }
 
-  console.log(appointmentsByPhone)
-
   let appointmentsFound = false
   const clientIdsToAdd: string[] = []
   const servicesToAdd: string[] = []
+  const pricesToAdd: number[] = []
   const appointmentDatesToAdd: string[] = []
+
   let clickedLinkCount = 0
   const messagesDelivered = sentMessages.filter(msg => msg.is_sent).length
 
   // Check appointments for each phone number
   for (const { phone, createdAt } of phoneNumbers) {
     const normalizedPhone = normalizePhone(phone)
-    console.log("Phone passed to acuity: " + normalizedPhone)
-    
     const appointments = appointmentsByPhone.get(normalizedPhone) || []
-    console.log("appointments: " + JSON.stringify(appointments))
 
     // Find all appointments created after SMS was sent, sorted by appointment datetime
     const appointmentsAfterSMS = appointments
@@ -229,6 +223,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
 
         clientIdsToAdd.push(client.client_id)
         servicesToAdd.push(firstAppt.type || 'Unknown')
+        pricesToAdd.push(Math.round(Number(firstAppt.price)) || 0)
         
         // Parse appointment datetime to UTC timestamptz format
         const apptDatetime = parseToUTCTimestamp(firstAppt.datetime)
@@ -254,7 +249,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
   // Check if record exists
   const { data: existing } = await supabase
     .from('barber_nudge_success')
-    .select('id, client_ids, services, appointment_dates')
+    .select('id, client_ids, services, prices, appointment_dates')
     .eq('user_id', userId)
     .eq('iso_week_number', isoWeek)
     .single()
@@ -263,21 +258,25 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     // Update existing record - merge arrays while maintaining index alignment
     const existingClientIds = existing.client_ids || []
     const existingServices = existing.services || []
+    const existingPrices = existing.prices || []
     const existingAppointmentDates = existing.appointment_dates || []
     
     // Add new clients and services, avoiding duplicates
     const mergedClientIds = [...existingClientIds]
     const mergedServices = [...existingServices]
+    const mergedPrices = [...existingPrices]
     const mergedAppointmentDates = [...existingAppointmentDates]
     
     for (let i = 0; i < clientIdsToAdd.length; i++) {
       const clientId = clientIdsToAdd[i]
       const service = servicesToAdd[i]
+      const price = priceToAdd[i]
       const appointmentDate = appointmentDatesToAdd[i]
       
       if (!existingClientIds.includes(clientId)) {
         mergedClientIds.push(clientId)
         mergedServices.push(service)
+        mergedPrices.push(price)
         mergedAppointmentDates.push(appointmentDate)
       }
     }
@@ -289,6 +288,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         clicked_link: clickedLinkCount,
         client_ids: mergedClientIds,
         services: mergedServices,
+        prices: mergedPrices,
         appointment_dates: mergedAppointmentDates,
         updated_at: new Date().toISOString()
       })
@@ -306,6 +306,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         clicked_link: clickedLinkCount,
         client_ids: clientIdsToAdd,
         services: servicesToAdd,
+        prices: pricesToAdd,
         appointment_dates: appointmentDatesToAdd
       })
 
