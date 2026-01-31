@@ -162,6 +162,20 @@ export async function ClientSMSFromBarberNudge(
 ) {
   const supabase = await createSupabaseServerClient()
 
+  await supabase
+      .from('barber_nudge_success')
+      .insert({
+        user_id: user_id,
+        iso_week_number: getISOWeek(),
+        messages_delivered: 0,
+        clicked_link: 0,
+        client_ids: [],
+        services: [],
+        appointment_dates: []
+      })
+
+  // console.log(`Created barber_nudge_success for user ${userId}`)
+
   try {
     // Calculate limit based on Mondays in current month
     const mondaysCount = getMondaysInCurrentMonth()

@@ -17,10 +17,10 @@ const twilio_client = twilio(accountSid, authToken)
 
 // Message templates
 const messageTemplates = [
-  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
-  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
-  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
-  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}).",
+  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
+  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
+  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
+  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\n Full details are saved in Corva.",
 ]
 
 function getRandomMessage(filled: number, total: number, takenSlots: number, recovery: number): string {

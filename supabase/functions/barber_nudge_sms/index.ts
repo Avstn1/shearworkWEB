@@ -18,16 +18,16 @@ const twilio_client = twilio(accountSid, authToken)
 
 // Message templates
 const messageTemplates = [
-  "How's it going {name}? It's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Hey {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "What's up {name}? Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Hi {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Hey there {name}! It's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Good morning {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Hello {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Yo {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Hi there {name}, it's Corva. You have {slots} empty slot/s this week. Want me to help fill them?}",
-  "Hey {name}! Corva here. You have {slots} empty slot/s this week. Want me to help fill them?}",
+  "How's it going {name}? It's Corva. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Hey {name}, it's Corva. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "What's up {name}? Corva here. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Hi {name}, it's Corva. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Hey there {name}! It's Corva. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Good morning {name}! Corva here. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Hello {name}, it's Corva. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Yo {name}! Corva here. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Hi there {name}, it's Corva. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Hey {name}! Corva here. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
 ]
 
 function getFirstName(fullName: string): string {
@@ -38,7 +38,7 @@ function getRandomMessage(name: string, empty_slots: number, estimatedReturn: nu
   const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)]
   return template
     .replace('{name}', getFirstName(name))
-    .replace('{slots}', empty_slots.toString())
+    .replace('{slots}', empty_slots)
 }
 
 function getISOWeekDates(date: Date): { start: Date; end: Date } {
@@ -88,7 +88,7 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; r
   
   return {
     slots: totalSlots,
-    revenue: Math.round(totalRevenue)
+    // revenue: Math.round(totalRevenue)
   }
 }
 
