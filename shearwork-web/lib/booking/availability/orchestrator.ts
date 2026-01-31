@@ -158,7 +158,10 @@ function buildDailySummaries(
 ): AvailabilityDailySummaryRecord[] {
   const defaultService = resolveDefaultServiceContext(slots)
 
-  // Use all services and normalize by duration (30-minute units).
+  const slotLengthMinutes = resolveSlotLengthMinutes(slots)
+
+  // Count only slots that can fit the slot length threshold.
+  // Ignore services under the threshold (e.g., 15-minute lineups).
   // Group by start_time to avoid double counting overlapping services.
   const timeMap = new Map<string, SummarySlotSelection>()
 
@@ -166,31 +169,28 @@ function buildDailySummaries(
     const slotTime = slot.start_time
     if (!slotTime) continue
 
-    const units = getSlotUnits(slot)
+    const durationMinutes = slot.duration_minutes ?? 30
+    if (!Number.isFinite(durationMinutes) || durationMinutes < slotLengthMinutes) continue
+
+    const price = getSlotPrice(slot) ?? defaultService.price
     const timeKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${slotTime}`
     const current = timeMap.get(timeKey)
 
-    if (!current) {
-      timeMap.set(timeKey, { slot, units })
-      continue
-    }
-
-    if (isPreferredSummarySlot(current, slot, units)) {
-      timeMap.set(timeKey, { slot, units })
+    if (!current || price < current.price) {
+      timeMap.set(timeKey, { slot, price })
     }
   }
 
   const summaryMap = new Map<string, AvailabilityDailySummaryRecord>()
 
   for (const entry of timeMap.values()) {
-    const { slot, units } = entry
+    const { slot, price } = entry
     const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
     const current = summaryMap.get(dayKey)
-    const price = getSlotPrice(slot) ?? defaultService.price
 
     if (current) {
       current.slot_count += 1
-      current.slot_units = (current.slot_units ?? 0) + units
+      current.slot_units = (current.slot_units ?? 0) + 1
       current.estimated_revenue += price
       continue
     }
@@ -200,7 +200,7 @@ function buildDailySummaries(
       source: slot.source,
       slot_date: slot.slot_date,
       slot_count: 1,
-      slot_units: units,
+      slot_units: 1,
       estimated_revenue: price,
       timezone: slot.timezone ?? null,
       fetched_at: fetchedAt,
@@ -218,7 +218,7 @@ function buildDailySummaries(
 
 type SummarySlotSelection = {
   slot: AvailabilitySlotRecord
-  units: number
+  price: number
 }
 
 type ServiceUsage = {
@@ -226,6 +226,12 @@ type ServiceUsage = {
   normalizedName: string
   count: number
   minPrice: number
+}
+
+type ServiceDurationUsage = {
+  name: string
+  count: number
+  durationMinutes: number
 }
 
 type DefaultServiceContext = {
@@ -262,6 +268,19 @@ function resolveDefaultServiceContext(
   }
 }
 
+function resolveSlotLengthMinutes(slots: AvailabilitySlotRecord[]): number {
+  const usage = collectServiceDurationUsage(slots)
+  const eligible = usage.filter((service) => service.durationMinutes >= 30)
+
+  if (eligible.length === 0) return 30
+
+  const topServices = pickTopDurationServices(eligible, 2)
+  if (topServices.length === 0) return 30
+
+  const total = topServices.reduce((sum, service) => sum + service.durationMinutes, 0)
+  return total / topServices.length
+}
+
 function collectServiceUsage(
   slots: AvailabilitySlotRecord[],
   predicate: (slot: AvailabilitySlotRecord) => boolean
@@ -292,6 +311,35 @@ function collectServiceUsage(
       normalizedName,
       count: 1,
       minPrice: price ?? Number.POSITIVE_INFINITY,
+    })
+  }
+
+  return Array.from(usageMap.values())
+}
+
+function collectServiceDurationUsage(
+  slots: AvailabilitySlotRecord[]
+): ServiceDurationUsage[] {
+  const usageMap = new Map<string, ServiceDurationUsage>()
+
+  for (const slot of slots) {
+    const rawName = slot.appointment_type_name?.trim()
+    if (!rawName) continue
+
+    const key = rawName.toLowerCase()
+    const durationMinutes = slot.duration_minutes ?? 30
+
+    const current = usageMap.get(key)
+    if (current) {
+      current.count += 1
+      current.durationMinutes = Math.max(current.durationMinutes, durationMinutes)
+      continue
+    }
+
+    usageMap.set(key, {
+      name: rawName,
+      count: 1,
+      durationMinutes,
     })
   }
 
@@ -334,6 +382,21 @@ function pickTopServices(usage: ServiceUsage[], limit: number): ServiceUsage[] {
   return sorted.slice(0, limit)
 }
 
+function pickTopDurationServices(
+  usage: ServiceDurationUsage[],
+  limit: number
+): ServiceDurationUsage[] {
+  if (limit <= 0 || usage.length === 0) return []
+
+  const sorted = [...usage].sort((a, b) => {
+    if (a.count !== b.count) return b.count - a.count
+    if (a.durationMinutes !== b.durationMinutes) return b.durationMinutes - a.durationMinutes
+    return a.name.localeCompare(b.name)
+  })
+
+  return sorted.slice(0, limit)
+}
+
 function getAverageServicePrice(services: ServiceUsage[]): number {
   const prices = services
     .map((service) => service.minPrice)
@@ -354,33 +417,6 @@ function getSlotPrice(slot: AvailabilitySlotRecord): number | null {
   const direct = normalizePrice(slot.price)
   if (direct !== null) return direct
   return normalizePrice(slot.estimated_revenue)
-}
-
-function getSlotUnits(slot: AvailabilitySlotRecord): number {
-  const duration = slot.duration_minutes ?? 30
-  if (!Number.isFinite(duration) || duration <= 0) return 0
-  return duration / 30
-}
-
-function isPreferredSummarySlot(
-  current: SummarySlotSelection,
-  candidate: AvailabilitySlotRecord,
-  candidateUnits: number
-): boolean {
-  if (candidateUnits > current.units) return true
-  if (candidateUnits < current.units) return false
-
-  const currentPrice = getSlotPrice(current.slot)
-  const candidatePrice = getSlotPrice(candidate)
-
-  if (currentPrice === null && candidatePrice === null) return false
-  if (currentPrice === null) return true
-  if (candidatePrice === null) return false
-
-  if (candidatePrice < currentPrice) return true
-  if (candidatePrice > currentPrice) return false
-
-  return false
 }
 
 function buildHourlyBuckets(slots: AvailabilitySlotRecord[]): AvailabilityHourlyBucket[] {
