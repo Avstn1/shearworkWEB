@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { startOfWeek, endOfWeek, eachDayOfInterval, format } from 'date-fns'
 import { AcuityAvailabilityAdapter } from '@/lib/booking/availability/adapters/acuity'
 import { SquareAvailabilityAdapter } from '@/lib/booking/availability/adapters/square'
 import type { AvailabilityAdapter } from '@/lib/booking/availability/adapters/AvailabilityAdapter'
@@ -132,26 +133,17 @@ export async function pullAvailability(
 }
 
 function buildCurrentWeekRange(): AvailabilityDateRange {
-  // Use Toronto timezone consistently for week boundary calculations.
-  // This ensures Mon-Sun alignment regardless of server timezone.
+  // Use Toronto timezone for current date, then date-fns for ISO week (Mon-Sun).
   const torontoNow = new Date(
     new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
   )
 
-  const dayOfWeek = torontoNow.getDay()
-  const isoDay = dayOfWeek === 0 ? 7 : dayOfWeek
+  // weekStartsOn: 1 = Monday (ISO week standard)
+  const monday = startOfWeek(torontoNow, { weekStartsOn: 1 })
+  const sunday = endOfWeek(torontoNow, { weekStartsOn: 1 })
 
-  const monday = new Date(torontoNow)
-  monday.setDate(torontoNow.getDate() - (isoDay - 1))
-  monday.setHours(0, 0, 0, 0)
-
-  const dates: string[] = []
-
-  for (let i = 0; i < 7; i += 1) {
-    const date = new Date(monday)
-    date.setDate(monday.getDate() + i)
-    dates.push(formatDate(date))
-  }
+  const dates = eachDayOfInterval({ start: monday, end: sunday })
+    .map(d => format(d, 'yyyy-MM-dd'))
 
   return {
     startDate: dates[0],
