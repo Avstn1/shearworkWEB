@@ -27,6 +27,9 @@ export type AvailabilityDailySummaryRecord = {
   source: string
   slot_date: string
   slot_count: number
+  slot_units?: number | null
+  slot_count_update?: number | null
+  slot_units_update?: number | null
   estimated_revenue: number
   timezone?: string | null
   fetched_at?: string

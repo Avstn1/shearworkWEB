@@ -156,62 +156,69 @@ function buildDailySummaries(
   slots: AvailabilitySlotRecord[],
   fetchedAt: string
 ): AvailabilityDailySummaryRecord[] {
-  const defaultService = resolveDefaultServiceContext(slots)
+  const fallbackPrice = resolveHaircutFallbackPrice(slots)
+  const slotLengthMinutes = resolveSlotLengthMinutes(slots)
 
-  // Track unique slot times per day to calculate true capacity.
-  // Only count slots for the default service with duration >= 30 min.
-  // Use exact start_time instead of rounding to avoid over/undercounting.
-  const summaryMap = new Map<
-    string,
-    {
-      summary: AvailabilityDailySummaryRecord
-      slotTimes: Set<string>
-    }
-  >()
+  // Count only slots that can fit the slot length threshold.
+  // Ignore services under the threshold (e.g., 15-minute lineups).
+  // Group by start_time to avoid double counting overlapping services.
+  const timeMap = new Map<string, SummarySlotSelection>()
 
   for (const slot of slots) {
-    const normalizedName = getNormalizedServiceName(slot.appointment_type_name)
-    if (!normalizedName || normalizedName !== defaultService.normalizedName) continue
-
-    const effectiveDuration = slot.duration_minutes ?? 30
-    if (effectiveDuration < 30) continue
-
     const slotTime = slot.start_time
     if (!slotTime) continue
 
+    const durationMinutes = slot.duration_minutes ?? 30
+    if (!isHaircutServiceName(slot.appointment_type_name)) continue
+    if (!Number.isFinite(durationMinutes) || durationMinutes < slotLengthMinutes) continue
+
+    const price = getSlotPrice(slot) ?? fallbackPrice
+    const timeKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${slotTime}`
+    const current = timeMap.get(timeKey)
+
+    if (!current || price < current.price) {
+      timeMap.set(timeKey, { slot, price })
+    }
+  }
+
+  const summaryMap = new Map<string, AvailabilityDailySummaryRecord>()
+
+  for (const entry of timeMap.values()) {
+    const { slot, price } = entry
     const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
     const current = summaryMap.get(dayKey)
 
     if (current) {
-      if (!current.slotTimes.has(slotTime)) {
-        current.slotTimes.add(slotTime)
-        current.summary.slot_count += 1
-      }
+      current.slot_count += 1
+      current.slot_units = (current.slot_units ?? 0) + 1
+      current.estimated_revenue += price
       continue
     }
 
     summaryMap.set(dayKey, {
-      summary: {
-        user_id: slot.user_id,
-        source: slot.source,
-        slot_date: slot.slot_date,
-        slot_count: 1,
-        estimated_revenue: 0,
-        timezone: slot.timezone ?? null,
-        fetched_at: fetchedAt,
-        updated_at: fetchedAt,
-      },
-      slotTimes: new Set([slotTime]),
+      user_id: slot.user_id,
+      source: slot.source,
+      slot_date: slot.slot_date,
+      slot_count: 1,
+      slot_units: 1,
+      estimated_revenue: price,
+      timezone: slot.timezone ?? null,
+      fetched_at: fetchedAt,
+      updated_at: fetchedAt,
     })
   }
 
-  for (const entry of summaryMap.values()) {
-    entry.summary.estimated_revenue = roundCurrency(
-      entry.summary.slot_count * defaultService.price
-    )
+  for (const summary of summaryMap.values()) {
+    summary.slot_units = roundUnits(summary.slot_units ?? 0)
+    summary.estimated_revenue = roundCurrency(summary.estimated_revenue)
   }
 
-  return Array.from(summaryMap.values()).map((entry) => entry.summary)
+  return Array.from(summaryMap.values())
+}
+
+type SummarySlotSelection = {
+  slot: AvailabilitySlotRecord
+  price: number
 }
 
 type ServiceUsage = {
@@ -219,6 +226,12 @@ type ServiceUsage = {
   normalizedName: string
   count: number
   minPrice: number
+}
+
+type ServiceDurationUsage = {
+  name: string
+  count: number
+  durationMinutes: number
 }
 
 type DefaultServiceContext = {
@@ -255,6 +268,29 @@ function resolveDefaultServiceContext(
   }
 }
 
+function resolveHaircutFallbackPrice(slots: AvailabilitySlotRecord[]): number {
+  const usage = collectServiceUsage(slots, (slot) =>
+    isHaircutServiceName(slot.appointment_type_name)
+  )
+  if (usage.length === 0) return 0
+  return getAverageServicePrice(pickTopServices(usage, 2))
+}
+
+function resolveSlotLengthMinutes(slots: AvailabilitySlotRecord[]): number {
+  const usage = collectServiceDurationUsage(slots, (slot) =>
+    isHaircutServiceName(slot.appointment_type_name)
+  )
+  const eligible = usage.filter((service) => service.durationMinutes >= 30)
+
+  if (eligible.length === 0) return 30
+
+  const topServices = pickTopDurationServices(eligible, 2)
+  if (topServices.length === 0) return 30
+
+  const total = topServices.reduce((sum, service) => sum + service.durationMinutes, 0)
+  return total / topServices.length
+}
+
 function collectServiceUsage(
   slots: AvailabilitySlotRecord[],
   predicate: (slot: AvailabilitySlotRecord) => boolean
@@ -285,6 +321,37 @@ function collectServiceUsage(
       normalizedName,
       count: 1,
       minPrice: price ?? Number.POSITIVE_INFINITY,
+    })
+  }
+
+  return Array.from(usageMap.values())
+}
+
+function collectServiceDurationUsage(
+  slots: AvailabilitySlotRecord[],
+  predicate: (slot: AvailabilitySlotRecord) => boolean
+): ServiceDurationUsage[] {
+  const usageMap = new Map<string, ServiceDurationUsage>()
+
+  for (const slot of slots) {
+    if (!predicate(slot)) continue
+    const rawName = slot.appointment_type_name?.trim()
+    if (!rawName) continue
+
+    const key = rawName.toLowerCase()
+    const durationMinutes = slot.duration_minutes ?? 30
+
+    const current = usageMap.get(key)
+    if (current) {
+      current.count += 1
+      current.durationMinutes = Math.max(current.durationMinutes, durationMinutes)
+      continue
+    }
+
+    usageMap.set(key, {
+      name: rawName,
+      count: 1,
+      durationMinutes,
     })
   }
 
@@ -327,6 +394,21 @@ function pickTopServices(usage: ServiceUsage[], limit: number): ServiceUsage[] {
   return sorted.slice(0, limit)
 }
 
+function pickTopDurationServices(
+  usage: ServiceDurationUsage[],
+  limit: number
+): ServiceDurationUsage[] {
+  if (limit <= 0 || usage.length === 0) return []
+
+  const sorted = [...usage].sort((a, b) => {
+    if (a.count !== b.count) return b.count - a.count
+    if (a.durationMinutes !== b.durationMinutes) return b.durationMinutes - a.durationMinutes
+    return a.name.localeCompare(b.name)
+  })
+
+  return sorted.slice(0, limit)
+}
+
 function getAverageServicePrice(services: ServiceUsage[]): number {
   const prices = services
     .map((service) => service.minPrice)
@@ -341,6 +423,14 @@ function getAverageServicePrice(services: ServiceUsage[]): number {
 function getNormalizedServiceName(value?: string | null): string | null {
   if (!value || !value.trim()) return null
   return normalizeServiceName(value)
+}
+
+function isHaircutServiceName(value?: string | null): boolean {
+  if (!value) return false
+  const name = value.trim().toLowerCase()
+  if (!name) return false
+  if (/\bkid/.test(name)) return false
+  return name.includes('haircut') || name.includes('scissor')
 }
 
 function getSlotPrice(slot: AvailabilitySlotRecord): number | null {
@@ -543,7 +633,7 @@ async function pullAvailabilityForSource(params: {
 
   if (cached) {
     const dedupedSlots = dedupeSlotsByTime(cached.slots)
-    const summaries = buildDailySummaries(dedupedSlots, cached.fetchedAt)
+    const summaries = buildDailySummaries(cached.slots, cached.fetchedAt)
 
     return {
       slots: dedupedSlots,
@@ -557,7 +647,7 @@ async function pullAvailabilityForSource(params: {
   const slots = await adapter.fetchAvailabilitySlots(supabase, userId, dateRange)
   const rawSlots = applyFetchedAtToSlots(slots, fetchedAt)
   const dedupedSlots = dedupeSlotsByTime(rawSlots)
-  const summaries = buildDailySummaries(dedupedSlots, fetchedAt)
+  const summaries = buildDailySummaries(rawSlots, fetchedAt)
 
   if (!options.dryRun) {
     // Store raw slots for service-specific filtering, but return deduped slots for summaries/UI.
@@ -655,6 +745,7 @@ async function upsertSummaries(
       source: summary.source,
       slot_date: summary.slot_date,
       slot_count_update: summary.slot_count,
+      slot_units_update: summary.slot_units ?? 0,
       updated_at: new Date().toISOString()
     }))
     
@@ -785,6 +876,10 @@ function formatDate(date: Date): string {
 }
 
 function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+function roundUnits(value: number): number {
   return Math.round(value * 100) / 100
 }
 
