@@ -176,29 +176,29 @@ function buildDailySummaries(
 
   // Count only slots that can fit the slot length threshold.
   // Ignore services under the threshold (e.g., 15-minute lineups).
-  // Group by start_time to avoid double counting overlapping services.
-  const timeMap = new Map<string, SummarySlotSelection>()
+  // Group by half-hour block to avoid double counting overlapping services.
+  const blockMap = new Map<string, SummaryBlockSelection>()
 
   for (const slot of slots) {
-    const slotTime = slot.start_time
-    if (!slotTime) continue
-
     const durationMinutes = slot.duration_minutes ?? 30
     if (!isHaircutServiceName(slot.appointment_type_name)) continue
     if (!Number.isFinite(durationMinutes) || durationMinutes !== slotLengthMinutes) continue
 
+    const block = getHalfHourBlock(slot)
+    if (!block) continue
+
     const price = getSlotPrice(slot) ?? fallbackPrice
-    const timeKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${slotTime}`
-    const current = timeMap.get(timeKey)
+    const blockKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${block}`
+    const current = blockMap.get(blockKey)
 
     if (!current || price < current.price) {
-      timeMap.set(timeKey, { slot, price })
+      blockMap.set(blockKey, { slot, price })
     }
   }
 
   const summaryMap = new Map<string, AvailabilityDailySummaryRecord>()
 
-  for (const entry of timeMap.values()) {
+  for (const entry of blockMap.values()) {
     const { slot, price } = entry
     const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
     const current = summaryMap.get(dayKey)
@@ -231,7 +231,7 @@ function buildDailySummaries(
   return Array.from(summaryMap.values())
 }
 
-type SummarySlotSelection = {
+type SummaryBlockSelection = {
   slot: AvailabilitySlotRecord
   price: number
 }
