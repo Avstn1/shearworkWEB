@@ -48,8 +48,13 @@ function getTwoMonthsFromNow(): string {
 }
 
 function stripE164(phone: string): string {
-  // Remove +1 prefix for Acuity API
   return phone.replace(/^\+1/, '')
+}
+
+function phoneToSearchParam(phone: string): string {
+  return phone.startsWith('+')
+    ? `%2b${phone.slice(1)}`
+    : phone
 }
 
 function parseToUTCTimestamp(datetimeStr: string): string {
@@ -83,10 +88,9 @@ async function getAccessToken(userId: string): Promise<string | null> {
   return data.access_token
 }
 
-async function getAcuityAppointments(
+async function getAllAcuityAppointments(
   accessToken: string,
-  calendarId: string,
-  phone: string
+  calendarId: string
 ): Promise<any[]> {
   const today = toEnCA(new Date())
   const maxDate = getTwoMonthsFromNow()
@@ -96,7 +100,9 @@ async function getAcuityAppointments(
   url.searchParams.set('maxDate', maxDate)
   url.searchParams.set('offset', '0')
   url.searchParams.set('calendarID', calendarId)
-  url.searchParams.set('phone', phone.toString())
+  // url.searchParams.set('phone', phone)
+  // url.searchParams.set('firstName', 'carlo')
+  // url.searchParams.set('lastName', '*')
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -108,7 +114,9 @@ async function getAcuityAppointments(
   }
 
   const data = await response.json()
-  return Array.isArray(data) ? data : []
+  // console.log("data: " + JSON.stringify(data))
+
+  return data
 }
 
 async function processBarber(userId: string, isoWeek: string, calendar: string) {
@@ -154,6 +162,28 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
       isSent: msg.is_sent
     }))
 
+  // Fetch all appointments once
+  const allAppointments = await getAllAcuityAppointments(accessToken, calendar)
+  // console.log("allAppointments: " + JSON.stringify(allAppointments))
+
+  // Normalize phone number to compare (remove +1 or 1 prefix)
+  const normalizePhone = (phoneStr: string) => {
+    if (!phoneStr) return ''
+    return phoneStr.replace(/^\+?1/, '')
+  }
+
+  // Create a map of normalized phone -> appointments
+  const appointmentsByPhone = new Map<string, any[]>()
+  for (const appt of allAppointments) {
+    const normalized = normalizePhone(appt.phone)
+    if (!appointmentsByPhone.has(normalized)) {
+      appointmentsByPhone.set(normalized, [])
+    }
+    appointmentsByPhone.get(normalized)!.push(appt)
+  }
+
+  console.log(appointmentsByPhone)
+
   let appointmentsFound = false
   const clientIdsToAdd: string[] = []
   const servicesToAdd: string[] = []
@@ -163,8 +193,11 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
 
   // Check appointments for each phone number
   for (const { phone, createdAt } of phoneNumbers) {
-    const nonE164Phone = stripE164(phone)
-    const appointments = await getAcuityAppointments(accessToken, calendar, nonE164Phone)
+    const normalizedPhone = normalizePhone(phone)
+    console.log("Phone passed to acuity: " + normalizedPhone)
+    
+    const appointments = appointmentsByPhone.get(normalizedPhone) || []
+    console.log("appointments: " + JSON.stringify(appointments))
 
     // Find all appointments created after SMS was sent, sorted by appointment datetime
     const appointmentsAfterSMS = appointments
@@ -174,6 +207,8 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         const dateB = new Date(b.datetime || b.datetimeCreated).getTime()
         return dateA - dateB
       })
+
+    console.log("appointmentsAfterSMS: " + JSON.stringify(appointmentsAfterSMS))
 
     if (appointmentsAfterSMS.length > 0) {
       appointmentsFound = true

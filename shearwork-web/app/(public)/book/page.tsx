@@ -6,6 +6,26 @@ type PageProps = {
   searchParams: Promise<{ profile?: string; t?: string }>
 }
 
+function getISOWeek(): string {
+  const now = new Date(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Toronto',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
+  )
+
+  const day = now.getDay() || 7
+  now.setDate(now.getDate() + 4 - day)
+
+  const yearStart = new Date(now.getFullYear(), 0, 1)
+  const week = Math.ceil(((+now - +yearStart) / 86400000 + 1) / 7)
+  const year = now.getFullYear()
+
+  return `${year}-W${week.toString().padStart(2, '0')}`
+}
+
 export default async function BookingRedirectPage({ searchParams }: PageProps) {
   const params = await searchParams
   const profileUsername = params.profile?.toLowerCase()
@@ -31,12 +51,25 @@ export default async function BookingRedirectPage({ searchParams }: PageProps) {
   }
 
   // Update click tracking if token exists
+  const isoWeek = getISOWeek()
   if (linkToken) {
     supabase
       .from('test_acuity_clients')
       .update({ last_date_clicked_link: new Date().toISOString() })
       .eq('link_token', linkToken)
-      .then(() => {}) // Fire and forget
+      .then(() => {})
+
+    const { error } = await supabase.rpc(
+      'increment_barber_nudge_clicked_link',
+      {
+        p_user_id: profile.user_id,        
+        p_iso_week: isoWeek       
+      }
+    )
+
+    if (error) {
+      console.error(error)
+    }
   }
 
   // If no booking link set, show search with this barber selected
