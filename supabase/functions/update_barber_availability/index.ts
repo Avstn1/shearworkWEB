@@ -59,11 +59,11 @@ Deno.serve(async (_req) => {
       let active = 0
       let index = 0
 
-      // CHANGE TO DYNAMIC LATER ON 
-      // day === 3 is wednesday so when it runs on a wednesday, update = true
-      // const day = torontoToday.getDay()
-      // const update = day === 3
-      const update = true;
+      // Monday (day 1) = normal mode to set baseline slot_count
+      // Tue-Sun = update mode to set slot_count_update (current availability)
+      const day = torontoToday.getDay()
+      const isMonday = day === 1
+      const update = !isMonday
       
       let url;
 

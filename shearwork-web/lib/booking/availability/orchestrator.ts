@@ -158,60 +158,67 @@ function buildDailySummaries(
 ): AvailabilityDailySummaryRecord[] {
   const defaultService = resolveDefaultServiceContext(slots)
 
-  // Track unique slot times per day to calculate true capacity.
-  // Only count slots for the default service with duration >= 30 min.
-  // Use exact start_time instead of rounding to avoid over/undercounting.
-  const summaryMap = new Map<
-    string,
-    {
-      summary: AvailabilityDailySummaryRecord
-      slotTimes: Set<string>
-    }
-  >()
+  // Use all services and normalize by duration (30-minute units).
+  // Group by start_time to avoid double counting overlapping services.
+  const timeMap = new Map<string, SummarySlotSelection>()
 
   for (const slot of slots) {
-    const normalizedName = getNormalizedServiceName(slot.appointment_type_name)
-    if (!normalizedName || normalizedName !== defaultService.normalizedName) continue
-
-    const effectiveDuration = slot.duration_minutes ?? 30
-    if (effectiveDuration < 30) continue
-
     const slotTime = slot.start_time
     if (!slotTime) continue
 
+    const units = getSlotUnits(slot)
+    const timeKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${slotTime}`
+    const current = timeMap.get(timeKey)
+
+    if (!current) {
+      timeMap.set(timeKey, { slot, units })
+      continue
+    }
+
+    if (isPreferredSummarySlot(current, slot, units)) {
+      timeMap.set(timeKey, { slot, units })
+    }
+  }
+
+  const summaryMap = new Map<string, AvailabilityDailySummaryRecord>()
+
+  for (const entry of timeMap.values()) {
+    const { slot, units } = entry
     const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
     const current = summaryMap.get(dayKey)
+    const price = getSlotPrice(slot) ?? defaultService.price
 
     if (current) {
-      if (!current.slotTimes.has(slotTime)) {
-        current.slotTimes.add(slotTime)
-        current.summary.slot_count += 1
-      }
+      current.slot_count += 1
+      current.slot_units = (current.slot_units ?? 0) + units
+      current.estimated_revenue += price
       continue
     }
 
     summaryMap.set(dayKey, {
-      summary: {
-        user_id: slot.user_id,
-        source: slot.source,
-        slot_date: slot.slot_date,
-        slot_count: 1,
-        estimated_revenue: 0,
-        timezone: slot.timezone ?? null,
-        fetched_at: fetchedAt,
-        updated_at: fetchedAt,
-      },
-      slotTimes: new Set([slotTime]),
+      user_id: slot.user_id,
+      source: slot.source,
+      slot_date: slot.slot_date,
+      slot_count: 1,
+      slot_units: units,
+      estimated_revenue: price,
+      timezone: slot.timezone ?? null,
+      fetched_at: fetchedAt,
+      updated_at: fetchedAt,
     })
   }
 
-  for (const entry of summaryMap.values()) {
-    entry.summary.estimated_revenue = roundCurrency(
-      entry.summary.slot_count * defaultService.price
-    )
+  for (const summary of summaryMap.values()) {
+    summary.slot_units = roundUnits(summary.slot_units ?? 0)
+    summary.estimated_revenue = roundCurrency(summary.estimated_revenue)
   }
 
-  return Array.from(summaryMap.values()).map((entry) => entry.summary)
+  return Array.from(summaryMap.values())
+}
+
+type SummarySlotSelection = {
+  slot: AvailabilitySlotRecord
+  units: number
 }
 
 type ServiceUsage = {
@@ -347,6 +354,33 @@ function getSlotPrice(slot: AvailabilitySlotRecord): number | null {
   const direct = normalizePrice(slot.price)
   if (direct !== null) return direct
   return normalizePrice(slot.estimated_revenue)
+}
+
+function getSlotUnits(slot: AvailabilitySlotRecord): number {
+  const duration = slot.duration_minutes ?? 30
+  if (!Number.isFinite(duration) || duration <= 0) return 0
+  return duration / 30
+}
+
+function isPreferredSummarySlot(
+  current: SummarySlotSelection,
+  candidate: AvailabilitySlotRecord,
+  candidateUnits: number
+): boolean {
+  if (candidateUnits > current.units) return true
+  if (candidateUnits < current.units) return false
+
+  const currentPrice = getSlotPrice(current.slot)
+  const candidatePrice = getSlotPrice(candidate)
+
+  if (currentPrice === null && candidatePrice === null) return false
+  if (currentPrice === null) return true
+  if (candidatePrice === null) return false
+
+  if (candidatePrice < currentPrice) return true
+  if (candidatePrice > currentPrice) return false
+
+  return false
 }
 
 function buildHourlyBuckets(slots: AvailabilitySlotRecord[]): AvailabilityHourlyBucket[] {
@@ -543,7 +577,7 @@ async function pullAvailabilityForSource(params: {
 
   if (cached) {
     const dedupedSlots = dedupeSlotsByTime(cached.slots)
-    const summaries = buildDailySummaries(dedupedSlots, cached.fetchedAt)
+    const summaries = buildDailySummaries(cached.slots, cached.fetchedAt)
 
     return {
       slots: dedupedSlots,
@@ -557,7 +591,7 @@ async function pullAvailabilityForSource(params: {
   const slots = await adapter.fetchAvailabilitySlots(supabase, userId, dateRange)
   const rawSlots = applyFetchedAtToSlots(slots, fetchedAt)
   const dedupedSlots = dedupeSlotsByTime(rawSlots)
-  const summaries = buildDailySummaries(dedupedSlots, fetchedAt)
+  const summaries = buildDailySummaries(rawSlots, fetchedAt)
 
   if (!options.dryRun) {
     // Store raw slots for service-specific filtering, but return deduped slots for summaries/UI.
@@ -655,6 +689,7 @@ async function upsertSummaries(
       source: summary.source,
       slot_date: summary.slot_date,
       slot_count_update: summary.slot_count,
+      slot_units_update: summary.slot_units ?? 0,
       updated_at: new Date().toISOString()
     }))
     
@@ -785,6 +820,10 @@ function formatDate(date: Date): string {
 }
 
 function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
+function roundUnits(value: number): number {
   return Math.round(value * 100) / 100
 }
 
