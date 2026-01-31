@@ -176,48 +176,73 @@ function buildDailySummaries(
 
   // Count only slots that can fit the slot length threshold.
   // Ignore services under the threshold (e.g., 15-minute lineups).
-  // Group by half-hour block to avoid double counting overlapping services.
-  const blockMap = new Map<string, SummaryBlockSelection>()
+  // Use interval scheduling to maximize non-overlapping slots per day.
+  const dayMap = new Map<string, DayIntervalState>()
 
   for (const slot of slots) {
     const durationMinutes = slot.duration_minutes ?? 30
     if (!isHaircutServiceName(slot.appointment_type_name)) continue
     if (!Number.isFinite(durationMinutes) || durationMinutes !== slotLengthMinutes) continue
 
-    const block = getHalfHourBlock(slot)
-    if (!block) continue
+    const startMinutes = parseStartTimeMinutes(slot.start_time)
+    if (startMinutes === null) continue
 
+    const endMinutes = startMinutes + slotLengthMinutes
     const price = getSlotPrice(slot) ?? fallbackPrice
-    const blockKey = `${slot.user_id}|${slot.source}|${slot.slot_date}|${block}`
-    const current = blockMap.get(blockKey)
+    const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
+    const current = dayMap.get(dayKey)
+    const timezone = slot.timezone ?? null
 
-    if (!current || price < current.price) {
-      blockMap.set(blockKey, { slot, price })
+    if (!current) {
+      const startMap = new Map<number, IntervalCandidate>()
+      startMap.set(startMinutes, { startMinutes, endMinutes, price })
+      dayMap.set(dayKey, {
+        userId: slot.user_id,
+        source: slot.source,
+        slotDate: slot.slot_date,
+        timezone,
+        startMap,
+      })
+      continue
+    }
+
+    if (!current.timezone && timezone) {
+      current.timezone = timezone
+    }
+
+    const existing = current.startMap.get(startMinutes)
+    if (!existing || price < existing.price) {
+      current.startMap.set(startMinutes, { startMinutes, endMinutes, price })
     }
   }
 
   const summaryMap = new Map<string, AvailabilityDailySummaryRecord>()
 
-  for (const entry of blockMap.values()) {
-    const { slot, price } = entry
-    const dayKey = `${slot.user_id}|${slot.source}|${slot.slot_date}`
-    const current = summaryMap.get(dayKey)
+  for (const entry of dayMap.values()) {
+    const intervals = Array.from(entry.startMap.values())
+      .sort((a, b) => a.endMinutes - b.endMinutes || a.startMinutes - b.startMinutes)
 
-    if (current) {
-      current.slot_count += 1
-      current.slot_units = (current.slot_units ?? 0) + 1
-      current.estimated_revenue += price
-      continue
+    let count = 0
+    let revenue = 0
+    let lastEnd = -1
+
+    for (const interval of intervals) {
+      if (interval.startMinutes < lastEnd) continue
+      count += 1
+      revenue += interval.price
+      lastEnd = interval.endMinutes
     }
 
-    summaryMap.set(dayKey, {
-      user_id: slot.user_id,
-      source: slot.source,
-      slot_date: slot.slot_date,
-      slot_count: 1,
-      slot_units: 1,
-      estimated_revenue: price,
-      timezone: slot.timezone ?? null,
+    if (count === 0) continue
+
+    summaryMap.set(`${entry.userId}|${entry.source}|${entry.slotDate}`, {
+      user_id: entry.userId,
+      source: entry.source,
+      slot_date: entry.slotDate,
+      slot_count: count,
+      slot_units: count,
+      estimated_revenue: revenue,
+      timezone: entry.timezone,
       fetched_at: fetchedAt,
       updated_at: fetchedAt,
     })
@@ -231,9 +256,18 @@ function buildDailySummaries(
   return Array.from(summaryMap.values())
 }
 
-type SummaryBlockSelection = {
-  slot: AvailabilitySlotRecord
+type IntervalCandidate = {
+  startMinutes: number
+  endMinutes: number
   price: number
+}
+
+type DayIntervalState = {
+  userId: string
+  source: string
+  slotDate: string
+  timezone: string | null
+  startMap: Map<number, IntervalCandidate>
 }
 
 type ServiceUsage = {
@@ -481,8 +515,22 @@ function isHaircutServiceName(value?: string | null): boolean {
   if (!value) return false
   const name = value.trim().toLowerCase()
   if (!name) return false
-  if (/\bkid/.test(name)) return false
+  if (name.includes('kid')) return false
   return name.includes('haircut') || name.includes('scissor')
+}
+
+function parseStartTimeMinutes(value?: string | null): number | null {
+  if (!value) return null
+  const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/)
+  if (!match) return null
+
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null
+
+  return hours * 60 + minutes
 }
 
 function normalizeSlotLengthMinutes(value: number): number {
