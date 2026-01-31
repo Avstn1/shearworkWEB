@@ -132,12 +132,17 @@ export async function pullAvailability(
 }
 
 function buildCurrentWeekRange(): AvailabilityDateRange {
-  const today = new Date()
-  const dayOfWeek = today.getDay()
+  // Use Toronto timezone consistently for week boundary calculations.
+  // This ensures Mon-Sun alignment regardless of server timezone.
+  const torontoNow = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
+  )
+
+  const dayOfWeek = torontoNow.getDay()
   const isoDay = dayOfWeek === 0 ? 7 : dayOfWeek
 
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - (isoDay - 1))
+  const monday = new Date(torontoNow)
+  monday.setDate(torontoNow.getDate() - (isoDay - 1))
   monday.setHours(0, 0, 0, 0)
 
   const dates: string[] = []
