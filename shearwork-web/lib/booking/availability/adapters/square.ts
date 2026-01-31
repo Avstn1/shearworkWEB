@@ -1,6 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import type { AvailabilityAdapter } from '@/lib/booking/availability/adapters/AvailabilityAdapter'
-import type { AvailabilityDateRange, AvailabilitySlotRecord } from '@/lib/booking/availability/types'
+import type {
+  AvailabilityAppointmentType,
+  AvailabilityDateRange,
+  AvailabilitySlotRecord,
+} from '@/lib/booking/availability/types'
 import { SquareAdapter } from '@/lib/booking/adapters/square'
 
 type SquareLocationInfo = {
@@ -94,6 +98,22 @@ export class SquareAvailabilityAdapter implements AvailabilityAdapter {
     }
 
     return slots
+  }
+
+  async fetchAppointmentTypesForUser(
+    supabase: SupabaseClient,
+    userId: string
+  ): Promise<AvailabilityAppointmentType[]> {
+    const squareAdapter = new SquareAdapter()
+    const accessToken = await squareAdapter.ensureValidToken(supabase, userId)
+    const serviceVariations = await fetchServiceVariations(accessToken)
+
+    return serviceVariations.map((variation) => ({
+      id: variation.id,
+      name: variation.name || null,
+      durationMinutes: variation.durationMinutes,
+      price: variation.price,
+    }))
   }
 }
 

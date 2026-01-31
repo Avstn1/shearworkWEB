@@ -22,6 +22,13 @@ export type AvailabilitySlotRecord = {
   updated_at?: string
 }
 
+export type AvailabilityAppointmentType = {
+  id: string
+  name: string | null
+  durationMinutes: number | null
+  price: number | null
+}
+
 export type AvailabilityDailySummaryRecord = {
   user_id: string
   source: string

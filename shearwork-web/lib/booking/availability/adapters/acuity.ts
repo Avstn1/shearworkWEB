@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import type { AvailabilityAdapter } from '@/lib/booking/availability/adapters/AvailabilityAdapter'
 import type {
+  AvailabilityAppointmentType,
   AvailabilityDateRange,
   AvailabilitySlotRecord,
 } from '@/lib/booking/availability/types'
@@ -92,6 +93,21 @@ export class AcuityAvailabilityAdapter implements AvailabilityAdapter {
     }
 
     return slots
+  }
+
+  async fetchAppointmentTypesForUser(
+    supabase: SupabaseClient,
+    userId: string
+  ): Promise<AvailabilityAppointmentType[]> {
+    const accessToken = await this.ensureValidToken(supabase, userId)
+    const appointmentTypes = await this.fetchAppointmentTypes(accessToken)
+
+    return appointmentTypes.map((appointmentType) => ({
+      id: appointmentType.id,
+      name: appointmentType.name || null,
+      durationMinutes: appointmentType.durationMinutes,
+      price: appointmentType.price,
+    }))
   }
 
   private async ensureValidToken(supabase: SupabaseClient, userId: string): Promise<string> {

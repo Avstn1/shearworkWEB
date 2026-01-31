@@ -9,6 +9,7 @@ import {
   normalizeServiceName,
 } from '@/lib/booking/serviceNormalization'
 import type {
+  AvailabilityAppointmentType,
   AvailabilityDailySummaryRecord,
   AvailabilityDateRange,
   AvailabilityCapacityBucket,
@@ -30,6 +31,13 @@ type SourceAvailabilityResult = {
   summaries: AvailabilityDailySummaryRecord[]
   fetchedAt: string
   cacheHit: boolean
+}
+
+type AvailabilityAppointmentTypeFetcher = AvailabilityAdapter & {
+  fetchAppointmentTypesForUser: (
+    supabase: SupabaseClient,
+    userId: string
+  ) => Promise<AvailabilityAppointmentType[]>
 }
 
 export async function pullAvailability(
@@ -60,6 +68,12 @@ export async function pullAvailability(
     { adapter: new SquareAvailabilityAdapter(), enabled: Boolean(squareToken?.access_token) },
   ]
 
+  const slotLengthMinutes = await resolveSlotLengthMinutesForUser({
+    supabase,
+    userId,
+    sourceConfigs,
+  })
+
   const outputSlots: AvailabilitySlotRecord[] = []
   const outputSummaries: AvailabilityDailySummaryRecord[] = []
   const cacheHitFlags: boolean[] = []
@@ -79,6 +93,7 @@ export async function pullAvailability(
         dateRange,
         fetchedAt,
         options,
+        slotLengthMinutes,
       })
 
       outputSlots.push(...result.slots)
@@ -154,10 +169,10 @@ function buildCurrentWeekRange(): AvailabilityDateRange {
 
 function buildDailySummaries(
   slots: AvailabilitySlotRecord[],
-  fetchedAt: string
+  fetchedAt: string,
+  slotLengthMinutes: number
 ): AvailabilityDailySummaryRecord[] {
   const fallbackPrice = resolveHaircutFallbackPrice(slots)
-  const slotLengthMinutes = resolveSlotLengthMinutes(slots)
 
   // Count only slots that can fit the slot length threshold.
   // Ignore services under the threshold (e.g., 15-minute lineups).
@@ -228,12 +243,6 @@ type ServiceUsage = {
   minPrice: number
 }
 
-type ServiceDurationUsage = {
-  name: string
-  count: number
-  durationMinutes: number
-}
-
 type DefaultServiceContext = {
   normalizedName: string
   price: number
@@ -276,20 +285,106 @@ function resolveHaircutFallbackPrice(slots: AvailabilitySlotRecord[]): number {
   return getAverageServicePrice(pickTopServices(usage, 2))
 }
 
-function resolveSlotLengthMinutes(slots: AvailabilitySlotRecord[]): number {
-  const usage = collectServiceDurationUsage(slots, (slot) =>
-    isHaircutServiceName(slot.appointment_type_name)
+function hasAppointmentTypeFetcher(
+  adapter: AvailabilityAdapter
+): adapter is AvailabilityAppointmentTypeFetcher {
+  return typeof (adapter as AvailabilityAppointmentTypeFetcher).fetchAppointmentTypesForUser === 'function'
+}
+
+async function resolveSlotLengthMinutesForUser(params: {
+  supabase: SupabaseClient
+  userId: string
+  sourceConfigs: Array<{ adapter: AvailabilityAdapter; enabled: boolean }>
+}): Promise<number> {
+  const { supabase, userId, sourceConfigs } = params
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('slot_length_minutes')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Failed to fetch slot length from profile:', error)
+  }
+
+  const stored = profile?.slot_length_minutes
+  if (stored && stored > 0) return stored
+
+  const appointmentTypes = await fetchAppointmentTypesFromSources(
+    supabase,
+    userId,
+    sourceConfigs
   )
-  const eligible = usage.filter((service) => service.durationMinutes >= 30)
 
-  if (eligible.length === 0) return 30
+  if (appointmentTypes.length === 0) return 30
 
-  const topServices = pickTopDurationServices(eligible, 2)
-  if (topServices.length === 0) return 30
+  const derived = deriveSlotLengthFromAppointmentTypes(appointmentTypes)
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({
+      slot_length_minutes: derived,
+      slot_length_derived_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
 
-  const total = topServices.reduce((sum, service) => sum + service.durationMinutes, 0)
-  const average = total / topServices.length
-  return normalizeSlotLengthMinutes(average)
+  if (updateError) {
+    console.error('Failed to persist slot length:', updateError)
+  }
+
+  return derived
+}
+
+async function fetchAppointmentTypesFromSources(
+  supabase: SupabaseClient,
+  userId: string,
+  sourceConfigs: Array<{ adapter: AvailabilityAdapter; enabled: boolean }>
+): Promise<AvailabilityAppointmentType[]> {
+  const preferredOrder = ['acuity', 'square']
+
+  for (const sourceName of preferredOrder) {
+    const match = sourceConfigs.find(
+      ({ adapter, enabled }) => enabled && adapter.name === sourceName && hasAppointmentTypeFetcher(adapter)
+    )
+
+    if (!match || !hasAppointmentTypeFetcher(match.adapter)) continue
+
+    try {
+      const types = await match.adapter.fetchAppointmentTypesForUser(supabase, userId)
+      if (types.length > 0) return types
+    } catch (err) {
+      console.error(`Failed to fetch ${sourceName} appointment types:`, err)
+    }
+  }
+
+  for (const { adapter, enabled } of sourceConfigs) {
+    if (!enabled || !hasAppointmentTypeFetcher(adapter)) continue
+
+    try {
+      const types = await adapter.fetchAppointmentTypesForUser(supabase, userId)
+      if (types.length > 0) return types
+    } catch (err) {
+      console.error(`Failed to fetch ${adapter.name} appointment types:`, err)
+    }
+  }
+
+  return []
+}
+
+function deriveSlotLengthFromAppointmentTypes(
+  appointmentTypes: AvailabilityAppointmentType[]
+): number {
+  const durations = appointmentTypes
+    .filter((type) => isHaircutServiceName(type.name))
+    .map((type) => type.durationMinutes)
+    .filter((duration): duration is number =>
+      typeof duration === 'number' && Number.isFinite(duration) && duration >= 30
+    )
+
+  if (durations.length === 0) return 30
+
+  const minDuration = Math.min(...durations)
+  return normalizeSlotLengthMinutes(minDuration)
 }
 
 function collectServiceUsage(
@@ -328,36 +423,6 @@ function collectServiceUsage(
   return Array.from(usageMap.values())
 }
 
-function collectServiceDurationUsage(
-  slots: AvailabilitySlotRecord[],
-  predicate: (slot: AvailabilitySlotRecord) => boolean
-): ServiceDurationUsage[] {
-  const usageMap = new Map<string, ServiceDurationUsage>()
-
-  for (const slot of slots) {
-    if (!predicate(slot)) continue
-    const rawName = slot.appointment_type_name?.trim()
-    if (!rawName) continue
-
-    const key = rawName.toLowerCase()
-    const durationMinutes = slot.duration_minutes ?? 30
-
-    const current = usageMap.get(key)
-    if (current) {
-      current.count += 1
-      current.durationMinutes = Math.max(current.durationMinutes, durationMinutes)
-      continue
-    }
-
-    usageMap.set(key, {
-      name: rawName,
-      count: 1,
-      durationMinutes,
-    })
-  }
-
-  return Array.from(usageMap.values())
-}
 
 function pickMostUsedService(usage: ServiceUsage[]): ServiceUsage | null {
   if (usage.length === 0) return null
@@ -395,20 +460,6 @@ function pickTopServices(usage: ServiceUsage[], limit: number): ServiceUsage[] {
   return sorted.slice(0, limit)
 }
 
-function pickTopDurationServices(
-  usage: ServiceDurationUsage[],
-  limit: number
-): ServiceDurationUsage[] {
-  if (limit <= 0 || usage.length === 0) return []
-
-  const sorted = [...usage].sort((a, b) => {
-    if (a.count !== b.count) return b.count - a.count
-    if (a.durationMinutes !== b.durationMinutes) return a.durationMinutes - b.durationMinutes
-    return a.name.localeCompare(b.name)
-  })
-
-  return sorted.slice(0, limit)
-}
 
 function getAverageServicePrice(services: ServiceUsage[]): number {
   const prices = services
@@ -631,8 +682,9 @@ async function pullAvailabilityForSource(params: {
   dateRange: AvailabilityDateRange
   fetchedAt: string
   options: AvailabilityPullOptions
+  slotLengthMinutes: number
 }): Promise<SourceAvailabilityResult> {
-  const { supabase, userId, adapter, dateRange, fetchedAt, options } = params
+  const { supabase, userId, adapter, dateRange, fetchedAt, options, slotLengthMinutes } = params
   // Reuse cached slots when possible to avoid hammering external APIs.
   const cached = options.forceRefresh
     ? null
@@ -640,7 +692,7 @@ async function pullAvailabilityForSource(params: {
 
   if (cached) {
     const dedupedSlots = dedupeSlotsByTime(cached.slots)
-    const summaries = buildDailySummaries(cached.slots, cached.fetchedAt)
+    const summaries = buildDailySummaries(cached.slots, cached.fetchedAt, slotLengthMinutes)
 
     return {
       slots: dedupedSlots,
@@ -654,7 +706,7 @@ async function pullAvailabilityForSource(params: {
   const slots = await adapter.fetchAvailabilitySlots(supabase, userId, dateRange)
   const rawSlots = applyFetchedAtToSlots(slots, fetchedAt)
   const dedupedSlots = dedupeSlotsByTime(rawSlots)
-  const summaries = buildDailySummaries(rawSlots, fetchedAt)
+  const summaries = buildDailySummaries(rawSlots, fetchedAt, slotLengthMinutes)
 
   if (!options.dryRun) {
     // Store raw slots for service-specific filtering, but return deduped slots for summaries/UI.
