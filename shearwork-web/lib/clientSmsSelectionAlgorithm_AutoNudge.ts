@@ -38,7 +38,7 @@ export async function selectClientsForSMS_AutoNudge(
   // Fetch eligible clients
   let query = supabase
     // acuity_clients change for testing
-    .from('test_acuity_clients')
+    .from('acuity_clients')
     .select('*')
     .eq('user_id', userId)
     .not('phone_normalized', 'is', null)
@@ -218,7 +218,7 @@ export async function markClientsAsMessaged(
 ): Promise<void> {
   const { error } = await supabase
     // acuity_clients change for testing
-    .from('test_acuity_clients')
+    .from('acuity_clients')
     .update({ date_last_sms_sent: new Date().toISOString() })
     .in('client_id', clientIds);
 

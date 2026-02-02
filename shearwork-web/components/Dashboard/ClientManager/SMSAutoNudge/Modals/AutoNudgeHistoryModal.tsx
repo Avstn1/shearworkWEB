@@ -220,7 +220,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
 
       // Fetch client details
       const { data: clientsData, error: clientsError } = await supabase
-        .from('test_acuity_clients')
+        .from('acuity_clients')
         .select('client_id, first_name, last_name, phone, phone_normalized')
         .eq('user_id', user.id)
         .or(`client_id.in.(${allClientIds.join(',')}),phone_normalized.in.(${allPhoneNumbers.map(p => `"${p}"`).join(',')})`);

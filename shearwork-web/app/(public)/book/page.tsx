@@ -54,7 +54,7 @@ export default async function BookingRedirectPage({ searchParams }: PageProps) {
   const isoWeek = getISOWeek()
   if (linkToken) {
     supabase
-      .from('test_acuity_clients')
+      .from('acuity_clients')
       .update({ last_date_clicked_link: new Date().toISOString() })
       .eq('link_token', linkToken)
       .then(() => {})
