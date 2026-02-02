@@ -112,7 +112,8 @@ export async function selectClientsForSMS_Campaign(
         }
         return scored;
       })
-      .filter(c => c.phone_normalized && !finalPhones.has(c.phone_normalized));
+      .filter(c => c.phone_normalized && !finalPhones.has(c.phone_normalized))
+      .filter(c => c.days_overdue >= 0);
 
     // Deduplicate and sort
     deselectedClients = deduplicateByPhone(scoredEligible);
@@ -158,9 +159,10 @@ async function getStrictClients(
   // Score with STRICT algorithm
   const scoredClients = clients.map((client) => scoreClientStrict(client, today));
   const afterScoreFilter = scoredClients.filter((client) => client.score > 0);
+  const validClients = afterScoreFilter.filter((client) => client.days_overdue >= 0);
 
   // Remove duplicates
-  const uniqueClients = deduplicateByPhone(afterScoreFilter);
+  const uniqueClients = deduplicateByPhone(validClients);
   
   // Sort by score
   uniqueClients.sort((a, b) => b.score - a.score);
@@ -201,9 +203,10 @@ async function getLenientClients(
   // Score with LENIENT algorithm
   const scoredClients = clients.map((client) => scoreClientLenient(client, today));
   const afterScoreFilter = scoredClients.filter((client) => client.score > 0);
+  const validClients = afterScoreFilter.filter((client) => client.days_overdue >= 0);
 
   // Remove duplicates
-  const uniqueClients = deduplicateByPhone(afterScoreFilter);
+  const uniqueClients = deduplicateByPhone(validClients);
   
   // Sort by score
   uniqueClients.sort((a, b) => b.score - a.score);
