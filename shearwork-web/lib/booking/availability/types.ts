@@ -89,4 +89,5 @@ export type AvailabilityPullOptions = {
   dryRun?: boolean
   forceRefresh?: boolean
   updateMode?: boolean
+  weekOffset?: number
 }

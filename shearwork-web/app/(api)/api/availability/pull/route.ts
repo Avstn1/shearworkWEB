@@ -13,9 +13,11 @@ export async function GET(request: Request) {
   const dryRun = searchParams.get('dryRun') === 'true'
   const forceRefresh = searchParams.get('forceRefresh') === 'true'
   const updateMode = searchParams.get('mode') === 'update'
+  const weekParam = searchParams.get('week')
+  const weekOffset = weekParam === 'next' ? 1 : weekParam === 'prev' ? -1 : 0
 
   try {
-    const result = await pullAvailability(supabase, user.id, { dryRun, forceRefresh, updateMode })
+    const result = await pullAvailability(supabase, user.id, { dryRun, forceRefresh, updateMode, weekOffset })
 
     return NextResponse.json({
       endpoint: 'availability',

@@ -45,7 +45,7 @@ export async function pullAvailability(
   userId: string,
   options: AvailabilityPullOptions = {}
 ): Promise<AvailabilityPullResult> {
-  const dateRange = buildCurrentWeekRange()
+  const dateRange = buildCurrentWeekRange(options.weekOffset ?? 0)
   const fetchedAt = new Date().toISOString()
   const errors: string[] = []
   const sources: AvailabilityPullResult['sources'] = {}
@@ -147,11 +147,16 @@ export async function pullAvailability(
   }
 }
 
-function buildCurrentWeekRange(): AvailabilityDateRange {
+function buildCurrentWeekRange(weekOffset: number = 0): AvailabilityDateRange {
   // Use Toronto timezone for current date, then date-fns for ISO week (Mon-Sun).
   const torontoNow = new Date(
     new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
   )
+
+  // Apply week offset (e.g., 1 = next week, -1 = last week)
+  if (weekOffset !== 0) {
+    torontoNow.setDate(torontoNow.getDate() + weekOffset * 7)
+  }
 
   // weekStartsOn: 1 = Monday (ISO week standard)
   const monday = startOfWeek(torontoNow, { weekStartsOn: 1 })
