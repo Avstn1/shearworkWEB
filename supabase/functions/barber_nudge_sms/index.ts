@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
       .select('user_id, full_name, phone')
       .ilike('role', 'barber')
       .eq('stripe_subscription_status', 'active')
+      .eq('sms_engaged_current_week', false)
       .not('phone', 'is', null)
 
     if (barbersError) {
