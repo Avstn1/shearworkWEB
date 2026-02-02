@@ -41,9 +41,9 @@ export async function POST(request: Request) {
     }
 
     // If the barber already said yes this week then don't run the nudge again. REMOVED FOR TESTING PURPOSES
-    // if (profile.sms_engaged_current_week) {
-    //   return NextResponse.json({ success: true, ignored: true })
-    // }
+    if (profile.sms_engaged_current_week) {
+      return NextResponse.json({ success: true, ignored: true })
+    }
     
     // Log the reply in your database
     const { error: insertError } = await supabase

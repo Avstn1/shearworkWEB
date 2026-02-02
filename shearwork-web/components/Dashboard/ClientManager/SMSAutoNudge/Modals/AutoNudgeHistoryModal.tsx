@@ -110,12 +110,15 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
         return;
       }
 
+      console.log(JSON.stringify(scheduledMessages));
+
       if (!scheduledMessages || scheduledMessages.length === 0) {
         setCampaigns([]);
         return;
       }
 
       const campaignList: BarberNudgeCampaign[] = [];
+      const seenWeeks = new Set<string>(); // Track unique weeks to avoid duplicates
 
       for (const message of scheduledMessages) {
         // Parse title to get user_id and iso_week
@@ -123,6 +126,10 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
         if (parts.length !== 2) continue;
 
         const isoWeek = parts[1];
+
+        // Skip if we've already processed this week (handles duplicates)
+        if (seenWeeks.has(isoWeek)) continue;
+        seenWeeks.add(isoWeek);
 
         // Get barber_nudge_success data
         const { data: successData, error: successError } = await supabase
@@ -132,10 +139,8 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
           .eq('iso_week_number', isoWeek)
           .single();
 
-        // Skip if no success data or no clients booked
-        if (successError || !successData || !successData.client_ids || successData.client_ids.length === 0) {
-          continue;
-        }
+        // Count booked clients (0 if no success data)
+        const clientsBooked = successData?.client_ids?.length || 0;
 
         // Get latest sms_sent created_at for this message
         const { data: sentData, error: sentError } = await supabase
@@ -155,7 +160,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
           iso_week_number: isoWeek,
           week_start: start,
           week_end: end,
-          clients_booked: successData.client_ids.length,
+          clients_booked: clientsBooked,
           date_sent: dateSent
         });
       }
