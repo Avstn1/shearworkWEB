@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Calendar, Megaphone } from 'lucide-react'
+import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Calendar, Megaphone, MessageCircleReply } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/ManageTipsButton'
@@ -183,6 +183,24 @@ export default function Navbar() {
           </Link>
 
           <Link 
+            href="/admin/nudge-engagement" 
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
+            style={{ color: COLORS.text }}
+            onMouseEnter={(e) => { 
+              e.currentTarget.style.color = COLORS.green
+              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+            }}
+            onMouseLeave={(e) => { 
+              e.currentTarget.style.color = COLORS.text
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <ChartBar className="w-5 h-5" />
+            <span>Barber Nudge Engagement</span>
+          </Link>
+
+          <Link 
             href="/dashboard" 
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
@@ -327,6 +345,17 @@ export default function Navbar() {
     rightSideContent = (
       <>
         {/* --- ADMIN CONTENT --- */}
+        <Link href="/admin/nudge-engagement" className="relative flex flex-col items-center group hidden md:flex">
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <MessageCircleReply className="w-6 h-6" style={{ color: COLORS.text }} />
+          </div>
+        </Link>
+          
         <Link href="/admin/feature-maker" className="relative flex flex-col items-center group hidden md:flex">
           <div 
             className="p-2 rounded-full transition-colors"
