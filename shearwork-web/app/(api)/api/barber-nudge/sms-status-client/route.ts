@@ -117,6 +117,15 @@ export async function POST(req: NextRequest) {
         console.error('Failed to insert failed status:', insertError)
       }
 
+      const { error: profileUpdateError } = await supabase
+        .from('acuity_clients')
+        .update({ sms_subscribed: false })
+        .eq('phone_normalized', phoneNormalized)
+
+      if (profileUpdateError) {
+        console.error('Failed to update sms_subscribed:', profileUpdateError)
+      }
+
       return NextResponse.json({ ok: true })
     }
 
