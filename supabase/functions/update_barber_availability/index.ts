@@ -31,18 +31,6 @@ Deno.serve(async (_req) => {
 
     if (profileError) throw profileError
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ 
-        sms_engaged_current_week: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('sms_engaged_current_week', false)
-    
-    if (updateError) {
-      console.error('Failed to update profile engagement:', updateError)
-    }
-
     // Build all requests to be made (one per user)
     const allRequests: { userId: string; fullName: string }[] = []
     
@@ -61,15 +49,29 @@ Deno.serve(async (_req) => {
 
       // Monday (day 1) = normal mode to set baseline slot_count
       // Tue-Sun = update mode to set slot_count_update (current availability)
-      // const day = torontoToday.getDay()
-      // const isMonday = day === 1
-      // const update = !isMonday
-
-      const update = true;
+      const day = torontoToday.getDay()
+      const isMonday = day === 1
+      const update = !isMonday
       
       let url;
+      // url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false&week=next&mode=update`
+      // const update = true;
 
+      // If not update, then it's a monday so reset sms_engaged_current week for everyone
       if (!update) {
+          const { error: updateError } = await supabase
+
+          .from('profiles')
+          .update({ 
+            sms_engaged_current_week: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('sms_engaged_current_week', true)
+        
+        if (updateError) {
+          console.error('Failed to update profile engagement:', updateError)
+        }
+
         url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false`
       } else {
         url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false&mode=update`

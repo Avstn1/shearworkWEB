@@ -212,7 +212,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
 
       // Get client info
       const { data: client } = await supabase
-        .from('test_acuity_clients')
+        .from('acuity_clients')
         .select('client_id, last_date_clicked_link')
         .eq('user_id', userId)
         .eq('phone_normalized', phone)
@@ -270,7 +270,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     for (let i = 0; i < clientIdsToAdd.length; i++) {
       const clientId = clientIdsToAdd[i]
       const service = servicesToAdd[i]
-      const price = priceToAdd[i]
+      const price = pricesToAdd[i]
       const appointmentDate = appointmentDatesToAdd[i]
       
       if (!existingClientIds.includes(clientId)) {

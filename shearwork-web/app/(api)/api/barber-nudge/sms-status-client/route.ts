@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       if (client_id) {
         const { error: updateError } = await supabase
         // change to test_acuity_clients for testing
-          .from('test_acuity_clients')
+          .from('acuity_clients')
           .update({
             date_last_sms_sent: new Date().toISOString(),
             updated_at: new Date().toISOString()

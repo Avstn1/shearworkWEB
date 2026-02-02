@@ -931,449 +931,449 @@ export default function SMSAutoNudge() {
   }
 
   return (
-    <UnderConstructionWrapper>
-      <div className="space-y-6">
-        {isTrialUser && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#bdbdbd]">
-            <p className="text-white font-semibold mb-1">Auto-Nudge is in preview during your trial</p>
-            <p>
-              You can build and preview auto-nudges, but activation and sending are available after upgrading.
-            </p>
-          </div>
-        )}
-        {/* Header */}
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 sm:mb-4 gap-3 sm:gap-4">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 sm:w-6 sm:h-6 text-sky-300" />
-                SMS Auto Nudge
-              </h2>
-              
-              <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3">
-                <button
-                  onClick={() => setShowAutoNudgeHistoryModal(true)}
-                  className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
-                >
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span className="hidden xs:inline">Auto Nudge History</span>
-                  <span className="xs:hidden">History</span>
-                </button>
+    <div className="space-y-6">
+      {isTrialUser && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#bdbdbd]">
+          <p className="text-white font-semibold mb-1">Auto-Nudge is in preview during your trial</p>
+          <p>
+            You can build and preview auto-nudges, but activation and sending are available after upgrading.
+          </p>
+        </div>
+      )}
+      {/* Header */}
+      <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-3 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-3 sm:mb-4 gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-white mb-2 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 sm:w-6 sm:h-6 text-sky-300" />
+              SMS Auto Nudge
+            </h2>
+            
+            <div className="grid grid-cols-2 lg:flex lg:flex-wrap items-center gap-1.5 sm:gap-2 mt-2 sm:mt-3">
+              <button
+                onClick={() => setShowAutoNudgeHistoryModal(true)}
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-purple-300/10 border border-purple-300/30 text-purple-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-purple-300/20 hover:border-purple-300/40 transition-all duration-300"
+              >
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Auto Nudge History</span>
+                <span className="xs:hidden">History</span>
+              </button>
 
-                <button
-                  onClick={() => setShowHowAutoNudgeWorksModal(true)}
-                  className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
-                >
-                  <Info className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span className="hidden xs:inline">How does this work?</span>
-                  <span className="xs:hidden">How it works</span>
-                </button>
-              </div>
-              
-              <p className="text-[#bdbdbd] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
-                Manage automated monthly marketing messages for each client type
-              </p>
+              <button
+                onClick={() => setShowHowAutoNudgeWorksModal(true)}
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-300/10 border border-sky-300/30 text-sky-300 rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-sky-300/20 hover:border-sky-300/40 transition-all duration-300"
+              >
+                <Info className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">How does this work?</span>
+                <span className="xs:hidden">How it works</span>
+              </button>
             </div>
             
-            <div className="flex flex-col items-stretch lg:items-end gap-2 sm:gap-3">
-              {/* Credits, Tests, and Action Buttons - All in one row on mobile */}
-              <div className="grid grid-cols-4 lg:grid-cols-2 gap-1.5 sm:gap-2">
-                <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1">
-                  <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-lime-300 flex-shrink-0" />
-                  <span className="text-[10px] sm:text-sm font-semibold text-lime-300 truncate">
-                    <span className="hidden sm:inline">{availableCredits.toLocaleString()} credits available</span>
-                    <span className="sm:hidden">{availableCredits > 999 ? `${(availableCredits / 1000).toFixed(1)}k` : availableCredits}</span>
-                  </span>
-                </div>
-                
-                <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 bg-sky-300/10 border border-sky-300/20">
-                  <Send className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 text-sky-300" />
-                  <span className="text-[10px] sm:text-sm font-semibold truncate text-sky-300">
-                    <span className="hidden sm:inline">Test messages cost 1 credit</span>
-                    <span className="sm:hidden">1 credit/test</span>
-                  </span>
-                </div>
-
-                <button
-                  onClick={draftAllActivatedMessages}
-                  disabled={isDraftingAll || messages.filter(m => m.validationStatus === 'ACCEPTED' && m.enabled).length === 0}
-                  className="px-2 py-1.5 sm:px-4 sm:py-2 bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full font-semibold text-[10px] sm:text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 lg:col-span-2"
-                >
-                  {isDraftingAll ? (
-                    <>
-                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
-                      <span className="hidden sm:inline">Drafting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="hidden sm:inline">Draft All</span>
-                      <span className="sm:hidden">Draft</span>
-                    </>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => {
-                    loadClientPreview();
-                    setShowPreview(true);
-                  }}
-                  disabled={loadingPreview}
-                  className="px-2 py-1.5 sm:px-4 sm:py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-[10px] sm:text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 lg:col-span-2"
-                >
-                  {loadingPreview ? (
-                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline">Client Preview</span>
-                      <span className="sm:hidden">Preview</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+            <p className="text-[#bdbdbd] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
+              Manage automated monthly marketing messages for each client type
+            </p>
           </div>
           
-          {/* Schedule Info & Button */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-2.5 sm:p-4 bg-white/5 border border-white/10 rounded-xl">
-            {hasSchedule ? (
-              <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0">
-                <Calendar className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-lime-300 flex-shrink-0 mt-0.5 sm:mt-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] sm:text-sm font-semibold text-white truncate sm:whitespace-normal">
-                    Monthly on day {scheduleDayOfMonth} at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
-                    {scheduleDayOfMonth > 28 && <span className="text-amber-300 ml-1 sm:ml-2">*</span>}
-                  </p>
-                  {scheduleDayOfMonth > 28 && (
-                    <p className="text-[9px] sm:text-xs text-amber-300 mt-0.5 hidden sm:block">
-                      * Adjusts to last day in shorter months
-                    </p>
-                  )}
-                  <p className="text-[9px] sm:text-xs text-[#bdbdbd] hidden sm:block">
-                    {scheduleStartDate && `Starting ${new Date(scheduleStartDate).toLocaleDateString()}`}
-                    {scheduleEndDate && ` • Ending ${new Date(scheduleEndDate).toLocaleDateString()}`}
-                  </p>
-                </div>
+          <div className="flex flex-col items-stretch lg:items-end gap-2 sm:gap-3">
+            {/* Credits, Tests, and Action Buttons - All in one row on mobile */}
+            <div className="grid grid-cols-4 lg:grid-cols-2 gap-1.5 sm:gap-2">
+              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1">
+                <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-lime-300 flex-shrink-0" />
+                <span className="text-[10px] sm:text-sm font-semibold text-lime-300 truncate">
+                  <span className="hidden sm:inline">{availableCredits.toLocaleString()} credits available</span>
+                  <span className="sm:hidden">{availableCredits > 999 ? `${(availableCredits / 1000).toFixed(1)}k` : availableCredits}</span>
+                </span>
               </div>
-            ) : (
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Clock className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-300 flex-shrink-0" />
-                <p className="text-[10px] sm:text-sm text-amber-300">No schedule set</p>
+              
+              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 bg-sky-300/10 border border-sky-300/20">
+                <Send className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 text-sky-300" />
+                <span className="text-[10px] sm:text-sm font-semibold truncate text-sky-300">
+                  <span className="hidden sm:inline">Test messages cost 1 credit</span>
+                  <span className="sm:hidden">1 credit/test</span>
+                </span>
               </div>
-            )}
-            <button
-              onClick={() => setShowScheduleModal(true)}
-              className="flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-xl font-semibold text-[10px] sm:text-sm hover:bg-purple-500/30 transition-all duration-300 whitespace-nowrap"
-            >
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-              {hasSchedule ? 'Edit' : 'Set Schedule'}
-            </button>
+
+              <button
+                onClick={draftAllActivatedMessages}
+                disabled={isDraftingAll || messages.filter(m => m.validationStatus === 'ACCEPTED' && m.enabled).length === 0}
+                className="px-2 py-1.5 sm:px-4 sm:py-2 bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-full font-semibold text-[10px] sm:text-sm hover:bg-amber-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 lg:col-span-2"
+              >
+                {isDraftingAll ? (
+                  <>
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                    <span className="hidden sm:inline">Drafting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Draft All</span>
+                    <span className="sm:hidden">Draft</span>
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={() => {
+                  loadClientPreview();
+                  setShowPreview(true);
+                }}
+                disabled={loadingPreview}
+                className="px-2 py-1.5 sm:px-4 sm:py-2 bg-white/10 text-sky-300 border border-sky-300/30 rounded-full font-semibold text-[10px] sm:text-sm hover:bg-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 sm:gap-2 lg:col-span-2"
+              >
+                {loadingPreview ? (
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Client Preview</span>
+                    <span className="sm:hidden">Preview</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
+        
+        {/* Schedule Info & Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-2.5 sm:p-4 bg-white/5 border border-white/10 rounded-xl">
+          {hasSchedule ? (
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0">
+              <Calendar className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-lime-300 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] sm:text-sm font-semibold text-white truncate sm:whitespace-normal">
+                  Monthly on day {scheduleDayOfMonth} at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
+                  {scheduleDayOfMonth > 28 && <span className="text-amber-300 ml-1 sm:ml-2">*</span>}
+                </p>
+                {scheduleDayOfMonth > 28 && (
+                  <p className="text-[9px] sm:text-xs text-amber-300 mt-0.5 hidden sm:block">
+                    * Adjusts to last day in shorter months
+                  </p>
+                )}
+                <p className="text-[9px] sm:text-xs text-[#bdbdbd] hidden sm:block">
+                  {scheduleStartDate && `Starting ${new Date(scheduleStartDate).toLocaleDateString()}`}
+                  {scheduleEndDate && ` • Ending ${new Date(scheduleEndDate).toLocaleDateString()}`}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Clock className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-300 flex-shrink-0" />
+              <p className="text-[10px] sm:text-sm text-amber-300">No schedule set</p>
+            </div>
+          )}
+          <button
+            onClick={() => setShowScheduleModal(true)}
+            className="flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-xl font-semibold text-[10px] sm:text-sm hover:bg-purple-500/30 transition-all duration-300 whitespace-nowrap"
+          >
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+            {hasSchedule ? 'Edit' : 'Set Schedule'}
+          </button>
+        </div>
+      </div>
 
-        <HowAutoNudgeWorksModal 
-          isOpen={showHowAutoNudgeWorksModal}
-          onClose={() => setShowHowAutoNudgeWorksModal(false)}
-        />
+      <HowAutoNudgeWorksModal 
+        isOpen={showHowAutoNudgeWorksModal}
+        onClose={() => setShowHowAutoNudgeWorksModal(false)}
+      />
 
-        <AutoNudgeHistoryModal 
-          isOpen={showAutoNudgeHistoryModal}
-          onClose={() => setShowAutoNudgeHistoryModal(false)}
-        />
+      <AutoNudgeHistoryModal 
+        isOpen={showAutoNudgeHistoryModal}
+        onClose={() => setShowAutoNudgeHistoryModal(false)}
+      />
 
-        {/* Test Message Confirmation Modal */}
-        <TestMessageConfirmModal
-          isOpen={showTestConfirmModal}
-          onClose={() => {
+      {/* Test Message Confirmation Modal */}
+      <TestMessageConfirmModal
+        isOpen={showTestConfirmModal}
+        onClose={() => {
+          setShowTestConfirmModal(false);
+          setPendingTestMessageId(null);
+        }}
+        onConfirm={async () => {
+          if (pendingTestMessageId) {
             setShowTestConfirmModal(false);
+            await handleTestMessageSend(pendingTestMessageId);
             setPendingTestMessageId(null);
-          }}
-          onConfirm={async () => {
-            if (pendingTestMessageId) {
-              setShowTestConfirmModal(false);
-              await handleTestMessageSend(pendingTestMessageId);
-              setPendingTestMessageId(null);
-            }
-          }}
-          availableCredits={availableCredits}
-          profilePhone={profile?.phone || null}
-        />
+          }
+        }}
+        availableCredits={availableCredits}
+        profilePhone={profile?.phone || null}
+      />
 
-        {/* Client Preview Modal */}
-        <ClientPreviewModal
-          isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          previewClients={previewClients}
-          previewStats={previewStats}
-        />
+      {/* Client Preview Modal */}
+      <ClientPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        previewClients={previewClients}
+        previewStats={previewStats}
+      />
 
-        {/* Schedule Modal */}
-        <AnimatePresence>
-          {showScheduleModal && (
+      {/* Schedule Modal */}
+      <AnimatePresence>
+        {showScheduleModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 min-h-screen"
+            onClick={() => setShowScheduleModal(false)}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 min-h-screen"
-              onClick={() => setShowScheduleModal(false)}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full max-h-[75vh] sm:max-h-[90vh] overflow-y-auto"
             >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full max-h-[75vh] sm:max-h-[90vh] overflow-y-auto"
-              >
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-300" />
-                      Set Monthly SMS Schedule
-                    </h3>
-                    <p className="text-xs sm:text-sm text-[#bdbdbd] mt-1">
-                      All messages will be sent on this schedule
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowScheduleModal(false)}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 sticky top-0 bg-[#1a1a1a] z-10">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-300" />
+                    Set Monthly SMS Schedule
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#bdbdbd] mt-1">
+                    All messages will be sent on this schedule
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowScheduleModal(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbdbd]" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+                {/* Day of Month */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Day of Month *
+                  </label>
+                  <select
+                    value={scheduleDayOfMonth}
+                    onChange={(e) => setScheduleDayOfMonth(parseInt(e.target.value))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                   >
-                    <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbdbd]" />
-                  </button>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                      <option key={day} value={day} className="bg-[#1a1a1a]">
+                        {day}
+                      </option>
+                    ))}
+                  </select>
+                  {scheduleDayOfMonth > 28 && (
+                    <div className="p-2 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 mt-2">
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-amber-300">
+                        <strong>Note:</strong> In months with fewer than {scheduleDayOfMonth} days, messages will be sent on the last available day of that month.
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-xs text-[#bdbdbd] mt-1">
+                    Messages will be sent on the {scheduleDayOfMonth}{scheduleDayOfMonth === 1 ? 'st' : scheduleDayOfMonth === 2 ? 'nd' : scheduleDayOfMonth === 3 ? 'rd' : 'th'} of every month
+                  </p>
                 </div>
 
-                {/* Modal Body */}
-                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                  {/* Day of Month */}
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Day of Month *
-                    </label>
+                {/* Time */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    Time *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Hour */}
                     <select
-                      value={scheduleDayOfMonth}
-                      onChange={(e) => setScheduleDayOfMonth(parseInt(e.target.value))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                      value={scheduleHour}
+                      onChange={(e) => setScheduleHour(parseInt(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
                     >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                        <option key={day} value={day} className="bg-[#1a1a1a]">
-                          {day}
+                      {[
+                        { value: 0, label: '12' },
+                        { value: 1, label: '1' },
+                        { value: 2, label: '2' },
+                        { value: 3, label: '3' },
+                        { value: 4, label: '4' },
+                        { value: 5, label: '5' },
+                        { value: 6, label: '6' },
+                        { value: 7, label: '7' },
+                        { value: 8, label: '8' },
+                        { value: 9, label: '9' },
+                        { value: 10, label: '10' },
+                        { value: 11, label: '11' },
+                      ].map((hour) => (
+                        <option key={hour.value} value={hour.value} className="bg-[#1a1a1a]">
+                          {hour.label}
                         </option>
                       ))}
                     </select>
-                    {scheduleDayOfMonth > 28 && (
-                      <div className="p-2 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 mt-2">
-                        <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-amber-300">
-                          <strong>Note:</strong> In months with fewer than {scheduleDayOfMonth} days, messages will be sent on the last available day of that month.
-                        </p>
-                      </div>
-                    )}
-                    <p className="text-xs text-[#bdbdbd] mt-1">
-                      Messages will be sent on the {scheduleDayOfMonth}{scheduleDayOfMonth === 1 ? 'st' : scheduleDayOfMonth === 2 ? 'nd' : scheduleDayOfMonth === 3 ? 'rd' : 'th'} of every month
-                    </p>
-                  </div>
 
-                  {/* Time */}
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      <Clock className="w-3 h-3 inline mr-1" />
-                      Time *
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {/* Hour */}
-                      <select
-                        value={scheduleHour}
-                        onChange={(e) => setScheduleHour(parseInt(e.target.value))}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
-                      >
-                        {[
-                          { value: 0, label: '12' },
-                          { value: 1, label: '1' },
-                          { value: 2, label: '2' },
-                          { value: 3, label: '3' },
-                          { value: 4, label: '4' },
-                          { value: 5, label: '5' },
-                          { value: 6, label: '6' },
-                          { value: 7, label: '7' },
-                          { value: 8, label: '8' },
-                          { value: 9, label: '9' },
-                          { value: 10, label: '10' },
-                          { value: 11, label: '11' },
-                        ].map((hour) => (
-                          <option key={hour.value} value={hour.value} className="bg-[#1a1a1a]">
-                            {hour.label}
-                          </option>
-                        ))}
-                      </select>
+                    {/* Minute */}
+                    <select
+                      value={scheduleMinute}
+                      onChange={(e) => setScheduleMinute(parseInt(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    >
+                      {[0, 15, 30, 45].map((minute) => (
+                        <option key={minute} value={minute} className="bg-[#1a1a1a]">
+                          {minute.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
 
-                      {/* Minute */}
-                      <select
-                        value={scheduleMinute}
-                        onChange={(e) => setScheduleMinute(parseInt(e.target.value))}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
-                      >
-                        {[0, 15, 30, 45].map((minute) => (
-                          <option key={minute} value={minute} className="bg-[#1a1a1a]">
-                            {minute.toString().padStart(2, '0')}
-                          </option>
-                        ))}
-                      </select>
-
-                      {/* AM/PM */}
-                      <select
-                        value={schedulePeriod}
-                        onChange={(e) => setSchedulePeriod(e.target.value as 'AM' | 'PM')}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
-                      >
-                        <option value="AM" className="bg-[#1a1a1a]">AM</option>
-                        <option value="PM" className="bg-[#1a1a1a]">PM</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Start Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Start Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={scheduleStartDate}
-                      onChange={(e) => setScheduleStartDate(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
-                    />
-                    <p className="text-xs text-[#bdbdbd] mt-1">
-                      When should the SMS nudging start?
-                    </p>
-                  </div>
-
-                  {/* End Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      End Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={scheduleEndDate}
-                      onChange={(e) => setScheduleEndDate(e.target.value)}
-                      min={scheduleStartDate || new Date().toISOString().split('T')[0]}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
-                    />
-                    <p className="text-xs text-[#bdbdbd] mt-1">
-                      Messages will be drafted after this date
-                    </p>
-                  </div>
-
-                  {/* Info Box */}
-                  <div className="p-3 sm:p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                    <p className="text-xs sm:text-sm text-purple-300">
-                      <strong>Monthly Schedule:</strong> Messages will be sent on day {scheduleDayOfMonth} of every month at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
-                    </p>
+                    {/* AM/PM */}
+                    <select
+                      value={schedulePeriod}
+                      onChange={(e) => setSchedulePeriod(e.target.value as 'AM' | 'PM')}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                    >
+                      <option value="AM" className="bg-[#1a1a1a]">AM</option>
+                      <option value="PM" className="bg-[#1a1a1a]">PM</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Modal Footer */}
-                <div className="flex items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-white/10 sticky bottom-0 bg-[#1a1a1a]">
-                  <button
-                    onClick={() => {
-                      setShowScheduleModal(false);
-                    }}
-                    className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl text-sm sm:text-base font-semibold hover:bg-white/10 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSetSchedule}
-                    disabled={!scheduleDayOfMonth || !scheduleStartDate}
-                    className="px-3 sm:px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Apply Schedule
-                  </button>
+                {/* Start Date */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={scheduleStartDate}
+                    onChange={(e) => setScheduleStartDate(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                  />
+                  <p className="text-xs text-[#bdbdbd] mt-1">
+                    When should the SMS nudging start?
+                  </p>
                 </div>
-              </motion.div>
+
+                {/* End Date */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    End Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={scheduleEndDate}
+                    onChange={(e) => setScheduleEndDate(e.target.value)}
+                    min={scheduleStartDate || new Date().toISOString().split('T')[0]}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-purple-300/50 focus:border-purple-300/50 transition-all"
+                  />
+                  <p className="text-xs text-[#bdbdbd] mt-1">
+                    Messages will be drafted after this date
+                  </p>
+                </div>
+
+                {/* Info Box */}
+                <div className="p-3 sm:p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                  <p className="text-xs sm:text-sm text-purple-300">
+                    <strong>Monthly Schedule:</strong> Messages will be sent on day {scheduleDayOfMonth} of every month at {scheduleHour}:{scheduleMinute.toString().padStart(2, '0')} {schedulePeriod}
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-white/10 sticky bottom-0 bg-[#1a1a1a]">
+                <button
+                  onClick={() => {
+                    setShowScheduleModal(false);
+                  }}
+                  className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl text-sm sm:text-base font-semibold hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSetSchedule}
+                  disabled={!scheduleDayOfMonth || !scheduleStartDate}
+                  className="px-3 sm:px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Apply Schedule
+                </button>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Edit confirmation modal */}
-        <AnimatePresence>
-          {showDeactivateModal && (
+      {/* Edit confirmation modal */}
+      <AnimatePresence>
+        {showDeactivateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowDeactivateModal(false);
+              setPendingDeactivateMessageId(null);
+            }}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => {
-                setShowDeactivateModal(false);
-                setPendingDeactivateMessageId(null);
-              }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full"
             >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full"
-              >
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
-                      <AlertCircle className="w-5 h-5 text-amber-300" />
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white">Deactivate Message?</h3>
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-amber-300" />
                   </div>
-                  <button
-                    onClick={() => {
+                  <h3 className="text-lg sm:text-xl font-bold text-white">Deactivate Message?</h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setPendingDeactivateMessageId(null);
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-[#bdbdbd]" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 sm:p-6">
+                <p className="text-sm sm:text-base text-[#bdbdbd] mb-4">
+                  This message will be converted to a <span className="text-amber-300 font-semibold">draft</span> and will <span className="text-amber-300 font-semibold">no longer be sent out</span> on the scheduled date.
+                </p>
+                <p className="text-sm sm:text-base text-[#bdbdbd]">
+                  You can reactivate it later by editing and re-activating the message.
+                </p>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-white/10">
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setPendingDeactivateMessageId(null);
+                  }}
+                  className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl text-sm sm:text-base font-semibold hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (pendingDeactivateMessageId) {
                       setShowDeactivateModal(false);
                       setPendingDeactivateMessageId(null);
-                    }}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5 text-[#bdbdbd]" />
-                  </button>
-                </div>
-
-                {/* Modal Body */}
-                <div className="p-4 sm:p-6">
-                  <p className="text-sm sm:text-base text-[#bdbdbd] mb-4">
-                    This message will be converted to a <span className="text-amber-300 font-semibold">draft</span> and will <span className="text-amber-300 font-semibold">no longer be sent out</span> on the scheduled date.
-                  </p>
-                  <p className="text-sm sm:text-base text-[#bdbdbd]">
-                    You can reactivate it later by editing and re-activating the message.
-                  </p>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-white/10">
-                  <button
-                    onClick={() => {
-                      setShowDeactivateModal(false);
-                      setPendingDeactivateMessageId(null);
-                    }}
-                    className="px-3 sm:px-4 py-2 bg-white/5 border border-white/10 text-[#bdbdbd] rounded-xl text-sm sm:text-base font-semibold hover:bg-white/10 transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (pendingDeactivateMessageId) {
-                        setShowDeactivateModal(false);
-                        setPendingDeactivateMessageId(null);
-                        await handleDeactivate(pendingDeactivateMessageId);
-                      }
-                    }}
-                    className="px-3 sm:px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-amber-300/30 transition-all"
-                  >
-                    Deactivate Message
-                  </button>
-                </div>
-              </motion.div>
+                      await handleDeactivate(pendingDeactivateMessageId);
+                    }
+                  }}
+                  className="px-3 sm:px-4 py-2 bg-amber-300/20 border border-amber-300/30 text-amber-300 rounded-xl text-sm sm:text-base font-semibold hover:bg-amber-300/30 transition-all"
+                >
+                  Deactivate Message
+                </button>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      <UnderConstructionWrapper>
         {/* Messages List */}
         <div className="space-y-4">
           {messages.length === 0 ? (
@@ -1482,7 +1482,7 @@ export default function SMSAutoNudge() {
             ))
           )}
         </div>
-      </div>
-    </UnderConstructionWrapper>
+      </UnderConstructionWrapper>
+    </div>
   );
 }
