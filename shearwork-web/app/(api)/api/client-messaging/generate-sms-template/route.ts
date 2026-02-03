@@ -35,10 +35,11 @@ export async function POST(req: Request) {
                           Requirements:
                           1. Message length: LESS THAN ${maxMessageLength} characters (not words - characters!). THIS IS A STRICT REQUIREMENT
                           2. Use proper formatting with line breaks for readability
-                          4. Allow friendly and funny tones. No need to keep it professional as we're building a relationship with clients.
-                          6. Make it appropriate for SMS (no emojis)
-                          7. Use proper spacing and line breaks (\n) for visual clarity but don't overdo it.
-                          8. Allow personal emails and phone numbers.
+                          3. Allow friendly and funny tones. No need to keep it professional as we're building a relationship with clients.
+                          4. Make it appropriate for SMS (no emojis). NO EMOJIS.
+                          5. Use proper spacing and line breaks (\n) for visual clarity but don't overdo it.
+                          6. Allow personal emails and phone numbers.
+                          7. The name should appear early on the message. For example: Hey, it's {name}... or How are you doing? It's {name}...
                           `
 
     const userPrompt = `Generate an SMS marketing message for a barber based on this request: ${prompt}.

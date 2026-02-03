@@ -36,6 +36,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
   const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   // Fetch campaigns on modal open
   useEffect(() => {
@@ -94,6 +95,75 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
       if (!user) {
         console.error('No user found');
         return;
+      }
+
+      // Check if we need to update auto nudge history
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('last_updated_auto_nudge_history')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
+
+      // Store the last updated timestamp
+      setLastUpdated(profile?.last_updated_auto_nudge_history || null);
+
+      let shouldCallLookAhead = false;
+      
+      if (!profile?.last_updated_auto_nudge_history) {
+        // Never updated before
+        shouldCallLookAhead = true;
+      } else {
+        // Check if it's been 15 minutes since last update
+        const lastUpdated = new Date(profile.last_updated_auto_nudge_history);
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+        
+        if (lastUpdated <= fifteenMinutesAgo) {
+          shouldCallLookAhead = true;
+        }
+      }
+
+      // Call appointments_look_ahead if needed
+      if (shouldCallLookAhead) {
+        try {
+          const lookAheadResponse = await fetch(
+            `https://efyvkyusfrqcgadocggk.supabase.co/functions/v1/appointments_look_ahead?user_id=${user.id}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+              }
+            }
+          );
+          
+          if (!lookAheadResponse.ok) {
+            console.error('Error calling appointments_look_ahead:', await lookAheadResponse.text());
+          } else {
+            const lookAheadData = await lookAheadResponse.json();
+            console.log('Appointments look ahead completed:', lookAheadData);
+            
+            // Update last_updated_auto_nudge_history
+            const newTimestamp = new Date().toISOString();
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ last_updated_auto_nudge_history: newTimestamp })
+              .eq('user_id', user.id);
+            
+            if (updateError) {
+              console.error('Error updating last_updated_auto_nudge_history:', updateError);
+            } else {
+              // Update the state with the new timestamp
+              setLastUpdated(newTimestamp);
+            }
+          }
+        } catch (lookAheadError) {
+          console.error('Failed to call appointments_look_ahead:', lookAheadError);
+          // Continue with fetch even if look ahead fails
+        }
+      } else {
+        console.log('Skipping appointments_look_ahead - updated recently');
       }
 
       // Get all sms_scheduled_messages that match the pattern {user_id}_{iso_week}
@@ -371,9 +441,30 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                         <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-lime-300 flex-shrink-0" />
                         <span className="truncate">Barber Nudge History</span>
                       </h3>
-                      <p className="text-sm text-[#bdbdbd] mt-1 hidden sm:block">
+                      <p className="text-sm text-[#bdbdbd] mt-2">
                         Track your weekly barber nudge campaign success
                       </p>
+                      {lastUpdated && (
+                        <p className="text-xs text-[#9e9e9e] mt-2 -mb-3">
+                          Last updated: {new Date(lastUpdated).toLocaleString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}. {(() => {
+                            const nextUpdate = new Date(new Date(lastUpdated).getTime() + 15 * 60 * 1000);
+                            const now = new Date();
+                            const minutesUntilNext = Math.max(0, Math.ceil((nextUpdate.getTime() - now.getTime()) / (60 * 1000)));
+                            
+                            if (minutesUntilNext > 0) {
+                              return `Check back in ${minutesUntilNext} minute${minutesUntilNext !== 1 ? 's' : ''} for the latest bookings.`;
+                            } else {
+                              return 'Reopen to see the latest bookings.';
+                            }
+                          })()}
+                        </p>
+                      )}
                     </div>
                     <button
                       onClick={onClose}
@@ -388,7 +479,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                     {isLoading ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
-                        <p className="text-base text-[#bdbdbd]">Loading campaigns...</p>
+                        <p className="text-base text-[#bdbdbd]">Updating your campaign history...</p>
                       </div>
                     ) : campaigns.length === 0 ? (
                       <div className="text-center py-12">
