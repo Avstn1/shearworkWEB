@@ -323,24 +323,68 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
   }
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    })
+  }
+
   try {
     console.log(`STARTING APPOINTMENTS LOOK AHEAD`)
 
+    // Parse optional user_id from query params
+    let targetUserId: string | null = null
+    
+    // Check query params first
+    const url = new URL(req.url)
+    targetUserId = url.searchParams.get('user_id')
+    console.log(targetUserId)
+    
     const isoWeek = getISOWeek()
-    console.log(`Current ISO Week: ${isoWeek}`)
 
-    // Get all engaged barbers
-    const { data: profiles, error: profileError } = await supabase
+    // Build query based on mode
+    let query = supabase
       .from('profiles')
       .select('user_id, calendar, full_name')
       .eq('sms_engaged_current_week', true)
       .not('calendar', 'is', null)
       .neq('calendar', '')
 
+    // Mode 2: Add user_id filter if provided
+    if (targetUserId) {
+      query = query.eq('user_id', targetUserId)
+    }
+
+    const { data: profiles, error: profileError } = await query
+
     if (profileError) throw profileError
 
-    console.log(`Processing ${profiles?.length || 0} engaged barbers`)
+    if (!profiles || profiles.length === 0) {
+      const message = targetUserId 
+        ? `No profile found for user_id: ${targetUserId}`
+        : 'No engaged barbers found'
+      console.log(message)
+      return new Response(JSON.stringify({
+        message,
+        isoWeek,
+        totalBarbers: 0,
+        results: []
+      }), {
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        status: 200,
+      })
+    }
+
+    console.log(`Processing ${profiles.length} barber(s)`)
 
     const CONCURRENCY_LIMIT = 100
     const results: any[] = []
@@ -388,6 +432,7 @@ Deno.serve(async (_req) => {
 
     return new Response(JSON.stringify({
       message: 'Appointments look ahead completed',
+      mode: targetUserId ? 'specific_user' : 'all_engaged',
       isoWeek,
       totalBarbers: profiles?.length || 0,
       success: successCount,
@@ -395,7 +440,10 @@ Deno.serve(async (_req) => {
       appointmentsFound: appointmentsFoundCount,
       results
     }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
       status: 200,
     })
   } catch (err: unknown) {
@@ -405,7 +453,10 @@ Deno.serve(async (_req) => {
       error: errorMessage
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      }
     })
   }
 })

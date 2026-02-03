@@ -194,7 +194,12 @@ Deno.serve(async (req) => {
           0
         )
         
-        const message = getRandomMessage(filledSlots, totalSlots, takenSlots, estimatedRecovery)
+        let message;
+        if (filledSlots > 0) {
+          message = getRandomMessage(filledSlots, totalSlots, takenSlots, estimatedRecovery)
+        } else {
+          message = `Hey ${barber.full_name}, none of the batch recipients booked this week. Let's try again next week.\n\nFull details in Corva.`
+        }
         
         const twilioMessage = await twilio_client.messages.create({
           body: `${message}\n\nReply STOP to unsubscribe.`,
@@ -203,7 +208,7 @@ Deno.serve(async (req) => {
         })
 
         console.log(`Update sent to ${barber.full_name} (${barber.phone}): ${twilioMessage.sid}`)
-        console.log(`  Stats: ${filledSlots}/${totalSlots} slots, $${estimatedRecovery} recovery`)
+        console.log(`Stats: ${filledSlots}/${totalSlots} slots, $${estimatedRecovery} recovery`)
         
         results.push({
           user_id: barber.user_id,
