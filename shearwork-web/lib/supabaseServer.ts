@@ -3,15 +3,15 @@ import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 
 /**
- * Server client for use in Server Components, Route Handlers, and Server Actions
- * Uses SERVICE_ROLE_KEY to bypass RLS when needed
+ * Server client for authenticated user requests
+ * Uses ANON_KEY to validate user JWTs
  */
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Using service role key
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // Changed to ANON key
     {
       cookies: {
         getAll() {

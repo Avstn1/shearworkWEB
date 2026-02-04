@@ -17,10 +17,10 @@ const twilio_client = twilio(accountSid, authToken)
 
 // Message templates
 const messageTemplates = [
-  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
-  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
-  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
-  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nFull details are saved in Corva.",
+  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
+  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
+  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
+  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
 ]
 
 function getRandomMessage(filled: number, total: number, takenSlots: number, recovery: number): string {
@@ -200,11 +200,18 @@ Deno.serve(async (req) => {
         } else {
           message = `Hey ${barber.full_name}, none of the batch recipients booked this week. Let's try again next week.\n\nFull details in Corva.`
         }
+
+        const statusCallbackUrl = `${siteUrl}/api/barber-nudge/sms-status`
+
+        const callbackUrl = new URL(statusCallbackUrl)
+        callbackUrl.searchParams.set('user_id', barber.user_id)
+        callbackUrl.searchParams.set('message', message)
         
         const twilioMessage = await twilio_client.messages.create({
           body: `${message}\n\nReply STOP to unsubscribe.`,
           messagingServiceSid: messagingServiceSid,
-          to: barber.phone
+          to: barber.phone,
+          statusCallback: callbackUrl.toString()
         })
 
         console.log(`Update sent to ${barber.full_name} (${barber.phone}): ${twilioMessage.sid}`)
