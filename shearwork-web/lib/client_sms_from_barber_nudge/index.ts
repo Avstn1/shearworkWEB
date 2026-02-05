@@ -274,6 +274,7 @@ export async function ClientSMSFromBarberNudge(
       success: true,
       sent: results.filter(r => r.status === 'sent').length,
       failed: results.filter(r => r.status === 'failed').length,
+      scheduledMessageId: scheduledMessage.id,
       results
     }
   } catch (error: any) {
