@@ -40,12 +40,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Barber not found' })
     }
 
-    // If the barber already said yes this week then don't run the nudge again. REMOVED FOR TESTING PURPOSES
+    // If the barber already said yes this week then don't run the nudge again.
     if (profile.sms_engaged_current_week) {
       return NextResponse.json({ success: true, ignored: true })
     }
+
+    // Any code below this point will have the intention to send out messages to clients
     
-    // Log the reply in your database
+    // Log the reply in the database
     const { error: insertError } = await supabase
       .from('sms_replies')
       .insert({
@@ -108,6 +110,20 @@ export async function POST(request: Request) {
         warning: 'Reply logged but SMS campaign failed',
         campaignError: smsResult.error
       })
+    }
+
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: profile.user_id,
+        header: "Weekly auto-nudge authorized",
+        message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
+        reference: smsResult.scheduledMessageId,
+        reference_type: 'sms_auto_nudge',
+      });
+
+    if (notificationError) {
+      console.error('Failed to insert notifications. Continuing without notification', notificationError)
     }
 
     console.log(`ClientSMSFromBarberNudge completed: ${smsResult.sent} sent, ${smsResult.failed} failed`)
