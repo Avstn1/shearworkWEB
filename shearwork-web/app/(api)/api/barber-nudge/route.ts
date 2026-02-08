@@ -42,6 +42,7 @@ export async function POST(request: Request) {
 
     // If the barber already said yes this week then don't run the nudge again.
     if (profile.sms_engaged_current_week) {
+      console.log('Barber already said yes for this week')
       return NextResponse.json({ success: true, ignored: true })
     }
 
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
         message_sid: messageSid,
         received_at: new Date().toISOString()
       })
-    
+  
     if (insertError) {
       console.error('Failed to insert SMS reply:', insertError)
       return NextResponse.json({ error: 'Failed to log reply' }, { status: 500 })
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
       })
     }
 
-    // Trigger the client SMS campaign
+    //Trigger the client SMS campaign
     console.log(`Triggering ClientSMSFromBarberNudge for ${fullProfile.full_name}`)
     
     const smsResult = await ClientSMSFromBarberNudge(profile.user_id, {
