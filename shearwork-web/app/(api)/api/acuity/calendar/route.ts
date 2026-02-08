@@ -6,27 +6,26 @@ import { getAuthenticatedUser } from '@/utils/api-auth'
 
 export async function GET(request: Request) {
   try {
-    // Log headers for debugging
     const { user, supabase } = await getAuthenticatedUser(request)
     if (!user) return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
 
     const { data: tokenRow, error: tokenError } = await supabase
-      .from('acuity_tokens')
-      .select('*')
-      .eq('user_id', user.id)
+      .rpc('get_acuity_token', { p_user_id: user.id })
       .single()
-    if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
 
-    let accessToken = tokenRow.access_token
+    if (!tokenRow) return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
+    
+    const token = tokenRow as any
+    let accessToken = token.access_token
     const nowSec = Math.floor(Date.now() / 1000)
 
-    if (tokenRow.expires_at && tokenRow.expires_at < nowSec) {
+    if (token.expires_at && token.expires_at < nowSec) {
       const refreshRes = await fetch('https://acuityscheduling.com/oauth2/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           grant_type: 'refresh_token',
-          refresh_token: tokenRow.refresh_token,
+          refresh_token: token.refresh_token,
           client_id: process.env.ACUITY_CLIENT_ID!,
           client_secret: process.env.ACUITY_CLIENT_SECRET!,
         }),
@@ -36,7 +35,7 @@ export async function GET(request: Request) {
       accessToken = newTokens.access_token
       await supabase.from('acuity_tokens').update({
         access_token: newTokens.access_token,
-        refresh_token: newTokens.refresh_token ?? tokenRow.refresh_token,
+        refresh_token: newTokens.refresh_token ?? token.refresh_token,
         expires_at: nowSec + newTokens.expires_in,
         updated_at: new Date().toISOString(),
       }).eq('user_id', user.id)

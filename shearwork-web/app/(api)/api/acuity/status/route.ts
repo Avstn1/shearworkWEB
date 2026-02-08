@@ -14,11 +14,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ connected: false })
   }
 
-  const { data, error } = await supabase
-    .from('acuity_tokens')
-    .select('access_token')
-    .eq('user_id', user.id)
+  const { data: tokenRow, error: tokenError } = await supabase
+    .rpc('get_acuity_token', { p_user_id: user.id })
     .single()
 
-  return NextResponse.json({ connected: !!data && !error })
+  if (!tokenRow) {
+    return NextResponse.json({ connected: false }, { status: 200 })
+  }
+
+  return NextResponse.json({ connected: true }, { status: 200 })
 }
