@@ -47,26 +47,6 @@ const MONTH_MAP: Record<string, number> = {
   December: 12,
 }
 
-async function notifyUserAboutReport(
-  userId: string,
-  reportId: string,
-  reportType: string,
-  reportTitle: string,
-  supabase: any,
-) {
-  const { data, error } = await supabase.functions.invoke('send-push-notif', {
-    body: {
-      userId,
-      title: 'New Report Available',
-      body: reportTitle,
-      reportId,
-      reportType,
-    },
-  })
-
-  if (error) console.error('Error sending notification:', error)
-}
-
 async function safeRpc(supabase: any, fn: string, args?: Record<string, any>) {
   const { error } = await supabase.rpc(fn, args ?? {})
   if (error) console.warn(`RPC ${fn} failed:`, error)
@@ -682,14 +662,6 @@ export async function POST(req: Request) {
       reference_type: type,
     })
     if (notifError) throw notifError
-
-    notifyUserAboutReport(
-      user_id,
-      newReport.id,
-      type,
-      `${formattedType} report generated`,
-      supabase,
-    )
 
     return NextResponse.json({ success: true, report: newReport })
   } catch (err: any) {
