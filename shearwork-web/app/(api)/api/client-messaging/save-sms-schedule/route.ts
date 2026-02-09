@@ -249,6 +249,8 @@ export async function POST(request: Request) {
       )
     }
 
+    console.log("User id: " + user.id)
+
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('trial_active, trial_start, trial_end, stripe_subscription_status')
@@ -256,6 +258,7 @@ export async function POST(request: Request) {
       .single()
 
     if (profileError) {
+      console.log(profileError)
       return NextResponse.json({ success: false, error: profileError.message }, { status: 500 })
     }
 
