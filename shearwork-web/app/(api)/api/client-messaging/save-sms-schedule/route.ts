@@ -98,7 +98,7 @@ function getCronText(
 
 async function createQStashSchedule(messageId: string, cron: string) {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app'
+    const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://shearwork-web.vercel.app'
     
     const schedule = await qstashClient.schedules.create({
       destination: `${appUrl}/api/client-messaging/qstash-sms-send?messageId=${messageId}`,
@@ -352,7 +352,7 @@ export async function POST(request: Request) {
             if (delaySeconds > 0) {
               console.log(`⏰ Scheduling one-time message with ${delaySeconds}s delay`)
               
-              const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shearwork-web.vercel.app'
+              const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://shearwork-web.vercel.app'
               
               try {
                 const response = await qstashClient.publishJSON({
