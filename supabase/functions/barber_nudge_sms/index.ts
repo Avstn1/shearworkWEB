@@ -30,6 +30,14 @@ const messageTemplates = [
   "Hey {name}! Corva here. You have {slots} empty slot/s this week. Want me to try filling a few of them?",
 ]
 
+const correctionTemplates = [
+  "Hey {name}, my mistake on that last text. You actually have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "My apologies {name}! That number was off. You actually have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Sorry for the confusion {name}! You actually have {slots} empty slot/s this week. Want me to try filling a few of them?",
+  "Hey {name}, sorry about the error in that last message. You actually have {slots} empty slot/s this week. Want me to try filling a few of them?",
+]
+
+
 function getFirstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0]
 }
