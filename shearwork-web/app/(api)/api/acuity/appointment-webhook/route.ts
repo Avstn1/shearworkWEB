@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { updateSmsBarberSuccess } from '@/lib/appointment_processors/update_sms_barber_success';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
+const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1';
 
 export async function POST(req: NextRequest) {
   try {
     console.log('\n=== ACUITY WEBHOOK RECEIVED ===');
     
-    // Log headers
-    console.log('\nHeaders:');
-    const headers: Record<string, string> = {};
-    req.headers.forEach((value, key) => {
-      headers[key] = value;
-    });
-    console.log(JSON.stringify(headers, null, 2));
-    
     // Get the raw body for signature verification
     const body = await req.text();
-    console.log('\nRaw Body:');
-    console.log(body);
+    console.log('\nRaw Body:', body);
     
     // Parse form data
     const formData = new URLSearchParams(body);
@@ -24,15 +29,65 @@ export async function POST(req: NextRequest) {
       data[key] = value;
     });
     
-    console.log('\nParsed Form Data:');
-    console.log(JSON.stringify(data, null, 2));
+    console.log('\nParsed Form Data:', JSON.stringify(data, null, 2));
     
-    // Extract specific fields
+    const action = data.action;
+    const appointmentId = data.id;
+    const calendarId = data.calendarID;
+    
     console.log('\n--- Webhook Details ---');
-    console.log('Action:', data.action);
-    console.log('Appointment ID:', data.id);
-    console.log('Calendar ID:', data.calendarID);
-    console.log('Appointment Type ID:', data.appointmentTypeID);
+    console.log('Action:', action);
+    console.log('Appointment ID:', appointmentId);
+    console.log('Calendar ID:', calendarId);
+    
+    if (!appointmentId || !calendarId) {
+      console.log('Missing appointment ID or calendar ID');
+      return NextResponse.json({ ok: true });
+    }
+    
+    // Find the user by calendar_id
+    const { data: token, error: tokenError } = await supabase
+      .from('acuity_tokens')
+      .select('user_id, access_token')
+      .eq('calendar_id', calendarId)
+      .single();
+    
+    if (tokenError || !token) {
+      console.error('Could not find user for calendar_id:', calendarId);
+      console.error('Error:', tokenError);
+      return NextResponse.json({ ok: true });
+    }
+    
+    console.log(`\n✅ Found user: ${token.user_id}`);
+    
+    // Fetch appointment details from Acuity
+    const response = await fetch(`${ACUITY_API_BASE}/appointments/${appointmentId}`, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+      }
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch appointment:', await response.text());
+      return NextResponse.json({ ok: true });
+    }
+    
+    const appointmentDetails = await response.json();
+    
+    console.log('\n--- Appointment Details ---');
+    console.log(JSON.stringify(appointmentDetails, null, 2));
+    
+    // Only process scheduled appointments for SMS tracking
+    if (action === 'scheduled') {
+      console.log('\n--- Checking SMS Campaign Attribution ---');
+      const result = await updateSmsBarberSuccess(token.user_id, appointmentDetails);
+      
+      if (result.success) {
+        console.log('✅ SMS campaign attribution tracked');
+      } else {
+        console.log(`ℹ️  Not attributed to SMS campaign: ${result.reason}`);
+      }
+    }
     
     console.log('\n=== END WEBHOOK ===\n');
     
