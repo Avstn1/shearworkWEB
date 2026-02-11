@@ -46,12 +46,14 @@ export async function POST(req: NextRequest) {
     }
     
     // Find the user by calendar_id
-    const { data: token, error: tokenError } = await supabase
+    const { data: tokens, error: tokenError } = await supabase
       .from('acuity_tokens')
       .select('user_id, access_token')
       .eq('calendar_id', calendarId)
-      .single();
-    
+      .limit(1);
+
+    const token = tokens?.[0];
+
     if (tokenError || !token) {
       console.error('Could not find user for calendar_id:', calendarId);
       console.error('Error:', tokenError);
