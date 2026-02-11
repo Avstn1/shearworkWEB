@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     console.log(JSON.stringify(appointmentDetails, null, 2));
     
     // Only process scheduled appointments for SMS tracking
-    if (action === 'scheduled') {
+    if (action === 'appointment.scheduled') {
       console.log('\n--- Checking SMS Campaign Attribution ---');
       const result = await updateSmsBarberSuccess(token.user_id, appointmentDetails);
       
