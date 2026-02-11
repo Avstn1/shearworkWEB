@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { updateSmsBarberSuccess } from '@/lib/acuity_webhooks/update_sms_barber_success';
+import { updateSmsBarberSuccess } from '@/lib/appointment_processors/update_sms_barber_success';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
