@@ -10,6 +10,7 @@ import {
 import { Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
+import { TRIAL_DAYS } from '@/lib/constants/trial'
 import { useSearchParams, useRouter } from 'next/navigation'
 
 const stripePromise = loadStripe(
@@ -270,10 +271,10 @@ function PricingPageContent() {
                   <>
                     <p className="text-3xl font-bold mb-1">Free</p>
                     <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
-                      7 days • billing info required
+                      {TRIAL_DAYS} days • billing info required
                     </p>
                     <p className="text-xs text-gray-300">
-                      Start your 7-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
+                      Start your {TRIAL_DAYS}-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
                     </p>
                   </>
                 )}

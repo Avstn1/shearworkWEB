@@ -10,6 +10,7 @@ import EditableAvatar from '@/components/EditableAvatar'
 import ConnectAcuityButton from '@/components/ConnectAcuityButton'
 import ConnectSquareButton from '@/components/ConnectSquareButton'
 import { isTrialActive } from '@/utils/trial'
+import { TRIAL_DAYS } from '@/lib/constants/trial'
 
 type BillingSummary = {
   hasSubscription: boolean
@@ -260,7 +261,7 @@ function PricingReturnContent() {
     }
 
     if (trialActive) {
-      return `Free Trial Active · Ends ${trialEndText ?? 'in 7 days'}`
+      return `Free Trial Active · Ends ${trialEndText ?? `in ${TRIAL_DAYS} days`}`
     }
 
     if (hasCheckoutComplete) {
@@ -332,7 +333,7 @@ function PricingReturnContent() {
       if (!currentProfile?.trial_start) {
         const now = new Date()
         const trialEnd = new Date(now)
-        trialEnd.setDate(trialEnd.getDate() + 7)
+        trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS)
 
         profileUpdate.trial_start = now.toISOString()
         profileUpdate.trial_end = trialEnd.toISOString()
