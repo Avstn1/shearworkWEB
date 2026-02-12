@@ -11,7 +11,13 @@ import {
   useCallback,
 } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { isTrialActive } from '@/utils/trial'
+import {
+  isTrialActive,
+  getTrialDayNumber,
+  getTrialDaysRemaining,
+  getTrialPromptMode,
+} from '@/utils/trial'
+import type { TrialPromptMode } from '@/components/Dashboard/TrialPromptModal'
 import type { AuthChangeEvent, PostgrestSingleResponse, Session, User } from '@supabase/supabase-js'
 
 interface Profile {
@@ -37,6 +43,12 @@ interface AuthContextType {
   isPremiumUser: boolean
   profileStatus: ProfileStatus
   refreshProfile: () => Promise<void>
+  // Trial-related
+  trialDayNumber: number
+  trialDaysRemaining: number
+  hasPaymentMethod: boolean
+  trialPromptMode: TrialPromptMode | null
+  refreshPaymentMethod: () => Promise<void>
 }
 
 const PROFILE_TIMEOUT_MS = 15000
@@ -67,6 +79,12 @@ const AuthContext = createContext<AuthContextType>({
   isPremiumUser: false,
   profileStatus: 'idle',
   refreshProfile: async () => {},
+  // Trial-related defaults
+  trialDayNumber: 0,
+  trialDaysRemaining: 0,
+  hasPaymentMethod: false,
+  trialPromptMode: null,
+  refreshPaymentMethod: async () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -74,6 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>('idle')
+  const [hasPaymentMethod, setHasPaymentMethod] = useState(false)
+  const [paymentMethodChecked, setPaymentMethodChecked] = useState(false)
 
   const profileFetchInFlight = useRef(false)
   const profileRetryCount = useRef(0)
@@ -243,11 +263,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadProfile(user.id)
   }, [loadProfile, user?.id])
 
+  // Check payment method when profile is ready
+  const checkPaymentMethod = useCallback(async () => {
+    if (!user?.id) {
+      setHasPaymentMethod(false)
+      setPaymentMethodChecked(true)
+      return
+    }
+
+    try {
+      const res = await fetch('/api/stripe/has-payment-method')
+      if (res.ok) {
+        const data = await res.json()
+        setHasPaymentMethod(data.hasPaymentMethod ?? false)
+      } else {
+        setHasPaymentMethod(false)
+      }
+    } catch (err) {
+      console.error('Failed to check payment method:', err)
+      setHasPaymentMethod(false)
+    } finally {
+      setPaymentMethodChecked(true)
+    }
+  }, [user?.id])
+
+  // Check payment method when profile becomes ready
+  useEffect(() => {
+    if (profileStatus === 'ready' && user?.id && !paymentMethodChecked) {
+      void checkPaymentMethod()
+    }
+  }, [profileStatus, user?.id, paymentMethodChecked, checkPaymentMethod])
+
+  // Reset payment method state when user changes
+  useEffect(() => {
+    if (!user?.id) {
+      setHasPaymentMethod(false)
+      setPaymentMethodChecked(false)
+    }
+  }, [user?.id])
+
   const isAdmin = profile?.role === 'Admin' || profile?.role === 'Owner'
 
   const isPremiumUser =
     profile?.stripe_subscription_status === 'active' ||
     isTrialActive(profile)
+
+  // Trial calculations
+  const trialDayNumber = useMemo(() => getTrialDayNumber(profile), [profile])
+  const trialDaysRemaining = useMemo(() => getTrialDaysRemaining(profile), [profile])
+  const trialPromptMode = useMemo(
+    () => getTrialPromptMode(profile, hasPaymentMethod),
+    [profile, hasPaymentMethod]
+  )
 
   const value = useMemo(
     () => ({
@@ -258,8 +325,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isPremiumUser,
       profileStatus,
       refreshProfile,
+      // Trial-related
+      trialDayNumber,
+      trialDaysRemaining,
+      hasPaymentMethod,
+      trialPromptMode,
+      refreshPaymentMethod: checkPaymentMethod,
     }),
-    [user, profile, isLoading, isAdmin, isPremiumUser, profileStatus, refreshProfile]
+    [
+      user,
+      profile,
+      isLoading,
+      isAdmin,
+      isPremiumUser,
+      profileStatus,
+      refreshProfile,
+      trialDayNumber,
+      trialDaysRemaining,
+      hasPaymentMethod,
+      trialPromptMode,
+      checkPaymentMethod,
+    ]
   )
 
   return (
