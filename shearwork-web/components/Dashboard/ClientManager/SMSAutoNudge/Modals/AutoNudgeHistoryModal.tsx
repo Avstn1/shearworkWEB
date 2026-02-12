@@ -1,56 +1,47 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, Calendar, Users, CheckCircle, XCircle, AlertCircle, ArrowLeft, Loader2, Bell } from 'lucide-react';
+import { X, Calendar, Users, ArrowLeft, Loader2, TrendingUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 
-interface AutoNudgeHistoryModalProps {
+interface BarberNudgeHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface AutoNudge {
+interface BarberNudgeCampaign {
   message_id: string;
-  title: string;
-  message: string;
-  cron: string;
-  cron_text: string;
-  success: number;
-  fail: number;
-  total: number;
-  final_clients_to_message: number;
-  last_sent: string;
+  iso_week_number: string;
+  week_start: string;
+  week_end: string;
+  clients_booked: number;
+  date_sent: string;
 }
 
-interface Recipient {
-  phone_normalized: string;
-  is_sent: boolean;
-  reason: string | null;
-  created_at: string;
+interface SMSRecipient {
   client_id: string | null;
   first_name: string | null;
   last_name: string | null;
+  phone: string | null;
+  phone_normalized: string | null;
+  status: 'booked' | 'pending';
+  service?: string;
+  price?: string;
+  appointment_date?: string;
 }
 
-interface RecipientStats {
-  total: number;
-  successful: number;
-  failed: number;
-}
-
-export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHistoryModalProps) {
+export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudgeHistoryModalProps) {
   const [view, setView] = useState<'list' | 'details'>('list');
-  const [autoNudges, setAutoNudges] = useState<AutoNudge[]>([]);
-  const [selectedAutoNudge, setSelectedAutoNudge] = useState<AutoNudge | null>(null);
-  const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [recipientsStats, setRecipientsStats] = useState<RecipientStats | null>(null);
-  const [cronText, setCronText] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<BarberNudgeCampaign[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<BarberNudgeCampaign | null>(null);
+  const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // Fetch auto-nudges on modal open
+  // Fetch campaigns on modal open
   useEffect(() => {
     if (isOpen) {
-      fetchAutoNudges();
+      fetchCampaigns();
     }
   }, [isOpen]);
 
@@ -58,14 +49,46 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
   useEffect(() => {
     if (!isOpen) {
       setView('list');
-      setSelectedAutoNudge(null);
+      setSelectedCampaign(null);
       setRecipients([]);
-      setRecipientsStats(null);
-      setCronText(null);
     }
   }, [isOpen]);
 
-  const fetchAutoNudges = async () => {
+  const getISOWeekDates = (isoWeek: string): { start: string; end: string } => {
+    // Parse "2026-W05" format
+    const [yearStr, weekStr] = isoWeek.split('-W');
+    const year = parseInt(yearStr);
+    const week = parseInt(weekStr);
+
+    // Calculate the date of the Monday of the ISO week
+    const jan4 = new Date(year, 0, 4); // January 4th is always in week 1
+    const jan4Day = jan4.getDay() || 7; // Convert Sunday (0) to 7
+    const firstMonday = new Date(jan4);
+    firstMonday.setDate(jan4.getDate() - jan4Day + 1);
+
+    // Calculate the Monday of the target week
+    const monday = new Date(firstMonday);
+    monday.setDate(firstMonday.getDate() + (week - 1) * 7);
+
+    // Calculate Sunday
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    };
+
+    return {
+      start: formatDate(monday),
+      end: formatDate(sunday)
+    };
+  };
+
+  const fetchCampaigns = async () => {
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -74,25 +97,153 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
         return;
       }
 
-      const response = await fetch(`/api/client-messaging/get-auto-nudge-recipients?userId=${user.id}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API error response:', errorData);
-        throw new Error(errorData.error || 'Failed to fetch auto-nudge history');
+      // Check if we need to update auto nudge history
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('last_updated_auto_nudge_history')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
       }
 
-      const data = await response.json();
-      console.log('Fetched auto-nudge campaigns:', data.campaigns);
-      setAutoNudges(data.campaigns || []);
+      // Store the last updated timestamp
+      setLastUpdated(profile?.last_updated_auto_nudge_history || null);
+
+      let shouldCallLookAhead = false;
+      
+      if (!profile?.last_updated_auto_nudge_history) {
+        // Never updated before
+        shouldCallLookAhead = true;
+      } else {
+        // Check if it's been 15 minutes since last update
+        const lastUpdated = new Date(profile.last_updated_auto_nudge_history);
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+        
+        if (lastUpdated <= fifteenMinutesAgo) {
+          shouldCallLookAhead = true;
+        }
+      }
+
+      // Call appointments_look_ahead if needed
+      if (shouldCallLookAhead) {
+        try {
+          const lookAheadResponse = await fetch(
+            `https://efyvkyusfrqcgadocggk.supabase.co/functions/v1/appointments_look_ahead?user_id=${user.id}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+              }
+            }
+          );
+          
+          if (!lookAheadResponse.ok) {
+            console.error('Error calling appointments_look_ahead:', await lookAheadResponse.text());
+          } else {
+            const lookAheadData = await lookAheadResponse.json();
+            console.log('Appointments look ahead completed:', lookAheadData);
+            
+            // Update last_updated_auto_nudge_history
+            const newTimestamp = new Date().toISOString();
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ last_updated_auto_nudge_history: newTimestamp })
+              .eq('user_id', user.id);
+            
+            if (updateError) {
+              console.error('Error updating last_updated_auto_nudge_history:', updateError);
+            } else {
+              // Update the state with the new timestamp
+              setLastUpdated(newTimestamp);
+            }
+          }
+        } catch (lookAheadError) {
+          console.error('Failed to call appointments_look_ahead:', lookAheadError);
+          // Continue with fetch even if look ahead fails
+        }
+      } else {
+        console.log('Skipping appointments_look_ahead - updated recently');
+      }
+
+      // Get all sms_scheduled_messages that match the pattern {user_id}_{iso_week}
+      const { data: scheduledMessages, error: schedError } = await supabase
+        .from('sms_scheduled_messages')
+        .select('id, title, created_at')
+        .eq('user_id', user.id)
+        .eq('purpose', 'auto-nudge')
+        .like('title', `${user.id}_%`)
+        .order('created_at', { ascending: false });
+
+      if (schedError) {
+        console.error('Error fetching scheduled messages:', schedError);
+        return;
+      }
+
+      console.log(JSON.stringify(scheduledMessages));
+
+      if (!scheduledMessages || scheduledMessages.length === 0) {
+        setCampaigns([]);
+        return;
+      }
+
+      const campaignList: BarberNudgeCampaign[] = [];
+      const seenWeeks = new Set<string>(); // Track unique weeks to avoid duplicates
+
+      for (const message of scheduledMessages) {
+        // Parse title to get user_id and iso_week
+        const parts = message.title.split('_');
+        if (parts.length !== 2) continue;
+
+        const isoWeek = parts[1];
+
+        // Skip if we've already processed this week (handles duplicates)
+        if (seenWeeks.has(isoWeek)) continue;
+        seenWeeks.add(isoWeek);
+
+        // Get barber_nudge_success data
+        const { data: successData, error: successError } = await supabase
+          .from('barber_nudge_success')
+          .select('client_ids')
+          .eq('user_id', user.id)
+          .eq('iso_week_number', isoWeek)
+          .single();
+
+        // Count booked clients (0 if no success data)
+        const clientsBooked = successData?.client_ids?.length || 0;
+
+        // Get latest sms_sent created_at for this message
+        const { data: sentData, error: sentError } = await supabase
+          .from('sms_sent')
+          .select('created_at')
+          .eq('message_id', message.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        const dateSent = sentData?.created_at || message.created_at;
+
+        const { start, end } = getISOWeekDates(isoWeek);
+
+        campaignList.push({
+          message_id: message.id,
+          iso_week_number: isoWeek,
+          week_start: start,
+          week_end: end,
+          clients_booked: clientsBooked,
+          date_sent: dateSent
+        });
+      }
+
+      setCampaigns(campaignList);
     } catch (error) {
-      console.error('Failed to fetch auto-nudges:', error);
+      console.error('Failed to fetch campaigns:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchRecipients = async (autoNudge: AutoNudge) => {
+  const fetchRecipients = async (campaign: BarberNudgeCampaign) => {
     setLoadingRecipients(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -101,68 +252,169 @@ export default function AutoNudgeHistoryModal({ isOpen, onClose }: AutoNudgeHist
         return;
       }
 
-      const params = new URLSearchParams({
-        messageId: autoNudge.message_id, 
-        message: autoNudge.message,
-        cron: autoNudge.cron,
-        userId: user.id
+      // Get all SMS sent for this message
+      const { data: smsSent, error: smsError } = await supabase
+        .from('sms_sent')
+        .select('client_id, phone_normalized')
+        .eq('message_id', campaign.message_id)
+        .eq('is_sent', true)
+        .order('created_at', { ascending: true });
+
+      if (smsError) {
+        console.error('Error fetching SMS sent:', smsError);
+        setRecipients([]);
+        return;
+      }
+
+      if (!smsSent || smsSent.length === 0) {
+        setRecipients([]);
+        return;
+      }
+
+      // Get barber_nudge_success data
+      const { data: successData, error: successError } = await supabase
+        .from('barber_nudge_success')
+        .select('client_ids, services, prices, appointment_dates')
+        .eq('user_id', user.id)
+        .eq('iso_week_number', campaign.iso_week_number)
+        .single();
+
+      const bookedClientIds = successData?.client_ids || [];
+      const services = successData?.services || [];
+      const prices = successData?.prices || []
+      const appointmentDates = successData?.appointment_dates || [];
+
+      // Get all unique client IDs and phone numbers from SMS sent
+      const allClientIds = smsSent
+        .map(sms => sms.client_id)
+        .filter((id): id is string => id !== null);
+      
+      const allPhoneNumbers = smsSent
+        .map(sms => sms.phone_normalized)
+        .filter((phone): phone is string => phone !== null);
+
+      // Fetch client details
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('acuity_clients')
+        .select('client_id, first_name, last_name, phone, phone_normalized')
+        .eq('user_id', user.id)
+        .or(`client_id.in.(${allClientIds.join(',')}),phone_normalized.in.(${allPhoneNumbers.map(p => `"${p}"`).join(',')})`);
+
+      if (clientsError) {
+        console.error('Error fetching clients:', clientsError);
+      }
+
+      const clientsMap = new Map(
+        (clientsData || []).map(client => [
+          client.client_id || client.phone_normalized,
+          client
+        ])
+      );
+
+      // Build recipients list
+      const recipientsList: SMSRecipient[] = smsSent.map(sms => {
+        const clientKey = sms.client_id || sms.phone_normalized;
+        const client = clientKey ? clientsMap.get(clientKey) : null;
+        
+        const bookedIndex = sms.client_id ? bookedClientIds.indexOf(sms.client_id) : -1;
+        const isBooked = bookedIndex !== -1;
+
+        return {
+          client_id: sms.client_id,
+          first_name: client?.first_name || null,
+          last_name: client?.last_name || null,
+          phone: client?.phone || null,
+          phone_normalized: sms.phone_normalized,
+          status: isBooked ? 'booked' : 'pending',
+          service: isBooked ? services[bookedIndex] : undefined,
+          price: isBooked ? prices [bookedIndex] : undefined, 
+          appointment_date: isBooked ? appointmentDates[bookedIndex] : undefined,
+        };
       });
 
-      const response = await fetch(`/api/client-messaging/get-auto-nudge-recipients?${params.toString()}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API error response:', errorData);
-        throw new Error(errorData.error || 'Failed to fetch recipients');
-      }
+      // Sort: booked first (by appointment date), then pending (by send order)
+      const sortedRecipients = recipientsList.sort((a, b) => {
+        if (a.status === 'booked' && b.status === 'booked') {
+          const dateA = new Date(a.appointment_date!).getTime();
+          const dateB = new Date(b.appointment_date!).getTime();
+          return dateA - dateB;
+        }
+        if (a.status === 'booked') return -1;
+        if (b.status === 'booked') return 1;
+        return 0; // Maintain send order for pending
+      });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        setRecipients(data.recipients || []);
-        setRecipientsStats(data.stats || null);
-        setCronText(data.cronText || null);
-        setView('details');
-      }
+      setRecipients(sortedRecipients);
+      setView('details');
     } catch (error) {
       console.error('Failed to fetch recipients:', error);
+      setRecipients([]);
     } finally {
       setLoadingRecipients(false);
     }
   };
 
-  const handleAutoNudgeClick = (autoNudge: AutoNudge) => {
-    setSelectedAutoNudge(autoNudge);
-    fetchRecipients(autoNudge);
+  const handleCampaignClick = (campaign: BarberNudgeCampaign) => {
+    setSelectedCampaign(campaign);
+    fetchRecipients(campaign);
   };
 
   const handleBack = () => {
     setView('list');
-    setSelectedAutoNudge(null);
+    setSelectedCampaign(null);
     setRecipients([]);
-    setRecipientsStats(null);
-    setCronText(null);
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric',
       hour: 'numeric',
       minute: '2-digit'
     });
   };
 
-return (
+  const formatPhoneNumber = (phone: string | null) => {
+    if (!phone) return 'No phone';
+    const digits = phone.replace(/\D/g, '');
+    const phoneDigits = digits.length === 11 && digits.startsWith('1')
+      ? digits.slice(1)
+      : digits;
+
+    if (phoneDigits.length === 10) {
+      return `(${phoneDigits.slice(0, 3)}) ${phoneDigits.slice(3, 6)}-${phoneDigits.slice(6, 10)}`;
+    }
+    return phone;
+  };
+
+  const formatAppointmentDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  const capitalizeName = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 min-h-screen"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div
@@ -170,7 +422,7 @@ return (
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden mb-16 sm:mb-0 "
+            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[70vw] max-w-5xl h-[70vh] sm:h-[80vh] flex flex-col overflow-hidden"
           >
             <AnimatePresence mode="wait">
               {view === 'list' && (
@@ -180,82 +432,86 @@ return (
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
-                  className="flex flex-col max-h-[85vh]"
+                  className="flex flex-col h-full"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 flex-shrink-0">
+                  <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-gradient-to-r from-lime-500/10 to-emerald-500/10 flex-shrink-0">
                     <div className="flex-1 min-w-0 pr-2">
-                      <h3 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2">
-                        <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-blue-300 flex-shrink-0" />
-                        <span className="truncate">Auto-Nudge History</span>
+                      <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-lime-300 flex-shrink-0" />
+                        <span className="truncate">Barber Nudge History</span>
                       </h3>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd] mt-1 hidden sm:block">
-                        View your past auto-nudge campaigns and their performance
+                      <p className="text-sm text-[#bdbdbd] mt-2">
+                        Track your weekly barber nudge campaign success
                       </p>
+                      {lastUpdated && (
+                        <p className="text-xs text-[#9e9e9e] mt-2 -mb-3">
+                          Last updated: {new Date(lastUpdated).toLocaleString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}. {(() => {
+                            const nextUpdate = new Date(new Date(lastUpdated).getTime() + 15 * 60 * 1000);
+                            const now = new Date();
+                            const minutesUntilNext = Math.max(0, Math.ceil((nextUpdate.getTime() - now.getTime()) / (60 * 1000)));
+                            
+                            if (minutesUntilNext > 0) {
+                              return `Check back in ${minutesUntilNext} minute${minutesUntilNext !== 1 ? 's' : ''} for the latest bookings.`;
+                            } else {
+                              return 'Reopen to see the latest bookings.';
+                            }
+                          })()}
+                        </p>
+                      )}
                     </div>
                     <button
                       onClick={onClose}
-                      className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                      className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                     >
-                      <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbdbd]" />
+                      <X className="w-5 h-5 text-[#bdbdbd]" />
                     </button>
                   </div>
 
-                  {/* Auto-Nudges List */}
-                  <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
+                  {/* Campaigns List */}
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
                     {isLoading ? (
                       <div className="text-center py-12">
-                        <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-blue-300 animate-spin mx-auto mb-4" />
-                        <p className="text-sm sm:text-base text-[#bdbdbd]">Loading auto-nudges...</p>
+                        <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
+                        <p className="text-base text-[#bdbdbd]">Updating your campaign history...</p>
                       </div>
-                    ) : autoNudges.length === 0 ? (
+                    ) : campaigns.length === 0 ? (
                       <div className="text-center py-12">
-                        <Bell className="w-10 h-10 sm:w-12 sm:h-12 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
-                        <p className="text-sm sm:text-base text-[#bdbdbd]">No completed auto-nudges yet</p>
-                        <p className="text-xs text-[#bdbdbd] mt-2">
-                          Completed auto-nudges will appear here
+                        <TrendingUp className="w-12 h-12 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
+                        <p className="text-base text-[#bdbdbd]">No barber nudge campaigns yet</p>
+                        <p className="text-sm text-[#bdbdbd] mt-2">
+                          Successful campaigns will appear here
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-2 sm:space-y-3">
-                        {autoNudges.map((autoNudge) => (
+                      <div className="space-y-3">
+                        {campaigns.map((campaign) => (
                           <button
-                            key={`${autoNudge.message_id}-${autoNudge.cron}`}
-                            onClick={() => handleAutoNudgeClick(autoNudge)}
-                            className="w-full p-3 sm:p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-blue-300/30 transition-all duration-300 text-left group"
+                            key={campaign.message_id}
+                            onClick={() => handleCampaignClick(campaign)}
+                            className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-lime-300/30 transition-all duration-300 text-left group"
                           >
                             <div className="flex items-start justify-between mb-2 gap-2">
-                              <h4 className="font-semibold text-white group-hover:text-blue-300 transition-colors text-sm sm:text-base truncate flex-1">
-                                {autoNudge.title}
+                              <h4 className="font-semibold text-white group-hover:text-lime-300 transition-colors text-base">
+                                {campaign.week_start} - {campaign.week_end}
                               </h4>
-                              <span className="px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-lime-300/10 text-lime-300 border border-lime-300/20 flex-shrink-0">
-                                Completed
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-lime-300/10 text-lime-300 border border-lime-300/20 flex-shrink-0">
+                                {campaign.clients_booked} booked
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-[#bdbdbd] flex-wrap">
+                            <div className="flex items-center gap-4 text-xs text-[#bdbdbd] flex-wrap">
                               <span className="flex items-center gap-1">
-                                <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
-                                {formatDate(autoNudge.last_sent)}
+                                <Calendar className="w-3 h-3 flex-shrink-0" />
+                                Sent {formatDate(campaign.date_sent)}
                               </span>
                               <span className="hidden sm:inline">•</span>
-                              <span className="text-blue-300 truncate">{autoNudge.cron_text}</span>
-                              <span className="hidden sm:inline">•</span>
-                              <span>{autoNudge.success + autoNudge.fail} recipients</span>
-                              <span className="hidden sm:inline">•</span>
-                              <span className="text-lime-300">{autoNudge.success} sent</span>
-                              <span className="hidden xs:inline">•</span>
-                              <span className="text-rose-300 hidden xs:inline">{autoNudge.fail || 0} failed</span>
-                              {(autoNudge.success + (autoNudge.fail || 0)) > 0 && (
-                                <>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="text-sky-300 hidden sm:inline">
-                                    {((autoNudge.success / (autoNudge.success + (autoNudge.fail || 0))) * 100).toFixed(1)}% rate
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                            <div className="mt-2 text-[10px] sm:text-xs text-[#bdbdbd] line-clamp-2 sm:line-clamp-1">
-                              {autoNudge.message}
+                              <span className="text-lime-300">Week {campaign.iso_week_number.split('-W')[1]}</span>
                             </div>
                           </button>
                         ))}
@@ -264,10 +520,10 @@ return (
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-3 sm:px-6 py-3 sm:py-4 bg-white/5 flex-shrink-0">
+                  <div className="border-t border-white/10 px-4 sm:px-6 py-4 bg-white/5 flex-shrink-0">
                     <button
                       onClick={onClose}
-                      className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base bg-white/10 text-white hover:bg-white/20 transition-all"
+                      className="w-full px-6 py-3 rounded-xl font-bold text-base bg-white/10 text-white hover:bg-white/20 transition-all"
                     >
                       Close
                     </button>
@@ -275,129 +531,122 @@ return (
                 </motion.div>
               )}
 
-              {view === 'details' && selectedAutoNudge && (
+              {view === 'details' && selectedCampaign && (
                 <motion.div
                   key="details"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2 }}
-                  className="flex flex-col max-h-[85vh]"
+                  className="flex flex-col h-full"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10 flex-shrink-0">
-                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                  <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <button
                         onClick={handleBack}
-                        className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                       >
-                        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bdbdbd]" />
+                        <ArrowLeft className="w-4 h-4 text-[#bdbdbd]" />
                       </button>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm sm:text-lg font-bold text-white truncate">{selectedAutoNudge.title}</h3>
-                        <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-0.5 truncate">
-                          {cronText || selectedAutoNudge.cron_text} • {formatDate(selectedAutoNudge.last_sent)}
+                        <h3 className="text-lg font-bold text-white truncate">
+                          {selectedCampaign.week_start} - {selectedCampaign.week_end}
+                        </h3>
+                        <p className="text-xs text-[#bdbdbd] mt-0.5 truncate">
+                          Sent {formatDate(selectedCampaign.date_sent)}
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={onClose}
-                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                      className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                     >
-                      <X className="w-4 h-4 text-[#bdbdbd]" />
+                      <X className="w-5 h-5 text-[#bdbdbd]" />
                     </button>
                   </div>
 
                   {/* Stats Bar */}
-                  {recipientsStats && (
-                    <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5 flex-shrink-0">
-                      <div className="flex gap-3 sm:gap-4 text-[10px] sm:text-xs mb-2">
-                        <div>
-                          <p className="text-[#bdbdbd] mb-0.5">Total</p>
-                          <p className="text-sm sm:text-base font-bold text-white">{recipientsStats.total}</p>
-                        </div>
-                        <div>
-                          <p className="text-[#bdbdbd] mb-0.5">Successful</p>
-                          <p className="text-sm sm:text-base font-bold text-lime-300">{recipientsStats.successful}</p>
-                        </div>
-                        <div>
-                          <p className="text-[#bdbdbd] mb-0.5">Failed</p>
-                          <p className="text-sm sm:text-base font-bold text-rose-300">{recipientsStats.failed || 0}</p>
-                        </div>
-                        {(recipientsStats.successful + (recipientsStats.failed || 0)) > 0 && (
-                          <div className="hidden xs:block">
-                            <p className="text-[#bdbdbd] mb-0.5">Success Rate</p>
-                            <p className="text-sm sm:text-base font-bold text-sky-300">
-                              {((recipientsStats.successful / (recipientsStats.successful + (recipientsStats.failed || 0))) * 100).toFixed(1)}%
-                            </p>
-                          </div>
-                        )}
+                  <div className="px-4 py-3 border-b border-white/10 bg-white/5 flex-shrink-0">
+                    <div className="flex gap-4 text-xs">
+                      <div>
+                        <p className="text-[#bdbdbd] mb-0.5">Clients Booked</p>
+                        <p className="text-base font-bold text-lime-300">{selectedCampaign.clients_booked}</p>
                       </div>
-                      <p className="text-[10px] sm:text-xs text-white/60 border-t border-white/10 pt-2 line-clamp-2">
-                        {selectedAutoNudge.message}
-                      </p>
+                      <div>
+                        <p className="text-[#bdbdbd] mb-0.5">Week</p>
+                        <p className="text-base font-bold text-white">
+                          {selectedCampaign.iso_week_number.split('-W')[1]}
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* Recipients List */}
-                  <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
+                  <div className="flex-1 overflow-y-auto p-4 min-h-0">
                     {loadingRecipients ? (
                       <div className="text-center py-12">
-                        <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-sky-300 animate-spin mx-auto mb-4" />
-                        <p className="text-sm sm:text-base text-[#bdbdbd]">Loading recipients...</p>
+                        <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
+                        <p className="text-base text-[#bdbdbd]">Loading recipients...</p>
                       </div>
                     ) : recipients.length === 0 ? (
                       <div className="text-center py-8">
-                        <Users className="w-8 h-8 sm:w-10 sm:h-10 text-[#bdbdbd] mx-auto mb-2 opacity-50" />
-                        <p className="text-xs sm:text-sm text-[#bdbdbd]">No recipients found</p>
+                        <Users className="w-10 h-10 text-[#bdbdbd] mx-auto mb-2 opacity-50" />
+                        <p className="text-sm text-[#bdbdbd]">No recipients found</p>
                       </div>
                     ) : (
-                      <div className="space-y-1.5">
+                      <div className="space-y-3">
                         {recipients.map((recipient, index) => (
                           <div
-                            key={index}
-                            className={`p-2 sm:p-2.5 rounded-lg border transition-colors ${
-                              recipient.is_sent
-                                ? 'bg-lime-300/5 border-lime-300/20 hover:bg-lime-300/10'
-                                : 'bg-rose-300/5 border-rose-300/20 hover:bg-rose-300/10'
+                            key={`${recipient.client_id || recipient.phone_normalized}-${index}`}
+                            className={`p-4 rounded-xl border transition-all duration-200 ${
+                              recipient.status === 'booked'
+                                ? 'bg-gradient-to-br from-lime-300/10 to-lime-300/5 border-lime-300/30 hover:border-lime-300/50 hover:shadow-lg hover:shadow-lime-300/10'
+                                : 'bg-gradient-to-br from-amber-300/10 to-amber-300/5 border-amber-300/30 hover:border-amber-300/50 hover:shadow-lg hover:shadow-amber-300/10'
                             }`}
                           >
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start justify-between gap-2 sm:gap-4 mb-3">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                  {recipient.first_name && recipient.last_name ? (
-                                    <h4 className="font-semibold text-white text-xs sm:text-sm truncate">
-                                      {recipient.first_name} {recipient.last_name}
-                                    </h4>
-                                  ) : (
-                                    <h4 className="font-semibold text-[#bdbdbd] text-xs sm:text-sm">Unknown Client</h4>
-                                  )}
-                                  <span className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold flex-shrink-0 ${
-                                    recipient.is_sent
-                                      ? 'bg-lime-300/20 text-lime-300'
-                                      : 'bg-rose-300/20 text-rose-300'
-                                  }`}>
-                                    {recipient.is_sent ? 'Sent' : 'Failed'}
-                                  </span>
-                                  {!recipient.is_sent && recipient.reason && (
-                                    <span className="flex items-center gap-1 text-[9px] sm:text-[10px] text-rose-300">
-                                      <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
-                                      <span className="truncate">{recipient.reason}</span>
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[10px] sm:text-[11px] text-[#bdbdbd] mt-0.5">
-                                  {recipient.phone_normalized}
+                                {recipient.first_name && recipient.last_name ? (
+                                  <h4 className="font-bold text-white text-sm sm:text-base mb-1">
+                                    {capitalizeName(`${recipient.first_name} ${recipient.last_name}`)}
+                                  </h4>
+                                ) : (
+                                  <h4 className="font-bold text-[#bdbdbd] text-sm sm:text-base mb-1">Unknown Client</h4>
+                                )}
+                                <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                                  {formatPhoneNumber(recipient.phone_normalized || recipient.phone)}
                                 </p>
                               </div>
-                              <div className="flex-shrink-0">
-                                {recipient.is_sent ? (
-                                  <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-lime-300" />
-                                ) : (
-                                  <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-300" />
-                                )}
-                              </div>
+                              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap flex-shrink-0 ${
+                                recipient.status === 'booked'
+                                  ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
+                                  : 'bg-amber-300/20 text-amber-300 border border-amber-300/30'
+                              }`}>
+                                {recipient.status === 'booked' ? '✓ Booked' : '○ Pending'}
+                              </span>
                             </div>
+                            
+                            {recipient.status === 'booked' && recipient.service && recipient.appointment_date && (
+                              <div className="pt-3 border-t border-white/10">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Service</p>
+                                    <p className="text-sm font-semibold text-lime-300 truncate">{recipient.service}</p>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Appointment</p>
+                                    <p className="text-xs sm:text-sm font-semibold text-white break-words">{formatAppointmentDate(recipient.appointment_date)}</p>
+                                  </div>
+                                  {recipient.price && (
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Price</p>
+                                      <p className="text-sm font-semibold text-lime-300">${recipient.price}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -405,10 +654,10 @@ return (
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/5 flex-shrink-0">
+                  <div className="border-t border-white/10 px-4 py-3 bg-white/5 flex-shrink-0">
                     <button
                       onClick={handleBack}
-                      className="w-full px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
+                      className="w-full px-4 py-2 rounded-lg font-semibold text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
                     >
                       Back to History
                     </button>
@@ -420,5 +669,5 @@ return (
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }

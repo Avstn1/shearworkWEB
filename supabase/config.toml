@@ -531,3 +531,80 @@ entrypoint = "./functions/reset_auto_nudge_values/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/reset_auto_nudge_values/*.html" ]
+
+[functions.barber_nudge]
+enabled = true
+verify_jwt = true
+import_map = "./functions/barber_nudge/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/barber_nudge/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/barber_nudge/*.html" ]
+
+[functions.update_barber_availability]
+enabled = true
+verify_jwt = true
+import_map = "./functions/update_barber_availability/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/update_barber_availability/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/update_barber_availability/*.html" ]
+
+[functions.appointments_look_ahead]
+enabled = true
+verify_jwt = true
+import_map = "./functions/appointments_look_ahead/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/appointments_look_ahead/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/appointments_look_ahead/*.html" ]
+
+[functions.update_barber_nudge]
+enabled = true
+verify_jwt = true
+import_map = "./functions/update_barber_nudge/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/update_barber_nudge/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/update_barber_nudge/*.html" ]
+
+[functions.barber_nudge_update]
+enabled = true
+verify_jwt = true
+import_map = "./functions/barber_nudge_update/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/barber_nudge_update/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/barber_nudge_update/*.html" ]
+
+[functions.send_push_notification]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send_push_notification/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/send_push_notification/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/send_push_notification/*.html" ]
+
+[functions.send_autonudge_confirmation_reminder_notif]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send_autonudge_confirmation_reminder_notif/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/send_autonudge_confirmation_reminder_notif/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/send_autonudge_confirmation_reminder_notif/*.html" ]

@@ -18,6 +18,7 @@ import { SquareClientProcessor } from './processors/squareClients'
 import { SquareAppointmentProcessor } from './processors/squareAppointments'
 import { runAggregations } from './processors/aggregations'
 import { SquareOrderRecord, SquarePaymentRecord } from '@/lib/square/normalize'
+import { DEFAULT_PRIMARY_SERVICE, normalizeServiceName } from '@/lib/booking/serviceNormalization'
 
 // ======================== DATE RANGE HELPERS ========================
 
@@ -122,6 +123,11 @@ function getFirstMondayOfMonth(date: Date): Date {
   return monday
 }
 
+const PRIMARY_SERVICE_LOOKBACK_MONTHS = 6
+const PRIMARY_SERVICE_QUERY_BATCH_SIZE = 200
+const PRIMARY_SERVICE_UPDATE_BATCH_SIZE = 200
+const SQUARE_STATUS_EXCLUDE = new Set(['cancelled', 'canceled', 'no_show'])
+
 // ======================== ORCHESTRATOR OPTIONS ========================
 
 export interface OrchestratorOptions {
@@ -224,6 +230,12 @@ export async function pull(
 
       if (!dryRun) {
         appointmentResult = await appointmentProcessor.upsert()
+        await updatePrimaryServiceForAcuityClients(
+          supabase,
+          userId,
+          Array.from(clientResolution.clients.keys()),
+          tablePrefix
+        )
       }
 
       sources.acuity = {
@@ -367,6 +379,12 @@ export async function pull(
 
       if (!dryRun) {
         squareAppointmentResult = await squareAppointmentProcessor.upsert()
+        await updatePrimaryServiceForSquareClients(
+          supabase,
+          userId,
+          Array.from(squareClientResolution.clients.keys()),
+          tablePrefix
+        )
       }
 
       sources.square = {
@@ -423,6 +441,164 @@ export async function pull(
     aggregations,
     errors: errors.length > 0 ? errors : undefined,
     sources,
+  }
+}
+
+type ServiceStats = {
+  count: number
+  lastDate: string
+}
+
+async function updatePrimaryServiceForAcuityClients(
+  supabase: SupabaseClient,
+  userId: string,
+  clientIds: string[],
+  tablePrefix: string
+) {
+  if (clientIds.length === 0) return
+
+  const startDate = getPrimaryServiceStartDate()
+  const statsByClient = new Map<string, Map<string, ServiceStats>>()
+
+  for (let i = 0; i < clientIds.length; i += PRIMARY_SERVICE_QUERY_BATCH_SIZE) {
+    const batch = clientIds.slice(i, i + PRIMARY_SERVICE_QUERY_BATCH_SIZE)
+
+    const { data, error } = await supabase
+      .from(`${tablePrefix}acuity_appointments`)
+      .select('client_id, service_type, appointment_date')
+      .eq('user_id', userId)
+      .gte('appointment_date', startDate)
+      .in('client_id', batch)
+
+    if (error) {
+      console.error('Failed to load acuity service history:', error)
+      return
+    }
+
+    for (const row of data || []) {
+      if (!row.client_id || !row.service_type) continue
+
+      const serviceName = normalizeServiceName(row.service_type)
+      const appointmentDate = row.appointment_date
+      if (!appointmentDate) continue
+
+      const serviceMap = statsByClient.get(row.client_id) ?? new Map<string, ServiceStats>()
+      const current = serviceMap.get(serviceName) ?? { count: 0, lastDate: appointmentDate }
+
+      current.count += 1
+      if (appointmentDate > current.lastDate) current.lastDate = appointmentDate
+
+      serviceMap.set(serviceName, current)
+      statsByClient.set(row.client_id, serviceMap)
+    }
+  }
+
+  const updates = clientIds.map((clientId) => ({
+    user_id: userId,
+    client_id: clientId,
+    primary_service: selectPrimaryService(statsByClient.get(clientId)),
+  }))
+
+  await upsertPrimaryService(supabase, `${tablePrefix}acuity_clients`, 'user_id,client_id', updates)
+}
+
+async function updatePrimaryServiceForSquareClients(
+  supabase: SupabaseClient,
+  userId: string,
+  customerIds: string[],
+  tablePrefix: string
+) {
+  if (customerIds.length === 0) return
+
+  const startDate = getPrimaryServiceStartDate()
+  const statsByClient = new Map<string, Map<string, ServiceStats>>()
+
+  for (let i = 0; i < customerIds.length; i += PRIMARY_SERVICE_QUERY_BATCH_SIZE) {
+    const batch = customerIds.slice(i, i + PRIMARY_SERVICE_QUERY_BATCH_SIZE)
+
+    const { data, error } = await supabase
+      .from(`${tablePrefix}square_appointments`)
+      .select('customer_id, service_type, appointment_date, status')
+      .eq('user_id', userId)
+      .gte('appointment_date', startDate)
+      .in('customer_id', batch)
+
+    if (error) {
+      console.error('Failed to load square service history:', error)
+      return
+    }
+
+    for (const row of data || []) {
+      if (!row.customer_id || !row.service_type) continue
+
+      const status = row.status ? String(row.status).toLowerCase() : ''
+      if (status && SQUARE_STATUS_EXCLUDE.has(status)) continue
+
+      const serviceName = normalizeServiceName(row.service_type)
+      const appointmentDate = row.appointment_date
+      if (!appointmentDate) continue
+
+      const serviceMap = statsByClient.get(row.customer_id) ?? new Map<string, ServiceStats>()
+      const current = serviceMap.get(serviceName) ?? { count: 0, lastDate: appointmentDate }
+
+      current.count += 1
+      if (appointmentDate > current.lastDate) current.lastDate = appointmentDate
+
+      serviceMap.set(serviceName, current)
+      statsByClient.set(row.customer_id, serviceMap)
+    }
+  }
+
+  const updates = customerIds.map((customerId) => ({
+    user_id: userId,
+    customer_id: customerId,
+    primary_service: selectPrimaryService(statsByClient.get(customerId)),
+  }))
+
+  await upsertPrimaryService(supabase, `${tablePrefix}square_clients`, 'user_id,customer_id', updates)
+}
+
+function selectPrimaryService(stats?: Map<string, ServiceStats>): string {
+  if (!stats || stats.size === 0) return DEFAULT_PRIMARY_SERVICE
+
+  let selected = DEFAULT_PRIMARY_SERVICE
+  let maxCount = -1
+  let latestDate = ''
+
+  for (const [serviceName, value] of stats) {
+    if (value.count > maxCount || (value.count === maxCount && value.lastDate > latestDate)) {
+      selected = serviceName
+      maxCount = value.count
+      latestDate = value.lastDate
+    }
+  }
+
+  return selected
+}
+
+function getPrimaryServiceStartDate(): string {
+  const start = new Date()
+  start.setMonth(start.getMonth() - PRIMARY_SERVICE_LOOKBACK_MONTHS)
+  return start.toISOString().slice(0, 10)
+}
+
+async function upsertPrimaryService(
+  supabase: SupabaseClient,
+  tableName: string,
+  conflictTarget: string,
+  updates: Array<Record<string, string | null>>
+) {
+  for (let i = 0; i < updates.length; i += PRIMARY_SERVICE_UPDATE_BATCH_SIZE) {
+    const batch = updates.slice(i, i + PRIMARY_SERVICE_UPDATE_BATCH_SIZE)
+
+    const { error } = await supabase
+      .from(tableName)
+      .upsert(batch, { onConflict: conflictTarget })
+
+    if (error) {
+      console.error('Failed to update primary_service:', error)
+      return
+    }
   }
 }
 

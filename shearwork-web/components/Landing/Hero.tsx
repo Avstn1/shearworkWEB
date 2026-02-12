@@ -212,40 +212,50 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-5xl md:text-6xl font-bold mb-6 leading-tight"
+          className="text-5xl md:text-6xl font-bold mb-8 leading-tight"
           style={{ color: COLORS.text }}
         >
-          Understand your business.
+          Stop Letting Cancellations
           <br />
-          <span style={{ color: COLORS.green }}>Unlock your next level.</span>
+          Cost You Money.
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
-          className="text-lg md:text-xl mb-8 mx-auto"
+          className="text-lg md:text-xl mb-4 mx-auto"
           style={{ color: COLORS.textMuted }}
         >
-          Analyze performance, track expenses, and retain clients effortlessly.
+          Corva detects your open spots and automatically reminds past clients so you recover bookings you would have missed.
+        </motion.p>
+
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+          className="text-sm md:text-base mb-8"
+          style={{ color: COLORS.textMuted }}
+        >
+          Independent barbers do not need more hustle. They need a system.
         </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
+          transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
           className="flex flex-col items-center gap-4"
         >
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-5 justify-center">
             <a
               href="/signup"
-              className="font-semibold px-8 py-3 rounded-full shadow-lg hover:scale-105 transition-transform duration-200"
+              className="font-semibold px-10 py-3 rounded-full shadow-lg hover:scale-105 transition-transform duration-200"
               style={{ 
                 backgroundColor: COLORS.green,
                 color: '#000000',
               }}
             >
-              Get Started
+              Start 21-Day Free Trial
             </a>
             <button
               onClick={() => {
@@ -281,9 +291,12 @@ export default function Hero() {
                 e.currentTarget.style.color = COLORS.green
               }}
             >
-              Learn More
+              See How It Works
             </button>
           </div>
+          <p className="text-xs md:text-sm" style={{ color: COLORS.textMuted }}>
+            No credit card required. Takes 2 minutes.
+          </p>
           <a 
             href="/login" 
             className="text-sm hover:underline transition-all"

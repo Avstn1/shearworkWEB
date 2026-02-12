@@ -11,10 +11,14 @@ export async function getAuthenticatedUser(request: Request) {
     const userId = request.headers.get('x-user-id');
     if (userId) {
       console.log('Authenticated via service role for user:', userId);
-      // Create a mock user object or fetch the actual user
       const { data: { user }, error } = await supabase.auth.admin.getUserById(userId);
       if (user) {
+        console.log(supabase)
         return { user, supabase };
+      }
+
+      if (error) {
+        console.log("error: " + error)
       }
     }
     // If no user_id provided, this is a system-level call
@@ -22,9 +26,7 @@ export async function getAuthenticatedUser(request: Request) {
     return { user: null, supabase }; // Or handle differently based on your needs
   }
 
-  // Extract token from either Authorization, x-client-access-token, URL query params, or Vercel headers
   const getTokenFromRequest = () => {
-    // Standard Authorization header (already checked above, so this will be user token)
     let token = authHeader?.replace(/^Bearer\s+/i, '');
 
     // Custom header from client

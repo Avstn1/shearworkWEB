@@ -8,6 +8,7 @@ export interface AcuityClient {
   phone_normalized: string | null;
   first_appt: string | null;
   last_appt: string | null;
+  primary_service: string | null;
   visiting_type: 'new' | 'consistent' | 'semi-consistent' | 'easy-going' | 'rare' | null;
   avg_weekly_visits: number | null;
   total_appointments: number;
@@ -63,6 +64,9 @@ export async function selectClientsForSMS_AutoNudge(
     return [];
   }
 
+  // console.log("Clients:")
+  // console.log(JSON.stringify(clients))
+
   // Score and filter clients
   const allScoredClients: ScoredClient[] = clients
     .map((client) => scoreClient(client, today))
@@ -100,8 +104,6 @@ export async function selectClientsForSMS_AutoNudge(
     c => c.visiting_type !== 'consistent' && c.visiting_type !== 'semi-consistent'
   );
 
-  console.log(`📊 Available clients: Consistent/Semi=${consistentAndSemiConsistent.length}, Others=${others.length}`);
-
   // Target 90% consistent/semi-consistent
   const targetConsistentCount = Math.floor(limit * 0.9);
   
@@ -122,7 +124,8 @@ export async function selectClientsForSMS_AutoNudge(
     selectedClients.push(...consistentAndSemiConsistent.slice(targetConsistentCount, targetConsistentCount + additionalNeeded));
   }
 
-  console.log(`✅ Selected ${selectedClients.length} clients`);
+  console.log("Selected Clients:")
+  console.log(selectedClients[0])
 
   return selectedClients;
 }

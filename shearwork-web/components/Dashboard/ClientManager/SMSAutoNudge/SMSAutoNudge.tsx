@@ -1,5 +1,7 @@
 'use client';
 
+import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
+
 const getSessionErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Failed to process request';
 
@@ -75,6 +77,7 @@ export default function SMSAutoNudge() {
   const [availableCredits, setAvailableCredits] = useState<number>(0);
   const [profile, setProfile] = useState<{
     full_name?: string | null
+    username?: string | null
     email?: string | null
     phone?: string | null
     available_credits?: number | null
@@ -274,7 +277,7 @@ export default function SMSAutoNudge() {
 
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, available_credits, auto_nudge_schedule, trial_active, trial_start, trial_end, booking_link')
+        .select('full_name, username, email, phone, available_credits, auto_nudge_schedule, trial_active, trial_start, trial_end, booking_link')
         .eq('user_id', user.id)
         .single();
 
@@ -1370,114 +1373,116 @@ export default function SMSAutoNudge() {
         )}
       </AnimatePresence>
 
-      {/* Messages List */}
-      <div className="space-y-4">
-        {messages.length === 0 ? (
-          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-8 sm:p-12 text-center">
-            <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
-            <p className="text-[#bdbdbd] text-base sm:text-lg mb-2">No messages configured</p>
-            <p className="text-[#bdbdbd]/70 text-xs sm:text-sm">
-              Messages will be created automatically on first load
-            </p>
-          </div>
-        ) : (
-          messages.map((msg, index) => (
-            <MessageCard
-              isLocked={lockedMessages.has(msg.id)}
-              autoNudgeCampaignProgress={autoNudgeCampaignProgress[msg.id]} 
-              isTrialPreview={isTrialUser}
-              key={msg.id}
-              message={msg}
-              index={index}
-              isSaving={isSaving}
-              savingMode={savingMode}
-              validatingId={validatingId}
-              editingTitleId={editingTitleId}
-              tempTitle={tempTitle}
-              phoneNumbers={phoneNumbersByType[msg.visitingType || 'consistent'] || []}
-              availableCredits={availableCredits}
-              profile={profile}
-              onUpdate={updateMessage}
-              onEnableEdit={enableEditMode}
-              onCancelEdit={cancelEdit}
-              onSave={handleSave}
-              onValidate={async (msgId: string) => {
-                const msg = messages.find((m) => m.id === msgId);
-                if (!msg || !msg.message.trim()) {
-                  toast.error('Please enter a message first');
-                  return;
-                }
-
-                if (msg.message.length < 100) {
-                  toast.error('Message must be at least 100 characters');
-                  return;
-                }
-
-                setValidatingId(msgId);
-                try {
-                  const response = await fetch('/api/client-messaging/verify-message', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg.message }),
-                  });
-
-                  const data = await response.json();
-                  
-                  if (!response.ok) {
-                    throw new Error(data.error || 'Validation failed');
+      <UnderConstructionWrapper>
+        {/* Messages List */}
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-8 sm:p-12 text-center">
+              <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
+              <p className="text-[#bdbdbd] text-base sm:text-lg mb-2">No messages configured</p>
+              <p className="text-[#bdbdbd]/70 text-xs sm:text-sm">
+                Messages will be created automatically on first load
+              </p>
+            </div>
+          ) : (
+            messages.map((msg, index) => (
+              <MessageCard
+                isLocked={lockedMessages.has(msg.id)}
+                autoNudgeCampaignProgress={autoNudgeCampaignProgress[msg.id]} 
+                isTrialPreview={isTrialUser}
+                key={msg.id}
+                message={msg}
+                index={index}
+                isSaving={isSaving}
+                savingMode={savingMode}
+                validatingId={validatingId}
+                editingTitleId={editingTitleId}
+                tempTitle={tempTitle}
+                phoneNumbers={phoneNumbersByType[msg.visitingType || 'consistent'] || []}
+                availableCredits={availableCredits}
+                profile={profile}
+                onUpdate={updateMessage}
+                onEnableEdit={enableEditMode}
+                onCancelEdit={cancelEdit}
+                onSave={handleSave}
+                onValidate={async (msgId: string) => {
+                  const msg = messages.find((m) => m.id === msgId);
+                  if (!msg || !msg.message.trim()) {
+                    toast.error('Please enter a message first');
+                    return;
                   }
 
-                  updateMessage(msgId, {
-                    isValidated: data.approved,
-                    validationStatus: data.approved ? 'DRAFT' : 'DENIED',
-                    validationReason: data.approved ? undefined : data.reason,
-                  });
-
-                  if (data.approved) {
-                    toast.success('Message validated and approved! You can now save as draft or activate.');
-                  } else {
-                    toast.error(data.reason || 'Message was denied');
+                  if (msg.message.length < 100) {
+                    toast.error('Message must be at least 100 characters');
+                    return;
                   }
-                } catch (error: unknown) {
-                  const message = getSessionErrorMessage(error);
-                  console.error('Validation error:', message);
-                  toast.error(message);
-                } finally {
-                  setValidatingId(null);
-                }
-              }}
-              onRequestTest={(msgId) => {
-                if (isTrialUser) {
-                  toast.error('Auto-Nudge tests are available after upgrading');
-                  return;
-                }
-                setPendingTestMessageId(msgId);
-                setShowTestConfirmModal(true);
-              }}
-              onStartEditingTitle={(id: string, currentTitle: string) => {
-                setEditingTitleId(id);
-                setTempTitle(currentTitle);
-              }}
-              onSaveTitle={(id: string) => {
-                if (tempTitle.trim()) {
-                  updateMessage(id, { title: tempTitle.trim() });
-                }
-                setEditingTitleId(null);
-                setTempTitle('');
-              }}
-              onCancelEditTitle={() => {
-                setEditingTitleId(null);
-                setTempTitle('');
-              }}
-              onRequestDeactivate={(msgId: string) => {
-                setPendingDeactivateMessageId(msgId);
-                setShowDeactivateModal(true);
-              }}
-              onTempTitleChange={setTempTitle}
-            />
-          ))
-        )}
-      </div>
+
+                  setValidatingId(msgId);
+                  try {
+                    const response = await fetch('/api/client-messaging/verify-message', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ message: msg.message }),
+                    });
+
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Validation failed');
+                    }
+
+                    updateMessage(msgId, {
+                      isValidated: data.approved,
+                      validationStatus: data.approved ? 'DRAFT' : 'DENIED',
+                      validationReason: data.approved ? undefined : data.reason,
+                    });
+
+                    if (data.approved) {
+                      toast.success('Message validated and approved! You can now save as draft or activate.');
+                    } else {
+                      toast.error(data.reason || 'Message was denied');
+                    }
+                  } catch (error: unknown) {
+                    const message = getSessionErrorMessage(error);
+                    console.error('Validation error:', message);
+                    toast.error(message);
+                  } finally {
+                    setValidatingId(null);
+                  }
+                }}
+                onRequestTest={(msgId) => {
+                  if (isTrialUser) {
+                    toast.error('Auto-Nudge tests are available after upgrading');
+                    return;
+                  }
+                  setPendingTestMessageId(msgId);
+                  setShowTestConfirmModal(true);
+                }}
+                onStartEditingTitle={(id: string, currentTitle: string) => {
+                  setEditingTitleId(id);
+                  setTempTitle(currentTitle);
+                }}
+                onSaveTitle={(id: string) => {
+                  if (tempTitle.trim()) {
+                    updateMessage(id, { title: tempTitle.trim() });
+                  }
+                  setEditingTitleId(null);
+                  setTempTitle('');
+                }}
+                onCancelEditTitle={() => {
+                  setEditingTitleId(null);
+                  setTempTitle('');
+                }}
+                onRequestDeactivate={(msgId: string) => {
+                  setPendingDeactivateMessageId(msgId);
+                  setShowDeactivateModal(true);
+                }}
+                onTempTitleChange={setTempTitle}
+              />
+            ))
+          )}
+        </div>
+      </UnderConstructionWrapper>
     </div>
   );
 }

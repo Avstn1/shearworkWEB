@@ -39,6 +39,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
+      .eq('show', true)
       .order('timestamp', { ascending: false })
       .limit(15)
 

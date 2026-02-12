@@ -26,7 +26,8 @@ export default async function middleware(request: NextRequest) {
     '/_next',
     '/api',
     '/images',
-    '/heroImages'
+    '/heroImages',
+    '/book'
   ]
 
   if (!user) {

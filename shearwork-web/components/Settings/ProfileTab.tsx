@@ -25,6 +25,8 @@ export default function ProfileTab() {
   const [commission, setCommission] = useState<number | string>('')
   const [authUser, setAuthUser] = useState<any>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const [username, setUsername] = useState<string>('')
   
   // Modal states
   const [showEmailModal, setShowEmailModal] = useState(false)
@@ -47,6 +49,11 @@ export default function ProfileTab() {
   const [phoneVerificationCode, setPhoneVerificationCode] = useState('')
   const [isVerifyingEmail, setIsVerifyingEmail] = useState(false)
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false)
+
+  const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false)
+  const [editedUsername, setEditedUsername] = useState('')
+  const [usernameError, setUsernameError] = useState('')
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false)
 
   // Phone number formatting
   const formatPhoneNumber = (value: string) => {
@@ -121,6 +128,37 @@ export default function ProfileTab() {
     fetchProfile()
   }, [])
 
+  const generateUsername = (fullName: string): string => {
+    return fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  };
+
+  const checkUsernameExists = async (username: string, excludeCurrentUser = false): Promise<boolean> => {
+    let query = supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', username);
+    
+    if (excludeCurrentUser && authUser) {
+      query = query.neq('user_id', authUser.id);
+    }
+    
+    const { data } = await query.maybeSingle();
+    return !!data;
+  };
+
+  const generateUniqueUsername = async (baseUsername: string): Promise<string> => {
+    let username = baseUsername;
+    let exists = await checkUsernameExists(username);
+    
+    while (exists) {
+      const randomNum = Math.floor(Math.random() * 90 + 10); // 10-99
+      username = `${baseUsername}${randomNum}`;
+      exists = await checkUsernameExists(username);
+    }
+    
+    return username;
+  };
+
   const fetchProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -145,11 +183,84 @@ export default function ProfileTab() {
         setEditedPhone(formattedPhone);
         setOriginalPhone(formattedPhone);
         setEditedBookingLink(data.booking_link || 'No booking link set.')
+        
+        // Check and set username if missing
+        if (!data.username && data.full_name) {
+          const baseUsername = generateUsername(data.full_name);
+          const uniqueUsername = await generateUniqueUsername(baseUsername);
+          
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ username: uniqueUsername })
+            .eq('user_id', user.id);
+          
+          if (!updateError) {
+            setProfile({ ...data, username: uniqueUsername });
+          }
+        }
       }
     } catch (err) {
       console.error(err)
     }
   }
+
+  const handleUsernameClick = () => {
+    setEditedUsername(profile?.username || '');
+    setUsernameError('');
+    setIsUsernameModalOpen(true);
+  };
+
+  const validateUsername = (username: string): boolean => {
+    const usernameRegex = /^[a-z0-9]+$/;
+    return usernameRegex.test(username);
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toLowerCase();
+    setEditedUsername(value);
+    
+    if (value && !validateUsername(value)) {
+      setUsernameError('Username can only contain lowercase letters and numbers');
+    } else {
+      setUsernameError('');
+    }
+  };
+
+  const handleUsernameSave = async () => {
+    if (!authUser || !editedUsername) return;
+    
+    if (!validateUsername(editedUsername)) {
+      setUsernameError('Username can only contain lowercase letters and numbers');
+      return;
+    }
+    
+    setIsCheckingUsername(true);
+    
+    // Check if username is taken by another user
+    const exists = await checkUsernameExists(editedUsername, true);
+    
+    if (exists) {
+      setUsernameError('This username is already taken');
+      setIsCheckingUsername(false);
+      return;
+    }
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username: editedUsername })
+      .eq('user_id', authUser.id);
+    
+    setIsCheckingUsername(false);
+    
+    if (error) {
+      setUsernameError('Failed to update username');
+      console.error('Username update error:', error);
+      return;
+    }
+    
+    setProfile({ ...profile!, username: editedUsername });
+    setIsUsernameModalOpen(false);
+  };
 
   const updateCommission = async () => {
     if (!profile) return
@@ -375,6 +486,29 @@ export default function ProfileTab() {
       setIsVerifyingPhone(false)
     }
   }
+  
+  const handleVerifyPhoneNoOTP = async () => {
+    const e164Phone = getE164PhoneNumber(editedPhone)
+    console.log(e164Phone)
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ 
+        phone: e164Phone,
+        phone_verified: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', profile.user_id)
+
+    if (updateError) {
+      console.log(updateError)
+    }
+
+    toast.success('Phone verified successfully!')
+    setShowPhoneModal(false)
+    setPhoneVerificationCode('')
+    fetchProfile()
+  }
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile) return
@@ -461,7 +595,17 @@ export default function ProfileTab() {
           </div>
 
           <div className="space-y-2 flex-1">
-            <h3 className="text-xl font-semibold">{profile.full_name}</h3>
+            {/* Full name with username */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl font-semibold">{profile.full_name}</h3>
+              <button
+                onClick={handleUsernameClick}
+                className="text-md text-gray-400 hover:text-teal-400 transition mt-2"
+              >
+                @{profile.username || 'set username'}
+              </button>
+            </div>
+            
             <p className="text-sm text-gray-400 capitalize">
               {profile.role === "Barber" 
                 ? profile.barber_type === "rental" 
@@ -692,8 +836,8 @@ export default function ProfileTab() {
         </Modal>
       )}
 
-      {/* Phone Modal */}
-      {showPhoneModal && (
+      {/* Phone Modal with phone verification */}
+      {/* {showPhoneModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
             <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
@@ -785,6 +929,125 @@ export default function ProfileTab() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )} */}
+
+      {/* Phone Modal without phone verification */}
+      {showPhoneModal && (
+        <Modal>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Update Phone Number</h3>
+                <button
+                  onClick={() => setShowPhoneModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Phone Number
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium">
+                      +1
+                    </div>
+                    <input
+                      type="tel"
+                      value={editedPhone}
+                      onChange={handlePhoneInput}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+                      placeholder="(647) 111-2222"
+                      maxLength={14}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Enter your 10-digit phone number
+                  </p>
+                </div>
+
+                {profile.phone && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">Current:</span>
+                    <span className="text-sm font-medium">{profile.phone}</span>
+                  </div>
+                )}
+
+                {!profile.phone && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                    <p className="text-sm text-rose-300">
+                      Phone number is required for SMS marketing features
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleVerifyPhoneNoOTP}
+                  disabled={editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save Phone Number
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Username Edit Modal */}
+      {isUsernameModalOpen && (
+        <Modal>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Edit Username</h3>
+                <button
+                  onClick={() => setIsUsernameModalOpen(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      value={editedUsername}
+                      onChange={handleUsernameChange}
+                      className="w-full pl-9 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50 text-white"
+                      placeholder="username"
+                    />
+                  </div>
+                  {usernameError && (
+                    <p className="mt-2 text-sm text-red-400">{usernameError}</p>
+                  )}
+                  <p className="mt-2 text-xs text-gray-400">
+                    Only lowercase letters and numbers allowed
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleUsernameSave}
+                  disabled={!editedUsername || !!usernameError || isCheckingUsername}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCheckingUsername ? 'Checking...' : 'Update Username'}
+                </button>
               </div>
             </div>
           </div>
