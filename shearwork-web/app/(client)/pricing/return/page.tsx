@@ -1,16 +1,29 @@
 'use client'
 
-import { Suspense, useEffect, useState, useRef } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { AnimatePresence, motion, Variants, easeInOut } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import { useAuth } from '@/contexts/AuthContext'
-import EditableAvatar from '@/components/EditableAvatar'
-import ConnectAcuityButton from '@/components/ConnectAcuityButton'
-import ConnectSquareButton from '@/components/ConnectSquareButton'
+import ProfileStep from '@/components/Onboarding/ProfileStep'
+import CalendarStep from '@/components/Onboarding/CalendarStep'
 import { isTrialActive } from '@/utils/trial'
-import { TRIAL_DAYS } from '@/lib/constants/trial'
+
+const fadeInUp: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: easeInOut },
+  },
+  exit: {
+    opacity: 0,
+    y: -20,
+    transition: { duration: 0.3, ease: easeInOut },
+  },
+}
 
 type BillingSummary = {
   hasSubscription: boolean
@@ -28,16 +41,28 @@ function PricingReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { refreshProfile } = useAuth()
+  
+  // State
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<BillingSummary | null>(null)
   const [sessionStatus, setSessionStatus] = useState<'open' | 'complete' | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileStepComplete, setProfileStepComplete] = useState(false)
+  const [currentOnboardingStep, setCurrentOnboardingStep] = useState<'profile' | 'calendar'>('profile')
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  
+  // Calendar state
   const [calendarStatus, setCalendarStatus] = useState({
     acuity: false,
     square: false,
     loading: true,
   })
+  const [acuityCalendars, setAcuityCalendars] = useState<Array<{ id: number | string; name: string }>>([])
+  const [selectedAcuityCalendar, setSelectedAcuityCalendar] = useState<string>('')
+  const [selectedProvider, setSelectedProvider] = useState<'acuity' | 'square' | null>('acuity')
+  
+  // Profile state
   const [profile, setProfile] = useState<{
     onboarded?: boolean | null
     trial_active?: boolean | null
@@ -45,6 +70,7 @@ function PricingReturnContent() {
     trial_end?: string | null
   } | null>(null)
   const [fullName, setFullName] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [userType, setUserType] = useState<'barber' | 'owner' | ''>('')
   const [selectedRole, setSelectedRole] = useState({
     label: '',
@@ -52,21 +78,16 @@ function PricingReturnContent() {
     barber_type: '',
   })
   const [commissionRate, setCommissionRate] = useState<number | ''>('')
-  const [shopOperation, setShopOperation] = useState<'commission' | 'rental' | ''>('')
   const [username, setUsername] = useState('')
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
   const [bookingLink, setBookingLink] = useState('')
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined)
-  const [selectedProvider, setSelectedProvider] = useState<'acuity' | 'square' | null>('acuity')
-  const [showValidationErrors, setShowValidationErrors] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout>()
 
+  // Load billing summary
   useEffect(() => {
     const sessionId = searchParams.get('session_id')
-    console.log('Stripe session_id (for debugging):', sessionId)
-
+    
     const fetchSummary = async () => {
       try {
         const summaryRequest = fetch('/api/stripe/billing-summary')
@@ -107,6 +128,7 @@ function PricingReturnContent() {
     fetchSummary()
   }, [searchParams])
 
+  // Load profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -115,7 +137,7 @@ function PricingReturnContent() {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('onboarded, full_name, role, barber_type, commission_rate, avatar_url, username, booking_link, trial_active, trial_start, trial_end')
+          .select('onboarded, full_name, phone, role, barber_type, commission_rate, avatar_url, username, booking_link, trial_active, trial_start, trial_end')
           .eq('user_id', user.id)
           .single()
 
@@ -123,6 +145,7 @@ function PricingReturnContent() {
 
         setProfile(data)
         setFullName(data?.full_name ?? '')
+        setPhoneNumber(data?.phone ?? '')
         setUsername(data?.username ?? '')
         setBookingLink(data?.booking_link ?? '')
         
@@ -130,17 +153,12 @@ function PricingReturnContent() {
           if (data.role === 'Barber') {
             setUserType('barber')
             if (data?.barber_type) {
-              const label = data.barber_type === 'commission'
-                ? 'Barber (Commission)'
-                : 'Barber (Chair Rental)'
+              const label = data.barber_type === 'commission' ? 'Commission' : 'Chair Rental'
               setSelectedRole({ label, role: data.role, barber_type: data.barber_type })
             }
           } else if (data.role === 'Owner') {
             setUserType('owner')
-            setSelectedRole({ label: 'Shop Owner / Manager', role: 'Owner', barber_type: '' })
-            if (data?.barber_type) {
-              setShopOperation(data.barber_type)
-            }
+            setSelectedRole({ label: 'Shop Owner / Manager', role: 'Owner', barber_type: data.barber_type || '' })
           }
         }
         
@@ -159,115 +177,7 @@ function PricingReturnContent() {
     fetchProfile()
   }, [])
 
-  const checkUsername = async (value: string) => {
-    if (!value || value.length < 3) {
-      setUsernameStatus('idle')
-      return
-    }
-
-    setUsernameStatus('checking')
-
-    try {
-      const res = await fetch(`/api/db-search/search-username?username=${encodeURIComponent(value)}`)
-      const data = await res.json()
-
-      if (!res.ok) {
-        setUsernameStatus('idle')
-        return
-      }
-
-      setUsernameStatus(data.available ? 'available' : 'taken')
-    } catch (err) {
-      console.error('Username check error:', err)
-      setUsernameStatus('idle')
-    }
-  }
-
-  useEffect(() => {
-    if (usernameCheckTimeoutRef.current) {
-      clearTimeout(usernameCheckTimeoutRef.current)
-    }
-
-    if (username.length >= 3) {
-      usernameCheckTimeoutRef.current = setTimeout(() => {
-        checkUsername(username)
-      }, 500)
-    } else {
-      setUsernameStatus('idle')
-    }
-
-    return () => {
-      if (usernameCheckTimeoutRef.current) {
-        clearTimeout(usernameCheckTimeoutRef.current)
-      }
-    }
-  }, [username])
-
-  const formatAmount = (amount: number, currency: string) =>
-    new Intl.NumberFormat('en-CA', {
-      style: 'currency',
-      currency: currency.toUpperCase(),
-      maximumFractionDigits: 2,
-    }).format(amount / 100)
-
-  const formatDate = (ts?: number | null) => {
-    if (!ts) return null
-    return new Date(ts * 1000).toLocaleDateString('en-CA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
-
-  const formatIsoDate = (value?: string | null) => {
-    if (!value) return null
-    return new Date(value).toLocaleDateString('en-CA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
-
-  const hasSub = summary?.hasSubscription ?? false
-  const trialActive = isTrialActive(profile)
-  const hasCheckoutComplete = sessionStatus === 'complete'
-  const hasAccess = true // hasSub || trialActive || hasCheckoutComplete CHANGE LATER
-  const calendarConnected = calendarStatus.acuity || calendarStatus.square
-  const interval = summary?.price?.interval
-  const intervalLabel =
-    interval === 'year' ? 'yearly' : interval === 'month' ? 'monthly' : 'recurring'
-  const amountText =
-    summary?.price &&
-    formatAmount(summary.price.amount, summary.price.currency)
-  const endDateText = formatDate(summary?.current_period_end ?? null)
-  const trialEndText = formatIsoDate(profile?.trial_end)
-
-  const isCommissionValid =
-    selectedRole.barber_type !== 'commission' ||
-    (typeof commissionRate === 'number' && commissionRate >= 1 && commissionRate <= 100)
-  
-  const isShopOperationValid = 
-    userType !== 'owner' || shopOperation !== ''
-  
-  const isUsernameValid = 
-    username.trim().length >= 3 && usernameStatus === 'available'
-  
-  const isProfileValid = 
-    fullName.trim().length > 0 && 
-    userType !== '' && 
-    (userType === 'owner' ? isShopOperationValid : selectedRole.barber_type !== '') &&
-    isCommissionValid &&
-    isUsernameValid
-
-  const setupSectionId = 'onboarding-setup'
-
-  const scrollToSetup = () => {
-    document.getElementById(setupSectionId)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
-  }
-
+  // Load calendar status
   const fetchCalendarStatus = async () => {
     try {
       const [acuityRes, squareRes] = await Promise.all([
@@ -278,11 +188,25 @@ function PricingReturnContent() {
       const acuityData = acuityRes.ok ? await acuityRes.json() : null
       const squareData = squareRes.ok ? await squareRes.json() : null
 
+      const acuityConnected = Boolean(acuityData?.connected)
+      const squareConnected = Boolean(squareData?.connected)
+
       setCalendarStatus({
-        acuity: Boolean(acuityData?.connected),
-        square: Boolean(squareData?.connected),
+        acuity: acuityConnected,
+        square: squareConnected,
         loading: false,
       })
+
+      if (acuityConnected) {
+        const calRes = await fetch('/api/acuity/calendar')
+        if (calRes.ok) {
+          const calData = await calRes.json()
+          setAcuityCalendars(calData.calendars || [])
+        }
+      } else {
+        setAcuityCalendars([])
+        setSelectedAcuityCalendar('')
+      }
     } catch (error) {
       console.error('Calendar status error:', error)
       setCalendarStatus({ acuity: false, square: false, loading: false })
@@ -293,6 +217,17 @@ function PricingReturnContent() {
     fetchCalendarStatus()
   }, [])
 
+  useEffect(() => {
+    if (calendarStatus.acuity) {
+      setSelectedProvider('acuity')
+      return
+    }
+    if (calendarStatus.square) {
+      setSelectedProvider('square')
+    }
+  }, [calendarStatus.acuity, calendarStatus.square])
+
+  // Handlers
   const handleBeforeConnectAcuity = async () => {
     if (calendarStatus.square) {
       const toastId = toast.loading('Disconnecting Square...')
@@ -305,6 +240,10 @@ function PricingReturnContent() {
       setCalendarStatus(prev => ({ ...prev, square: false }))
     }
     return true
+  }
+
+  const handleAcuityConnectSuccess = async () => {
+    await fetchCalendarStatus()
   }
 
   const handleBeforeConnectSquare = async () => {
@@ -321,55 +260,31 @@ function PricingReturnContent() {
     return true
   }
 
-  useEffect(() => {
-    if (calendarStatus.acuity) {
-      setSelectedProvider('acuity')
-      return
-    }
-    if (calendarStatus.square) {
-      setSelectedProvider('square')
-    }
-  }, [calendarStatus.acuity, calendarStatus.square])
-
-  const statusSummary = (() => {
-    if (hasSub) {
-      const renewalText = endDateText ? `Renews ${endDateText}` : 'Renews soon'
-      const priceText = amountText ? `${amountText}/${interval === 'year' ? 'yr' : 'mo'}` : 'Plan active'
-      return `Pro Plan Active · ${renewalText} · ${priceText}`
-    }
-
-    if (trialActive) {
-      return `Free Trial Active · Ends ${trialEndText ?? `in ${TRIAL_DAYS} days`}`
-    }
-
-    if (hasCheckoutComplete) {
-      return 'Subscription processing · We will confirm shortly'
-    }
-
-    return null
-  })()
-
-  const stepLabels = ['Subscription', 'Profile', 'Calendar']
-  const currentStep = !hasAccess ? 1 : !profile?.onboarded ? 2 : calendarConnected ? 3 : 3
-  const providerConnected =
-    selectedProvider === 'acuity'
-      ? calendarStatus.acuity
-      : selectedProvider === 'square'
-        ? calendarStatus.square
-        : false
-
-  const handleAvatarClick = () => fileInputRef.current?.click()
-
-  const handleAvatarChange = (file: File) => {
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
+  const phoneToE164 = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '')
+    return `+1${cleaned}`
   }
 
-  const handleProfileSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!isProfileValid) {
-      setShowValidationErrors(true)
+  const handleNext = () => {
+    if (currentOnboardingStep === 'profile') {
+      if (!isProfileValid) {
+        setShowValidationErrors(true)
+        return
+      }
+      setShowValidationErrors(false)
+      setCurrentOnboardingStep('calendar')
+    }
+  }
+
+  const handleBack = () => {
+    if (currentOnboardingStep === 'calendar') {
+      setCurrentOnboardingStep('profile')
+    }
+  }
+
+  const handleFinishOnboarding = async () => {
+    if (!isCalendarConnected) {
+      toast.error('Please connect a calendar to continue')
       return
     }
     
@@ -393,11 +308,13 @@ function PricingReturnContent() {
 
       const profileUpdate: Record<string, unknown> = {
         full_name: fullName,
+        phone: phoneToE164(phoneNumber),
         role: selectedRole.role,
-        barber_type: userType === 'owner' ? shopOperation : selectedRole.barber_type || null,
+        barber_type: selectedRole.barber_type || null,
         avatar_url: avatarUrl,
         username: username.toLowerCase(),
-        booking_link: bookingLink.trim() || null,
+        booking_link: bookingLink.trim(),
+        calendar: selectedProvider === 'acuity' ? selectedAcuityCalendar : null,
         onboarded: true,
       }
 
@@ -419,7 +336,7 @@ function PricingReturnContent() {
       if (!currentProfile?.trial_start) {
         const now = new Date()
         const trialEnd = new Date(now)
-        trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS)
+        trialEnd.setDate(trialEnd.getDate() + 7)
 
         profileUpdate.trial_start = now.toISOString()
         profileUpdate.trial_end = trialEnd.toISOString()
@@ -469,11 +386,11 @@ function PricingReturnContent() {
 
       setProfileStepComplete(true)
       setProfile(prev => (prev ? { ...prev, onboarded: true } : prev))
-      toast.success('Profile saved')
+      toast.success('Onboarding complete!')
       await refreshProfile()
       router.push('/dashboard')
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile'
+      const message = err instanceof Error ? err.message : 'Failed to complete onboarding'
       console.error(message)
       toast.error(message)
     } finally {
@@ -481,455 +398,342 @@ function PricingReturnContent() {
     }
   }
 
-  const getTrustMessage = () => {
-    if (userType === 'barber') {
-      return 'You will only see your own schedule and data.'
-    }
-    if (userType === 'owner') {
-      return 'For now, you will only see your own schedule and data. Full shop-wide analytics are coming soon.'
-    }
-    return null
+  // Computed values
+  const formatAmount = (amount: number, currency: string) =>
+    new Intl.NumberFormat('en-CA', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+      maximumFractionDigits: 2,
+    }).format(amount / 100)
+
+  const formatDate = (ts?: number | null) => {
+    if (!ts) return null
+    return new Date(ts * 1000).toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
   }
 
+  const formatIsoDate = (value?: string | null) => {
+    if (!value) return null
+    return new Date(value).toLocaleDateString('en-CA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  }
+
+  const hasSub = summary?.hasSubscription ?? false
+  const trialActive = isTrialActive(profile)
+  const hasCheckoutComplete = sessionStatus === 'complete'
+  const hasAccess = true
+  const calendarConnected = calendarStatus.acuity || calendarStatus.square
+  const interval = summary?.price?.interval
+  const amountText = summary?.price && formatAmount(summary.price.amount, summary.price.currency)
+  const endDateText = formatDate(summary?.current_period_end ?? null)
+  const trialEndText = formatIsoDate(profile?.trial_end)
+
+  const isCommissionValid =
+    selectedRole.barber_type !== 'commission' ||
+    (typeof commissionRate === 'number' && commissionRate >= 1 && commissionRate <= 100)
+  
+  const isUsernameValid = username.trim().length >= 3 && usernameStatus === 'available'
+  const isPhoneNumberValid = phoneNumber.replace(/\D/g, '').length === 10
+  const isBookingLinkValid = bookingLink.trim().length > 0
+  const isCalendarConnected = calendarConnected
+  
+  const isProfileValid = 
+    fullName.trim().length > 0 && 
+    isPhoneNumberValid &&
+    userType !== '' && 
+    selectedRole.barber_type !== '' &&
+    isCommissionValid &&
+    isUsernameValid &&
+    isBookingLinkValid
+
+  const stepLabels = [
+    { key: 'subscription', label: 'Subscription' },
+    { key: 'profile', label: 'Profile' },
+    { key: 'calendar', label: 'Calendar' }
+  ]
+  
+  const getCurrentStepNumber = () => {
+    if (!hasAccess) return 1
+    if (currentOnboardingStep === 'profile') return 2
+    return 3
+  }
+  
+  const currentStepNumber = getCurrentStepNumber()
+
+  const statusSummary = (() => {
+    if (hasSub) {
+      const renewalText = endDateText ? `Renews ${endDateText}` : 'Renews soon'
+      const priceText = amountText ? `${amountText}/${interval === 'year' ? 'yr' : 'mo'}` : 'Plan active'
+      return `${priceText} · ${renewalText}`
+    }
+
+    if (trialActive) {
+      return `Free Trial · Ends ${trialEndText ?? 'in 7 days'}`
+    }
+
+    if (hasCheckoutComplete) {
+      return 'Subscription processing'
+    }
+
+    return null
+  })()
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] px-4 py-12">
-      <div className="mx-auto w-full max-w-4xl lg:max-w-6xl text-white">
-        <div className="text-center">
-          <p className="text-[0.6rem] uppercase tracking-[0.35em] text-gray-400">Setup</p>
-          <h1 className="mt-3 text-3xl font-semibold">Finish your onboarding</h1>
-          <p className="mt-2 text-sm text-gray-400">
-            Follow the steps below to unlock your dashboard and reports.
-          </p>
-          {hasAccess && (
-            <div className="mt-5 flex flex-col items-center gap-3">
-              <span className="text-xs text-emerald-200 border border-emerald-300/20 rounded-full px-3 py-1">
-                Step {currentStep} of {stepLabels.length}
-              </span>
-              <div className="flex flex-wrap justify-center gap-2">
-                {stepLabels.map((label, index) => (
-                  <span
-                    key={label}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold border ${
-                      index + 1 === currentStep
-                        ? 'border-emerald-300/40 bg-emerald-400/10 text-emerald-100'
-                        : 'border-white/10 bg-black/30 text-gray-400'
-                    }`}
-                  >
-                    {label}
-                  </span>
-                ))}
+    <div className="min-h-screen bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            className="fixed inset-0 z-50 flex"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* overlay */}
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            {/* slide-over sidebar */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'tween', duration: 0.3 }}
+              className="relative w-72 bg-[#1a1f1b] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-emerald-300 text-2xl font-bold">Onboarding</span>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-gray-400 hover:text-white text-xl transition-colors"
+                >
+                  ✕
+                </button>
               </div>
-            </div>
-          )}
-        </div>
-
-        {statusSummary && (
-          <div className="mt-6 flex justify-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-4 py-2 text-xs text-gray-200">
-              <span className="text-emerald-300">✅</span>
-              {statusSummary}
-            </div>
-          </div>
-        )}
-
-        <div className="mt-8 rounded-3xl border border-white/10 bg-black/30 p-6 md:p-8 shadow-2xl">
-          {!hasAccess ? (
-            <div className="space-y-4">
-              {loading ? (
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing your subscription…
-                </div>
-              ) : sessionStatus === 'open' ? (
-                <>
-                  <p className="text-lg font-semibold">Checkout not completed</p>
-                  <p className="text-sm text-gray-300">
-                    Please return to pricing to finish checkout and activate your plan.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-lg font-semibold">No active subscription</p>
-                  <p className="text-sm text-gray-300">
-                    We couldn&apos;t find an active subscription for this account. Please return to pricing to choose a plan.
-                  </p>
-                </>
-              )}
-              <button
-                type="button"
-                onClick={() => router.push('/pricing')}
-                className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15"
-              >
-                Return to pricing
-              </button>
-            </div>
-          ) : (
-            <div id={setupSectionId} className="space-y-8">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div>
-                  <h2 className="text-lg font-semibold">Complete your setup</h2>
-                  <p className="text-xs text-gray-400">
-                    Finish your profile and connect a calendar to get started.
-                  </p>
-                </div>
-                {profileStepComplete && (
-                  <span className="text-xs text-emerald-300 border border-emerald-300/30 rounded-full px-3 py-1">
-                    Profile saved
-                  </span>
-                )}
-              </div>
-
-              <form onSubmit={handleProfileSave} className="space-y-8">
-                <div className="grid gap-6 lg:grid-cols-2">
-                  {/* Profile Section */}
-                  <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-6">
-                    <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Your profile</h3>
-                    
-                    {/* Avatar and What best describes you Row */}
-                    <div className="grid gap-4 md:grid-cols-[140px_1fr] items-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <EditableAvatar
-                          avatarUrl={avatarPreview}
-                          fullName={fullName}
-                          onClick={handleAvatarClick}
-                          size={110}
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAvatarClick}
-                          className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-full px-4 py-1 hover:border-white/20"
-                        >
-                          Change photo
-                        </button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={e => e.target.files?.[0] && handleAvatarChange(e.target.files[0])}
-                        />
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block mb-2 text-sm font-semibold text-white">Full Name</label>
-                          <input
-                            type="text"
-                            value={fullName}
-                            onChange={e => setFullName(e.target.value)}
-                            className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                            required
-                          />
-                          {showValidationErrors && !fullName.trim() && (
-                            <p className="mt-1 text-xs text-rose-300">Enter your full name</p>
-                          )}
+              
+              {/* Mobile Steps */}
+              <div className="space-y-3 flex-1">
+                {stepLabels.map((step, index) => {
+                  const stepNum = index + 1
+                  const isActive = stepNum === currentStepNumber
+                  const isComplete = stepNum < currentStepNumber
+                  
+                  return (
+                    <div
+                      key={step.key}
+                      className={`p-4 rounded-xl border transition-all ${
+                        isComplete
+                          ? 'border-emerald-300/40 bg-emerald-400/10'
+                          : isActive
+                          ? 'border-emerald-300/40 bg-emerald-400/10'
+                          : 'border-white/10 bg-black/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold ${
+                          isComplete
+                            ? 'border-emerald-300 bg-emerald-300 text-black'
+                            : isActive
+                            ? 'border-emerald-300 text-emerald-300'
+                            : 'border-white/30 text-white/30'
+                        }`}>
+                          {isComplete ? '✓' : stepNum}
                         </div>
-
                         <div>
-                          <label className="block mb-2 text-sm font-semibold text-white">What best describes you?</label>
-                          <select
-                            value={userType}
-                            onChange={e => {
-                              const value = e.target.value as 'barber' | 'owner' | ''
-                              setUserType(value)
-                              if (value === 'barber') {
-                                setSelectedRole({ label: '', role: 'Barber', barber_type: '' })
-                                setShopOperation('')
-                              } else if (value === 'owner') {
-                                setSelectedRole({ label: 'Shop Owner / Manager', role: 'Owner', barber_type: '' })
-                              } else {
-                                setSelectedRole({ label: '', role: '', barber_type: '' })
-                                setShopOperation('')
-                              }
-                            }}
-                            className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                          >
-                            <option value="">Select...</option>
-                            <option value="barber">Barber</option>
-                            <option value="owner">Shop Owner / Manager</option>
-                          </select>
-                          {showValidationErrors && userType === '' && (
-                            <p className="mt-1 text-xs text-rose-300">Select what best describes you</p>
+                          <p className={`text-sm font-semibold ${
+                            isComplete || isActive ? 'text-white' : 'text-white/40'
+                          }`}>
+                            {step.label}
+                          </p>
+                          {stepNum === 1 && statusSummary && (
+                            <p className="text-xs text-emerald-300 mt-0.5">
+                              ✓ {statusSummary}
+                            </p>
                           )}
                         </div>
                       </div>
                     </div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-                    {/* Rest of the form fields */}
-                    <div className="space-y-4">
+      {/* Page Content */}
+      <div
+        className="min-h-screen px-4 py-6 md:px-8 md:py-8"
+        style={{ paddingTop: 'calc(80px + 1.5rem)' }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-white">Onboarding</h1>
+            <p className="text-xs text-gray-400">Complete setup to unlock dashboard</p>
+          </div>
 
-                      {userType === 'barber' && (
-                        <>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:flex w-72 flex-shrink-0">
+              <div className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
+                <div className="space-y-3">
+                  {stepLabels.map((step, index) => {
+                    const stepNum = index + 1
+                    const isActive = stepNum === currentStepNumber
+                    const isComplete = stepNum < currentStepNumber
+                    
+                    return (
+                      <div
+                        key={step.key}
+                        className={`p-4 rounded-xl border transition-all ${
+                          isComplete
+                            ? 'border-emerald-300/40 bg-emerald-400/10'
+                            : isActive
+                            ? 'border-emerald-300/40 bg-emerald-400/10'
+                            : 'border-white/10 bg-black/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold ${
+                            isComplete
+                              ? 'border-emerald-300 bg-emerald-300 text-black'
+                              : isActive
+                              ? 'border-emerald-300 text-emerald-300'
+                              : 'border-white/30 text-white/30'
+                          }`}>
+                            {isComplete ? '✓' : stepNum}
+                          </div>
                           <div>
-                            <label className="block mb-2 text-sm font-semibold text-white">How do you operate?</label>
-                            <select
-                              value={selectedRole.barber_type}
-                              onChange={e => {
-                                const barberType = e.target.value
-                                setSelectedRole({
-                                  label: barberType === 'commission' ? 'Barber (Commission)' : 'Barber (Chair Rental)',
-                                  role: 'Barber',
-                                  barber_type: barberType,
-                                })
-                              }}
-                              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                            >
-                              <option value="">Select...</option>
-                              <option value="commission">Commission</option>
-                              <option value="rental">Chair Rental</option>
-                            </select>
-                            {showValidationErrors && selectedRole.barber_type === '' && (
-                              <p className="mt-1 text-xs text-rose-300">Select how you operate</p>
+                            <p className={`text-sm font-semibold ${
+                              isComplete || isActive ? 'text-white' : 'text-white/40'
+                            }`}>
+                              {step.label}
+                            </p>
+                            {stepNum === 1 && statusSummary && (
+                              <p className="text-xs text-emerald-300 mt-0.5">
+                                ✓ {statusSummary}
+                              </p>
                             )}
                           </div>
-
-                          {selectedRole.barber_type === 'commission' && (
-                            <div>
-                              <label className="block mb-2 text-sm font-semibold text-white">
-                                Commission Rate (%)
-                              </label>
-                              <input
-                                type="number"
-                                step="1"
-                                min="1"
-                                max="100"
-                                value={commissionRate}
-                                onChange={e => setCommissionRate(e.target.value === '' ? '' : Number(e.target.value))}
-                                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                                required
-                              />
-                              <p className="mt-1 text-xs text-gray-400">
-                                Used to calculate payouts and reports.
-                              </p>
-                              {showValidationErrors && !isCommissionValid && (
-                                <p className="mt-1 text-xs text-rose-300">
-                                  Enter a valid commission rate between 1 and 100
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {userType === 'owner' && (
-                        <div>
-                          <label className="block mb-2 text-sm font-semibold text-white">How does your shop operate?</label>
-                          <select
-                            value={shopOperation}
-                            onChange={e => setShopOperation(e.target.value as 'commission' | 'rental' | '')}
-                            className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                          >
-                            <option value="">Select...</option>
-                            <option value="commission">Commission</option>
-                            <option value="rental">Chair Rental</option>
-                          </select>
-                          {showValidationErrors && shopOperation === '' && (
-                            <p className="mt-1 text-xs text-rose-300">Select how your shop operates</p>
-                          )}
-                        </div>
-                      )}
-
-                      {userType && (
-                        <div className="rounded-xl border border-blue-400/30 bg-blue-400/10 p-3">
-                          <p className="text-xs text-blue-200">
-                            {getTrustMessage()}
-                          </p>
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block mb-2 text-sm font-semibold text-white">Booking Link (Optional)</label>
-                        <input
-                          type="url"
-                          value={bookingLink}
-                          onChange={e => setBookingLink(e.target.value)}
-                          className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                          placeholder="https://your-booking-site.com"
-                        />
-                        <p className="mt-1 text-xs text-gray-400">
-                          Where clients can book appointments with you directly
-                        </p>
-                        {!bookingLink.trim() && (
-                          <p className="mt-1 text-xs text-amber-300">
-                            ⚠️ SMS auto-nudges to clients are way more effective with a booking link.
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block mb-2 text-sm font-semibold text-white">Username</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={username}
-                            onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                            className="w-full p-3 pr-10 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                            placeholder="yourname"
-                            required
-                          />
-                          {usernameStatus === 'checking' && (
-                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-gray-400" />
-                          )}
-                          {usernameStatus === 'available' && (
-                            <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
-                          )}
-                          {usernameStatus === 'taken' && (
-                            <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-rose-400" />
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-400">
-                          Used for tracking SMS bookings: https://www.corva.ca/book?profile={username || 'yourname'}
-                        </p>
-                        {showValidationErrors && !username.trim() && (
-                          <p className="mt-1 text-xs text-rose-300">Enter a username</p>
-                        )}
-                        {username.trim() && username.length < 3 && (
-                          <p className="mt-1 text-xs text-rose-300">Username must be at least 3 characters</p>
-                        )}
-                        {usernameStatus === 'taken' && (
-                          <p className="mt-1 text-xs text-rose-300">This username is already taken</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Calendar Section */}
-                  <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-6">
-                    <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Connect your calendar</h3>
-                    <p className="text-xs text-gray-400">
-                      Choose the provider you want to sync. You can change this later in Settings.
-                    </p>
-                    <div className="space-y-3">
-                      {(
-                        [
-                          {
-                            id: 'acuity',
-                            title: 'Acuity',
-                            description: 'Recommended for booking management',
-                            helper: 'Best if you manage appointments in Acuity Scheduling.',
-                          },
-                          {
-                            id: 'square',
-                            title: 'Square',
-                            description: 'Best if you take payments + bookings in Square',
-                            helper: 'Ideal if your POS and scheduling live in Square.',
-                          },
-                        ] as const
-                      ).map((option) => (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => setSelectedProvider(option.id)}
-                          className={`w-full rounded-2xl border p-4 text-left transition ${
-                            selectedProvider === option.id
-                              ? 'border-emerald-400/40 bg-emerald-400/10'
-                              : 'border-white/10 bg-black/20 hover:border-white/30'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <span
-                              className={`mt-1 h-4 w-4 rounded-full border ${
-                                selectedProvider === option.id
-                                  ? 'border-emerald-300 bg-emerald-300'
-                                  : 'border-white/30'
-                              }`}
-                            />
-                            <div>
-                              <p className="text-sm font-semibold text-white">{option.title}</p>
-                              <p className="text-xs text-gray-300">{option.description}</p>
-                              <p className="text-[0.7rem] text-gray-400 mt-1">{option.helper}</p>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    {selectedProvider && (
-                      <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-                        <div className="flex flex-col gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-white">
-                              {selectedProvider === 'acuity' ? 'Acuity selected' : 'Square selected'}
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              {providerConnected
-                                ? 'Calendar connected successfully.'
-                                : 'Connect to begin syncing appointments.'}
-                            </p>
-                          </div>
-                          {!providerConnected && (
-                            <div>
-                              {selectedProvider === 'acuity' ? (
-                                <ConnectAcuityButton
-                                  variant="secondary"
-                                  onBeforeConnect={handleBeforeConnectAcuity}
-                                  disabled={calendarStatus.loading}
-                                  disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
-                                  className="w-full"
-                                />
-                              ) : (
-                                <ConnectSquareButton
-                                  variant="secondary"
-                                  onBeforeConnect={handleBeforeConnectSquare}
-                                  disabled={calendarStatus.loading}
-                                  disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
-                                  className="w-full"
-                                />
-                              )}
-                            </div>
-                          )}
-                          {providerConnected && (
-                            <span className="text-xs text-emerald-300 border border-emerald-300/30 rounded-full px-3 py-1 w-fit">
-                              Connected
-                            </span>
-                          )}
                         </div>
                       </div>
-                    )}
-
-                    <p className="text-[0.7rem] text-gray-500">
-                      You can change this later in Settings.
-                    </p>
-                  </div>
+                    )
+                  })}
                 </div>
-
-                {/* Centered Submit Section */}
-                <div className="flex flex-col items-center space-y-3 max-w-md mx-auto">
-                  <button
-                    type="submit"
-                    className={`w-full py-3 font-semibold rounded-xl transition-all ${
-                      isProfileValid && !profileLoading
-                        ? 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black'
-                        : 'bg-white/5 border border-white/10 text-gray-400'
-                    }`}
-                    disabled={profileLoading || !isProfileValid}
-                  >
-                    {profileLoading ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </span>
-                    ) : (
-                      'Finish onboarding'
-                    )}
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => {
-                      toast('Connect a calendar later in Settings to sync appointments.', {
-                        icon: '⚠️',
-                      })
-                      router.push('/settings')
-                    }}
-                    className="w-full py-2 text-xs text-gray-400 hover:text-white transition"
-                  >
-                    Connect later in Settings
-                  </button>
-                </div>
-              </form>
+              </div>
             </div>
-          )}
+
+            {/* Mobile Menu Button */}
+            <div className="flex lg:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="px-6 py-2.5 bg-gradient-to-r from-emerald-400 to-[#3af1f7] text-black rounded-full font-semibold shadow-lg hover:shadow-emerald-400/20 transition-all"
+              >
+                Menu
+              </button>
+            </div>
+
+            {/* Main Content */}
+            <motion.div
+              key={currentOnboardingStep}
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="flex-1 min-h-[600px]"
+            >
+              {!hasAccess ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-xl">
+                  <div className="space-y-4">
+                    {loading ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-300">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing your subscription…
+                      </div>
+                    ) : sessionStatus === 'open' ? (
+                      <>
+                        <p className="text-lg font-semibold text-white">Checkout not completed</p>
+                        <p className="text-sm text-gray-300">
+                          Please return to pricing to finish checkout and activate your plan.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-lg font-semibold text-white">No active subscription</p>
+                        <p className="text-sm text-gray-300">
+                          We couldn&apos;t find an active subscription for this account. Please return to pricing to choose a plan.
+                        </p>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => router.push('/pricing')}
+                      className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15"
+                    >
+                      Return to pricing
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {currentOnboardingStep === 'profile' ? (
+                    <ProfileStep
+                      fullName={fullName}
+                      setFullName={setFullName}
+                      phoneNumber={phoneNumber}
+                      setPhoneNumber={setPhoneNumber}
+                      userType={userType}
+                      setUserType={setUserType}
+                      selectedRole={selectedRole}
+                      setSelectedRole={setSelectedRole}
+                      commissionRate={commissionRate}
+                      setCommissionRate={setCommissionRate}
+                      username={username}
+                      setUsername={setUsername}
+                      usernameStatus={usernameStatus}
+                      setUsernameStatus={setUsernameStatus}
+                      bookingLink={bookingLink}
+                      setBookingLink={setBookingLink}
+                      avatarFile={avatarFile}
+                      setAvatarFile={setAvatarFile}
+                      avatarPreview={avatarPreview}
+                      setAvatarPreview={setAvatarPreview}
+                      showValidationErrors={showValidationErrors}
+                      isProfileValid={isProfileValid}
+                      isCommissionValid={isCommissionValid}
+                      isUsernameValid={isUsernameValid}
+                      isPhoneNumberValid={isPhoneNumberValid}
+                      isBookingLinkValid={isBookingLinkValid}
+                      onNext={handleNext}
+                    />
+                  ) : (
+                    <CalendarStep
+                      selectedProvider={selectedProvider}
+                      setSelectedProvider={setSelectedProvider}
+                      calendarStatus={calendarStatus}
+                      acuityCalendars={acuityCalendars}
+                      selectedAcuityCalendar={selectedAcuityCalendar}
+                      setSelectedAcuityCalendar={setSelectedAcuityCalendar}
+                      handleBeforeConnectAcuity={handleBeforeConnectAcuity}
+                      handleAcuityConnectSuccess={handleAcuityConnectSuccess}
+                      handleBeforeConnectSquare={handleBeforeConnectSquare}
+                      onBack={handleBack}
+                      onFinish={handleFinishOnboarding}
+                      isCalendarConnected={isCalendarConnected}
+                      profileLoading={profileLoading}
+                    />
+                  )}
+                </>
+              )}
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>
