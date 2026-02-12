@@ -182,7 +182,44 @@ function PricingPageContent() {
       maximumFractionDigits: 0,
     }).format(amount / 100)
 
+  // Start card-less trial (no Stripe checkout)
+  const startTrial = async () => {
+    try {
+      setLoading(true)
+      setSelectedPlan('trial')
+      setShowCancelModal(false)
+
+      const res = await fetch('/api/trial/start', {
+        method: 'POST',
+      })
+
+      const data = await res.json()
+      console.log('trial/start response:', res.status, data)
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start trial')
+      }
+
+      toast.success('Trial started! Redirecting to onboarding...')
+      router.push('/pricing/return')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not start trial'
+      console.error(message)
+      toast.error(message)
+      setSelectedPlan(null)
+      setShowCancelModal(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Start Stripe checkout for paid plans
   const startCheckout = async (plan: Plan) => {
+    // For trial, use the card-less flow
+    if (plan === 'trial') {
+      return startTrial()
+    }
+
     try {
       setLoading(true)
       setSelectedPlan(plan)
@@ -271,10 +308,10 @@ function PricingPageContent() {
                   <>
                     <p className="text-3xl font-bold mb-1">Free</p>
                     <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
-                      {TRIAL_DAYS} days • billing info required
+                      {TRIAL_DAYS} days • no card required
                     </p>
                     <p className="text-xs text-gray-300">
-                      Start your {TRIAL_DAYS}-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
+                      Start your {TRIAL_DAYS}-day free trial of Corva Pro. No credit card needed to get started.
                     </p>
                   </>
                 )}
@@ -295,7 +332,7 @@ function PricingPageContent() {
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
                 {loading && selectedPlan === 'trial'
-                  ? 'Starting checkout…'
+                  ? 'Starting trial…'
                   : 'Start Free Trial'}
               </button>
             </div>
