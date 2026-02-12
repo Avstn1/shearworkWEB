@@ -35,9 +35,9 @@ const getModeConfig = (mode: TrialPromptMode, daysRemaining: number) => {
         icon: CreditCard,
         iconColor: COLORS.green,
         iconGlow: COLORS.greenGlow,
-        title: 'Add a card to keep Auto-Fill running after your trial.',
-        subtitle: null,
-        primaryButton: 'Add Card',
+        title: `Your trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}.`,
+        subtitle: 'Add a payment method to keep Auto-Fill sending reminders and filling your open slots. No charge until your trial ends.',
+        primaryButton: 'Subscribe Now',
         secondaryButton: 'Not Now',
         showClose: true,
       }
@@ -47,8 +47,8 @@ const getModeConfig = (mode: TrialPromptMode, daysRemaining: number) => {
         iconColor: COLORS.yellow,
         iconGlow: COLORS.yellowGlow,
         title: `Only ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left on your trial.`,
-        subtitle: 'Add a card to avoid interruption.',
-        primaryButton: 'Add Card',
+        subtitle: 'After your trial, Auto-Fill will pause. Subscribe now to keep your bookings coming in.',
+        primaryButton: 'Subscribe Now',
         secondaryButton: 'Remind Me Later',
         showClose: true,
       }
@@ -58,8 +58,8 @@ const getModeConfig = (mode: TrialPromptMode, daysRemaining: number) => {
         iconColor: COLORS.red,
         iconGlow: COLORS.redGlow,
         title: 'Your trial has ended.',
-        subtitle: 'Add a payment method to continue using Corva.',
-        primaryButton: 'Add Card',
+        subtitle: 'Auto-Fill is paused. Subscribe now to pick up right where you left off — your data is safe.',
+        primaryButton: 'Subscribe Now',
         secondaryButton: null,
         showClose: false,
       }
@@ -181,15 +181,7 @@ export default function TrialPromptModal({
                 )}
               </div>
 
-              {/* Trial info for strong mode */}
-              {mode === 'strong' && (
-                <p
-                  className="mt-4 text-xs"
-                  style={{ color: COLORS.textMuted }}
-                >
-                  Your data is safe. Add a card to pick up where you left off.
-                </p>
-              )}
+
             </div>
           </motion.div>
         </motion.div>

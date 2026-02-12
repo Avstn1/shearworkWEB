@@ -439,11 +439,11 @@ function PricingPageContent() {
 
       {/* Modal: embedded checkout */}
       {clientSecret && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto">
+          <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => closeCheckout(true)}
-              className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition px-1.5 py-1.5"
+              className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition px-1.5 py-1.5 z-10"
               aria-label="Close checkout"
             >
               <X className="w-4 h-4 text-gray-200" />
