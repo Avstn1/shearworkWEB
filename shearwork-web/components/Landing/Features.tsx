@@ -20,28 +20,28 @@ const COLORS = {
 export default function Features() {
  const features = [
     {
-      title: 'Business Insights',
-      desc: 'See your revenue, trends, and performance in real-time with comprehensive analytics.',
-      icon: '📊',
+      title: 'Auto-Fill Engine',
+      desc: 'Detects open spots and fills them before they go to waste.',
+      icon: '⚡',
     },
     {
-      title: 'Automated Reports',
-      desc: 'Weekly and monthly reports automatically generated and delivered to your inbox.',
+      title: 'Smart Client Reminders',
+      desc: 'Reaches past clients at the right time to recover bookings.',
+      icon: '💬',
+    },
+    {
+      title: 'Booking Alerts',
+      desc: 'Get notified the moment a reminder turns into a booking.',
+      icon: '🔔',
+    },
+    {
+      title: 'Simple Performance Insights',
+      desc: 'See what is working without getting buried in dashboards.',
       icon: '📈',
     },
     {
-      title: 'Expense Tracking',
-      desc: 'Monitor all your business expenses in one place with our built-in tracker.',
-      icon: '💰',
-    },
-    {
-      title: 'Tip Tracker',
-      desc: 'Never lose track of your daily tips with easy logging and totals.',
-      icon: '💵',
-    },
-    {
-      title: 'Acuity Integration',
-      desc: 'Seamlessly sync your appointments from Acuity Scheduling.',
+      title: 'Booking Integration',
+      desc: 'Connect Acuity or Square so everything stays in sync.',
       icon: '🔗',
     },
   ]
@@ -62,7 +62,7 @@ export default function Features() {
         className="text-4xl font-bold mb-12"
         style={{ color: COLORS.text }}
       >
-        Why Barbers Choose Corva
+        How Corva Makes You More Money
       </motion.h2>
 
       {/* ✅ Switched from grid to flex for proper horizontal centering */}

@@ -21,14 +21,14 @@ export default function FeaturesAndPricing() {
   const router = useRouter()
 
   const features = [
-    { title: 'Business Insights', desc: 'Analytics & insights.', icon: '📊' },
-    { title: 'Automated Reports', desc: 'Weekly summaries.', icon: '📈' },
-    { title: 'Expense Tracking', desc: 'Track expenses.', icon: '💰' },
-    { title: 'Tip Tracker', desc: 'Track tips.', icon: '💵' },
-    { title: 'Acuity Integration', desc: 'Sync bookings.', icon: '🔗' },
+    { title: 'Auto-Fill Engine', desc: 'Recover open spots automatically.', icon: '⚡' },
+    { title: 'Smart Client Reminders', desc: 'Reach past clients at the right time.', icon: '💬' },
+    { title: 'Booking Alerts', desc: 'Know the moment someone books.', icon: '🔔' },
+    { title: 'Simple Performance Insights', desc: 'See what works without the noise.', icon: '📈' },
+    { title: 'Booking Integration', desc: 'Connect Acuity or Square.', icon: '🔗' },
   ]
 
-  const plans = [{ name: 'Pro Monthly', price: '$20/month' }]
+  const plans = [{ name: 'Corva Pro', price: '$20/month' }]
 
   return (
     <section
@@ -48,7 +48,7 @@ export default function FeaturesAndPricing() {
             transition={{ duration: 0.3 }}
             className="text-base md:text-xl lg:text-2xl font-bold mb-2 md:mb-4"
           >
-            Features
+            How Corva Makes You More Money
           </motion.h2>
 
           <div className="grid grid-cols-2 gap-2.5 md:gap-4">
@@ -127,7 +127,7 @@ export default function FeaturesAndPricing() {
                 </div>
 
                 <div className="space-y-1 md:space-y-2 mb-2 md:mb-4">
-                  {['Automated reports', 'Expense tracking', 'Analytics', 'Acuity integration'].map(
+                  {['Auto-Fill your empty slots', 'Smart booking reminders', 'Real-time booking alerts', 'Weekly performance insights'].map(
                     (feature, idx) => (
                       <div key={idx} className="flex items-center gap-1.5 md:gap-2">
                         <div
@@ -150,8 +150,11 @@ export default function FeaturesAndPricing() {
                     color: '#000',
                   }}
                 >
-                  Get Started
+                  Start 21-Day Free Trial
                 </button>
+                <p className="mt-2 text-[10px] md:text-xs" style={{ color: COLORS.textMuted }}>
+                  No credit card required
+                </p>
               </div>
             </motion.div>
           ))}

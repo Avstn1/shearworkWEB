@@ -1,20 +1,40 @@
 'use client'
 
-import { ReactNode, Suspense, useEffect } from 'react'
+import { ReactNode, Suspense, useEffect, useMemo } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
 import MobileAuthHandler from './MobileAuthHandler'
+import TrialPromptModal from '@/components/Dashboard/TrialPromptModal'
 import { isTrialActive } from '@/utils/trial'
 
 function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, profile, isAdmin, isPremiumUser, isLoading, profileStatus } = useAuth()
+  const {
+    user,
+    profile,
+    isAdmin,
+    isPremiumUser,
+    isLoading,
+    profileStatus,
+    trialPromptMode,
+    trialDaysRemaining,
+  } = useAuth()
 
   // Public routes that don't need authentication
   const publicRoutes = ['/', '/login', '/signup', '/pricing', '/settings', '/book']
   const isPublicRoute = publicRoutes.includes(pathname)
+
+  // Show strong prompt modal when trial has ended (Day 21+)
+  const showStrongPrompt = useMemo(() => {
+    return trialPromptMode === 'strong' && !isPublicRoute && !isAdmin
+  }, [trialPromptMode, isPublicRoute, isAdmin])
+
+  // Fallback handler - modal now handles checkout internally
+  const handleAddCard = () => {
+    router.push('/pricing')
+  }
 
   // -----------------------------
   // Keep your redirect logic exactly as before
@@ -138,6 +158,14 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <MobileAuthHandler />
       </Suspense>
+
+      {/* Strong prompt modal - blocking, no dismiss */}
+      <TrialPromptModal
+        isOpen={showStrongPrompt}
+        mode="strong"
+        daysRemaining={trialDaysRemaining}
+        onAddCard={handleAddCard}
+      />
 
       {showSidebar && <Sidebar />}
 
