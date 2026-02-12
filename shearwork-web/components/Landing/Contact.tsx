@@ -35,7 +35,7 @@ export default function Contact() {
         className="text-4xl font-bold mb-6"
         style={{ color: COLORS.text }}
       >
-        Ready to get started?
+        Ready to stop guessing?
       </motion.h2>
 
       {/* Description */}
@@ -46,7 +46,7 @@ export default function Contact() {
         className="max-w-2xl mx-auto mb-10 text-lg"
         style={{ color: COLORS.textMuted }}
       >
-        Let's help you manage your barber business effortlessly. Contact us for a free demo or onboarding assistance.
+        Let&apos;s show you how Corva turns your numbers into a clear plan. Get a free walkthrough.
       </motion.p>
 
       {/* Contact Button — opens email client */}

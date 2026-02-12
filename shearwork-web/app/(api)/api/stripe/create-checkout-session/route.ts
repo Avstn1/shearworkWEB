@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { TRIAL_DAYS } from '@/lib/constants/trial'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
         supabase_user_id: user.id,
         plan, // so you can see which plan they picked in Stripe
       },
-      ...(plan === 'trial' ? { subscription_data: { trial_period_days: 7 } } : {}),
+      ...(plan === 'trial' ? { subscription_data: { trial_period_days: TRIAL_DAYS } } : {}),
     })
 
     if (!session.client_secret) {

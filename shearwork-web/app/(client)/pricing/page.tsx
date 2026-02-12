@@ -10,6 +10,7 @@ import {
 import { Loader2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
+import { TRIAL_DAYS } from '@/lib/constants/trial'
 import { useSearchParams, useRouter } from 'next/navigation'
 
 const stripePromise = loadStripe(
@@ -181,7 +182,44 @@ function PricingPageContent() {
       maximumFractionDigits: 0,
     }).format(amount / 100)
 
+  // Start card-less trial (no Stripe checkout)
+  const startTrial = async () => {
+    try {
+      setLoading(true)
+      setSelectedPlan('trial')
+      setShowCancelModal(false)
+
+      const res = await fetch('/api/trial/start', {
+        method: 'POST',
+      })
+
+      const data = await res.json()
+      console.log('trial/start response:', res.status, data)
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start trial')
+      }
+
+      toast.success('Trial started! Redirecting to onboarding...')
+      router.push('/pricing/return')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not start trial'
+      console.error(message)
+      toast.error(message)
+      setSelectedPlan(null)
+      setShowCancelModal(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Start Stripe checkout for paid plans
   const startCheckout = async (plan: Plan) => {
+    // For trial, use the card-less flow
+    if (plan === 'trial') {
+      return startTrial()
+    }
+
     try {
       setLoading(true)
       setSelectedPlan(plan)
@@ -270,10 +308,10 @@ function PricingPageContent() {
                   <>
                     <p className="text-3xl font-bold mb-1">Free</p>
                     <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
-                      7 days • billing info required
+                      {TRIAL_DAYS} days • no card required
                     </p>
                     <p className="text-xs text-gray-300">
-                      Start your 7-day free trial of Corva Pro. Enter billing info now — no commitment, cancel anytime.
+                      Start your {TRIAL_DAYS}-day free trial of Corva Pro. No credit card needed to get started.
                     </p>
                   </>
                 )}
@@ -294,7 +332,7 @@ function PricingPageContent() {
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
                 {loading && selectedPlan === 'trial'
-                  ? 'Starting checkout…'
+                  ? 'Starting trial…'
                   : 'Start Free Trial'}
               </button>
             </div>
@@ -401,11 +439,11 @@ function PricingPageContent() {
 
       {/* Modal: embedded checkout */}
       {clientSecret && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto">
+          <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => closeCheckout(true)}
-              className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition px-1.5 py-1.5"
+              className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition px-1.5 py-1.5 z-10"
               aria-label="Close checkout"
             >
               <X className="w-4 h-4 text-gray-200" />

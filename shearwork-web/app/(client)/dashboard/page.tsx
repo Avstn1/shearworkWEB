@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -31,6 +32,7 @@ import YearlyDashboard from '@/components/Dashboard/YearlyDashboard'
 import GettingStartedTips from '@/components/Dashboard/GettingStartedTips'
 import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
 import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
+import TrialPromptModal from '@/components/Dashboard/TrialPromptModal'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/utils/supabaseClient'
@@ -59,8 +61,13 @@ const getLocalMonthYear = () => {
   return { month: MONTHS[now.getMonth()], year: now.getFullYear() }
 }
 
+// localStorage keys for prompt dismissal tracking
+const SOFT_PROMPT_DISMISSED_KEY = 'trial_soft_prompt_dismissed_date'
+const URGENT_PROMPT_DISMISSED_KEY = 'trial_urgent_prompt_dismissed_session'
+
 export default function DashboardPage() {
-  const { user, profile, isLoading } = useAuth()
+  const router = useRouter()
+  const { user, profile, isLoading, trialPromptMode, trialDaysRemaining } = useAuth()
 
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -71,6 +78,7 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [dashboardView, setDashboardView] = useState<'monthly' | 'yearly' | 'profit'>('monthly')
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate())
+  const [showTrialPrompt, setShowTrialPrompt] = useState(false)
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
   const hasSyncedInitially = useRef(false)
@@ -79,6 +87,41 @@ export default function DashboardPage() {
   const isSyncing = useRef(false)
   const showGettingStarted = isTrialUser
   const showTrialNote = isTrialUser && !profile?.onboarded
+
+  // Check if we should show soft/urgent prompt
+  useEffect(() => {
+    if (trialPromptMode === 'soft') {
+      // Once per day for soft prompt
+      const dismissedDate = localStorage.getItem(SOFT_PROMPT_DISMISSED_KEY)
+      const today = new Date().toDateString()
+      if (dismissedDate !== today) {
+        setShowTrialPrompt(true)
+      }
+    } else if (trialPromptMode === 'urgent') {
+      // Once per session for urgent prompt
+      const dismissedThisSession = sessionStorage.getItem(URGENT_PROMPT_DISMISSED_KEY)
+      if (!dismissedThisSession) {
+        setShowTrialPrompt(true)
+      }
+    } else {
+      setShowTrialPrompt(false)
+    }
+  }, [trialPromptMode])
+
+  // handleAddCard is kept for interface compatibility but modal handles checkout internally
+  const handleAddCard = useCallback(() => {
+    // Modal now handles checkout directly, this is a fallback
+    router.push('/pricing')
+  }, [router])
+
+  const handleDismissPrompt = useCallback(() => {
+    setShowTrialPrompt(false)
+    if (trialPromptMode === 'soft') {
+      localStorage.setItem(SOFT_PROMPT_DISMISSED_KEY, new Date().toDateString())
+    } else if (trialPromptMode === 'urgent') {
+      sessionStorage.setItem(URGENT_PROMPT_DISMISSED_KEY, 'true')
+    }
+  }, [trialPromptMode])
 
 
   const cardClass =
@@ -415,6 +458,17 @@ export default function DashboardPage() {
   // -------------------- RENDER --------------------
   return (
     <OnboardingGuard>
+      {/* Soft/Urgent trial prompt modal */}
+      {(trialPromptMode === 'soft' || trialPromptMode === 'urgent') && (
+        <TrialPromptModal
+          isOpen={showTrialPrompt}
+          mode={trialPromptMode}
+          daysRemaining={trialDaysRemaining}
+          onAddCard={handleAddCard}
+          onDismiss={handleDismissPrompt}
+        />
+      )}
+
       {isMobile && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex flex-col">
           <div className="absolute inset-0 backdrop-blur-sm bg-black/40" onClick={() => setMobileMenuOpen(false)} />
