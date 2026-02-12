@@ -65,7 +65,7 @@ export default function ProfileStep({
   onNext,
 }: ProfileStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout>()
+  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/\D/g, '')
