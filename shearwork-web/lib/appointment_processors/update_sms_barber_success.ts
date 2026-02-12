@@ -236,7 +236,7 @@ export async function updateSmsBarberSuccess(
           .insert({
             user_id: userId,
             header: "SMS Auto-nudge success!",
-            message: `${appointmentDetails.firstName} booked your opening at ${readableDatetime}.`,
+            message: `${appointmentDetails.firstName} booked your opening at ${readableDatetime}`,
             reference_type: 'sms_auto_nudge',
             show: false
           });

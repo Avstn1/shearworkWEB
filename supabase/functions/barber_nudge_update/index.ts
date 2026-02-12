@@ -12,6 +12,7 @@ const supabase = createClient(
 const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID")
 const authToken = Deno.env.get("TWILIO_AUTH_TOKEN")
 const messagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID_BARBERS")
+const siteUrl = Deno.env.get("NEXT_PUBLIC_SITE_URL")
 
 const twilio_client = twilio(accountSid, authToken)
 
@@ -136,6 +137,7 @@ Deno.serve(async (req) => {
       .ilike('role', 'barber')
       .eq('stripe_subscription_status', 'active')
       .eq('sms_engaged_current_week', true)
+      .eq('user_id', '39d5d08d-2deb-4b92-a650-ee10e70b7af1') // TEMP - only send to Gavin for testing
       .not('phone', 'is', null)
 
     if (barbersError) {
@@ -216,6 +218,20 @@ Deno.serve(async (req) => {
 
         console.log(`Update sent to ${barber.full_name} (${barber.phone}): ${twilioMessage.sid}`)
         console.log(`Stats: ${filledSlots}/${totalSlots} slots, $${estimatedRecovery} recovery`)
+
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: barber.user_id,
+            header: "Auto nudge update",
+            message: "Your auto nudge update has been sent to your phone. Click to view details in Corva.",
+            reference_type: 'sms_auto_nudge',
+            show: false,
+          });
+
+        if (notificationError) {
+          console.error('Failed to insert notifications. Continuing without notification', notificationError)
+        }
         
         results.push({
           user_id: barber.user_id,

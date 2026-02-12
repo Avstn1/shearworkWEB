@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import { useAuth } from '@/contexts/AuthContext'
@@ -44,16 +44,23 @@ function PricingReturnContent() {
     trial_end?: string | null
   } | null>(null)
   const [fullName, setFullName] = useState('')
+  const [userType, setUserType] = useState<'barber' | 'owner' | ''>('')
   const [selectedRole, setSelectedRole] = useState({
-    label: 'Barber (Commission)',
-    role: 'Barber',
-    barber_type: 'commission',
+    label: '',
+    role: '',
+    barber_type: '',
   })
   const [commissionRate, setCommissionRate] = useState<number | ''>('')
+  const [shopOperation, setShopOperation] = useState<'commission' | 'rental' | ''>('')
+  const [username, setUsername] = useState('')
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const [bookingLink, setBookingLink] = useState('')
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined)
-  const [selectedProvider, setSelectedProvider] = useState<'acuity' | 'square' | null>(null)
+  const [selectedProvider, setSelectedProvider] = useState<'acuity' | 'square' | null>('acuity')
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id')
@@ -107,7 +114,7 @@ function PricingReturnContent() {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('onboarded, full_name, role, barber_type, commission_rate, avatar_url, trial_active, trial_start, trial_end')
+          .select('onboarded, full_name, role, barber_type, commission_rate, avatar_url, username, booking_link, trial_active, trial_start, trial_end')
           .eq('user_id', user.id)
           .single()
 
@@ -115,12 +122,27 @@ function PricingReturnContent() {
 
         setProfile(data)
         setFullName(data?.full_name ?? '')
-        if (data?.role && data?.barber_type) {
-          const label = data.barber_type === 'commission'
-            ? 'Barber (Commission)'
-            : 'Barber (Chair Rental)'
-          setSelectedRole({ label, role: data.role, barber_type: data.barber_type })
+        setUsername(data?.username ?? '')
+        setBookingLink(data?.booking_link ?? '')
+        
+        if (data?.role) {
+          if (data.role === 'Barber') {
+            setUserType('barber')
+            if (data?.barber_type) {
+              const label = data.barber_type === 'commission'
+                ? 'Barber (Commission)'
+                : 'Barber (Chair Rental)'
+              setSelectedRole({ label, role: data.role, barber_type: data.barber_type })
+            }
+          } else if (data.role === 'Owner') {
+            setUserType('owner')
+            setSelectedRole({ label: 'Shop Owner / Manager', role: 'Owner', barber_type: '' })
+            if (data?.barber_type) {
+              setShopOperation(data.barber_type)
+            }
+          }
         }
+        
         if (typeof data?.commission_rate === 'number') {
           setCommissionRate(Math.round(data.commission_rate * 100))
         }
@@ -135,6 +157,50 @@ function PricingReturnContent() {
 
     fetchProfile()
   }, [])
+
+  const checkUsername = async (value: string) => {
+    if (!value || value.length < 3) {
+      setUsernameStatus('idle')
+      return
+    }
+
+    setUsernameStatus('checking')
+
+    try {
+      const res = await fetch(`/api/db-search/search-username?username=${encodeURIComponent(value)}`)
+      const data = await res.json()
+
+      if (!res.ok) {
+        setUsernameStatus('idle')
+        return
+      }
+
+      setUsernameStatus(data.available ? 'available' : 'taken')
+    } catch (err) {
+      console.error('Username check error:', err)
+      setUsernameStatus('idle')
+    }
+  }
+
+  useEffect(() => {
+    if (usernameCheckTimeoutRef.current) {
+      clearTimeout(usernameCheckTimeoutRef.current)
+    }
+
+    if (username.length >= 3) {
+      usernameCheckTimeoutRef.current = setTimeout(() => {
+        checkUsername(username)
+      }, 500)
+    } else {
+      setUsernameStatus('idle')
+    }
+
+    return () => {
+      if (usernameCheckTimeoutRef.current) {
+        clearTimeout(usernameCheckTimeoutRef.current)
+      }
+    }
+  }, [username])
 
   const formatAmount = (amount: number, currency: string) =>
     new Intl.NumberFormat('en-CA', {
@@ -164,7 +230,7 @@ function PricingReturnContent() {
   const hasSub = summary?.hasSubscription ?? false
   const trialActive = isTrialActive(profile)
   const hasCheckoutComplete = sessionStatus === 'complete'
-  const hasAccess = hasSub || trialActive || hasCheckoutComplete
+  const hasAccess = true // hasSub || trialActive || hasCheckoutComplete CHANGE LATER
   const calendarConnected = calendarStatus.acuity || calendarStatus.square
   const interval = summary?.price?.interval
   const intervalLabel =
@@ -178,7 +244,19 @@ function PricingReturnContent() {
   const isCommissionValid =
     selectedRole.barber_type !== 'commission' ||
     (typeof commissionRate === 'number' && commissionRate >= 1 && commissionRate <= 100)
-  const isProfileValid = fullName.trim().length > 0 && isCommissionValid
+  
+  const isShopOperationValid = 
+    userType !== 'owner' || shopOperation !== ''
+  
+  const isUsernameValid = 
+    username.trim().length >= 3 && usernameStatus === 'available'
+  
+  const isProfileValid = 
+    fullName.trim().length > 0 && 
+    userType !== '' && 
+    (userType === 'owner' ? isShopOperationValid : selectedRole.barber_type !== '') &&
+    isCommissionValid &&
+    isUsernameValid
 
   const setupSectionId = 'onboarding-setup'
 
@@ -288,6 +366,12 @@ function PricingReturnContent() {
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!isProfileValid) {
+      setShowValidationErrors(true)
+      return
+    }
+    
     setProfileLoading(true)
 
     try {
@@ -309,8 +393,10 @@ function PricingReturnContent() {
       const profileUpdate: Record<string, unknown> = {
         full_name: fullName,
         role: selectedRole.role,
-        barber_type: selectedRole.barber_type,
+        barber_type: userType === 'owner' ? shopOperation : selectedRole.barber_type || null,
         avatar_url: avatarUrl,
+        username: username.toLowerCase(),
+        booking_link: bookingLink.trim() || null,
         onboarded: true,
       }
 
@@ -394,9 +480,19 @@ function PricingReturnContent() {
     }
   }
 
+  const getTrustMessage = () => {
+    if (userType === 'barber') {
+      return 'You will only see your own schedule and data.'
+    }
+    if (userType === 'owner') {
+      return 'For now, you will only see your own schedule and data. Full shop-wide analytics are coming soon.'
+    }
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] px-4 py-12">
-      <div className="mx-auto w-full max-w-4xl lg:max-w-5xl text-white">
+      <div className="mx-auto w-full max-w-4xl lg:max-w-6xl text-white">
         <div className="text-center">
           <p className="text-[0.6rem] uppercase tracking-[0.35em] text-gray-400">Setup</p>
           <h1 className="mt-3 text-3xl font-semibold">Finish your onboarding</h1>
@@ -483,191 +579,321 @@ function PricingReturnContent() {
               </div>
 
               <form onSubmit={handleProfileSave} className="space-y-8">
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Your profile</h3>
-                  <div className="grid gap-6 md:grid-cols-[140px_1fr]">
-                    <div className="flex flex-col items-center gap-3">
-                      <EditableAvatar
-                        avatarUrl={avatarPreview}
-                        fullName={fullName}
-                        onClick={handleAvatarClick}
-                        size={110}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAvatarClick}
-                        className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-full px-4 py-1 hover:border-white/20"
-                      >
-                        Change photo
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={e => e.target.files?.[0] && handleAvatarChange(e.target.files[0])}
-                      />
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block mb-2 text-sm font-semibold text-white">Full Name</label>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Profile Section */}
+                  <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-6">
+                    <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Your profile</h3>
+                    
+                    {/* Avatar and What best describes you Row */}
+                    <div className="grid gap-4 md:grid-cols-[140px_1fr] items-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <EditableAvatar
+                          avatarUrl={avatarPreview}
+                          fullName={fullName}
+                          onClick={handleAvatarClick}
+                          size={110}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAvatarClick}
+                          className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-full px-4 py-1 hover:border-white/20"
+                        >
+                          Change photo
+                        </button>
                         <input
-                          type="text"
-                          value={fullName}
-                          onChange={e => setFullName(e.target.value)}
-                          className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                          required
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => e.target.files?.[0] && handleAvatarChange(e.target.files[0])}
                         />
                       </div>
 
-                      <div>
-                        <label className="block mb-2 text-sm font-semibold text-white">Role</label>
-                        <select
-                          value={selectedRole.label}
-                          onChange={e => {
-                            const roleObj = ['Barber (Commission)', 'Barber (Chair Rental)'].includes(e.target.value)
-                              ? e.target.value
-                              : 'Barber (Commission)'
-
-                            setSelectedRole({
-                              label: roleObj,
-                              role: 'Barber',
-                              barber_type: roleObj === 'Barber (Commission)' ? 'commission' : 'rental',
-                            })
-                          }}
-                          className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                        >
-                          <option value="Barber (Commission)">Barber (Commission)</option>
-                          <option value="Barber (Chair Rental)">Barber (Chair Rental)</option>
-                        </select>
-                      </div>
-
-                      {selectedRole.barber_type === 'commission' && (
+                      <div className="space-y-4">
                         <div>
-                          <label className="block mb-2 text-sm font-semibold text-white">
-                            Commission Rate (%)
-                          </label>
+                          <label className="block mb-2 text-sm font-semibold text-white">Full Name</label>
                           <input
-                            type="number"
-                            step="1"
-                            min="1"
-                            max="100"
-                            value={commissionRate}
-                            onChange={e => setCommissionRate(e.target.value === '' ? '' : Number(e.target.value))}
+                            type="text"
+                            value={fullName}
+                            onChange={e => setFullName(e.target.value)}
                             className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
                             required
                           />
-                          <p className="mt-1 text-xs text-gray-400">
-                            Used to calculate payouts and reports.
-                          </p>
-                          {!isCommissionValid && (
-                            <p className="mt-1 text-xs text-rose-300">
-                              Enter a commission rate between 1 and 100.
-                            </p>
+                          {showValidationErrors && !fullName.trim() && (
+                            <p className="mt-1 text-xs text-rose-300">Enter your full name</p>
                           )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Connect your calendar</h3>
-                  <p className="text-xs text-gray-400">
-                    Choose the provider you want to sync. You can change this later in Settings.
-                  </p>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {(
-                      [
-                        {
-                          id: 'acuity',
-                          title: 'Acuity',
-                          description: 'Recommended for booking management',
-                          helper: 'Best if you manage appointments in Acuity Scheduling.',
-                        },
-                        {
-                          id: 'square',
-                          title: 'Square',
-                          description: 'Best if you take payments + bookings in Square',
-                          helper: 'Ideal if your POS and scheduling live in Square.',
-                        },
-                      ] as const
-                    ).map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setSelectedProvider(option.id)}
-                        className={`rounded-2xl border p-4 text-left transition ${
-                          selectedProvider === option.id
-                            ? 'border-emerald-400/40 bg-emerald-400/10'
-                            : 'border-white/10 bg-black/20 hover:border-white/30'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span
-                            className={`mt-1 h-4 w-4 rounded-full border ${
-                              selectedProvider === option.id
-                                ? 'border-emerald-300 bg-emerald-300'
-                                : 'border-white/30'
-                            }`}
-                          />
-                          <div>
-                            <p className="text-sm font-semibold text-white">{option.title}</p>
-                            <p className="text-xs text-gray-300">{option.description}</p>
-                            <p className="text-[0.7rem] text-gray-400 mt-1">{option.helper}</p>
-                          </div>
+                        <div>
+                          <label className="block mb-2 text-sm font-semibold text-white">What best describes you?</label>
+                          <select
+                            value={userType}
+                            onChange={e => {
+                              const value = e.target.value as 'barber' | 'owner' | ''
+                              setUserType(value)
+                              if (value === 'barber') {
+                                setSelectedRole({ label: '', role: 'Barber', barber_type: '' })
+                                setShopOperation('')
+                              } else if (value === 'owner') {
+                                setSelectedRole({ label: 'Shop Owner / Manager', role: 'Owner', barber_type: '' })
+                              } else {
+                                setSelectedRole({ label: '', role: '', barber_type: '' })
+                                setShopOperation('')
+                              }
+                            }}
+                            className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                          >
+                            <option value="">Select...</option>
+                            <option value="barber">Barber</option>
+                            <option value="owner">Shop Owner / Manager</option>
+                          </select>
+                          {showValidationErrors && userType === '' && (
+                            <p className="mt-1 text-xs text-rose-300">Select what best describes you</p>
+                          )}
                         </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {selectedProvider && (
-                    <div className="rounded-2xl border border-white/10 bg-black/40 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {selectedProvider === 'acuity' ? 'Acuity selected' : 'Square selected'}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {providerConnected
-                            ? 'Calendar connected successfully.'
-                            : 'Connect to begin syncing appointments.'}
-                        </p>
                       </div>
-                      {!providerConnected && (
-                        <div className="w-full sm:w-auto">
-                          {selectedProvider === 'acuity' ? (
-                            <ConnectAcuityButton
-                              variant="secondary"
-                              onBeforeConnect={handleBeforeConnectAcuity}
-                              disabled={calendarStatus.loading}
-                              disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
-                              className="w-full"
-                            />
-                          ) : (
-                            <ConnectSquareButton
-                              variant="secondary"
-                              onBeforeConnect={handleBeforeConnectSquare}
-                              disabled={calendarStatus.loading}
-                              disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
-                              className="w-full"
-                            />
+                    </div>
+
+                    {/* Rest of the form fields */}
+                    <div className="space-y-4">
+
+                      {userType === 'barber' && (
+                        <>
+                          <div>
+                            <label className="block mb-2 text-sm font-semibold text-white">How do you operate?</label>
+                            <select
+                              value={selectedRole.barber_type}
+                              onChange={e => {
+                                const barberType = e.target.value
+                                setSelectedRole({
+                                  label: barberType === 'commission' ? 'Barber (Commission)' : 'Barber (Chair Rental)',
+                                  role: 'Barber',
+                                  barber_type: barberType,
+                                })
+                              }}
+                              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                            >
+                              <option value="">Select...</option>
+                              <option value="commission">Commission</option>
+                              <option value="rental">Chair Rental</option>
+                            </select>
+                            {showValidationErrors && selectedRole.barber_type === '' && (
+                              <p className="mt-1 text-xs text-rose-300">Select how you operate</p>
+                            )}
+                          </div>
+
+                          {selectedRole.barber_type === 'commission' && (
+                            <div>
+                              <label className="block mb-2 text-sm font-semibold text-white">
+                                Commission Rate (%)
+                              </label>
+                              <input
+                                type="number"
+                                step="1"
+                                min="1"
+                                max="100"
+                                value={commissionRate}
+                                onChange={e => setCommissionRate(e.target.value === '' ? '' : Number(e.target.value))}
+                                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                                required
+                              />
+                              <p className="mt-1 text-xs text-gray-400">
+                                Used to calculate payouts and reports.
+                              </p>
+                              {showValidationErrors && !isCommissionValid && (
+                                <p className="mt-1 text-xs text-rose-300">
+                                  Enter a valid commission rate between 1 and 100
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {userType === 'owner' && (
+                        <div>
+                          <label className="block mb-2 text-sm font-semibold text-white">How does your shop operate?</label>
+                          <select
+                            value={shopOperation}
+                            onChange={e => setShopOperation(e.target.value as 'commission' | 'rental' | '')}
+                            className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                          >
+                            <option value="">Select...</option>
+                            <option value="commission">Commission</option>
+                            <option value="rental">Chair Rental</option>
+                          </select>
+                          {showValidationErrors && shopOperation === '' && (
+                            <p className="mt-1 text-xs text-rose-300">Select how your shop operates</p>
                           )}
                         </div>
                       )}
-                      {providerConnected && (
-                        <span className="text-xs text-emerald-300 border border-emerald-300/30 rounded-full px-3 py-1">
-                          Connected
-                        </span>
-                      )}
-                    </div>
-                  )}
 
-                  <p className="text-[0.7rem] text-gray-500">
-                    You can change this later in Settings.
-                  </p>
+                      {userType && (
+                        <div className="rounded-xl border border-blue-400/30 bg-blue-400/10 p-3">
+                          <p className="text-xs text-blue-200">
+                            {getTrustMessage()}
+                          </p>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block mb-2 text-sm font-semibold text-white">Booking Link (Optional)</label>
+                        <input
+                          type="url"
+                          value={bookingLink}
+                          onChange={e => setBookingLink(e.target.value)}
+                          className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                          placeholder="https://your-booking-site.com"
+                        />
+                        <p className="mt-1 text-xs text-gray-400">
+                          Where clients can book appointments with you directly
+                        </p>
+                        {!bookingLink.trim() && (
+                          <p className="mt-1 text-xs text-amber-300">
+                            ⚠️ SMS auto-nudges to clients are way more effective with a booking link.
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block mb-2 text-sm font-semibold text-white">Username</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={username}
+                            onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                            className="w-full p-3 pr-10 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                            placeholder="yourname"
+                            required
+                          />
+                          {usernameStatus === 'checking' && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-gray-400" />
+                          )}
+                          {usernameStatus === 'available' && (
+                            <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
+                          )}
+                          {usernameStatus === 'taken' && (
+                            <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-rose-400" />
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-400">
+                          Used for tracking SMS bookings: https://www.corva.ca/book?profile={username || 'yourname'}
+                        </p>
+                        {showValidationErrors && !username.trim() && (
+                          <p className="mt-1 text-xs text-rose-300">Enter a username</p>
+                        )}
+                        {username.trim() && username.length < 3 && (
+                          <p className="mt-1 text-xs text-rose-300">Username must be at least 3 characters</p>
+                        )}
+                        {usernameStatus === 'taken' && (
+                          <p className="mt-1 text-xs text-rose-300">This username is already taken</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Calendar Section */}
+                  <div className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-6">
+                    <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Connect your calendar</h3>
+                    <p className="text-xs text-gray-400">
+                      Choose the provider you want to sync. You can change this later in Settings.
+                    </p>
+                    <div className="space-y-3">
+                      {(
+                        [
+                          {
+                            id: 'acuity',
+                            title: 'Acuity',
+                            description: 'Recommended for booking management',
+                            helper: 'Best if you manage appointments in Acuity Scheduling.',
+                          },
+                          {
+                            id: 'square',
+                            title: 'Square',
+                            description: 'Best if you take payments + bookings in Square',
+                            helper: 'Ideal if your POS and scheduling live in Square.',
+                          },
+                        ] as const
+                      ).map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setSelectedProvider(option.id)}
+                          className={`w-full rounded-2xl border p-4 text-left transition ${
+                            selectedProvider === option.id
+                              ? 'border-emerald-400/40 bg-emerald-400/10'
+                              : 'border-white/10 bg-black/20 hover:border-white/30'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={`mt-1 h-4 w-4 rounded-full border ${
+                                selectedProvider === option.id
+                                  ? 'border-emerald-300 bg-emerald-300'
+                                  : 'border-white/30'
+                              }`}
+                            />
+                            <div>
+                              <p className="text-sm font-semibold text-white">{option.title}</p>
+                              <p className="text-xs text-gray-300">{option.description}</p>
+                              <p className="text-[0.7rem] text-gray-400 mt-1">{option.helper}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {selectedProvider && (
+                      <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                        <div className="flex flex-col gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              {selectedProvider === 'acuity' ? 'Acuity selected' : 'Square selected'}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {providerConnected
+                                ? 'Calendar connected successfully.'
+                                : 'Connect to begin syncing appointments.'}
+                            </p>
+                          </div>
+                          {!providerConnected && (
+                            <div>
+                              {selectedProvider === 'acuity' ? (
+                                <ConnectAcuityButton
+                                  variant="secondary"
+                                  onBeforeConnect={handleBeforeConnectAcuity}
+                                  disabled={calendarStatus.loading}
+                                  disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
+                                  className="w-full"
+                                />
+                              ) : (
+                                <ConnectSquareButton
+                                  variant="secondary"
+                                  onBeforeConnect={handleBeforeConnectSquare}
+                                  disabled={calendarStatus.loading}
+                                  disabledReason={calendarStatus.loading ? 'Checking calendar status' : undefined}
+                                  className="w-full"
+                                />
+                              )}
+                            </div>
+                          )}
+                          {providerConnected && (
+                            <span className="text-xs text-emerald-300 border border-emerald-300/30 rounded-full px-3 py-1 w-fit">
+                              Connected
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-[0.7rem] text-gray-500">
+                      You can change this later in Settings.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
+                {/* Centered Submit Section */}
+                <div className="flex flex-col items-center space-y-3 max-w-md mx-auto">
                   <button
                     type="submit"
                     className={`w-full py-3 font-semibold rounded-xl transition-all ${
@@ -686,11 +912,7 @@ function PricingReturnContent() {
                       'Finish onboarding'
                     )}
                   </button>
-                  {!isProfileValid && (
-                    <p className="text-xs text-gray-400">
-                      Enter your name and a valid commission rate to continue.
-                    </p>
-                  )}
+                  
                   <button
                     type="button"
                     onClick={() => {
