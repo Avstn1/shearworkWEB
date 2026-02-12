@@ -108,8 +108,9 @@ export default function DashboardPage() {
     }
   }, [trialPromptMode])
 
+  // handleAddCard is kept for interface compatibility but modal handles checkout internally
   const handleAddCard = useCallback(() => {
-    setShowTrialPrompt(false)
+    // Modal now handles checkout directly, this is a fallback
     router.push('/pricing')
   }, [router])
 

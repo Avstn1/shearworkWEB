@@ -31,6 +31,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     return trialPromptMode === 'strong' && !isPublicRoute && !isAdmin
   }, [trialPromptMode, isPublicRoute, isAdmin])
 
+  // Fallback handler - modal now handles checkout internally
   const handleAddCard = () => {
     router.push('/pricing')
   }
