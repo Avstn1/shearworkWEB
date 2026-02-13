@@ -9,6 +9,8 @@ import { supabase } from '@/utils/supabaseClient'
 import { useAuth } from '@/contexts/AuthContext'
 import ProfileStep from '@/components/Onboarding/ProfileStep'
 import CalendarStep from '@/components/Onboarding/CalendarStep'
+import BookingSyncStep from '@/components/Onboarding/BookingSyncStep'
+import AutoNudgeActivationStep from '@/components/Onboarding/AutoNudgeActivationStep'
 import { isTrialActive } from '@/utils/trial'
 
 const fadeInUp: Variants = {
@@ -48,7 +50,7 @@ function PricingReturnContent() {
   const [sessionStatus, setSessionStatus] = useState<'open' | 'complete' | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileStepComplete, setProfileStepComplete] = useState(false)
-  const [currentOnboardingStep, setCurrentOnboardingStep] = useState<'profile' | 'calendar'>('profile')
+  const [currentOnboardingStep, setCurrentOnboardingStep] = useState<'profile' | 'calendar' | 'booking-sync' | 'auto-nudge'>('profile')
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
@@ -145,7 +147,25 @@ function PricingReturnContent() {
 
         setProfile(data)
         setFullName(data?.full_name ?? '')
-        setPhoneNumber(data?.phone ?? '')
+        
+        // Format phone from E.164 (+12223334444) to display format (222) 333-4444
+        const phoneFromDB = data?.phone ?? ''
+        if (phoneFromDB) {
+          const phoneDigits = phoneFromDB.replace(/\D/g, '').slice(1) // Remove +1, keep 10 digits
+          const formatPhoneDisplay = (digits: string) => {
+            if (digits.length <= 3) {
+              return digits
+            } else if (digits.length <= 6) {
+              return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+            } else {
+              return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+            }
+          }
+          setPhoneNumber(formatPhoneDisplay(phoneDigits))
+        } else {
+          setPhoneNumber('')
+        }
+        
         setUsername(data?.username ?? '')
         setBookingLink(data?.booking_link ?? '')
         
@@ -273,12 +293,20 @@ function PricingReturnContent() {
       }
       setShowValidationErrors(false)
       setCurrentOnboardingStep('calendar')
+    } else if (currentOnboardingStep === 'calendar') {
+      setCurrentOnboardingStep('booking-sync')
+    } else if (currentOnboardingStep === 'booking-sync') {
+      setCurrentOnboardingStep('auto-nudge')
     }
   }
 
   const handleBack = () => {
     if (currentOnboardingStep === 'calendar') {
       setCurrentOnboardingStep('profile')
+    } else if (currentOnboardingStep === 'booking-sync') {
+      setCurrentOnboardingStep('calendar')
+    } else if (currentOnboardingStep === 'auto-nudge') {
+      setCurrentOnboardingStep('booking-sync')
     }
   }
 
@@ -455,13 +483,17 @@ function PricingReturnContent() {
   const stepLabels = [
     { key: 'subscription', label: 'Subscription' },
     { key: 'profile', label: 'Profile' },
-    { key: 'calendar', label: 'Calendar' }
+    { key: 'calendar', label: 'Calendar' },
+    { key: 'booking-sync', label: 'Booking Sync' },
+    { key: 'auto-nudge', label: 'Auto Nudge' }
   ]
   
   const getCurrentStepNumber = () => {
     if (!hasAccess) return 1
     if (currentOnboardingStep === 'profile') return 2
-    return 3
+    if (currentOnboardingStep === 'calendar') return 3
+    if (currentOnboardingStep === 'booking-sync') return 4
+    return 5
   }
   
   const currentStepNumber = getCurrentStepNumber()
@@ -713,7 +745,7 @@ function PricingReturnContent() {
                       isBookingLinkValid={isBookingLinkValid}
                       onNext={handleNext}
                     />
-                  ) : (
+                  ) : currentOnboardingStep === 'calendar' ? (
                     <CalendarStep
                       selectedProvider={selectedProvider}
                       setSelectedProvider={setSelectedProvider}
@@ -725,8 +757,20 @@ function PricingReturnContent() {
                       handleAcuityConnectSuccess={handleAcuityConnectSuccess}
                       handleBeforeConnectSquare={handleBeforeConnectSquare}
                       onBack={handleBack}
-                      onFinish={handleFinishOnboarding}
+                      onFinish={handleNext}
                       isCalendarConnected={isCalendarConnected}
+                      profileLoading={profileLoading}
+                    />
+                  ) : currentOnboardingStep === 'booking-sync' ? (
+                    <BookingSyncStep
+                      onBack={handleBack}
+                      onNext={handleNext}
+                      profileLoading={profileLoading}
+                    />
+                  ) : (
+                    <AutoNudgeActivationStep
+                      onBack={handleBack}
+                      onFinish={handleFinishOnboarding}
                       profileLoading={profileLoading}
                     />
                   )}

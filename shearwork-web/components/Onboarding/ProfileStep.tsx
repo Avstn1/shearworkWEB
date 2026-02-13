@@ -65,7 +65,7 @@ export default function ProfileStep({
   onNext,
 }: ProfileStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout>()
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/\D/g, '')
@@ -171,7 +171,6 @@ export default function ProfileStep({
 
       <div className="space-y-6 rounded-2xl border border-white/10 bg-black/20 p-6">
         <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Your profile</h3>
-        
         {/* Avatar, Full Name, and Phone Number */}
         <div className="grid gap-6 md:grid-cols-[160px_1fr] items-start">
           <div className="flex flex-col items-center gap-3 mt-3">
@@ -214,17 +213,20 @@ export default function ProfileStep({
 
             <div>
               <label className="block mb-2 text-sm font-semibold text-white">Phone Number</label>
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={handlePhoneChange}
-                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-                placeholder="(555) 123-4567"
-                required
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                +1 will be added automatically when saving
-              </p>
+              <div className="flex items-center gap-2">
+                <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium text-white">
+                  +1
+                </div>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={handlePhoneChange}
+                  className="flex-1 p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                  placeholder="(555) 123-4567"
+                  maxLength={14}
+                  required
+                />
+              </div>
               {showValidationErrors && !isPhoneNumberValid && (
                 <p className="mt-1 text-xs text-rose-300">Enter a valid 10-digit phone number</p>
               )}
@@ -367,17 +369,17 @@ export default function ProfileStep({
             )}
           </div>
         </div>
-      </div>
 
-      {/* Next Button */}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onNext}
-          className="px-8 py-3 font-semibold rounded-xl transition-all bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg"
-        >
-          Next
-        </button>
+        {/* Next Button */}
+        <div className="flex justify-end pt-4 border-t border-white/10">
+          <button
+            type="button"
+            onClick={onNext}
+            className="px-8 py-3 font-semibold rounded-xl transition-all bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   )

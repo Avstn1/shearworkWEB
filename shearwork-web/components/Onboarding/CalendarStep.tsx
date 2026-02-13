@@ -197,46 +197,35 @@ export default function CalendarStep({
           </div>
         )}
 
-        <p className="text-[0.7rem] text-gray-500">
-          You can change this later in Settings.
-        </p>
+        {/* Back and Finish Buttons */}
+        <div className="flex justify-between items-center gap-4 pt-4 border-t border-white/10">
+          <button
+            type="button"
+            onClick={onBack}
+            className="px-6 py-3 font-semibold rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={onFinish}
+            disabled={profileLoading || !isCalendarConnected}
+            className={`px-8 py-3 font-semibold rounded-xl transition-all ${
+              profileLoading || !isCalendarConnected
+                ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+        
+        {!isCalendarConnected && (
+          <p className="text-xs text-gray-400 text-center">
+            Connect a calendar to continue
+          </p>
+        )}
       </div>
-
-      {/* Back and Finish Buttons */}
-      <div className="flex justify-between items-center gap-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="px-6 py-3 font-semibold rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={onFinish}
-          disabled={profileLoading || !isCalendarConnected}
-          className={`px-8 py-3 font-semibold rounded-xl transition-all ${
-            profileLoading || !isCalendarConnected
-              ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
-          }`}
-        >
-          {profileLoading ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Finishing...
-            </span>
-          ) : (
-            'Finish onboarding'
-          )}
-        </button>
-      </div>
-      
-      {!isCalendarConnected && (
-        <p className="text-xs text-gray-400 text-center">
-          Connect a calendar to finish onboarding
-        </p>
-      )}
     </div>
   )
 }

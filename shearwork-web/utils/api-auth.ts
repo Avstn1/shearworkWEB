@@ -10,10 +10,9 @@ export async function getAuthenticatedUser(request: Request) {
     // Get user_id from custom header for service role requests
     const userId = request.headers.get('x-user-id');
     if (userId) {
-      console.log('Authenticated via service role for user:', userId);
+      // console.log('Authenticated via service role for user:', userId);
       const { data: { user }, error } = await supabase.auth.admin.getUserById(userId);
       if (user) {
-        console.log(supabase)
         return { user, supabase };
       }
 
