@@ -30,6 +30,7 @@ interface Profile {
   onboarded?: boolean | null
   special_access?: boolean | null
   last_read_feature_updates?: string | null
+  date_autonudge_enabled?: string | null
   [key: string]: unknown
 }
 
@@ -120,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profilePromise = supabase
           .from('profiles')
           .select(
-            'role, stripe_subscription_status, full_name, trial_active, trial_start, trial_end, onboarded, special_access, last_read_feature_updates'
+            'role, stripe_subscription_status, full_name, trial_active, trial_start, trial_end, onboarded, special_access, last_read_feature_updates, date_autonudge_enabled'
           )
           .eq('user_id', userId)
           .maybeSingle() as unknown as Promise<PostgrestSingleResponse<Profile>>

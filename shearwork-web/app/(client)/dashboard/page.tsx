@@ -29,7 +29,7 @@ import ServiceBreakdownChart from '@/components/Dashboard/ServiceBreakdownChart'
 import MarketingFunnelsChart from '@/components/Dashboard/MarketingFunnelsChart'
 import ProfitLossDashboard from '@/components/Dashboard/ProfitLossDashboard'
 import YearlyDashboard from '@/components/Dashboard/YearlyDashboard'
-import GettingStartedTips from '@/components/Dashboard/GettingStartedTips'
+import TrialStatusHub from '@/components/Dashboard/TrialStatusHub'
 import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
 import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
 import TrialPromptModal from '@/components/Dashboard/TrialPromptModal'
@@ -224,7 +224,8 @@ export default function DashboardPage() {
     }
   }
 
-  const scrollToWeeklyReports = () => {
+  // Scroll helper for weekly reports section (kept for potential future use)
+  const _scrollToWeeklyReports = () => {
     if (dashboardView !== 'monthly') {
       setDashboardView('monthly')
       setTimeout(() => {
@@ -418,10 +419,11 @@ export default function DashboardPage() {
         </div>
       )}
       {showGettingStarted && (
-        <GettingStartedTips
+        <TrialStatusHub
           userId={user.id}
-          onSync={syncAcuityData}
-          onOpenWeeklyReports={scrollToWeeklyReports}
+          daysRemaining={trialDaysRemaining}
+          dateAutoNudgeEnabled={profile?.date_autonudge_enabled ?? null}
+          onNavigateToAutoNudge={() => router.push('/client-manager')}
         />
       )}
       <AnimatePresence mode="wait" initial={false}>
