@@ -248,16 +248,28 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
             <h4 className="text-sm font-semibold text-emerald-200 mb-2">
               ✓ Previously Synced Data
             </h4>
-            <p className="text-xs text-emerald-300 mb-2">
-              {completedSyncs.length} month{completedSyncs.length !== 1 ? 's' : ''} already synced:
-            </p>
-            <div className="text-xs text-emerald-200 max-h-32 overflow-y-auto">
-              {completedSyncs.map((sync, i) => (
-                <span key={i}>
-                  {sync.month} {sync.year}
-                  {i < completedSyncs.length - 1 ? ', ' : ''}
-                </span>
-              ))}
+            <div className="text-xs text-emerald-300">
+              <p className="mb-1">
+                <span className="font-semibold">{completedSyncs.length}</span> month{completedSyncs.length !== 1 ? 's' : ''} synced
+              </p>
+              {completedSyncs.length > 0 && (
+                <p className="text-emerald-200">
+                  {(() => {
+                    const sorted = [...completedSyncs].sort((a, b) => {
+                      if (a.year !== b.year) return a.year - b.year
+                      return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month)
+                    })
+                    const earliest = sorted[0]
+                    const latest = sorted[sorted.length - 1]
+                    
+                    if (sorted.length === 1) {
+                      return `${earliest.month} ${earliest.year}`
+                    }
+                    
+                    return `${earliest.month} ${earliest.year} – ${latest.month} ${latest.year}`
+                  })()}
+                </p>
+              )}
             </div>
           </div>
         )}

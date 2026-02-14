@@ -39,6 +39,13 @@ export default function BookingSyncStep({
 
       setUserId(user.id)
 
+      // Call edge function to update availability data
+      supabase.functions.invoke('update_barber_availability', {
+        body: { user_id: user.id }
+      }).catch(err => {
+        console.error('Background availability update failed:', err)
+      })
+
       // Check for existing sync_status rows
       const { data: syncStatusData, error: syncError } = await supabase
         .from('sync_status')

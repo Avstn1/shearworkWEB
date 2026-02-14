@@ -65,7 +65,7 @@ export default function ProfileStep({
   onNext,
 }: ProfileStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout>()
+  const usernameCheckTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/\D/g, '')
@@ -152,7 +152,7 @@ export default function ProfileStep({
   }, [username])
 
   return (
-    <div className="space-y-6 animate-fadeInUp">
+    <div className="space-y-6 animate-fadeInUp min-h-[calc(100vh-340px)]">
       <style jsx>{`
         @keyframes fadeInUp {
           from {

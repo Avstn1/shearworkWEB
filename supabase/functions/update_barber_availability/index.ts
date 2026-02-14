@@ -1,4 +1,4 @@
-// supabase/functions/daily_availability_pull/index.ts
+// supabase/functions/update_barber_availability/index.ts
 
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
@@ -15,20 +15,45 @@ const torontoToday = new Date(
   new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
 )
 
-Deno.serve(async (_req) => {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    })
+  }
+
   try {
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
     const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
     
     const CONCURRENCY_LIMIT = 100
 
-    // Get all profiles with a calendar set
-    const { data: profiles, error: profileError } = await supabase
+    // Check for optional user_id parameter
+    const body = await req.json()
+    console.log('Received body:', body)
+    const targetUserId = body.user_id
+
+    // Get all profiles with a calendar set (filtered by user_id if provided)
+    let profileQuery = supabase
       .from('profiles')
       .select('user_id, calendar, full_name')
       .not('calendar', 'is', null)
       .neq('calendar', '')
+    
+    if (targetUserId) {
+      profileQuery = profileQuery.eq('user_id', targetUserId)
+    }
 
+    const { data: profiles, error: profileError } = await profileQuery
+    
     if (profileError) throw profileError
 
     // Build all requests to be made (one per user)
@@ -51,16 +76,13 @@ Deno.serve(async (_req) => {
       // Tue-Sun = update mode to set slot_count_update (current availability)
       const day = torontoToday.getDay()
       const isMonday = day === 1
-      const update = !isMonday
+      const update = !isMonday && !targetUserId
       
       let url;
-      // url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false&week=next&mode=update`
-      // const update = true;
 
       // If not update, then it's a monday so reset sms_engaged_current week for everyone
       if (!update) {
-          const { error: updateError } = await supabase
-
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
             sms_engaged_current_week: false,
@@ -157,7 +179,10 @@ Deno.serve(async (_req) => {
         slotsUpserted: r.data?.slotsUpserted || 0
       }))
     }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      },
       status: 200,
     })
   } catch (err: unknown) {
@@ -167,7 +192,10 @@ Deno.serve(async (_req) => {
       error: errorMessage 
     }), { 
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        ...corsHeaders
+      }
     })
   }
 })

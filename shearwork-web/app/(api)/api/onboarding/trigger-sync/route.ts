@@ -11,6 +11,13 @@ export async function POST(request: NextRequest) {
     const { user, supabase } = await getAuthenticatedUser(request)
     const { userId, startMonth, startYear } = await request.json()
 
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     if (!userId || !startYear) {
       return NextResponse.json(
         { error: 'Missing userId or startYear' },

@@ -1,6 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
+import { supabase } from '@/utils/supabaseClient'
 import ConnectAcuityButton from '@/components/ConnectAcuityButton'
 import ConnectSquareButton from '@/components/ConnectSquareButton'
 
@@ -20,6 +22,7 @@ interface CalendarStepProps {
   handleBeforeConnectSquare: () => Promise<boolean>
   onBack: () => void
   onFinish: () => void
+  onSaveCalendar: () => Promise<void>
   isCalendarConnected: boolean
   profileLoading: boolean
 }
@@ -36,15 +39,68 @@ export default function CalendarStep({
   handleBeforeConnectSquare,
   onBack,
   onFinish,
+  onSaveCalendar,
   isCalendarConnected,
   profileLoading,
 }: CalendarStepProps) {
+  const [saving, setSaving] = useState(false)
+  const [isCalendarLocked, setIsCalendarLocked] = useState(false)
+  const [loadingLockStatus, setLoadingLockStatus] = useState(true)
+  const [existingCalendar, setExistingCalendar] = useState<string>('')
+
+  // Check if calendar is already locked on mount
+  useEffect(() => {
+    checkCalendarLock()
+  }, [])
+
+  const checkCalendarLock = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('calendar')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profile?.calendar) {
+        setIsCalendarLocked(true)
+        setExistingCalendar(profile.calendar)
+        setSelectedAcuityCalendar(profile.calendar)
+      }
+    } catch (error) {
+      console.error('Error checking calendar lock:', error)
+    } finally {
+      setLoadingLockStatus(false)
+    }
+  }
+
   const providerConnected =
     selectedProvider === 'acuity'
       ? calendarStatus.acuity
       : selectedProvider === 'square'
         ? calendarStatus.square
         : false
+
+  // Calendar is selected if: locked (already saved) OR user has selected one
+  const isCalendarSelected = isCalendarLocked || (selectedProvider === 'acuity' 
+    ? !!selectedAcuityCalendar 
+    : selectedProvider === 'square')
+
+  const handleNext = async () => {
+    if (!isCalendarSelected) return
+
+    setSaving(true)
+    try {
+      await onSaveCalendar()
+      onFinish()
+    } catch (error) {
+      console.error('Error saving calendar:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -155,26 +211,35 @@ export default function CalendarStep({
                   <div>
                     <label className="block mb-2 text-sm font-semibold text-white">Select Calendar</label>
                     <select
-                      value={selectedAcuityCalendar}
+                      value={isCalendarLocked ? existingCalendar : selectedAcuityCalendar}
                       onChange={e => setSelectedAcuityCalendar(e.target.value)}
-                      className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
+                      disabled={isCalendarLocked}
+                      className={`w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all ${
+                        isCalendarLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                      }`}
                     >
-                      <option value="">Select a calendar...</option>
-                      {acuityCalendars.map((cal) => (
-                        <option key={cal.id} value={cal.name}>
-                          {cal.name}
-                        </option>
-                      ))}
+                      {!isCalendarLocked && <option value="">Select a calendar...</option>}
+                      {isCalendarLocked ? (
+                        <option value={existingCalendar}>{existingCalendar}</option>
+                      ) : (
+                        acuityCalendars.map((cal) => (
+                          <option key={cal.id} value={cal.name}>
+                            {cal.name}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
-                  <div className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-3">
-                    <p className="text-xs text-rose-200 font-semibold">
-                      ⚠️ WARNING: You cannot change your calendar after selecting one.
-                    </p>
-                    <p className="text-xs text-rose-200 mt-1">
-                      If you need to change calendars later, you will need to create a new account.
-                    </p>
-                  </div>
+                  {!isCalendarLocked && (
+                    <div className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-3">
+                      <p className="text-xs text-rose-200 font-semibold">
+                        ⚠️ WARNING: You cannot change your calendar after clicking Next.
+                      </p>
+                      <p className="text-xs text-rose-200 mt-1">
+                        Make sure you select the correct calendar before proceeding.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
               {providerConnected && (
@@ -197,32 +262,49 @@ export default function CalendarStep({
           </div>
         )}
 
-        {/* Back and Finish Buttons */}
+        {/* Back and Next Buttons */}
         <div className="flex justify-between items-center gap-4 pt-4 border-t border-white/10">
           <button
             type="button"
             onClick={onBack}
-            className="px-6 py-3 font-semibold rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
+            disabled={saving}
+            className={`px-6 py-3 font-semibold rounded-xl transition-all ${
+              saving
+                ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
+                : 'bg-white/10 border border-white/20 hover:bg-white/15'
+            }`}
           >
             Back
           </button>
           <button
             type="button"
-            onClick={onFinish}
-            disabled={profileLoading || !isCalendarConnected}
+            onClick={handleNext}
+            disabled={profileLoading || saving || !isCalendarConnected || !isCalendarSelected}
             className={`px-8 py-3 font-semibold rounded-xl transition-all ${
-              profileLoading || !isCalendarConnected
+              profileLoading || saving || !isCalendarConnected || !isCalendarSelected
                 ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
             }`}
           >
-            Next
+            {saving ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              'Next'
+            )}
           </button>
         </div>
         
         {!isCalendarConnected && (
           <p className="text-xs text-gray-400 text-center">
             Connect a calendar to continue
+          </p>
+        )}
+        {isCalendarConnected && !isCalendarSelected && !isCalendarLocked && (
+          <p className="text-xs text-gray-400 text-center">
+            Select a calendar to continue
           </p>
         )}
       </div>

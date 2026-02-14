@@ -40,13 +40,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Barber not found' })
     }
 
+    const hasActiveAccess = profile.stripe_subscription_status === 'active' || profile.trial_active === true
+    
+    if (!hasActiveAccess) {
+      console.log('Barber does not have active subscription or trial')
+      return NextResponse.json({ success: false, error: 'No active subscription or trial' })
+    }
+
     // If the barber already said yes this week then don't run the nudge again.
     if (profile.sms_engaged_current_week) {
       console.log('Barber already said yes for this week')
       return NextResponse.json({ success: true, ignored: true })
     }
 
-    // Any code below this point will have the intention to send out messages to clients
+    // Any code below this point has the intention to send out messages to clients
     
     // Log the reply in the database
     const { error: insertError } = await supabase

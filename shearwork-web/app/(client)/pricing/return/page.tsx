@@ -310,6 +310,28 @@ function PricingReturnContent() {
     }
   }
 
+  const handleSaveCalendar = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not logged in')
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          calendar: selectedProvider === 'acuity' ? selectedAcuityCalendar : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      toast.success('Calendar saved!')
+    } catch (error) {
+      console.error('Error saving calendar:', error)
+      toast.error('Failed to save calendar')
+      throw error
+    }
+  }
+
   const handleFinishOnboarding = async () => {
     if (!isCalendarConnected) {
       toast.error('Please connect a calendar to continue')
@@ -455,7 +477,7 @@ function PricingReturnContent() {
   const hasSub = summary?.hasSubscription ?? false
   const trialActive = isTrialActive(profile)
   const hasCheckoutComplete = sessionStatus === 'complete'
-  const hasAccess = true
+  const hasAccess = hasSub || trialActive || hasCheckoutComplete 
   const calendarConnected = calendarStatus.acuity || calendarStatus.square
   const interval = summary?.price?.interval
   const amountText = summary?.price && formatAmount(summary.price.amount, summary.price.currency)
@@ -603,7 +625,7 @@ function PricingReturnContent() {
       {/* Page Content */}
       <div
         className="min-h-screen px-4 py-6 md:px-8 md:py-8"
-        style={{ paddingTop: 'calc(80px + 1.5rem)' }}
+        style={{ paddingTop: 'calc(80px + 2.5rem)' }}
       >
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
@@ -611,10 +633,10 @@ function PricingReturnContent() {
             <p className="text-xs text-gray-400">Complete setup to unlock dashboard</p>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex flex-col lg:flex-row gap-6 lg:items-stretch">
             {/* Desktop Sidebar */}
             <div className="hidden lg:flex w-72 flex-shrink-0">
-              <div className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
+              <div className="w-full h-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
                 <div className="space-y-3">
                   {stepLabels.map((step, index) => {
                     const stepNum = index + 1
@@ -679,10 +701,10 @@ function PricingReturnContent() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="flex-1 min-h-[600px]"
+              className="flex-1 flex flex-col"
             >
               {!hasAccess ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-xl">
+                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-xl h-full">
                   <div className="space-y-4">
                     {loading ? (
                       <div className="flex items-center gap-2 text-sm text-gray-300">
@@ -758,6 +780,7 @@ function PricingReturnContent() {
                       handleBeforeConnectSquare={handleBeforeConnectSquare}
                       onBack={handleBack}
                       onFinish={handleNext}
+                      onSaveCalendar={handleSaveCalendar}
                       isCalendarConnected={isCalendarConnected}
                       profileLoading={profileLoading}
                     />
