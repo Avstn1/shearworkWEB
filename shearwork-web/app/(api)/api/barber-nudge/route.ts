@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     // Find the profile by normalized phone number
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_id, sms_engaged_current_week')
+      .select('user_id, sms_engaged_current_week, trial_active, stripe_subscription_status')
       .eq('phone', normalizedPhone)
       .single()
     

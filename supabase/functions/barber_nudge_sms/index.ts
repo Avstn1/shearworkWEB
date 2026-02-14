@@ -115,6 +115,29 @@ function getTorontoUTCOffset(date: Date): number {
   return torontoDate.getTime() - utcDate.getTime()
 }
 
+async function updateBarbersAvailability(userIds: string[]): Promise<void> {
+  if (!userIds || userIds.length === 0) {
+    console.log('No user IDs to update availability for')
+    return
+  }
+
+  console.log(`Updating availability for ${userIds.length} barber(s)`)
+
+  try {
+    const { data, error } = await supabase.functions.invoke('update_barber_availability', {
+      body: { user_ids: userIds }
+    })
+
+    if (error) {
+      console.error('Failed to update barber availability:', error)
+    } else {
+      console.log(`Availability update completed. Success: ${data?.success}, Failed: ${data?.failed}`)
+    }
+  } catch (error) {
+    console.error('Error calling update_barber_availability:', error)
+  }
+}
+
 function getRandomMessage(name: string, empty_slots: number, estimatedReturn: number): string {
   const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)]
   return template
@@ -236,6 +259,10 @@ Deno.serve(async (req) => {
 
     console.log(`Sending messages to ${barbers.length} barber(s). Current time: ${new Date().toISOString()}`)
 
+    // Update availability for all barbers before sending messages
+    const barberUserIds = barbers.map(b => b.user_id)
+    await updateBarbersAvailability(barberUserIds)
+
     const statusCallbackUrl = `${siteUrl}/api/barber-nudge/sms-status`
     const results = []
 
@@ -253,6 +280,7 @@ Deno.serve(async (req) => {
         const callbackUrl = new URL(statusCallbackUrl)
         callbackUrl.searchParams.set('user_id', barber.user_id)
         callbackUrl.searchParams.set('message', message)
+        callbackUrl.searchParams.set('purpose', 'barber_sms')
         
         const twilioMessage = await twilio_client.messages.create({
           body: `${message}\n\nReply YES to continue and STOP to unsubscribe.`,

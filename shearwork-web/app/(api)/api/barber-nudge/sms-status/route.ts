@@ -50,113 +50,57 @@ export async function POST(req: NextRequest) {
     const url = new URL(req.url)
     const user_id = url.searchParams.get('user_id')
     const message = url.searchParams.get('message')
+    const purpose = url.searchParams.get('purpose') as 'barber_sms' | 'barber_sms_update' || 'barber_sms'
 
     // Normalize phone to E.164 format
     const phoneNormalized = normalizePhone(to)
     if (!phoneNormalized) return NextResponse.json({ ok: true })
 
-    // Get current day of week (0 = Sunday, 1 = Monday, 3 = Wednesday)
-    const today = new Date().getDay()
-    const isMonday = today === 1
-    const isWednesday = today === 3
+    // ✅ Delivered
+    if (messageStatus === 'delivered') {
+      const { error: insertError } = await supabase
+        .from('sms_sent')
+        .insert({
+          user_id: user_id,
+          is_sent: true,
+          purpose: purpose,
+          reason: null,
+          phone_normalized: phoneNormalized,
+          message: message
+        })
 
-    // Wednesday: Use barber_sms_update purpose
-    if (isWednesday) {
-      // ✅ Delivered
-      if (messageStatus === 'delivered') {
-        const { error: insertError } = await supabase
-          .from('sms_sent')
-          .insert({
-            user_id: user_id,
-            is_sent: true,
-            purpose: 'barber_sms_update',
-            reason: null,
-            phone_normalized: phoneNormalized,
-            message: message
-          })
-
-        if (insertError) {
-          console.error('Failed to insert delivered status:', insertError)
-        }
-
-        return NextResponse.json({ ok: true })
-      }
-
-      // 🔴 Failed or Undelivered
-      if (messageStatus === 'failed' || messageStatus === 'undelivered') {
-        const failureReason = errorCode 
-          ? TWILIO_ERROR_CODES[errorCode] || `Unknown error (code: ${errorCode})`
-          : 'Unknown error'
-
-        const { error: insertError } = await supabase
-          .from('sms_sent')
-          .insert({
-            user_id: user_id,
-            is_sent: false,
-            purpose: 'barber_sms_update',
-            reason: failureReason,
-            phone_normalized: phoneNormalized,
-            message: message
-          })
-
-        if (insertError) {
-          console.error('Failed to insert failed status:', insertError)
-        }
-
-        return NextResponse.json({ ok: true })
+      if (insertError) {
+        console.error('Failed to insert delivered status:', insertError)
       }
 
       return NextResponse.json({ ok: true })
     }
 
-    // Monday: Use barber_sms purpose
-    if (isMonday) {
-      // ✅ Delivered
-      if (messageStatus === 'delivered') {
-        const { error: insertError } = await supabase
-          .from('sms_sent')
-          .insert({
-            user_id: user_id,
-            is_sent: true,
-            purpose: 'barber_sms',
-            reason: null,
-            phone_normalized: phoneNormalized,
-            message: message
-          })
+    // 🔴 Failed or Undelivered
+    if (messageStatus === 'failed' || messageStatus === 'undelivered') {
+      const failureReason = errorCode 
+        ? TWILIO_ERROR_CODES[errorCode] || `Unknown error (code: ${errorCode})`
+        : 'Unknown error'
 
-        if (insertError) {
-          console.error('Failed to insert delivered status:', insertError)
-        }
+      const { error: insertError } = await supabase
+        .from('sms_sent')
+        .insert({
+          user_id: user_id,
+          is_sent: false,
+          purpose: purpose,
+          reason: failureReason,
+          phone_normalized: phoneNormalized,
+          message: message
+        })
 
-        return NextResponse.json({ ok: true })
+      if (insertError) {
+        console.error('Failed to insert failed status:', insertError)
       }
 
-      // 🔴 Failed or Undelivered
-      if (messageStatus === 'failed' || messageStatus === 'undelivered') {
-        const failureReason = errorCode 
-          ? TWILIO_ERROR_CODES[errorCode] || `Unknown error (code: ${errorCode})`
-          : 'Unknown error'
-
-        const { error: insertError } = await supabase
-          .from('sms_sent')
-          .insert({
-            user_id: user_id,
-            is_sent: false,
-            purpose: 'barber_sms',
-            reason: failureReason,
-            phone_normalized: phoneNormalized,
-            message: message
-          })
-
-        if (insertError) {
-          console.error('Failed to insert failed status:', insertError)
-        }
-
-        return NextResponse.json({ ok: true })
-      }
+      return NextResponse.json({ ok: true })
     }
 
-    // Ignore other statuses and non-Monday/Wednesday days
+    // Ignore other statuses
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('SMS status webhook error:', error)

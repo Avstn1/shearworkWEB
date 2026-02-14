@@ -36,20 +36,28 @@ Deno.serve(async (req) => {
     
     const CONCURRENCY_LIMIT = 100
 
-    // Check for optional user_id parameter
+    // Check for optional user_id (singular) or user_ids (array) parameter
+    // Prioritize user_ids if both are present
     const body = await req.json()
     console.log('Received body:', body)
-    const targetUserId = body.user_id
+    
+    let targetUserIds = body.user_ids // Array
+    const targetUserId = body.user_id  // Single string
+    
+    // If user_ids not provided but user_id is, convert to array
+    if ((!targetUserIds || targetUserIds.length === 0) && targetUserId) {
+      targetUserIds = [targetUserId]
+    }
 
-    // Get all profiles with a calendar set (filtered by user_id if provided)
+    // Get all profiles with a calendar set (filtered by user_ids if provided)
     let profileQuery = supabase
       .from('profiles')
       .select('user_id, calendar, full_name')
       .not('calendar', 'is', null)
       .neq('calendar', '')
     
-    if (targetUserId) {
-      profileQuery = profileQuery.eq('user_id', targetUserId)
+    if (targetUserIds && Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+      profileQuery = profileQuery.in('user_id', targetUserIds)
     }
 
     const { data: profiles, error: profileError } = await profileQuery
@@ -76,7 +84,7 @@ Deno.serve(async (req) => {
       // Tue-Sun = update mode to set slot_count_update (current availability)
       const day = torontoToday.getDay()
       const isMonday = day === 1
-      const update = !isMonday && !targetUserId
+      const update = !isMonday && (!targetUserIds || targetUserIds.length === 0)
       
       let url;
 
