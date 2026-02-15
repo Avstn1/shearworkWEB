@@ -18,6 +18,7 @@ import TestMessageConfirmModal from './Modals/TestMessageConfirmModal';
 import HowAutoNudgeWorksModal from './Modals/HowAutoNudgeWorksModal'
 import AutoNudgeHistoryModal from './Modals/AutoNudgeHistoryModal'
 import ClientPreviewModal from './Modals/ClientPreviewModal'
+import AppInstallPromptModal from '@/components/Dashboard/AppInstallPromptModal'
 
 interface PreviewClient {
   client_id: string;
@@ -97,6 +98,7 @@ export default function SMSAutoNudge() {
   // Auto Nudge modals
   const [showAutoNudgeHistoryModal, setShowAutoNudgeHistoryModal] = useState(false);
   const [showHowAutoNudgeWorksModal, setShowHowAutoNudgeWorksModal] = useState(false);
+  const [showAppInstallPrompt, setShowAppInstallPrompt] = useState(false);
 
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [pendingDeactivateMessageId, setPendingDeactivateMessageId] = useState<string | null>(null);
@@ -808,6 +810,11 @@ export default function SMSAutoNudge() {
             : m
         ));
         toast.success(mode === 'draft' ? 'Draft saved!' : 'Schedule activated!');
+        
+        // Show app install prompt after activation
+        if (mode === 'activate') {
+          setShowAppInstallPrompt(true);
+        }
       } else {
         toast.error('Failed to save');
       }
@@ -1104,6 +1111,12 @@ export default function SMSAutoNudge() {
         onClose={() => setShowPreview(false)}
         previewClients={previewClients}
         previewStats={previewStats}
+      />
+
+      {/* App Install Prompt Modal */}
+      <AppInstallPromptModal
+        isOpen={showAppInstallPrompt}
+        onDismiss={() => setShowAppInstallPrompt(false)}
       />
 
       {/* Schedule Modal */}
