@@ -422,7 +422,8 @@ export default function DashboardPage() {
         <TrialStatusHub
           userId={user.id}
           daysRemaining={trialDaysRemaining}
-          onNavigateToAutoNudge={() => router.push('/client-manager')}
+          dateAutoNudgeEnabled={profile?.date_autonudge_enabled}
+          onNavigateToAutoNudge={() => router.push('/client-manager?view=sms')}
         />
       )}
       <AnimatePresence mode="wait" initial={false}>

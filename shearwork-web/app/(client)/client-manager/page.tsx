@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard';
@@ -13,6 +14,8 @@ import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
 import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
 import { CLIENT_MANAGER_TUTORIAL_STEPS } from '@/lib/tutorials/client-manager'
 
+type ViewType = 'sheets' | 'sms' | 'sms-campaign';
+
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number = 1) => ({
@@ -23,8 +26,30 @@ const fadeInUp = {
 };
 
 export default function ClientManagerPage() {
-  const [activeView, setActiveView] = useState<'sheets' | 'sms' | 'sms-campaign'>('sheets');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const viewParam = searchParams.get('view');
+  
+  // Derive active view from URL param (URL is source of truth for initial load)
+  const getActiveView = (): ViewType => {
+    if (viewParam === 'sms' || viewParam === 'auto-nudge') return 'sms';
+    if (viewParam === 'sms-campaign' || viewParam === 'campaigns') return 'sms-campaign';
+    return 'sheets';
+  };
+
+  // Use URL-derived view, but allow local override via state for tab clicks
+  const [localView, setLocalView] = useState<ViewType | null>(null);
   const [showFAQ, setShowFAQ] = useState(false);
+  
+  // If user hasn't clicked a tab yet, use URL param; otherwise use their selection
+  const activeView = localView ?? getActiveView();
+  
+  // When user clicks a tab, update local state (clears URL influence)
+  const handleSetView = (view: ViewType) => {
+    setLocalView(view);
+    // Optionally update URL to match (keeps URL in sync)
+    router.replace(`/client-manager?view=${view}`, { scroll: false });
+  };
 
   return (
     <OnboardingGuard>
@@ -51,7 +76,7 @@ export default function ClientManagerPage() {
             {/* View Switcher */}
             <div data-tutorial-id="client-manager-tabs" className="flex gap-1 bg-[#1a1a1a] rounded-full p-1">
               <button
-                onClick={() => setActiveView('sheets')}
+                onClick={() => handleSetView('sheets')}
                 className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sheets'
                     ? 'bg-lime-300 text-black shadow-[0_0_8px_#c4ff85]'
@@ -62,7 +87,7 @@ export default function ClientManagerPage() {
                 <span className="xs:hidden">Sheets</span>
               </button>
               <button
-                onClick={() => setActiveView('sms')}
+                onClick={() => handleSetView('sms')}
                 className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
@@ -73,7 +98,7 @@ export default function ClientManagerPage() {
                 <span className="xs:hidden">Auto Nudge</span>
               </button>
               <button
-                onClick={() => setActiveView('sms-campaign')}
+                onClick={() => handleSetView('sms-campaign')}
                 className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms-campaign'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
@@ -91,7 +116,7 @@ export default function ClientManagerPage() {
               pageKey="client-manager"
               steps={CLIENT_MANAGER_TUTORIAL_STEPS}
               context={{
-                setActiveView: (view) => setActiveView(view as 'sheets' | 'sms' | 'sms-campaign'),
+                setActiveView: (view) => handleSetView(view as ViewType),
               }}
               renderTrigger={(openTutorial) => (
                 <TutorialInfoButton onClick={openTutorial} label="Client Manager tutorial" />
