@@ -221,7 +221,7 @@ export default function TrialStatusHub({
                     <span className="text-[#9ca3af] ml-1">this week</span>
                   </span>
                 ) : (
-                  <span className="text-sm italic text-[#9ca3af]">Waiting for bookings...</span>
+                  <span className="text-sm text-[#9ca3af]">No bookings yet this week</span>
                 )}
               </div>
             </>
