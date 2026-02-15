@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Calendar, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import SyncProgressBar from '@/components/Onboarding/SyncProgressBar'
@@ -40,10 +40,13 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
   const [completedSyncs, setCompletedSyncs] = useState<{ month: string; year: number }[]>([])
   const [loadingCompleted, setLoadingCompleted] = useState(true)
   const [syncStartTime, setSyncStartTime] = useState<number | null>(null)
+  const [firstAppointment, setFirstAppointment] = useState<{ month: string; year: number; datetime: string } | null>(null)
+  const [loadingFirstAppointment, setLoadingFirstAppointment] = useState(true)
 
-  // Load completed syncs on mount
+  // Load completed syncs and first appointment on mount
   useEffect(() => {
     fetchCompletedSyncs()
+    fetchFirstAppointment()
   }, [userId])
 
   const fetchCompletedSyncs = async () => {
@@ -63,6 +66,133 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
       console.error('Error fetching completed syncs:', error)
     } finally {
       setLoadingCompleted(false)
+    }
+  }
+
+  const fetchFirstAppointment = async () => {
+    try {
+      // Call our backend API route which proxies to Acuity
+      const response = await fetch('/api/onboarding/get-first-appointment', {
+        headers: {
+          'x-client-access-token': await getAccessToken(),
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch first appointment')
+      }
+
+      const data = await response.json()
+
+      if (data.firstAppointment) {
+        const first = data.firstAppointment
+        // datetime format: "2013-07-02T10:15:00-0700"
+        const appointmentDate = new Date(first.datetime)
+        const month = MONTHS[appointmentDate.getMonth()]
+        const year = appointmentDate.getFullYear()
+
+        setFirstAppointment({
+          month,
+          year,
+          datetime: first.datetime
+        })
+
+        // Auto-select this month and year
+        setSelectedMonth(month)
+        setSelectedYear(year)
+      }
+    } catch (error) {
+      console.error('Error fetching first appointment:', error)
+    } finally {
+      setLoadingFirstAppointment(false)
+    }
+  }
+
+  const getAccessToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  }
+
+  // Get available months based on selected year and first appointment
+  const getAvailableMonths = () => {
+    if (!firstAppointment || !selectedYear) return MONTHS
+
+    const firstAppointmentYear = firstAppointment.year
+    const firstAppointmentMonthIndex = MONTHS.indexOf(firstAppointment.month)
+    const currentYear = new Date().getFullYear()
+    const currentMonthIndex = new Date().getMonth()
+
+    // If selected year is before first appointment year, no months available
+    if (selectedYear < firstAppointmentYear) {
+      return []
+    }
+
+    // If selected year is the first appointment year
+    if (selectedYear === firstAppointmentYear) {
+      // Only show months from first appointment onwards, but not beyond current month if it's the current year
+      if (selectedYear === currentYear) {
+        return MONTHS.filter((_, index) => index >= firstAppointmentMonthIndex && index <= currentMonthIndex)
+      }
+      return MONTHS.filter((_, index) => index >= firstAppointmentMonthIndex)
+    }
+
+    // If selected year is the current year
+    if (selectedYear === currentYear) {
+      // Only show months up to current month
+      return MONTHS.filter((_, index) => index <= currentMonthIndex)
+    }
+
+    // If selected year is between first appointment and current year, show all months
+    if (selectedYear > firstAppointmentYear && selectedYear < currentYear) {
+      return MONTHS
+    }
+
+    // If selected year is after current year, no months available
+    return []
+  }
+
+  // Get available years (from first appointment year to current year)
+  const getAvailableYears = () => {
+    if (!firstAppointment) return generateYearOptions()
+
+    const currentYear = new Date().getFullYear()
+    const firstYear = firstAppointment.year
+    const years = []
+    
+    for (let year = currentYear; year >= firstYear; year--) {
+      years.push(year)
+    }
+    
+    return years
+  }
+
+  // Handle year change and validate selected month
+  const handleYearChange = (year: number | '') => {
+    setSelectedYear(year)
+    
+    if (year && selectedMonth) {
+      // Get available months for the new year
+      const availableMonths = year ? getAvailableMonths() : MONTHS
+      
+      // If current month is not in available months, reset it
+      if (!availableMonths.includes(selectedMonth)) {
+        setSelectedMonth('')
+      }
+    }
+  }
+
+  // Handle month change with validation
+  const handleMonthChange = (month: string) => {
+    setSelectedMonth(month)
+    
+    // If year is already selected, validate the combination
+    if (selectedYear && firstAppointment) {
+      const availableMonths = getAvailableMonths()
+      
+      // If the month is not in available months, reset it
+      if (!availableMonths.includes(month)) {
+        setSelectedMonth('')
+      }
     }
   }
 
@@ -239,6 +369,27 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     )
   }
 
+  // Show loading state while fetching first appointment
+  if (loadingFirstAppointment) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-white/10 bg-black/20 p-8">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+            <div className="text-center">
+              <p className="text-sm font-semibold text-white mb-1">
+                Finding your first appointment...
+              </p>
+              <p className="text-xs text-gray-400">
+                This helps us sync your data accurately
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4">
@@ -274,28 +425,64 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
           </div>
         )}
 
+        {/* First Appointment Info */}
+        {!loadingFirstAppointment && firstAppointment && completedSyncs.length === 0 && (
+          <div className="p-4 rounded-xl border-2 border-cyan-400/30 bg-cyan-400/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar size={18} className="text-cyan-400" />
+              <h4 className="text-sm font-semibold text-cyan-200">
+                Your First Appointment
+              </h4>
+            </div>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              Based on your calendar, your first appointment was in{' '}
+              <span className="font-bold text-white">
+                {firstAppointment.month} {firstAppointment.year}
+              </span>
+            </p>
+            <p className="text-xs text-gray-400 italic mt-2">
+              We've pre-selected this date for you. You can change it if needed.
+            </p>
+          </div>
+        )}
+
+        {/* Recommendation banner */}
+        {!loadingFirstAppointment && firstAppointment && (
+          <div className="p-4 rounded-xl border-2 border-emerald-400/40 bg-emerald-400/10 flex items-start gap-3">
+            <Info size={18} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-emerald-300 mb-1">
+                💡 Recommended: Sync Everything
+              </p>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                For the best analytics and insights, we recommend syncing all your historical data from {firstAppointment.month} {firstAppointment.year} onwards. This ensures accurate trends and complete reporting.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div>
           <h4 className="text-sm font-semibold text-white mb-2">
-            {completedSyncs.length > 0 ? 'Sync Additional Data' : 'When did you start using Acuity?'}
+            {completedSyncs.length > 0 ? 'Sync Additional Data' : 'Sync Your Appointment History'}
           </h4>
           <p className="text-xs text-gray-400 mb-4">
             {completedSyncs.length > 0 
               ? 'Select a range to sync more historical data. Already synced months will be skipped.'
-              : 'This helps us sync your historical appointment data.'
+              : 'Select when you started using Acuity to import your appointment data.'
             }
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block mb-2 text-sm font-semibold text-white">Month (Optional)</label>
+            <label className="block mb-2 text-sm font-semibold text-gray-400">Month (Optional)</label>
             <select
               value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
+              onChange={e => handleMonthChange(e.target.value)}
               className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
             >
               <option value="">Don't remember</option>
-              {MONTHS.map(month => (
+              {getAvailableMonths().map(month => (
                 <option key={month} value={month}>
                   {month}
                 </option>
@@ -304,14 +491,14 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-white">Year</label>
+            <label className="block mb-2 text-sm font-semibold text-gray-400">Year</label>
             <select
               value={selectedYear}
-              onChange={e => setSelectedYear(e.target.value ? Number(e.target.value) : '')}
+              onChange={e => handleYearChange(e.target.value ? Number(e.target.value) : '')}
               className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
             >
               <option value="">Select year...</option>
-              {generateYearOptions().map(year => (
+              {getAvailableYears().map(year => (
                 <option key={year} value={year}>
                   {year}
                 </option>
