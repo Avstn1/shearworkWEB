@@ -76,6 +76,7 @@ export default function TrialStatusHub({
   const [isLoadingRevenue, setIsLoadingRevenue] = useState(false)
 
   // Fetch Auto-Nudge status
+  // Active if: dateAutoNudgeEnabled is set OR sms_scheduled_messages has status='ACCEPTED' + enabled=true
   useEffect(() => {
     const checkAutoNudgeStatus = async () => {
       if (!userId) {
@@ -83,6 +84,13 @@ export default function TrialStatusHub({
         return
       }
 
+      // If dateAutoNudgeEnabled is set, user has activated via onboarding
+      if (dateAutoNudgeEnabled) {
+        setAutoNudgeStatus('active')
+        return
+      }
+
+      // Otherwise check sms_scheduled_messages for active auto-nudge
       try {
         const { data, error } = await supabase
           .from('sms_scheduled_messages')
@@ -103,7 +111,7 @@ export default function TrialStatusHub({
     }
 
     checkAutoNudgeStatus()
-  }, [userId])
+  }, [userId, dateAutoNudgeEnabled])
 
   // Fetch revenue when active
   useEffect(() => {
