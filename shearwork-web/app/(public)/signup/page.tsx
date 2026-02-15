@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Landing/Footer';
 import { motion } from 'framer-motion';
-import SiteDownWrapper from '@/components/Wrappers/SiteDownWrapper';
+
 
 // Color palette
 const COLORS = {
@@ -136,7 +136,6 @@ export default function SignUpPage() {
           {/* Left Side: Sign Up Form */}
 
           <div className="flex-1 w-full lg:w-auto lg:h-[430px]">
-            <SiteDownWrapper>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -337,7 +336,6 @@ export default function SignUpPage() {
                   </span>
                 </div>
               </motion.div>
-            </SiteDownWrapper>
           </div>
 
           {/* Vertical Divider - hidden on mobile */}

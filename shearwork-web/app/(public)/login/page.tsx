@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Landing/Footer';
 import { motion } from 'framer-motion';
-import SiteDownWrapper from '@/components/Wrappers/SiteDownWrapper';
+
 
 // Color palette
 const COLORS = {
@@ -166,7 +166,6 @@ export default function LoginPage() {
           <div className="flex flex-col lg:flex-row gap-2 lg:gap-12 items-stretch">
           {/* Left Side: Login Form */}
           <div className="flex-1 w-full lg:w-auto lg:h-[430px]">
-            <SiteDownWrapper>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -309,7 +308,6 @@ export default function LoginPage() {
                   </span>
                 </div>
               </motion.div>
-            </SiteDownWrapper>
           </div>
 
           {/* Vertical Divider - hidden on mobile */}
@@ -403,7 +401,7 @@ export default function LoginPage() {
                 className="text-[10px] lg:text-sm mb-2 lg:mb-3 font-medium"
                 style={{ color: COLORS.textMuted }}
               >
-                Don't have an account?
+                Don&apos;t have an account?
               </p>
               <a
                 href="/signup"
