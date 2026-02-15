@@ -31,10 +31,10 @@ function getISOWeekNumber(date: Date): string {
 }
 
 // Calculate next nudge date based on when auto-nudge was enabled
-// Logic from Carlo's AutoNudgeActivationStep:
+// Rules:
+// - Monday before 10am → today (Monday) at 10am
 // - Monday after 10am, Tuesday, Wednesday → next day at 10am
 // - Thursday, Friday, Saturday, Sunday → next Monday at 10am
-// - Monday before 10am → today at 10am
 function calculateNextNudgeDate(enabledDateUTC: string): string {
   const enabledDate = new Date(enabledDateUTC)
   const torontoTime = new Date(enabledDate.toLocaleString('en-US', { timeZone: 'America/Toronto' }))
@@ -42,21 +42,19 @@ function calculateNextNudgeDate(enabledDateUTC: string): string {
   const dayOfWeek = torontoTime.getDay() // 0 = Sunday, 1 = Monday, etc.
   const hour = torontoTime.getHours()
   
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
-  let targetDate = new Date(now)
+  // Always start from the enabled date, not "now"
+  const targetDate = new Date(torontoTime)
   
-  // Monday (1) after 10am to Wednesday (3): send tomorrow (enabled date + 1 day)
+  // Monday (1) after 10am, Tuesday (2), Wednesday (3): send next day at 10am
   if ((dayOfWeek === 1 && hour >= 10) || dayOfWeek === 2 || dayOfWeek === 3) {
-    targetDate = new Date(torontoTime)
     targetDate.setDate(targetDate.getDate() + 1)
   }
-  // Thursday (4) to Sunday (0): send next Monday
+  // Thursday (4) to Sunday (0): send next Monday at 10am
   else if (dayOfWeek >= 4 || dayOfWeek === 0) {
     const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek
     targetDate.setDate(targetDate.getDate() + daysUntilMonday)
   }
-  // Monday before 10am: send today at 10am
-  // targetDate is already set to today
+  // Monday before 10am: send today (Monday) at 10am - targetDate already correct
   
   const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Toronto' })
   const monthName = targetDate.toLocaleDateString('en-US', { month: 'short', timeZone: 'America/Toronto' })
