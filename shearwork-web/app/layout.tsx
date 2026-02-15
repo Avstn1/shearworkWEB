@@ -2,11 +2,11 @@ import './globals.css';
 import { ReactNode } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider } from '@/contexts/AppContext'
+import ConditionalNavbar from '@/components/Wrappers/ConditionalNavbar'
 import Navbar from '@/components/Navbar'
 import LayoutWrapper from '@/components/Wrappers/LayoutWrapper'
 import { AuthProvider } from '@/contexts/AuthContext'
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
-
 
 export const metadata = {
   title: 'Corva',
@@ -25,7 +25,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 font-sans min-h-screen">
         <AuthProvider> 
           <AppProvider>
-            <Navbar/>
+            {/* <ConditionalNavbar /> */}
+            <Navbar />
               <LayoutWrapper>
                 {children}
               </LayoutWrapper>

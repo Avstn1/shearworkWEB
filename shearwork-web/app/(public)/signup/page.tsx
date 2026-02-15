@@ -136,206 +136,206 @@ export default function SignUpPage() {
           {/* Left Side: Sign Up Form */}
 
           <div className="flex-1 w-full lg:w-auto lg:h-[430px]">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
+              className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
+              style={{
+                background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
+                borderWidth: 1,
+                borderColor: COLORS.glassBorder,
+              }}
+            >
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-                className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
-                style={{
-                  background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
-                  borderWidth: 1,
-                  borderColor: COLORS.glassBorder,
-                }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                className="mb-2 lg:mb-4"
               >
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
-                  className="mb-2 lg:mb-4"
-                >
-                  <div className="flex items-center gap-1.5 lg:gap-2 mb-1 lg:mb-2">
-                    <div 
-                      className="w-6 h-6 lg:w-8 lg:h-8 rounded-md lg:rounded-lg flex items-center justify-center"
-                      style={{
-                        background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
-                        boxShadow: `0 0 16px ${COLORS.greenGlow}`,
-                      }}
-                    >
-                      <Sparkles size={12} className="lg:w-4 lg:h-4" color="#000000" />
-                    </div>
-                    <h2 className="text-base lg:text-2xl font-bold" style={{ color: COLORS.text }}>
-                      Get Started
-                    </h2>
-                  </div>
-                  <p className="text-[10px] lg:text-sm leading-tight lg:leading-normal" style={{ color: COLORS.textMuted }}>
-                    Create your account and start growing
-                  </p>
-
-                </motion.div>
-
-                <form onSubmit={handleSignUp} className="flex flex-col gap-1.5 lg:gap-4 relative z-10">
-                  {/* Email Input */}
-                  <div className="relative">
-                    <Mail 
-                      size={14} 
-                      className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                      style={{ color: COLORS.textMuted }}
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      required
-                      className="w-full p-2 lg:p-3 pl-7 lg:pl-10 rounded-md lg:rounded-xl border transition-all duration-200 focus:outline-none placeholder:opacity-60 text-[11px] lg:text-sm"
-                      style={{
-                        backgroundColor: COLORS.surfaceSolid,
-                        borderColor: COLORS.glassBorder,
-                        color: COLORS.text,
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.green
-                        e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.greenGlow}`
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.glassBorder
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    />
-                  </div>
-
-                  {/* Password Input */}
-                  <div className="relative">
-                    <Lock 
-                      size={14} 
-                      className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                      style={{ color: COLORS.textMuted }}
-                    />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      required
-                      className="w-full p-2 lg:p-3 pl-7 lg:pl-10 pr-8 lg:pr-10 rounded-md lg:rounded-xl border transition-all duration-200 focus:outline-none placeholder:opacity-60 text-[11px] lg:text-sm"
-                      style={{
-                        backgroundColor: COLORS.surfaceSolid,
-                        borderColor: COLORS.glassBorder,
-                        color: COLORS.text,
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.green
-                        e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.greenGlow}`
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = COLORS.glassBorder
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 lg:right-3 top-1/2 -translate-y-1/2 transition-colors"
-                      style={{ color: COLORS.textMuted }}
-                      onClick={() => setShowPassword(!showPassword)}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.textMuted }}
-                    >
-                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
-
-                  {/* Confirm Password Input */}
-                  <div className="relative">
-                    <Lock 
-                      size={14} 
-                      className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                      style={{ color: COLORS.textMuted }}
-                    />
-                    <input
-                      type={showConfirm ? 'text' : 'password'}
-                      placeholder="Confirm"
-                      value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                      required
-                      className="w-full p-2 lg:p-3 pl-7 lg:pl-10 pr-8 lg:pr-10 rounded-md lg:rounded-xl border transition-all duration-200 focus:outline-none placeholder:opacity-60 text-[11px] lg:text-sm"
-                      style={{
-                        backgroundColor: COLORS.surfaceSolid,
-                        borderColor: confirmPassword
-                          ? passwordMatch
-                            ? COLORS.green
-                            : '#ff4444'
-                          : COLORS.glassBorder,
-                        color: COLORS.text,
-                      }}
-                      onFocus={(e) => {
-                        if (!confirmPassword || passwordMatch) {
-                          e.currentTarget.style.borderColor = COLORS.green
-                          e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.greenGlow}`
-                        }
-                      }}
-                      onBlur={(e) => {
-                        if (confirmPassword) {
-                          e.currentTarget.style.borderColor = passwordMatch ? COLORS.green : '#ff4444'
-                        } else {
-                          e.currentTarget.style.borderColor = COLORS.glassBorder
-                        }
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 lg:right-3 top-1/2 -translate-y-1/2 transition-colors"
-                      style={{ color: COLORS.textMuted }}
-                      onClick={() => setShowConfirm(!showConfirm)}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.textMuted }}
-                    >
-                      {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                    {passwordMatch && (
-                      <CheckCircle2 
-                        size={14} 
-                        className="absolute right-8 lg:right-10 top-1/2 -translate-y-1/2"
-                        style={{ color: COLORS.green }}
-                      />
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2 lg:py-3 rounded-md lg:rounded-xl font-bold transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl disabled:opacity-50 disabled:hover:scale-100 mt-0.5 lg:mt-2 relative overflow-hidden group"
+                <div className="flex items-center gap-1.5 lg:gap-2 mb-1 lg:mb-2">
+                  <div 
+                    className="w-6 h-6 lg:w-8 lg:h-8 rounded-md lg:rounded-lg flex items-center justify-center"
                     style={{
                       background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
-                      color: '#000000',
-                      boxShadow: `0 8px 32px ${COLORS.greenGlow}`,
+                      boxShadow: `0 0 16px ${COLORS.greenGlow}`,
                     }}
                   >
-                    <span className="relative z-10 text-[11px] lg:text-sm">{loading ? 'Creating...' : 'Create Account'}</span>
-                    <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      style={{
-                        background: `linear-gradient(135deg, ${COLORS.greenLight} 0%, ${COLORS.green} 100%)`,
-                      }}
-                    />
-                  </button>
-
-                  <p className="text-center text-[9px] lg:text-xs leading-tight" style={{ color: COLORS.textMuted }}>
-                    By signing up, you agree to our Terms
-                  </p>
-                </form>
-
-                {/* Bottom decoration/info */}
-                <div 
-                  className="pt-1.5 lg:pt-4 mt-1.5 lg:mt-4 border-t flex items-center justify-center gap-1 lg:gap-2"
-                  style={{ borderColor: COLORS.glassBorder }}
-                >
-                  <Lock size={10} className="lg:w-3.5 lg:h-3.5" style={{ color: COLORS.green }} />
-                  <span className="text-[9px] lg:text-xs" style={{ color: COLORS.textMuted }}>
-                    Encrypted & secure
-                  </span>
+                    <Sparkles size={12} className="lg:w-4 lg:h-4" color="#000000" />
+                  </div>
+                  <h2 className="text-base lg:text-2xl font-bold" style={{ color: COLORS.text }}>
+                    Get Started
+                  </h2>
                 </div>
+                <p className="text-[10px] lg:text-sm leading-tight lg:leading-normal" style={{ color: COLORS.textMuted }}>
+                  Create your account and start growing
+                </p>
+
               </motion.div>
+
+              <form onSubmit={handleSignUp} className="flex flex-col gap-1.5 lg:gap-4 relative z-10">
+                {/* Email Input */}
+                <div className="relative">
+                  <Mail 
+                    size={14} 
+                    className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: COLORS.textMuted }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    className="w-full p-2 lg:p-3 pl-7 lg:pl-10 rounded-md lg:rounded-xl border transition-all duration-200 focus:outline-none placeholder:opacity-60 text-[11px] lg:text-sm"
+                    style={{
+                      backgroundColor: COLORS.surfaceSolid,
+                      borderColor: COLORS.glassBorder,
+                      color: COLORS.text,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.green
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.greenGlow}`
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.glassBorder
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  />
+                </div>
+
+                {/* Password Input */}
+                <div className="relative">
+                  <Lock 
+                    size={14} 
+                    className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: COLORS.textMuted }}
+                  />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    className="w-full p-2 lg:p-3 pl-7 lg:pl-10 pr-8 lg:pr-10 rounded-md lg:rounded-xl border transition-all duration-200 focus:outline-none placeholder:opacity-60 text-[11px] lg:text-sm"
+                    style={{
+                      backgroundColor: COLORS.surfaceSolid,
+                      borderColor: COLORS.glassBorder,
+                      color: COLORS.text,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.green
+                      e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.greenGlow}`
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = COLORS.glassBorder
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 lg:right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: COLORS.textMuted }}
+                    onClick={() => setShowPassword(!showPassword)}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.textMuted }}
+                  >
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+
+                {/* Confirm Password Input */}
+                <div className="relative">
+                  <Lock 
+                    size={14} 
+                    className="absolute left-2 lg:left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ color: COLORS.textMuted }}
+                  />
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    placeholder="Confirm"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                    className="w-full p-2 lg:p-3 pl-7 lg:pl-10 pr-8 lg:pr-10 rounded-md lg:rounded-xl border transition-all duration-200 focus:outline-none placeholder:opacity-60 text-[11px] lg:text-sm"
+                    style={{
+                      backgroundColor: COLORS.surfaceSolid,
+                      borderColor: confirmPassword
+                        ? passwordMatch
+                          ? COLORS.green
+                          : '#ff4444'
+                        : COLORS.glassBorder,
+                      color: COLORS.text,
+                    }}
+                    onFocus={(e) => {
+                      if (!confirmPassword || passwordMatch) {
+                        e.currentTarget.style.borderColor = COLORS.green
+                        e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.greenGlow}`
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (confirmPassword) {
+                        e.currentTarget.style.borderColor = passwordMatch ? COLORS.green : '#ff4444'
+                      } else {
+                        e.currentTarget.style.borderColor = COLORS.glassBorder
+                      }
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 lg:right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: COLORS.textMuted }}
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.green }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = COLORS.textMuted }}
+                  >
+                    {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                  {passwordMatch && (
+                    <CheckCircle2 
+                      size={14} 
+                      className="absolute right-8 lg:right-10 top-1/2 -translate-y-1/2"
+                      style={{ color: COLORS.green }}
+                    />
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2 lg:py-3 rounded-md lg:rounded-xl font-bold transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl disabled:opacity-50 disabled:hover:scale-100 mt-0.5 lg:mt-2 relative overflow-hidden group"
+                  style={{
+                    background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
+                    color: '#000000',
+                    boxShadow: `0 8px 32px ${COLORS.greenGlow}`,
+                  }}
+                >
+                  <span className="relative z-10 text-[11px] lg:text-sm">{loading ? 'Creating...' : 'Create Account'}</span>
+                  <div 
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    style={{
+                      background: `linear-gradient(135deg, ${COLORS.greenLight} 0%, ${COLORS.green} 100%)`,
+                    }}
+                  />
+                </button>
+
+                <p className="text-center text-[9px] lg:text-xs leading-tight" style={{ color: COLORS.textMuted }}>
+                  By signing up, you agree to our Terms
+                </p>
+              </form>
+
+              {/* Bottom decoration/info */}
+              <div 
+                className="pt-1.5 lg:pt-4 mt-1.5 lg:mt-4 border-t flex items-center justify-center gap-1 lg:gap-2"
+                style={{ borderColor: COLORS.glassBorder }}
+              >
+                <Lock size={10} className="lg:w-3.5 lg:h-3.5" style={{ color: COLORS.green }} />
+                <span className="text-[9px] lg:text-xs" style={{ color: COLORS.textMuted }}>
+                  Encrypted & secure
+                </span>
+              </div>
+            </motion.div>
           </div>
 
           {/* Vertical Divider - hidden on mobile */}

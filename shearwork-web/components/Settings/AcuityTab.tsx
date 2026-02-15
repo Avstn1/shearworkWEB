@@ -39,6 +39,7 @@ export default function AcuityTab() {
   const [syncingClients, setSyncingClients] = useState(false)
   const [syncingAppointments, setSyncingAppointments] = useState(false)
   const hasCalendarChange = selectedCalendar !== (profile?.calendar ?? '')
+  const calendarLocked = Boolean(profile?.calendar) // Locked if calendar already selected
 
   useEffect(() => {
     loadData()
@@ -106,15 +107,19 @@ export default function AcuityTab() {
 
       if (error) throw error
 
-      toast.success('Calendar updated!')
+      toast.success('Calendar saved!')
       loadData()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || 'Failed to update calendar')
+      toast.error(err.message || 'Failed to save calendar')
     }
   }
 
   const handleCalendarChangeRequest = (val: string) => {
+    if (calendarLocked) {
+      toast.error('Calendar is locked after first selection')
+      return
+    }
     setSelectedCalendar(val)
   }
 
@@ -253,42 +258,66 @@ export default function AcuityTab() {
           Calendar
         </h3>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <Select
-              options={[
-                { value: '', label: 'Select calendar' },
-                ...calendars.map((c) => ({ value: c.name, label: c.name })),
-              ]}
-              value={selectedCalendar}
-              onChange={(val) => handleCalendarChangeRequest(val as string)}
-              disabled={!acuityConnected || calendars.length === 0}
-            />
-          </div>
-
-          {hasCalendarChange && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setSelectedCalendar(profile?.calendar || '')
-                }}
-                className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => saveCalendar(selectedCalendar)}
-                className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all"
-              >
-                Save
-              </button>
+        {calendarLocked ? (
+          // Calendar is locked - show read-only display
+          <div className="space-y-3">
+            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+              <p className="text-sm text-gray-400 mb-1">Active Calendar</p>
+              <p className="text-lg font-semibold">{profile.calendar}</p>
             </div>
-          )}
-        </div>
+            
+            <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3">
+              <p className="text-xs text-amber-200">
+                <strong>Note:</strong> Calendar is locked after selection. Contact support if you need to switch calendars.
+              </p>
+            </div>
+          </div>
+        ) : (
+          // Calendar not yet selected - allow selection
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <Select
+                  options={[
+                    { value: '', label: 'Select calendar' },
+                    ...calendars.map((c) => ({ value: c.name, label: c.name })),
+                  ]}
+                  value={selectedCalendar}
+                  onChange={(val) => handleCalendarChangeRequest(val as string)}
+                  disabled={!acuityConnected || calendars.length === 0}
+                />
+              </div>
 
-        <p className="text-xs text-gray-400">
-          Changing calendars will resync appointments for the selected calendar.
-        </p>
+              {hasCalendarChange && selectedCalendar && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedCalendar(profile?.calendar || '')
+                    }}
+                    className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => saveCalendar(selectedCalendar)}
+                    className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all"
+                  >
+                    Save
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-3">
+              <p className="text-xs text-rose-200 font-semibold">
+                ⚠️ WARNING: You cannot change your calendar after selecting one.
+              </p>
+              <p className="text-xs text-rose-200 mt-1">
+                If you need to change calendars later, you will need to create a new account.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sync Section */}

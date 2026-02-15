@@ -97,75 +97,6 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
         return;
       }
 
-      // Check if we need to update auto nudge history
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('last_updated_auto_nudge_history')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-      }
-
-      // Store the last updated timestamp
-      setLastUpdated(profile?.last_updated_auto_nudge_history || null);
-
-      let shouldCallLookAhead = false;
-      
-      if (!profile?.last_updated_auto_nudge_history) {
-        // Never updated before
-        shouldCallLookAhead = true;
-      } else {
-        // Check if it's been 15 minutes since last update
-        const lastUpdated = new Date(profile.last_updated_auto_nudge_history);
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-        
-        if (lastUpdated <= fifteenMinutesAgo) {
-          shouldCallLookAhead = true;
-        }
-      }
-
-      // Call appointments_look_ahead if needed
-      if (shouldCallLookAhead) {
-        try {
-          const lookAheadResponse = await fetch(
-            `https://efyvkyusfrqcgadocggk.supabase.co/functions/v1/appointments_look_ahead?user_id=${user.id}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-              }
-            }
-          );
-          
-          if (!lookAheadResponse.ok) {
-            console.error('Error calling appointments_look_ahead:', await lookAheadResponse.text());
-          } else {
-            const lookAheadData = await lookAheadResponse.json();
-            console.log('Appointments look ahead completed:', lookAheadData);
-            
-            // Update last_updated_auto_nudge_history
-            const newTimestamp = new Date().toISOString();
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ last_updated_auto_nudge_history: newTimestamp })
-              .eq('user_id', user.id);
-            
-            if (updateError) {
-              console.error('Error updating last_updated_auto_nudge_history:', updateError);
-            } else {
-              // Update the state with the new timestamp
-              setLastUpdated(newTimestamp);
-            }
-          }
-        } catch (lookAheadError) {
-          console.error('Failed to call appointments_look_ahead:', lookAheadError);
-          // Continue with fetch even if look ahead fails
-        }
-      } else {
-        console.log('Skipping appointments_look_ahead - updated recently');
-      }
-
       // Get all sms_scheduled_messages that match the pattern {user_id}_{iso_week}
       const { data: scheduledMessages, error: schedError } = await supabase
         .from('sms_scheduled_messages')
@@ -444,27 +375,9 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                       <p className="text-sm text-[#bdbdbd] mt-2">
                         Track your weekly barber nudge campaign success
                       </p>
-                      {lastUpdated && (
-                        <p className="text-xs text-[#9e9e9e] mt-2 -mb-3">
-                          Last updated: {new Date(lastUpdated).toLocaleString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            hour: 'numeric', 
-                            minute: '2-digit',
-                            hour12: true 
-                          })}. {(() => {
-                            const nextUpdate = new Date(new Date(lastUpdated).getTime() + 15 * 60 * 1000);
-                            const now = new Date();
-                            const minutesUntilNext = Math.max(0, Math.ceil((nextUpdate.getTime() - now.getTime()) / (60 * 1000)));
-                            
-                            if (minutesUntilNext > 0) {
-                              return `Check back in ${minutesUntilNext} minute${minutesUntilNext !== 1 ? 's' : ''} for the latest bookings.`;
-                            } else {
-                              return 'Reopen to see the latest bookings.';
-                            }
-                          })()}
-                        </p>
-                      )}
+                      <p className="text-xs text-[#9e9e9e] mt-2 -mb-3">
+                        Reopen to refresh bookings
+                      </p>
                     </div>
                     <button
                       onClick={onClose}
