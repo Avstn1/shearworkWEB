@@ -51,6 +51,24 @@ export default async function middleware(request: NextRequest) {
   const hasTrialAccess = isTrialActive(profile)
 
   // -----------------------------
+  // ONBOARDING CHECK
+  // -----------------------------
+  // Non-onboarded users must complete onboarding before accessing the app
+  if (profile && !profile.onboarded && role !== 'admin' && role !== 'owner') {
+    // Allow access to onboarding flow and related API routes
+    const allowedDuringOnboarding = [
+      '/pricing/return',
+      '/api/onboarding',
+      '/api/acuity',
+      '/api/square',
+    ]
+    
+    if (!allowedDuringOnboarding.some(route => pathname.startsWith(route))) {
+      return NextResponse.redirect(new URL('/pricing/return', request.url))
+    }
+  }
+
+  // -----------------------------
   // ACTIVE/TRIAL REDIRECTS
   // -----------------------------
   if (subStatus === 'active' || hasTrialAccess) {
