@@ -40,6 +40,24 @@ export default function BookingSyncStep({
 
       setUserId(user.id)
 
+      // Check for Acuity token FIRST
+      const { data: acuityToken } = await supabase
+        .from('acuity_tokens')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      setHasAcuity(!!acuityToken)
+
+      // Check for Square token (future)
+      const { data: squareToken } = await supabase
+        .from('square_tokens')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      setHasSquare(!!squareToken)
+
       // Call edge function to update availability data
       supabase.functions.invoke('update_barber_availability', {
         body: { user_id: user.id }
@@ -64,7 +82,10 @@ export default function BookingSyncStep({
         
         if (allComplete) {
           // All priority syncs complete, allow proceeding
+          console.log('All priority syncs already completed, skipping sync step')
           setSyncComplete(true)
+          setLoading(false)
+          return
         } else if (hasPending) {
           // Has pending priority syncs, resume them
           console.log('Found incomplete priority syncs, resuming...')
@@ -92,24 +113,6 @@ export default function BookingSyncStep({
           })
         }
       }
-
-      // Check for Acuity token
-      const { data: acuityToken } = await supabase
-        .from('acuity_tokens')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      setHasAcuity(!!acuityToken)
-
-      // Check for Square token (future)
-      const { data: squareToken } = await supabase
-        .from('square_tokens')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      setHasSquare(!!squareToken)
     } catch (error) {
       console.error('Error checking integrations:', error)
     } finally {

@@ -33,8 +33,39 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
 
   // Load first appointment on mount
   useEffect(() => {
+    checkExistingSync()
     fetchFirstAppointment()
   }, [userId])
+
+  const checkExistingSync = async () => {
+    if (!userId) return
+
+    try {
+      // Check if priority syncs are already complete
+      const { data: prioritySyncs, error } = await supabase
+        .from('sync_status')
+        .select('status')
+        .eq('user_id', userId)
+        .eq('sync_phase', 'priority')
+
+      if (error) {
+        console.error('Error checking existing syncs:', error)
+        return
+      }
+
+      if (prioritySyncs && prioritySyncs.length > 0) {
+        const allComplete = prioritySyncs.every(s => s.status === 'completed')
+        
+        if (allComplete) {
+          console.log('Priority syncs already completed')
+          setSyncComplete(true)
+          setSyncStarted(false) // Don't show progress bar, just enable Next button
+        }
+      }
+    } catch (error) {
+      console.error('Error checking existing sync:', error)
+    }
+  }
 
   const fetchFirstAppointment = async () => {
     try {
@@ -198,6 +229,45 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
               Retry
             </button>
           )}
+        </div>
+      </div>
+    )
+  }
+
+  // If already complete (user navigated back), show the same completion UI
+  if (syncComplete && !loadingFirstAppointment) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-white/10 bg-black/20 p-6">
+          <h4 className="text-sm font-semibold text-white mb-4">Syncing Priority Data</h4>
+          
+          {/* Show progress bar at 100% */}
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-white font-medium">
+                Priority sync complete!
+              </span>
+              <span className="text-emerald-300 font-bold">
+                100%
+              </span>
+            </div>
+            
+            <div className="w-full bg-black/40 rounded-full h-3 overflow-hidden border border-white/10">
+              <div
+                className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#3af1f7]"
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+          
+          <div className="p-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10">
+            <p className="text-sm text-emerald-200">
+              ✓ Priority sync completed successfully!
+            </p>
+            <p className="text-xs text-emerald-300 mt-1">
+              Older data will continue syncing in the background. You'll receive a notification when complete.
+            </p>
+          </div>
         </div>
       </div>
     )
