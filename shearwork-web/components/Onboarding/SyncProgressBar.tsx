@@ -6,12 +6,14 @@ import { supabase } from '@/utils/supabaseClient'
 interface SyncProgressBarProps {
   userId: string
   totalMonths: number
+  syncPhase: 'priority' | 'background'
   onComplete: () => void
 }
 
 export default function SyncProgressBar({
   userId,
   totalMonths,
+  syncPhase,
   onComplete,
 }: SyncProgressBarProps) {
   const [completedMonths, setCompletedMonths] = useState(0)
@@ -24,7 +26,7 @@ export default function SyncProgressBar({
   const hasCalledCompleteRef = useRef(false)
   const randomIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Fetch current sync status
+  // Fetch current sync status for the specific phase
   const fetchSyncStatus = useCallback(async () => {
     if (isComplete) return // Stop polling when complete
     
@@ -32,6 +34,7 @@ export default function SyncProgressBar({
       .from('sync_status')
       .select('status')
       .eq('user_id', userId)
+      .eq('sync_phase', syncPhase) // Only get syncs for this phase
 
     if (error) {
       console.error('Error fetching sync status:', error)
@@ -41,11 +44,11 @@ export default function SyncProgressBar({
     const completed = data?.filter(s => s.status === 'completed').length || 0
     const hasFailed = data?.some(s => s.status === 'failed') || false
     
-    console.log(`Sync status: ${completed}/${totalMonths} completed`)
+    console.log(`[${syncPhase}] Sync status: ${completed}/${totalMonths} completed`)
     
     setCompletedMonths(completed)
     setFailed(hasFailed)
-  }, [userId, totalMonths, isComplete])
+  }, [userId, totalMonths, syncPhase, isComplete])
 
   // Poll for sync status updates
   useEffect(() => {
@@ -65,7 +68,7 @@ export default function SyncProgressBar({
   useEffect(() => {
     // Check if all months are complete (use >= for safety)
     if (completedMonths >= totalMonths && totalMonths > 0 && !hasCalledCompleteRef.current) {
-      console.log('All months complete! Jumping to 100%')
+      console.log(`[${syncPhase}] All months complete! Jumping to 100%`)
       hasCalledCompleteRef.current = true
       setIsComplete(true)
       setDisplayProgress(100)
@@ -78,7 +81,7 @@ export default function SyncProgressBar({
       
       onComplete()
     }
-  }, [completedMonths, totalMonths, onComplete])
+  }, [completedMonths, totalMonths, syncPhase, onComplete])
 
   // Handle progress updates when completedMonths changes (but not complete yet)
   useEffect(() => {
@@ -92,12 +95,12 @@ export default function SyncProgressBar({
       const progressPerMonth = 95 / totalMonths // Leave room to jump to 100%
       const newProgress = Math.min(completedMonths * progressPerMonth, 95)
       
-      console.log(`Progress update: ${completedMonths}/${totalMonths} months = ${newProgress.toFixed(1)}%`)
+      console.log(`[${syncPhase}] Progress update: ${completedMonths}/${totalMonths} months = ${newProgress.toFixed(1)}%`)
       
       setDisplayProgress(newProgress)
       lastCompletedCountRef.current = completedMonths
     }
-  }, [completedMonths, totalMonths, isComplete])
+  }, [completedMonths, totalMonths, syncPhase, isComplete])
 
   // Random increments while waiting (only when not complete)
   useEffect(() => {
@@ -133,10 +136,8 @@ export default function SyncProgressBar({
       <div className="flex items-center justify-between text-sm">
         <span className="text-white font-medium">
           {isComplete 
-            ? 'Sync complete!' 
-            : failed 
-              ? 'Sync encountered errors' 
-              : 'Syncing your data...'}
+            ? `${syncPhase === 'priority' ? 'Priority' : 'Background'} sync complete!` 
+            : `Syncing ${syncPhase === 'priority' ? 'priority' : 'background'} data...`}
         </span>
         <span className="text-emerald-300 font-bold">
           {Math.round(displayProgress)}%
@@ -145,20 +146,12 @@ export default function SyncProgressBar({
       
       <div className="w-full bg-black/40 rounded-full h-3 overflow-hidden border border-white/10">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${
-            failed 
-              ? 'bg-gradient-to-r from-rose-400 to-red-500' 
-              : 'bg-gradient-to-r from-emerald-400 to-[#3af1f7]'
-          }`}
+          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#3af1f7]"
           style={{ width: `${displayProgress}%` }}
         />
       </div>
 
-      {failed && !isComplete && (
-        <p className="text-xs text-rose-300">
-          Some months failed to sync. Please retry.
-        </p>
-      )}
+      {/* Don't show error message to user - retries happen automatically */}
     </div>
   )
 }
