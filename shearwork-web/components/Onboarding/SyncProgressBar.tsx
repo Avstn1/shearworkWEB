@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 
 interface SyncProgressBarProps {
@@ -17,24 +17,17 @@ export default function SyncProgressBar({
   const [completedMonths, setCompletedMonths] = useState(0)
   const [displayProgress, setDisplayProgress] = useState(0)
   const [failed, setFailed] = useState(false)
-  const [lastCompletedCount, setLastCompletedCount] = useState(0)
-
-  useEffect(() => {
-    // Poll for sync status updates every 2 seconds
-    const pollInterval = setInterval(() => {
-      fetchSyncStatus()
-    }, 2000)
-
-    // Initial fetch
-    fetchSyncStatus()
-
-    return () => {
-      clearInterval(pollInterval)
-    }
-  }, [userId])
+  const [isComplete, setIsComplete] = useState(false)
+  
+  // Use refs to track values without causing re-renders
+  const lastCompletedCountRef = useRef(0)
+  const hasCalledCompleteRef = useRef(false)
+  const randomIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch current sync status
-  const fetchSyncStatus = async () => {
+  const fetchSyncStatus = useCallback(async () => {
+    if (isComplete) return // Stop polling when complete
+    
     const { data, error } = await supabase
       .from('sync_status')
       .select('status')
@@ -52,58 +45,92 @@ export default function SyncProgressBar({
     
     setCompletedMonths(completed)
     setFailed(hasFailed)
-  }
+  }, [userId, totalMonths, isComplete])
 
-  // Handle progress updates when completedMonths changes
+  // Poll for sync status updates
   useEffect(() => {
-    console.log(`Progress update: completed=${completedMonths}, last=${lastCompletedCount}, display=${displayProgress}`)
-    
-    // Check if all months are complete
-    if (completedMonths === totalMonths && totalMonths > 0) {
-      console.log('All months complete! Jumping to 100%')
-      setDisplayProgress(100)
-      onComplete()
-      return
-    }
+    const pollInterval = setInterval(() => {
+      fetchSyncStatus()
+    }, 2000)
 
-    // If a new month completed, increment the progress bar
-    if (completedMonths > lastCompletedCount && totalMonths > 0) {
-      const currentProgress = displayProgress
-      const percentageToAdd = (100 - currentProgress) / totalMonths
-      const newProgress = Math.min(currentProgress + percentageToAdd, 99)
+    // Initial fetch
+    fetchSyncStatus()
+
+    return () => {
+      clearInterval(pollInterval)
+    }
+  }, [fetchSyncStatus])
+
+  // Handle completion - check if all months are done
+  useEffect(() => {
+    // Check if all months are complete (use >= for safety)
+    if (completedMonths >= totalMonths && totalMonths > 0 && !hasCalledCompleteRef.current) {
+      console.log('All months complete! Jumping to 100%')
+      hasCalledCompleteRef.current = true
+      setIsComplete(true)
+      setDisplayProgress(100)
       
-      console.log(`Adding ${percentageToAdd.toFixed(2)}% to progress: ${currentProgress.toFixed(2)}% -> ${newProgress.toFixed(2)}%`)
+      // Stop the random increment timer
+      if (randomIntervalRef.current) {
+        clearInterval(randomIntervalRef.current)
+        randomIntervalRef.current = null
+      }
       
-      setDisplayProgress(newProgress)
-      setLastCompletedCount(completedMonths)
+      onComplete()
     }
   }, [completedMonths, totalMonths, onComplete])
 
-  // Random increments while waiting (independent of completion)
+  // Handle progress updates when completedMonths changes (but not complete yet)
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (isComplete) return // Don't update if already complete
+    
+    // If a new month completed, increment the progress bar
+    if (completedMonths > lastCompletedCountRef.current && totalMonths > 0) {
+      const progressPerMonth = 95 / totalMonths // Leave room to jump to 100%
+      const newProgress = Math.min(completedMonths * progressPerMonth, 95)
+      
+      console.log(`Progress update: ${completedMonths}/${totalMonths} months = ${newProgress.toFixed(1)}%`)
+      
+      setDisplayProgress(newProgress)
+      lastCompletedCountRef.current = completedMonths
+    }
+  }, [completedMonths, totalMonths, isComplete])
+
+  // Random increments while waiting (only when not complete)
+  useEffect(() => {
+    if (isComplete) return // Don't run random increments after completion
+    
+    randomIntervalRef.current = setInterval(() => {
       setDisplayProgress(prev => {
-        // Never go to 100% with random increments
-        if (prev >= 99) {
+        // Stop at 95% to leave room for real completion
+        if (prev >= 95) {
           return prev
         }
         
-        // Random increment between 0.5% and 2%
-        const increment = Math.random() * 1.5 + 0.5
-        const newProgress = Math.min(prev + increment, 99)
+        // Smaller random increment between 0.3% and 1%
+        const increment = Math.random() * 0.7 + 0.3
+        const newProgress = Math.min(prev + increment, 95)
         
         return newProgress
       })
-    }, 1500) // Update every 1.5 seconds
+    }, 1500)
 
-    return () => clearInterval(interval)
-  }, [])
+    return () => {
+      if (randomIntervalRef.current) {
+        clearInterval(randomIntervalRef.current)
+      }
+    }
+  }, [isComplete])
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-sm">
         <span className="text-white font-medium">
-          {failed ? 'Sync encountered errors' : 'Syncing your data...'}
+          {isComplete 
+            ? 'Sync complete!' 
+            : failed 
+              ? 'Sync encountered errors' 
+              : 'Syncing your data...'}
         </span>
         <span className="text-emerald-300 font-bold">
           {Math.round(displayProgress)}%
@@ -121,7 +148,7 @@ export default function SyncProgressBar({
         />
       </div>
 
-      {failed && (
+      {failed && !isComplete && (
         <p className="text-xs text-rose-300">
           Some months failed to sync. Please retry.
         </p>
