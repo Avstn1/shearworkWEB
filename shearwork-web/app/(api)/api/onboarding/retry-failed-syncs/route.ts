@@ -6,15 +6,15 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-// Retry configuration
+// Retry configuration (same as trigger-sync)
 const MAX_RETRIES = 3
-const RETRY_DELAY = 2000 // 2 seconds
-const REQUEST_TIMEOUT = 120000 // 2 minutes
+const RETRY_DELAY = 2000
+const REQUEST_TIMEOUT = 120000
 
 export async function POST(request: NextRequest) {
   try {
     const { user, supabase } = await getAuthenticatedUser(request)
-    const { userId, startMonth, startYear } = await request.json()
+    const { userId } = await request.json()
 
     if (!user) {
       return NextResponse.json(
@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!userId || !startYear) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Missing userId or startYear' },
+        { error: 'Missing userId' },
         { status: 400 }
       )
     }
@@ -38,73 +38,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify user has Acuity token
-    const { data: acuityToken } = await supabase
-      .from('acuity_tokens')
-      .select('user_id')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (!acuityToken) {
-      return NextResponse.json(
-        { error: 'No Acuity integration found for this user' },
-        { status: 404 }
-      )
-    }
-
-    // Calculate months to sync
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth() // 0-11
-
-    let startDate: Date
-    if (startMonth) {
-      const startMonthIndex = MONTHS.indexOf(startMonth)
-      startDate = new Date(startYear, startMonthIndex, 1)
-    } else {
-      startDate = new Date(startYear, 0, 1) // January
-    }
-
-    const monthsToSync: { month: string; year: number }[] = []
-    let iterDate = new Date(startDate)
-
-    while (
-      iterDate.getFullYear() < currentYear ||
-      (iterDate.getFullYear() === currentYear && iterDate.getMonth() <= currentMonth)
-    ) {
-      monthsToSync.push({
-        month: MONTHS[iterDate.getMonth()],
-        year: iterDate.getFullYear(),
-      })
-      iterDate.setMonth(iterDate.getMonth() + 1)
-    }
-
-    // Reverse order - most recent months first (more relevant)
-    monthsToSync.reverse()
-
-    // Create sync_status rows
-    const syncStatusRows = monthsToSync.map(({ month, year }) => ({
-      user_id: userId,
-      month,
-      year,
-      status: 'pending',
-      retry_count: 0,
-      error_message: null,
-    }))
-
-    const { error: insertError } = await supabase
+    // Get all failed syncs
+    const { data: failedSyncs, error: fetchError } = await supabase
       .from('sync_status')
-      .upsert(syncStatusRows, {
-        onConflict: 'user_id,month,year',
-        ignoreDuplicates: false,
-      })
+      .select('month, year')
+      .eq('user_id', userId)
+      .eq('status', 'failed')
 
-    if (insertError) {
-      console.error('Error inserting sync_status:', insertError)
-      throw insertError
+    if (fetchError) {
+      throw fetchError
     }
 
-    // Process months with concurrency limit of 6
+    if (!failedSyncs || failedSyncs.length === 0) {
+      return NextResponse.json({ 
+        success: true,
+        message: 'No failed syncs to retry',
+        retriedCount: 0
+      })
+    }
+
+    // Reset them to pending
+    const { error: updateError } = await supabase
+      .from('sync_status')
+      .update({ 
+        status: 'pending', 
+        retry_count: 0,
+        error_message: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('status', 'failed')
+
+    if (updateError) {
+      throw updateError
+    }
+
     const CONCURRENCY_LIMIT = 6
     const BYPASS_TOKEN = process.env.BYPASS_TOKEN!
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -112,9 +80,8 @@ export async function POST(request: NextRequest) {
     // Function to process a single month with retry logic
     const processMonth = async (month: string, year: number, retryCount = 0): Promise<any> => {
       try {
-        console.log(`🚀 Starting sync: ${userId} - ${month} ${year} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`)
+        console.log(`🔄 Retrying sync: ${userId} - ${month} ${year} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`)
         
-        // Update status to processing
         await supabase
           .from('sync_status')
           .update({ 
@@ -126,7 +93,6 @@ export async function POST(request: NextRequest) {
           .eq('month', month)
           .eq('year', year)
 
-        // Call the pull endpoint with timeout
         const targetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${year}`
         
         const controller = new AbortController()
@@ -150,7 +116,6 @@ export async function POST(request: NextRequest) {
           throw new Error(`HTTP ${response.status}: ${errorText}`)
         }
         
-        // Update sync_status to completed
         await supabase
           .from('sync_status')
           .update({ 
@@ -163,12 +128,12 @@ export async function POST(request: NextRequest) {
           .eq('month', month)
           .eq('year', year)
 
-        console.log(`✓ Completed: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`)
+        console.log(`✓ Retry completed: ${userId} - ${month} ${year}`)
         
         return { month, year, status: 'completed' }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        console.error(`✗ Failed: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
+        console.error(`✗ Retry failed: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
         
         // Check error types that should trigger retry
         const isTimeout = errorMessage.includes('aborted') || 
@@ -183,9 +148,8 @@ export async function POST(request: NextRequest) {
         // Retry logic - retry on timeouts, deadlocks, or server errors
         if (retryCount < MAX_RETRIES && (isTimeout || isDeadlock || isServerError)) {
           const retryReason = isDeadlock ? 'deadlock' : isTimeout ? 'timeout' : 'server error'
-          console.log(`⏳ Retrying ${month} ${year} due to ${retryReason} in ${RETRY_DELAY}ms... (${MAX_RETRIES - retryCount} retries left)`)
+          console.log(`⏳ Re-retrying ${month} ${year} due to ${retryReason} in ${RETRY_DELAY}ms...`)
           
-          // Update status to show retry pending
           await supabase
             .from('sync_status')
             .update({ 
@@ -201,7 +165,6 @@ export async function POST(request: NextRequest) {
           return processMonth(month, year, retryCount + 1)
         }
         
-        // Mark as failed after all retries exhausted
         await supabase
           .from('sync_status')
           .update({ 
@@ -219,13 +182,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Process months with concurrency limit
-    // Note: Months are processed in reverse chronological order (newest first)
-    // This ensures most relevant/recent data is synced first
     const processWithConcurrency = async () => {
       const results: any[] = []
       const executing: Promise<any>[] = []
 
-      for (const { month, year } of monthsToSync) {
+      for (const { month, year } of failedSyncs) {
         const promise = processMonth(month, year).then(result => {
           executing.splice(executing.indexOf(promise), 1)
           return result
@@ -242,20 +203,20 @@ export async function POST(request: NextRequest) {
       return Promise.all(results)
     }
 
-    // Start processing in the background (don't await)
+    // Start processing in the background
     processWithConcurrency().catch(err => {
-      console.error('Background sync error:', err)
+      console.error('Background retry error:', err)
     })
 
-    return NextResponse.json({
-      success: true,
-      message: 'Sync started',
-      totalMonths: monthsToSync.length,
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Retrying failed syncs',
+      retriedCount: failedSyncs.length,
       concurrencyLimit: CONCURRENCY_LIMIT,
       maxRetries: MAX_RETRIES,
     })
   } catch (error) {
-    console.error('trigger-sync error:', error)
+    console.error('retry-failed-syncs error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

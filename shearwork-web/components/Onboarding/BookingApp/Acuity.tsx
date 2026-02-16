@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Calendar, Info } from 'lucide-react'
+import { Loader2, Calendar, Info, AlertTriangle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import SyncProgressBar from '@/components/Onboarding/SyncProgressBar'
@@ -38,14 +38,17 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
   const [totalMonths, setTotalMonths] = useState(existingSync?.totalMonths || 0)
   const [syncComplete, setSyncComplete] = useState(false)
   const [completedSyncs, setCompletedSyncs] = useState<{ month: string; year: number }[]>([])
+  const [failedSyncs, setFailedSyncs] = useState<{ month: string; year: number; error_message?: string }[]>([])
   const [loadingCompleted, setLoadingCompleted] = useState(true)
+  const [retryingFailed, setRetryingFailed] = useState(false)
   const [syncStartTime, setSyncStartTime] = useState<number | null>(null)
   const [firstAppointment, setFirstAppointment] = useState<{ month: string; year: number; datetime: string } | null>(null)
   const [loadingFirstAppointment, setLoadingFirstAppointment] = useState(true)
 
-  // Load completed syncs and first appointment on mount
+  // Load completed syncs, failed syncs, and first appointment on mount
   useEffect(() => {
     fetchCompletedSyncs()
+    fetchFailedSyncs()
     fetchFirstAppointment()
   }, [userId])
 
@@ -66,6 +69,24 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
       console.error('Error fetching completed syncs:', error)
     } finally {
       setLoadingCompleted(false)
+    }
+  }
+
+  const fetchFailedSyncs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sync_status')
+        .select('month, year, error_message')
+        .eq('user_id', userId)
+        .eq('status', 'failed')
+        .order('year', { ascending: true })
+        .order('month', { ascending: true })
+
+      if (!error && data) {
+        setFailedSyncs(data)
+      }
+    } catch (error) {
+      console.error('Error fetching failed syncs:', error)
     }
   }
 
@@ -302,6 +323,42 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     }
   }
 
+  const handleRetryFailed = async () => {
+    if (failedSyncs.length === 0) return
+    
+    setRetryingFailed(true)
+    
+    try {
+      const response = await fetch('/api/onboarding/retry-failed-syncs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to retry syncs')
+      }
+
+      toast.success(`Retrying ${data.retriedCount} failed sync${data.retriedCount !== 1 ? 's' : ''}!`)
+      
+      // Refresh the lists
+      await fetchFailedSyncs()
+      await fetchCompletedSyncs()
+      
+      // Start monitoring progress
+      setSyncStarted(true)
+      setTotalMonths(data.retriedCount)
+      onSyncStateChange(true)
+    } catch (error) {
+      console.error('Retry error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to retry syncs')
+    } finally {
+      setRetryingFailed(false)
+    }
+  }
+
   const handleRetry = async () => {
     // Clear sync status and restart
     setSyncStarted(false)
@@ -332,6 +389,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
       setSelectedYear('')
       setSyncStartTime(null)
       fetchCompletedSyncs() // Refresh the completed syncs list
+      fetchFailedSyncs() // Refresh the failed syncs list
     }, 2000) // 2 second delay to show success message
   }
 
@@ -421,6 +479,54 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
                   })()}
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Show failed syncs if any */}
+        {failedSyncs.length > 0 && (
+          <div className="mb-4 p-4 rounded-xl border border-orange-400/30 bg-orange-400/10">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className="text-orange-400" />
+                <h4 className="text-sm font-semibold text-orange-200">
+                  Failed Syncs
+                </h4>
+              </div>
+              <button
+                onClick={handleRetryFailed}
+                disabled={retryingFailed}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-400/20 border border-orange-400/40 text-orange-200 hover:bg-orange-400/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {retryingFailed ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Retrying...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={12} />
+                    Retry All
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="text-xs text-orange-300 space-y-1">
+              <p className="mb-2">
+                <span className="font-semibold">{failedSyncs.length}</span> month{failedSyncs.length !== 1 ? 's' : ''} failed to sync
+              </p>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {failedSyncs.map((fs, idx) => (
+                  <div key={idx} className="text-orange-200/80 text-xs">
+                    • {fs.month} {fs.year}
+                    {fs.error_message && (
+                      <span className="text-orange-300/60 ml-2">
+                        ({fs.error_message.substring(0, 50)}{fs.error_message.length > 50 ? '...' : ''})
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
