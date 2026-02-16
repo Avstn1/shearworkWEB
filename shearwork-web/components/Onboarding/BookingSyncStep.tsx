@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import Acuity from '@/components/Onboarding/BookingApp/Acuity'
 
@@ -46,24 +47,48 @@ export default function BookingSyncStep({
         console.error('Background availability update failed:', err)
       })
 
-      // Check for existing sync_status rows
+      // Check for existing sync_status rows (priority phase only)
       const { data: syncStatusData, error: syncError } = await supabase
         .from('sync_status')
-        .select('status')
+        .select('status, sync_phase')
         .eq('user_id', user.id)
+        .eq('sync_phase', 'priority') // Only check priority phase
 
       if (!syncError && syncStatusData && syncStatusData.length > 0) {
-        const hasPending = syncStatusData.some(s => s.status === 'pending' || s.status === 'processing')
+        const hasPending = syncStatusData.some(s => 
+          s.status === 'pending' || 
+          s.status === 'processing' || 
+          s.status === 'retrying'
+        )
         const allComplete = syncStatusData.every(s => s.status === 'completed')
         
         if (allComplete) {
-          // All syncs complete, allow proceeding
+          // All priority syncs complete, allow proceeding
           setSyncComplete(true)
         } else if (hasPending) {
-          // Has pending syncs, resume them
+          // Has pending priority syncs, resume them
+          console.log('Found incomplete priority syncs, resuming...')
+          
           setExistingSync({
             hasPending: true,
             totalMonths: syncStatusData.length
+          })
+          
+          // Auto-resume incomplete syncs
+          fetch('/api/onboarding/resume-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id }),
+          }).then(async (res) => {
+            const data = await res.json()
+            if (res.ok) {
+              console.log('Auto-resumed syncs:', data)
+              toast.success('Resuming your sync...')
+            } else {
+              console.error('Failed to auto-resume:', data.error)
+            }
+          }).catch(err => {
+            console.error('Error auto-resuming syncs:', err)
           })
         }
       }
@@ -151,7 +176,7 @@ export default function BookingSyncStep({
             <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl p-6 max-w-md mx-4">
               <h3 className="text-lg font-semibold text-white mb-2">Sync in Progress</h3>
               <p className="text-sm text-gray-300 mb-4">
-                Please wait for the sync to complete before navigating away. This ensures all your data is properly synced.
+                Please wait for the priority sync to complete before navigating away. Your older data will continue syncing in the background.
               </p>
               <button
                 onClick={() => setShowBackWarning(false)}
@@ -207,7 +232,7 @@ export default function BookingSyncStep({
                 : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
             }`}
           >
-            Next
+            {!syncComplete && isSyncing ? 'Syncing...' : 'Next'}
           </button>
         </div>
       </div>

@@ -6,9 +6,10 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-// Retry configuration
-const MAX_RETRIES = 3
-const RETRY_DELAY = 2000 // 2 seconds
+// Retry configuration - NO MAX RETRIES, infinite retries until success
+const PRIORITY_RETRY_DELAY = 6000 // 6 seconds for priority months
+const BACKGROUND_RETRY_DELAY_BASE = 2000 // Base 2 seconds for background, exponential backoff
+const BACKGROUND_RETRY_DELAY_MAX = 30000 // Max 30 seconds for background
 const REQUEST_TIMEOUT = 120000 // 2 minutes
 
 export async function POST(request: NextRequest) {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
       startDate = new Date(startYear, 0, 1) // January
     }
 
-    const monthsToSync: { month: string; year: number }[] = []
+    const monthsToSync: { month: string; year: number; phase: 'priority' | 'background' }[] = []
     let iterDate = new Date(startDate)
 
     while (
@@ -75,19 +76,30 @@ export async function POST(request: NextRequest) {
       monthsToSync.push({
         month: MONTHS[iterDate.getMonth()],
         year: iterDate.getFullYear(),
+        phase: 'background', // Will be updated below
       })
       iterDate.setMonth(iterDate.getMonth() + 1)
     }
 
-    // Reverse order - most recent months first (more relevant)
+    // Reverse order - most recent months first
     monthsToSync.reverse()
 
-    // Create sync_status rows
-    const syncStatusRows = monthsToSync.map(({ month, year }) => ({
+    // Determine priority vs background phases
+    // Priority = last 12 months (or all months if < 12 months of data)
+    const priorityCount = Math.min(12, monthsToSync.length)
+    for (let i = 0; i < priorityCount; i++) {
+      monthsToSync[i].phase = 'priority'
+    }
+
+    console.log(`📊 Sync plan: ${priorityCount} priority months, ${monthsToSync.length - priorityCount} background months`)
+
+    // Create sync_status rows with phase information
+    const syncStatusRows = monthsToSync.map(({ month, year, phase }) => ({
       user_id: userId,
       month,
       year,
       status: 'pending',
+      sync_phase: phase,
       retry_count: 0,
       error_message: null,
     }))
@@ -104,15 +116,30 @@ export async function POST(request: NextRequest) {
       throw insertError
     }
 
-    // Process months with concurrency limit of 6
-    const CONCURRENCY_LIMIT = 6
     const BYPASS_TOKEN = process.env.BYPASS_TOKEN!
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-    // Function to process a single month with retry logic
-    const processMonth = async (month: string, year: number, retryCount = 0): Promise<any> => {
+    // Calculate retry delay with exponential backoff for background syncs
+    const getRetryDelay = (phase: 'priority' | 'background', retryCount: number): number => {
+      if (phase === 'priority') {
+        return PRIORITY_RETRY_DELAY // Fixed 6 seconds
+      }
+      
+      // Background: exponential backoff starting at 2s, max 30s
+      const delay = BACKGROUND_RETRY_DELAY_BASE * Math.pow(2, retryCount)
+      return Math.min(delay, BACKGROUND_RETRY_DELAY_MAX)
+    }
+
+    // Function to process a single month with INFINITE retry logic
+    const processMonth = async (
+      month: string, 
+      year: number, 
+      phase: 'priority' | 'background',
+      retryCount = 0
+    ): Promise<any> => {
       try {
-        console.log(`🚀 Starting sync: ${userId} - ${month} ${year} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`)
+        const attemptLabel = retryCount === 0 ? 'initial attempt' : `retry #${retryCount}`
+        console.log(`🚀 Starting sync [${phase}]: ${userId} - ${month} ${year} (${attemptLabel})`)
         
         // Update status to processing
         await supabase
@@ -145,20 +172,63 @@ export async function POST(request: NextRequest) {
 
         clearTimeout(timeoutId)
 
+        console.log(`[${phase}] Response status for ${month} ${year}: ${response.status} ${response.statusText}`)
+        
         if (!response.ok) {
           const errorText = await response.text()
+          console.error(`[${phase}] HTTP error ${response.status} for ${month} ${year}:`, errorText)
           throw new Error(`HTTP ${response.status}: ${errorText}`)
         }
         
+        // Clone response to read it twice (for debugging)
+        const responseClone = response.clone()
+        const rawText = await responseClone.text()
+        console.log(`[${phase}] Raw response length for ${month} ${year}:`, rawText.length, 'chars')
+        console.log(`[${phase}] Raw response preview:`, rawText.substring(0, 300))
+        
         // Check response body for errors (API may return 200 with error in body)
-        const data = await response.json()
-        if (data.error || !data.success) {
+        let data
+        try {
+          data = await response.json()
+        } catch (parseError) {
+          console.error(`[${phase}] JSON parse error for ${month} ${year}:`, parseError)
+          console.error(`[${phase}] Raw response was:`, rawText)
+          throw new Error('Failed to parse response from pull endpoint')
+        }
+        
+        console.log(`[${phase}] Pull response for ${month} ${year}:`, { success: data.success, hasError: !!data.error, errorType: typeof data.error })
+        
+        // Only fail if there's an explicit error, not just missing success field
+        if (data.error) {
           // Extract error details if available
-          const errorDetail = typeof data.error === 'object' 
-            ? JSON.stringify(data.error) 
-            : data.error || 'Unknown error from pull endpoint'
+          let errorDetail = 'Unknown error from pull endpoint'
+          
+          if (typeof data.error === 'string') {
+            errorDetail = data.error
+          } else if (typeof data.error === 'object') {
+            // Handle PostgreSQL error objects
+            if (data.error.message) {
+              errorDetail = data.error.message
+            } else if (data.error.code) {
+              errorDetail = `DB Error ${data.error.code}: ${data.error.details || data.error.hint || 'Database error'}`
+            } else {
+              errorDetail = JSON.stringify(data.error)
+            }
+          }
+          
+          console.error(`[${phase}] Pull endpoint error for ${month} ${year}:`, data.error)
           throw new Error(errorDetail)
         }
+        
+        // If no error and success is explicitly false, that's also an error
+        if (data.success === false) {
+          console.error(`[${phase}] Pull endpoint returned success=false for ${month} ${year}`)
+          throw new Error('Pull endpoint returned success: false')
+        }
+        
+        // If we get here, consider it successful (even if success field is missing)
+        console.log(`✓ Pull successful for ${month} ${year} (success: ${data.success})`)
+
         
         // Only mark as completed if both HTTP status and response body indicate success
         await supabase
@@ -173,32 +243,34 @@ export async function POST(request: NextRequest) {
           .eq('month', month)
           .eq('year', year)
 
-        console.log(`✓ Completed: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`)
+        console.log(`✓ Completed [${phase}]: ${userId} - ${month} ${year} (after ${retryCount} retries)`)
         
-        return { month, year, status: 'completed' }
+        return { month, year, phase, status: 'completed' }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        console.error(`✗ Failed: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
+        console.error(`✗ Failed [${phase}]: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
         
-        // Check error types that should trigger retry
+        // Check error types
         // Timeout can be in message or in error object code
         const isTimeout = errorMessage.includes('aborted') || 
                          errorMessage.includes('timeout') ||
-                         errorMessage.includes('57014') || // PostgreSQL statement timeout
+                         errorMessage.includes('57014') || 
                          errorMessage.includes('canceling statement due to statement timeout') ||
                          (typeof error === 'object' && error !== null && 'code' in error && error.code === '57014')
         
         // Deadlock can be in message or in error object code
-        const isDeadlock = errorMessage.includes('40P01') || // PostgreSQL deadlock code
+        const isDeadlock = errorMessage.includes('40P01') || 
                           errorMessage.includes('deadlock detected') ||
                           (typeof error === 'object' && error !== null && 'code' in error && error.code === '40P01')
         
         const isServerError = errorMessage.includes('500')
         
-        // Retry logic - retry on timeouts, deadlocks, or server errors
-        if (retryCount < MAX_RETRIES && (isTimeout || isDeadlock || isServerError)) {
+        // INFINITE RETRY - Always retry on timeout, deadlock, or server errors
+        if (isTimeout || isDeadlock || isServerError) {
           const retryReason = isDeadlock ? 'deadlock' : isTimeout ? 'timeout' : 'server error'
-          console.log(`⏳ Retrying ${month} ${year} due to ${retryReason} in ${RETRY_DELAY}ms... (${MAX_RETRIES - retryCount} retries left)`)
+          const retryDelay = getRetryDelay(phase, retryCount)
+          
+          console.log(`⏳ Retrying [${phase}] ${month} ${year} due to ${retryReason} in ${retryDelay}ms... (retry #${retryCount + 1})`)
           
           // Update status to show retry pending
           await supabase
@@ -212,11 +284,12 @@ export async function POST(request: NextRequest) {
             .eq('month', month)
             .eq('year', year)
           
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
-          return processMonth(month, year, retryCount + 1)
+          await new Promise(resolve => setTimeout(resolve, retryDelay))
+          return processMonth(month, year, phase, retryCount + 1)
         }
         
-        // Mark as failed after all retries exhausted
+        // For non-retryable errors, mark as failed
+        // Note: This should rarely happen now that we retry infinitely
         await supabase
           .from('sync_status')
           .update({ 
@@ -229,19 +302,23 @@ export async function POST(request: NextRequest) {
           .eq('month', month)
           .eq('year', year)
 
-        return { month, year, status: 'failed', error: errorMessage }
+        return { month, year, phase, status: 'failed', error: errorMessage }
       }
     }
 
-    // Process months with concurrency limit
-    // Note: Months are processed in reverse chronological order (newest first)
-    // This ensures most relevant/recent data is synced first
-    const processWithConcurrency = async () => {
+    // PHASE 1: Process priority months first (concurrency = 3)
+    const processPriorityMonths = async () => {
+      const priorityMonths = monthsToSync.filter(m => m.phase === 'priority')
+      if (priorityMonths.length === 0) return []
+
+      console.log(`🎯 Starting PRIORITY phase: ${priorityMonths.length} months (concurrency = 3)`)
+
       const results: any[] = []
       const executing: Promise<any>[] = []
+      const PRIORITY_CONCURRENCY = 3
 
-      for (const { month, year } of monthsToSync) {
-        const promise = processMonth(month, year).then(result => {
+      for (const { month, year, phase } of priorityMonths) {
+        const promise = processMonth(month, year, phase).then(result => {
           executing.splice(executing.indexOf(promise), 1)
           return result
         })
@@ -249,7 +326,7 @@ export async function POST(request: NextRequest) {
         results.push(promise)
         executing.push(promise)
 
-        if (executing.length >= CONCURRENCY_LIMIT) {
+        if (executing.length >= PRIORITY_CONCURRENCY) {
           await Promise.race(executing)
         }
       }
@@ -257,17 +334,84 @@ export async function POST(request: NextRequest) {
       return Promise.all(results)
     }
 
+    // PHASE 2: Process background months after priority (concurrency = 4)
+    const processBackgroundMonths = async () => {
+      const backgroundMonths = monthsToSync.filter(m => m.phase === 'background')
+      if (backgroundMonths.length === 0) return []
+
+      console.log(`📦 Starting BACKGROUND phase: ${backgroundMonths.length} months (concurrency = 4)`)
+
+      const results: any[] = []
+      const executing: Promise<any>[] = []
+      const BACKGROUND_CONCURRENCY = 4
+
+      for (const { month, year, phase } of backgroundMonths) {
+        const promise = processMonth(month, year, phase).then(result => {
+          executing.splice(executing.indexOf(promise), 1)
+          return result
+        })
+
+        results.push(promise)
+        executing.push(promise)
+
+        if (executing.length >= BACKGROUND_CONCURRENCY) {
+          await Promise.race(executing)
+        }
+      }
+
+      return Promise.all(results)
+    }
+
+    // Start both phases in sequence (priority first, then background)
+    const startSyncSequence = async () => {
+      try {
+        // Phase 1: Priority months (blocking)
+        await processPriorityMonths()
+        console.log('✅ PRIORITY phase complete')
+
+        // Phase 2: Background months (non-blocking for onboarding)
+        const backgroundResults = await processBackgroundMonths()
+        console.log('✅ BACKGROUND phase complete')
+
+        // Send notification when ALL data is synced
+        const allSuccessful = backgroundResults.every(r => r.status === 'completed')
+        if (allSuccessful) {
+          const { error: notificationError } = await supabase
+            .from('notifications')
+            .insert({
+              user_id: userId,
+              header: 'Acuity data fully synced',
+              message: "Your data from Acuity has been completely synced. Please refresh to ensure that you're seeing the latest data",
+              reference_type: 'sync_completed',
+            })
+
+          if (notificationError) {
+            console.error('Failed to create notification:', notificationError)
+          } else {
+            console.log('📬 Notification sent: Full sync complete')
+          }
+        }
+      } catch (err) {
+        console.error('Sync sequence error:', err)
+      }
+    }
+
     // Start processing in the background (don't await)
-    processWithConcurrency().catch(err => {
+    startSyncSequence().catch(err => {
       console.error('Background sync error:', err)
     })
+
+    const priorityMonthsCount = monthsToSync.filter(m => m.phase === 'priority').length
+    const backgroundMonthsCount = monthsToSync.filter(m => m.phase === 'background').length
 
     return NextResponse.json({
       success: true,
       message: 'Sync started',
       totalMonths: monthsToSync.length,
-      concurrencyLimit: CONCURRENCY_LIMIT,
-      maxRetries: MAX_RETRIES,
+      priorityMonths: priorityMonthsCount,
+      backgroundMonths: backgroundMonthsCount,
+      priorityConcurrency: 3,
+      backgroundConcurrency: 4,
     })
   } catch (error) {
     console.error('trigger-sync error:', error)

@@ -46,45 +46,8 @@ function getFirstName(fullName: string): string {
 }
 
 function getTorontoDate(date: Date = new Date()): Date {
-  // Convert UTC date to Toronto timezone
-  const torontoTimeString = date.toLocaleString('en-CA', { timeZone: TORONTO_TZ })
-  return new Date(torontoTimeString)
-}
-
-function getCurrentDayOfWeek(): number {
-  // Returns 0 (Sunday) to 6 (Saturday) in Toronto time
-  const torontoDate = getTorontoDate()
-  return torontoDate.getDay()
-}
-
-function getYesterdayInTorontoAsUTC(): { start: string; end: string } {
-  const now = new Date()
-  const torontoDate = getTorontoDate(now)
-  
-  // Get yesterday's date in Toronto
-  const yesterday = new Date(torontoDate)
-  yesterday.setDate(yesterday.getDate() - 1)
-  
-  // Create start of day in Toronto (00:00:00)
-  const yesterdayStartToronto = new Date(
-    yesterday.getFullYear(),
-    yesterday.getMonth(),
-    yesterday.getDate(),
-    0, 0, 0, 0
-  )
-  
-  // Create end of day in Toronto (23:59:59)
-  const yesterdayEndToronto = new Date(
-    yesterday.getFullYear(),
-    yesterday.getMonth(),
-    yesterday.getDate(),
-    23, 59, 59, 999
-  )
-  
-  // Convert Toronto times to UTC by creating dates with timezone offset
-  // We parse the Toronto date string back as if it's in the local (Toronto) timezone
-  // then get the UTC equivalent
-  const torontoFormatter = new Intl.DateTimeFormat('en-CA', {
+  // Get the time in Toronto timezone as ISO components
+  const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: TORONTO_TZ,
     year: 'numeric',
     month: '2-digit',
@@ -95,16 +58,64 @@ function getYesterdayInTorontoAsUTC(): { start: string; end: string } {
     hour12: false
   })
   
-  // Get offset between Toronto and UTC
-  const torontoOffset = getTorontoUTCOffset(now)
+  const parts = formatter.formatToParts(date)
+  const get = (type: string) => parts.find(p => p.type === type)!.value
   
-  // Apply offset to get UTC times
-  const yesterdayStartUTC = new Date(yesterdayStartToronto.getTime() - torontoOffset)
-  const yesterdayEndUTC = new Date(yesterdayEndToronto.getTime() - torontoOffset)
+  // Create a new Date object with Toronto time values
+  return new Date(
+    parseInt(get('year')),
+    parseInt(get('month')) - 1,
+    parseInt(get('day')),
+    parseInt(get('hour')),
+    parseInt(get('minute')),
+    parseInt(get('second'))
+  )
+}
+
+function getCurrentDayOfWeek(): number {
+  // Returns 0 (Sunday) to 6 (Saturday) in Toronto time
+  const torontoDate = getTorontoDate()
+  return torontoDate.getDay()
+}
+
+function getYesterdayInTorontoAsUTC(): { start: string; end: string } {
+  // Get current time in Toronto
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TORONTO_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  
+  const now = new Date()
+  const parts = formatter.formatToParts(now)
+  const year = parseInt(parts.find(p => p.type === 'year')!.value)
+  const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1
+  const day = parseInt(parts.find(p => p.type === 'day')!.value)
+  
+  // Create yesterday's date
+  const torontoToday = new Date(Date.UTC(year, month, day))
+  const torontoYesterday = new Date(torontoToday)
+  torontoYesterday.setUTCDate(torontoYesterday.getUTCDate() - 1)
+  
+  // Start and end of yesterday in Toronto time (as UTC)
+  const start = new Date(Date.UTC(
+    torontoYesterday.getUTCFullYear(),
+    torontoYesterday.getUTCMonth(),
+    torontoYesterday.getUTCDate(),
+    5, 0, 0  // 00:00 Toronto = 05:00 UTC (EST) or 04:00 UTC (EDT)
+  ))
+  
+  const end = new Date(Date.UTC(
+    torontoYesterday.getUTCFullYear(),
+    torontoYesterday.getUTCMonth(),
+    torontoYesterday.getUTCDate() + 1,
+    4, 59, 59  // 23:59:59 Toronto = next day 04:59:59 UTC (EST) or 03:59:59 UTC (EDT)
+  ))
   
   return {
-    start: yesterdayStartUTC.toISOString(),
-    end: yesterdayEndUTC.toISOString()
+    start: start.toISOString(),
+    end: end.toISOString()
   }
 }
 
@@ -220,9 +231,10 @@ Deno.serve(async (req) => {
       .ilike('role', 'barber')
       .eq('sms_engaged_current_week', false)
       .not('phone', 'is', null)
+      .or('stripe_subscription_status.eq.active,trial_active.eq.true')
     
     // Add subscription filter (active OR trial)
-    query = query.or('stripe_subscription_status.eq.active,trial_active.eq.true')
+    // query = query.or('stripe_subscription_status.eq.active,trial_active.eq.true')
     
     if (dayOfWeek === 1) {
       // Monday: Regular flow - send to everyone with date_autonudge_enabled set

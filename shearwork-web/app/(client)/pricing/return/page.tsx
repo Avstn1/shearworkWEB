@@ -455,7 +455,6 @@ function PricingReturnContent() {
 
   const hasSub = summary?.hasSubscription ?? false
   const trialActive = isTrialActive(profile)
-  console.log("trial is active:", trialActive)
   const hasCheckoutComplete = sessionStatus === 'complete'
   const hasAccess = hasSub || trialActive || hasCheckoutComplete 
   const calendarConnected = calendarStatus.acuity || calendarStatus.square

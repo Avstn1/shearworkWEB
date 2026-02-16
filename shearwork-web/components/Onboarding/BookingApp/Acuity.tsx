@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Calendar, Info, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Loader2, Calendar, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import SyncProgressBar from '@/components/Onboarding/SyncProgressBar'
@@ -21,78 +21,23 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ]
 
-const generateYearOptions = () => {
-  const currentYear = new Date().getFullYear()
-  const years = []
-  for (let i = 0; i < 10; i++) {
-    years.push(currentYear - i)
-  }
-  return years
-}
-
 export default function Acuity({ userId, onSyncComplete, onSyncStateChange, existingSync }: AcuityProps) {
-  const [selectedMonth, setSelectedMonth] = useState<string>('')
-  const [selectedYear, setSelectedYear] = useState<number | ''>('')
   const [syncing, setSyncing] = useState(false)
   const [syncStarted, setSyncStarted] = useState(!!existingSync?.hasPending)
-  const [totalMonths, setTotalMonths] = useState(existingSync?.totalMonths || 0)
+  const [totalPriorityMonths, setTotalPriorityMonths] = useState(0)
   const [syncComplete, setSyncComplete] = useState(false)
-  const [completedSyncs, setCompletedSyncs] = useState<{ month: string; year: number }[]>([])
-  const [failedSyncs, setFailedSyncs] = useState<{ month: string; year: number; error_message?: string }[]>([])
-  const [loadingCompleted, setLoadingCompleted] = useState(true)
-  const [retryingFailed, setRetryingFailed] = useState(false)
   const [syncStartTime, setSyncStartTime] = useState<number | null>(null)
   const [firstAppointment, setFirstAppointment] = useState<{ month: string; year: number; datetime: string } | null>(null)
   const [loadingFirstAppointment, setLoadingFirstAppointment] = useState(true)
+  const [priorityMonthsInfo, setPriorityMonthsInfo] = useState<{ startMonth: string; startYear: number; endMonth: string; endYear: number } | null>(null)
 
-  // Load completed syncs, failed syncs, and first appointment on mount
+  // Load first appointment on mount
   useEffect(() => {
-    fetchCompletedSyncs()
-    fetchFailedSyncs()
     fetchFirstAppointment()
   }, [userId])
 
-  const fetchCompletedSyncs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sync_status')
-        .select('month, year, status')
-        .eq('user_id', userId)
-        .eq('status', 'completed')
-        .order('year', { ascending: true })
-        .order('month', { ascending: true })
-
-      if (!error && data) {
-        setCompletedSyncs(data.map(d => ({ month: d.month, year: d.year })))
-      }
-    } catch (error) {
-      console.error('Error fetching completed syncs:', error)
-    } finally {
-      setLoadingCompleted(false)
-    }
-  }
-
-  const fetchFailedSyncs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sync_status')
-        .select('month, year, error_message')
-        .eq('user_id', userId)
-        .eq('status', 'failed')
-        .order('year', { ascending: true })
-        .order('month', { ascending: true })
-
-      if (!error && data) {
-        setFailedSyncs(data)
-      }
-    } catch (error) {
-      console.error('Error fetching failed syncs:', error)
-    }
-  }
-
   const fetchFirstAppointment = async () => {
     try {
-      // Call our backend API route which proxies to Acuity
       const response = await fetch('/api/onboarding/get-first-appointment', {
         headers: {
           'x-client-access-token': await getAccessToken(),
@@ -107,7 +52,6 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
 
       if (data.firstAppointment) {
         const first = data.firstAppointment
-        // datetime format: "2013-07-02T10:15:00-0700"
         const appointmentDate = new Date(first.datetime)
         const month = MONTHS[appointmentDate.getMonth()]
         const year = appointmentDate.getFullYear()
@@ -118,9 +62,27 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
           datetime: first.datetime
         })
 
-        // Auto-select this month and year
-        setSelectedMonth(month)
-        setSelectedYear(year)
+        // Calculate priority months (last 12 months or less if first appointment is recent)
+        const now = new Date()
+        const currentMonth = now.getMonth()
+        const currentYear = now.getFullYear()
+        
+        // Calculate months between first appointment and now
+        const monthsSinceFirst = (currentYear - year) * 12 + (currentMonth - appointmentDate.getMonth()) + 1
+        const priorityCount = Math.min(12, monthsSinceFirst)
+        
+        setTotalPriorityMonths(priorityCount)
+        
+        // Calculate the date range for priority months
+        const priorityStartDate = new Date(now)
+        priorityStartDate.setMonth(priorityStartDate.getMonth() - (priorityCount - 1))
+        
+        setPriorityMonthsInfo({
+          startMonth: MONTHS[priorityStartDate.getMonth()],
+          startYear: priorityStartDate.getFullYear(),
+          endMonth: MONTHS[currentMonth],
+          endYear: currentYear
+        })
       }
     } catch (error) {
       console.error('Error fetching first appointment:', error)
@@ -134,174 +96,30 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     return session?.access_token || ''
   }
 
-  // Get available months based on selected year and first appointment
-  const getAvailableMonths = () => {
-    if (!firstAppointment || !selectedYear) return MONTHS
-
-    const firstAppointmentYear = firstAppointment.year
-    const firstAppointmentMonthIndex = MONTHS.indexOf(firstAppointment.month)
-    const currentYear = new Date().getFullYear()
-    const currentMonthIndex = new Date().getMonth()
-
-    // If selected year is before first appointment year, no months available
-    if (selectedYear < firstAppointmentYear) {
-      return []
-    }
-
-    // If selected year is the first appointment year
-    if (selectedYear === firstAppointmentYear) {
-      // Only show months from first appointment onwards, but not beyond current month if it's the current year
-      if (selectedYear === currentYear) {
-        return MONTHS.filter((_, index) => index >= firstAppointmentMonthIndex && index <= currentMonthIndex)
-      }
-      return MONTHS.filter((_, index) => index >= firstAppointmentMonthIndex)
-    }
-
-    // If selected year is the current year
-    if (selectedYear === currentYear) {
-      // Only show months up to current month
-      return MONTHS.filter((_, index) => index <= currentMonthIndex)
-    }
-
-    // If selected year is between first appointment and current year, show all months
-    if (selectedYear > firstAppointmentYear && selectedYear < currentYear) {
-      return MONTHS
-    }
-
-    // If selected year is after current year, no months available
-    return []
-  }
-
-  // Get available years (from first appointment year to current year)
-  const getAvailableYears = () => {
-    if (!firstAppointment) return generateYearOptions()
-
-    const currentYear = new Date().getFullYear()
-    const firstYear = firstAppointment.year
-    const years = []
-    
-    for (let year = currentYear; year >= firstYear; year--) {
-      years.push(year)
-    }
-    
-    return years
-  }
-
-  // Handle year change and validate selected month
-  const handleYearChange = (year: number | '') => {
-    setSelectedYear(year)
-    
-    if (year && selectedMonth) {
-      // Get available months for the new year
-      const availableMonths = year ? getAvailableMonths() : MONTHS
-      
-      // If current month is not in available months, reset it
-      if (!availableMonths.includes(selectedMonth)) {
-        setSelectedMonth('')
-      }
-    }
-  }
-
-  // Handle month change with validation
-  const handleMonthChange = (month: string) => {
-    setSelectedMonth(month)
-    
-    // If year is already selected, validate the combination
-    if (selectedYear && firstAppointment) {
-      const availableMonths = getAvailableMonths()
-      
-      // If the month is not in available months, reset it
-      if (!availableMonths.includes(month)) {
-        setSelectedMonth('')
-      }
-    }
-  }
-
-  // If there's an existing sync, skip the questions and show progress
+  // If there's an existing sync, skip and show progress
   useEffect(() => {
     if (existingSync?.hasPending) {
       setSyncStarted(true)
-      setTotalMonths(existingSync.totalMonths)
+      setTotalPriorityMonths(existingSync.totalMonths)
     }
   }, [existingSync])
 
-  const calculateMonthsBetween = (startMonth: string | null, startYear: number) => {
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth() // 0-11
-
-    let start: Date
-    if (startMonth) {
-      const startMonthIndex = MONTHS.indexOf(startMonth)
-      start = new Date(startYear, startMonthIndex, 1)
-    } else {
-      // If no month selected, assume January
-      start = new Date(startYear, 0, 1)
-    }
-
-    const end = new Date(currentYear, currentMonth, 1)
-
-    // Calculate months between
-    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
-    return Math.max(1, months)
-  }
-
   const handleStartSync = async () => {
-    if (!selectedYear) {
-      toast.error('Please select a year')
+    if (!firstAppointment) {
+      toast.error('Unable to determine sync range')
       return
     }
 
     setSyncing(true)
 
     try {
-      // Calculate all months in range
-      const now = new Date()
-      const currentYear = now.getFullYear()
-      const currentMonth = now.getMonth() // 0-11
-
-      let start: Date
-      if (selectedMonth) {
-        const startMonthIndex = MONTHS.indexOf(selectedMonth)
-        start = new Date(selectedYear as number, startMonthIndex, 1)
-      } else {
-        start = new Date(selectedYear as number, 0, 1)
-      }
-
-      const end = new Date(currentYear, currentMonth, 1)
-
-      // Calculate all months
-      const allMonths: { month: string; year: number }[] = []
-      let iterDate = new Date(start)
-      while (iterDate <= end) {
-        allMonths.push({
-          month: MONTHS[iterDate.getMonth()],
-          year: iterDate.getFullYear(),
-        })
-        iterDate.setMonth(iterDate.getMonth() + 1)
-      }
-
-      // Filter out already completed months
-      const monthsToSync = allMonths.filter(({ month, year }) => {
-        return !completedSyncs.some(cs => cs.month === month && cs.year === year)
-      })
-
-      if (monthsToSync.length === 0) {
-        toast.success('All months in this range are already synced!')
-        setSyncing(false)
-        return
-      }
-
-      const totalMonths = monthsToSync.length
-      setTotalMonths(totalMonths)
-
       const response = await fetch('/api/onboarding/trigger-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          startMonth: selectedMonth || null,
-          startYear: selectedYear,
+          startMonth: firstAppointment.month,
+          startYear: firstAppointment.year,
         }),
       })
 
@@ -311,10 +129,11 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
         throw new Error(data.error || 'Failed to start sync')
       }
 
-      toast.success(`Starting sync for ${totalMonths} months!`)
+      toast.success(`Starting sync for ${data.priorityMonths} priority months!`)
+      setTotalPriorityMonths(data.priorityMonths)
       setSyncStarted(true)
-      setSyncStartTime(Date.now()) // Track start time
-      onSyncStateChange(true) // Notify parent that sync started
+      setSyncStartTime(Date.now())
+      onSyncStateChange(true)
     } catch (error) {
       console.error('Sync error:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to start sync')
@@ -323,53 +142,17 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     }
   }
 
-  const handleRetryFailed = async () => {
-    if (failedSyncs.length === 0) return
-    
-    setRetryingFailed(true)
-    
-    try {
-      const response = await fetch('/api/onboarding/retry-failed-syncs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to retry syncs')
-      }
-
-      toast.success(`Retrying ${data.retriedCount} failed sync${data.retriedCount !== 1 ? 's' : ''}!`)
-      
-      // Refresh the lists
-      await fetchFailedSyncs()
-      await fetchCompletedSyncs()
-      
-      // Start monitoring progress
-      setSyncStarted(true)
-      setTotalMonths(data.retriedCount)
-      onSyncStateChange(true)
-    } catch (error) {
-      console.error('Retry error:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to retry syncs')
-    } finally {
-      setRetryingFailed(false)
-    }
-  }
-
   const handleRetry = async () => {
     // Clear sync status and restart
     setSyncStarted(false)
     setSyncComplete(false)
-    setTotalMonths(0)
+    setTotalPriorityMonths(0)
     handleStartSync()
   }
 
   const handleComplete = () => {
     setSyncComplete(true)
-    onSyncStateChange(false) // Notify parent that sync finished
+    onSyncStateChange(false)
     onSyncComplete()
     
     // Calculate sync duration
@@ -377,38 +160,31 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
       const durationMs = Date.now() - syncStartTime
       const durationSeconds = (durationMs / 1000).toFixed(2)
       const durationMinutes = (durationMs / 60000).toFixed(2)
-      console.log(`🎉 Sync completed in ${durationSeconds}s (${durationMinutes}min) for ${totalMonths} months`)
-      console.log(`⏱️  Average time per month: ${(durationMs / totalMonths / 1000).toFixed(2)}s`)
+      console.log(`🎉 Priority sync completed in ${durationSeconds}s (${durationMinutes}min) for ${totalPriorityMonths} months`)
+      console.log(`⏱️  Average time per month: ${(durationMs / totalPriorityMonths / 1000).toFixed(2)}s`)
     }
-    
-    // After a short delay, reset to show date selection again
-    setTimeout(() => {
-      setSyncStarted(false)
-      setSyncComplete(false)
-      setSelectedMonth('')
-      setSelectedYear('')
-      setSyncStartTime(null)
-      fetchCompletedSyncs() // Refresh the completed syncs list
-      fetchFailedSyncs() // Refresh the failed syncs list
-    }, 2000) // 2 second delay to show success message
   }
 
   if (syncStarted) {
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-white/10 bg-black/20 p-6">
-          <h4 className="text-sm font-semibold text-white mb-4">Syncing Acuity Data</h4>
+          <h4 className="text-sm font-semibold text-white mb-4">Syncing Priority Data</h4>
           
           <SyncProgressBar
             userId={userId}
-            totalMonths={totalMonths}
+            totalMonths={totalPriorityMonths}
+            syncPhase="priority"
             onComplete={handleComplete}
           />
 
           {syncComplete && (
             <div className="mt-4 p-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10">
               <p className="text-sm text-emerald-200">
-                ✓ Sync completed successfully!
+                ✓ Priority sync completed successfully!
+              </p>
+              <p className="text-xs text-emerald-300 mt-1">
+                Older data will continue syncing in the background. You'll receive a notification when complete.
               </p>
             </div>
           )}
@@ -451,88 +227,8 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4">
-        {/* Show completed syncs if any */}
-        {!loadingCompleted && completedSyncs.length > 0 && (
-          <div className="mb-4 p-4 rounded-xl border border-emerald-400/30 bg-emerald-400/10">
-            <h4 className="text-sm font-semibold text-emerald-200 mb-2">
-              ✓ Previously Synced Data
-            </h4>
-            <div className="text-xs text-emerald-300">
-              <p className="mb-1">
-                <span className="font-semibold">{completedSyncs.length}</span> month{completedSyncs.length !== 1 ? 's' : ''} synced
-              </p>
-              {completedSyncs.length > 0 && (
-                <p className="text-emerald-200">
-                  {(() => {
-                    const sorted = [...completedSyncs].sort((a, b) => {
-                      if (a.year !== b.year) return a.year - b.year
-                      return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month)
-                    })
-                    const earliest = sorted[0]
-                    const latest = sorted[sorted.length - 1]
-                    
-                    if (sorted.length === 1) {
-                      return `${earliest.month} ${earliest.year}`
-                    }
-                    
-                    return `${earliest.month} ${earliest.year} – ${latest.month} ${latest.year}`
-                  })()}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Show failed syncs if any */}
-        {failedSyncs.length > 0 && (
-          <div className="mb-4 p-4 rounded-xl border border-orange-400/30 bg-orange-400/10">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <AlertTriangle size={16} className="text-orange-400" />
-                <h4 className="text-sm font-semibold text-orange-200">
-                  Failed Syncs
-                </h4>
-              </div>
-              <button
-                onClick={handleRetryFailed}
-                disabled={retryingFailed}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-400/20 border border-orange-400/40 text-orange-200 hover:bg-orange-400/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {retryingFailed ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Retrying...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw size={12} />
-                    Retry All
-                  </>
-                )}
-              </button>
-            </div>
-            <div className="text-xs text-orange-300 space-y-1">
-              <p className="mb-2">
-                <span className="font-semibold">{failedSyncs.length}</span> month{failedSyncs.length !== 1 ? 's' : ''} failed to sync
-              </p>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {failedSyncs.map((fs, idx) => (
-                  <div key={idx} className="text-orange-200/80 text-xs">
-                    • {fs.month} {fs.year}
-                    {fs.error_message && (
-                      <span className="text-orange-300/60 ml-2">
-                        ({fs.error_message.substring(0, 50)}{fs.error_message.length > 50 ? '...' : ''})
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* First Appointment Info */}
-        {!loadingFirstAppointment && firstAppointment && completedSyncs.length === 0 && (
+        {!loadingFirstAppointment && firstAppointment && (
           <div className="p-4 rounded-xl border-2 border-cyan-400/30 bg-cyan-400/10">
             <div className="flex items-center gap-2 mb-2">
               <Calendar size={18} className="text-cyan-400" />
@@ -546,79 +242,56 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
                 {firstAppointment.month} {firstAppointment.year}
               </span>
             </p>
-            <p className="text-xs text-gray-400 italic mt-2">
-              We've pre-selected this date for you. You can change it if needed.
-            </p>
           </div>
         )}
 
-        {/* Recommendation banner */}
-        {!loadingFirstAppointment && firstAppointment && (
-          <div className="p-4 rounded-xl border-2 border-emerald-400/40 bg-emerald-400/10 flex items-start gap-3">
-            <Info size={18} className="text-emerald-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-emerald-300 mb-1">
-                💡 Recommended: Sync Everything
-              </p>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                For the best analytics and insights, we recommend syncing all your historical data from {firstAppointment.month} {firstAppointment.year} onwards. This ensures accurate trends and complete reporting.
-              </p>
+        {/* Sync Strategy Explanation */}
+        {priorityMonthsInfo && (
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl border-2 border-emerald-400/40 bg-emerald-400/10 flex items-start gap-3">
+              <Info size={18} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-300 mb-1">
+                  📊 Smart Sync Strategy
+                </p>
+                <p className="text-xs text-gray-300 leading-relaxed mb-2">
+                  We'll sync your <span className="font-bold text-white">last {totalPriorityMonths} months</span> ({priorityMonthsInfo.startMonth} {priorityMonthsInfo.startYear} - {priorityMonthsInfo.endMonth} {priorityMonthsInfo.endYear}) right now. This is your most recent and relevant data.
+                </p>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  All older data will sync in the background after onboarding. You'll get a notification when everything is complete.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border-2 border-amber-400/40 bg-amber-400/10 flex items-start gap-3">
+              <Info size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-300 mb-1">
+                  ⚠️ Data Accuracy Note
+                </p>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  Some client metrics (total visits, first appointment date, etc.) may be incomplete until your full history is synced. Once you receive the "Full Sync Complete" notification, all data will be accurate.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
         <div>
           <h4 className="text-sm font-semibold text-white mb-2">
-            {completedSyncs.length > 0 ? 'Sync Additional Data' : 'Sync Your Appointment History'}
+            Ready to Sync Your Data
           </h4>
           <p className="text-xs text-gray-400 mb-4">
-            {completedSyncs.length > 0 
-              ? 'Select a range to sync more historical data. Already synced months will be skipped.'
-              : 'Select when you started using Acuity to import your appointment data.'
-            }
+            Click "Start Sync" to begin importing your appointment history.
           </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-400">Month (Optional)</label>
-            <select
-              value={selectedMonth}
-              onChange={e => handleMonthChange(e.target.value)}
-              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-            >
-              <option value="">Don't remember</option>
-              {getAvailableMonths().map(month => (
-                <option key={month} value={month}>
-                  {month}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-400">Year</label>
-            <select
-              value={selectedYear}
-              onChange={e => handleYearChange(e.target.value ? Number(e.target.value) : '')}
-              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all"
-            >
-              <option value="">Select year...</option>
-              {getAvailableYears().map(year => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <button
           type="button"
           onClick={handleStartSync}
-          disabled={!selectedYear || syncing}
+          disabled={syncing || !firstAppointment}
           className={`w-full py-3 font-semibold rounded-xl transition-all ${
-            !selectedYear || syncing
+            syncing || !firstAppointment
               ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-emerald-400 to-[#3af1f7] text-black hover:shadow-lg'
           }`}
