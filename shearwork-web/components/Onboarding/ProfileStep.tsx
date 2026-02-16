@@ -102,29 +102,22 @@ export default function ProfileStep({
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
-      const res = await fetch(`/api/db-search/search-username?username=${encodeURIComponent(value)}`)
-      const data = await res.json()
+      if (!user) return
 
-      if (!res.ok) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', value.toLowerCase())
+        .neq('user_id', user.id)
+        .maybeSingle()
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Username check error:', error)
         setUsernameStatus('idle')
         return
       }
 
-      if (!data.available && user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('user_id', user.id)
-          .single()
-        
-        if (profileData?.username === value.toLowerCase()) {
-          setUsernameStatus('available')
-          return
-        }
-      }
-
-      setUsernameStatus(data.available ? 'available' : 'taken')
+      setUsernameStatus(data ? 'taken' : 'available')
     } catch (err) {
       console.error('Username check error:', err)
       setUsernameStatus('idle')

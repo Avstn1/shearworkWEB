@@ -82,7 +82,10 @@ export default function SyncProgressBar({
 
   // Handle progress updates when completedMonths changes (but not complete yet)
   useEffect(() => {
-    if (isComplete) return // Don't update if already complete
+    if (isComplete) {
+      setDisplayProgress(100)
+      return // Don't update if already complete
+    }
     
     // If a new month completed, increment the progress bar
     if (completedMonths > lastCompletedCountRef.current && totalMonths > 0) {
