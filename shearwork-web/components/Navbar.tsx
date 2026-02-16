@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Calendar, Megaphone, MessageCircleReply } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
@@ -36,6 +37,10 @@ export default function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null)
   const { user, profile } = useAuth()
   const userRole = profile?.role ?? null
+  const pathname = usePathname()
+  
+  // During onboarding, only show the logo - hide all other navbar controls
+  const isOnboarding = pathname === '/pricing/return' || (user && profile?.onboarded === false)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -317,7 +322,10 @@ export default function Navbar() {
 
   let rightSideContent
 
-  if (!user) {
+  // During onboarding, hide all controls (credits, notifications, avatar, etc.)
+  if (isOnboarding) {
+    rightSideContent = null
+  } else if (!user) {
     rightSideContent = (
       <div className="hidden md:flex items-center gap-4 text-[clamp(0.8rem,2vw,1rem)]">
         <Link 
@@ -465,26 +473,29 @@ export default function Navbar() {
           {/* --- RIGHT SIDE --- */}
           <div className="flex items-center gap-2 sm:gap-4 ml-auto">
             {rightSideContent}
-            <button
-              className="md:hidden p-[clamp(4px,1vw,8px)] rounded transition-colors"
-              style={{
-                backgroundColor: 'transparent',
-                color: COLORS.text,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-              onClick={() => setOpen(!open)}
-            >
-              {open ? (
-                <X className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
-              ) : (
-                <Menu className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
-              )}
-            </button>
+            {/* Hide hamburger menu during onboarding */}
+            {!isOnboarding && (
+              <button
+                className="md:hidden p-[clamp(4px,1vw,8px)] rounded transition-colors"
+                style={{
+                  backgroundColor: 'transparent',
+                  color: COLORS.text,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = COLORS.surfaceSolid
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+                onClick={() => setOpen(!open)}
+              >
+                {open ? (
+                  <X className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
+                ) : (
+                  <Menu className="w-[clamp(16px,4vw,24px)] h-[clamp(16px,4vw,24px)]" />
+                )}
+              </button>
+            )}
           </div>
         </div>
 

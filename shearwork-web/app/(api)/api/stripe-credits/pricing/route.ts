@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
@@ -7,6 +8,31 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 
 export async function GET() {
   try {
+    // Check if user is authenticated and has completed onboarding
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Check onboarding status
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('onboarded')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !profile?.onboarded) {
+      return NextResponse.json(
+        { error: 'Please complete onboarding first' },
+        { status: 403 }
+      )
+    }
+
     const credits100PriceId = process.env.STRIPE_PRICE_ID_100CREDITS
     const credits250PriceId = process.env.STRIPE_PRICE_ID_250CREDITS
     const credits500PriceId = process.env.STRIPE_PRICE_ID_500CREDITS

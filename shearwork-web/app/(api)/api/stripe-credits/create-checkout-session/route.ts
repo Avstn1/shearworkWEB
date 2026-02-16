@@ -22,6 +22,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    // Check onboarding status - users must complete onboarding before purchasing credits
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('onboarded')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !profile?.onboarded) {
+      return NextResponse.json(
+        { error: 'Please complete onboarding first' },
+        { status: 403 }
+      )
+    }
+
     // Read credit package from body, default to '100' if missing/invalid
     let creditPackage: CreditPackage = '100'
     try {
