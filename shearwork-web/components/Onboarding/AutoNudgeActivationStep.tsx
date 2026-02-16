@@ -133,7 +133,7 @@ export default function AutoNudgeActivationStep({
 
     try {
       // Send confirmation SMS
-      const smsResponse = await fetch('/api/barber-nudge/send-confirmation', {
+      const smsResponse = await fetch('/api/onboarding/send-confirmation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
