@@ -45,9 +45,9 @@ export default function Hero() {
           className="text-5xl md:text-6xl font-bold mb-8 leading-tight"
           style={{ color: COLORS.text }}
         >
-          Stop Letting Cancellations
+          Stop Relying on Hustle
           <br />
-          Cost You Money.
+          to Stay Booked.
         </motion.h1>
 
         <motion.p
