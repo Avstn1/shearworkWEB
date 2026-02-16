@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 import EditableAvatar from '@/components/EditableAvatar'
 import { supabase } from '@/utils/supabaseClient'
 
@@ -66,6 +67,7 @@ export default function ProfileStep({
 }: ProfileStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const usernameCheckTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const [saving, setSaving] = useState(false)
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/\D/g, '')
@@ -143,6 +145,75 @@ export default function ProfileStep({
       }
     }
   }, [username])
+
+  const phoneToE164 = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '')
+    return `+1${cleaned}`
+  }
+
+  const handleNextClick = async () => {
+    // This will be called from the parent with validation already set
+    if (!isProfileValid) {
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not logged in')
+
+      // Upload avatar if changed
+      let avatarUrl = avatarPreview || ''
+      if (avatarFile) {
+        const fileName = `${fullName.replace(/\s+/g, '_')}_${Date.now()}`
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, avatarFile, { upsert: true })
+        if (uploadError) throw uploadError
+
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
+        avatarUrl = urlData.publicUrl
+        setAvatarPreview(avatarUrl)
+      }
+
+      // Prepare profile update
+      const profileUpdate: Record<string, unknown> = {
+        full_name: fullName,
+        phone: phoneToE164(phoneNumber),
+        role: selectedRole.role,
+        barber_type: selectedRole.barber_type || null,
+        avatar_url: avatarUrl,
+        username: username.toLowerCase(),
+        booking_link: bookingLink.trim(),
+        updated_at: new Date().toISOString(),
+      }
+
+      if (selectedRole.barber_type === 'commission') {
+        if (commissionRate === '' || commissionRate < 1 || commissionRate > 100) {
+          throw new Error('Please enter a valid commission rate between 1 and 100')
+        }
+        profileUpdate.commission_rate = commissionRate / 100
+      }
+
+      // Save to database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('user_id', user.id)
+
+      if (updateError) throw updateError
+
+      toast.success('Profile saved!')
+      onNext()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save profile'
+      console.error(message)
+      toast.error(message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fadeInUp min-h-[calc(100vh-340px)]">
@@ -367,10 +438,18 @@ export default function ProfileStep({
         <div className="flex justify-end pt-4 border-t border-white/10">
           <button
             type="button"
-            onClick={onNext}
-            className="px-8 py-3 font-semibold rounded-xl transition-all bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg"
+            onClick={handleNextClick}
+            disabled={saving}
+            className="px-8 py-3 font-semibold rounded-xl transition-all bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Next
+            {saving ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              'Next'
+            )}
           </button>
         </div>
       </div>

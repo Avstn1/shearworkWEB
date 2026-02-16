@@ -146,6 +146,7 @@ function PricingReturnContent() {
         if (error) throw error
 
         setProfile(data)
+        console.log(data)
         setFullName(data?.full_name ?? '')
         
         // Format phone from E.164 (+12223334444) to display format (222) 333-4444
@@ -280,24 +281,22 @@ function PricingReturnContent() {
     return true
   }
 
-  const phoneToE164 = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, '')
-    return `+1${cleaned}`
-  }
-
   const handleNext = () => {
     if (currentOnboardingStep === 'profile') {
-      if (!isProfileValid) {
-        setShowValidationErrors(true)
-        return
-      }
-      setShowValidationErrors(false)
-      setCurrentOnboardingStep('calendar')
+      // Validation happens in ProfileStep, it will call onNext only if valid
+      setShowValidationErrors(true)
+      // ProfileStep will handle saving and calling this function
     } else if (currentOnboardingStep === 'calendar') {
       setCurrentOnboardingStep('booking-sync')
     } else if (currentOnboardingStep === 'booking-sync') {
       setCurrentOnboardingStep('auto-nudge')
     }
+  }
+
+  const handleProfileNext = () => {
+    // Called by ProfileStep after successful save
+    setShowValidationErrors(false)
+    setCurrentOnboardingStep('calendar')
   }
 
   const handleBack = () => {
@@ -344,36 +343,10 @@ function PricingReturnContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
 
-      let avatarUrl = avatarPreview || ''
-      if (avatarFile) {
-        const fileName = `${fullName.replace(/\s+/g, '_')}_${Date.now()}`
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, avatarFile, { upsert: true })
-        if (uploadError) throw uploadError
-
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
-        avatarUrl = urlData.publicUrl
-      }
-
-      const profileUpdate: Record<string, unknown> = {
-        full_name: fullName,
-        phone: phoneToE164(phoneNumber),
-        role: selectedRole.role,
-        barber_type: selectedRole.barber_type || null,
-        avatar_url: avatarUrl,
-        username: username.toLowerCase(),
-        booking_link: bookingLink.trim(),
-        calendar: selectedProvider === 'acuity' ? selectedAcuityCalendar : null,
-        onboarded: true,
-      }
-
-      if (selectedRole.barber_type === 'commission') {
-        if (commissionRate === '' || commissionRate < 1 || commissionRate > 100) {
-          throw new Error('Please enter a valid commission rate between 1 and 100')
-        }
-        profileUpdate.commission_rate = commissionRate / 100
-      }
+      // Profile data was already saved in ProfileStep, we just need to:
+      // 1. Save calendar selection (if not already done)
+      // 2. Set onboarded to true
+      // 3. Grant trial credits if needed
 
       const { data: currentProfile, error: currentProfileError } = await supabase
         .from('profiles')
@@ -382,6 +355,12 @@ function PricingReturnContent() {
         .single()
 
       if (currentProfileError) throw currentProfileError
+
+      const profileUpdate: Record<string, unknown> = {
+        calendar: selectedProvider === 'acuity' ? selectedAcuityCalendar : null,
+        onboarded: true,
+        updated_at: new Date().toISOString(),
+      }
 
       if (!currentProfile?.trial_start) {
         const now = new Date()
@@ -476,6 +455,7 @@ function PricingReturnContent() {
 
   const hasSub = summary?.hasSubscription ?? false
   const trialActive = isTrialActive(profile)
+  console.log("trial is active:", trialActive)
   const hasCheckoutComplete = sessionStatus === 'complete'
   const hasAccess = hasSub || trialActive || hasCheckoutComplete 
   const calendarConnected = calendarStatus.acuity || calendarStatus.square
@@ -765,7 +745,7 @@ function PricingReturnContent() {
                       isUsernameValid={isUsernameValid}
                       isPhoneNumberValid={isPhoneNumberValid}
                       isBookingLinkValid={isBookingLinkValid}
-                      onNext={handleNext}
+                      onNext={handleProfileNext}
                     />
                   ) : currentOnboardingStep === 'calendar' ? (
                     <CalendarStep

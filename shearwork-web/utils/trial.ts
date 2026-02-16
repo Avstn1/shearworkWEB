@@ -13,7 +13,7 @@ export type TrialProfile = {
 }
 
 export const isTrialActive = (profile?: TrialProfile | null): boolean => {
-  if (profile?.stripe_subscription_status === 'trialing') return true
+  if (profile?.stripe_subscription_status === 'trialing' || profile?.trial_active === true) return true
   if (!profile?.trial_active || !profile.trial_start || !profile.trial_end) return false
 
   const start = new Date(profile.trial_start)
