@@ -116,6 +116,17 @@ export async function POST(request: NextRequest) {
           throw new Error(`HTTP ${response.status}: ${errorText}`)
         }
         
+        // Check response body for errors (API may return 200 with error in body)
+        const data = await response.json()
+        if (data.error || !data.success) {
+          // Extract error details if available
+          const errorDetail = typeof data.error === 'object' 
+            ? JSON.stringify(data.error) 
+            : data.error || 'Unknown error from pull endpoint'
+          throw new Error(errorDetail)
+        }
+        
+        // Only mark as completed if both HTTP status and response body indicate success
         await supabase
           .from('sync_status')
           .update({ 
@@ -136,12 +147,17 @@ export async function POST(request: NextRequest) {
         console.error(`✗ Retry failed: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
         
         // Check error types that should trigger retry
+        // Timeout can be in message or in error object code
         const isTimeout = errorMessage.includes('aborted') || 
                          errorMessage.includes('timeout') ||
-                         errorMessage.includes('57014') // PostgreSQL statement timeout
+                         errorMessage.includes('57014') || // PostgreSQL statement timeout
+                         errorMessage.includes('canceling statement due to statement timeout') ||
+                         (typeof error === 'object' && error !== null && 'code' in error && error.code === '57014')
         
-        const isDeadlock = errorMessage.includes('40P01') || // PostgreSQL deadlock
-                          errorMessage.includes('deadlock detected')
+        // Deadlock can be in message or in error object code
+        const isDeadlock = errorMessage.includes('40P01') || // PostgreSQL deadlock code
+                          errorMessage.includes('deadlock detected') ||
+                          (typeof error === 'object' && error !== null && 'code' in error && error.code === '40P01')
         
         const isServerError = errorMessage.includes('500')
         
