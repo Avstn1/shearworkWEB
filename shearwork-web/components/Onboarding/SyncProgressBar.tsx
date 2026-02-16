@@ -82,7 +82,10 @@ export default function SyncProgressBar({
 
   // Handle progress updates when completedMonths changes (but not complete yet)
   useEffect(() => {
-    if (isComplete) return // Don't update if already complete
+    if (isComplete) {
+      setDisplayProgress(100)
+      return
+    }
     
     // If a new month completed, increment the progress bar
     if (completedMonths > lastCompletedCountRef.current && totalMonths > 0) {
@@ -98,7 +101,10 @@ export default function SyncProgressBar({
 
   // Random increments while waiting (only when not complete)
   useEffect(() => {
-    if (isComplete) return // Don't run random increments after completion
+    if (isComplete) {
+      setDisplayProgress(100)
+      return
+    }
     
     randomIntervalRef.current = setInterval(() => {
       setDisplayProgress(prev => {
@@ -113,7 +119,7 @@ export default function SyncProgressBar({
         
         return newProgress
       })
-    }, 1500)
+    }, 5000) // Every 5 seconds
 
     return () => {
       if (randomIntervalRef.current) {
