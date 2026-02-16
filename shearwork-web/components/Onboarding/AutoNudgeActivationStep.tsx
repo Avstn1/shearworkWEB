@@ -69,13 +69,14 @@ export default function AutoNudgeActivationStep({
 
       setUserId(user.id)
 
-      // Check if already enabled
+      // Check if already enabled (date_autonudge_enabled is NOT null)
       const { data: profile } = await supabase
         .from('profiles')
         .select('date_autonudge_enabled')
         .eq('user_id', user.id)
         .single()
 
+      // If date_autonudge_enabled has a value, they've already activated
       if (profile?.date_autonudge_enabled) {
         const enabledDate = new Date(profile.date_autonudge_enabled)
         const torontoTime = new Date(enabledDate.toLocaleString('en-US', { timeZone: 'America/Toronto' }))
@@ -133,7 +134,7 @@ export default function AutoNudgeActivationStep({
 
     try {
       // Send confirmation SMS
-      const smsResponse = await fetch('/api/barber-nudge/send-confirmation', {
+      const smsResponse = await fetch('/api/onboarding/send-confirmation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -327,9 +328,9 @@ export default function AutoNudgeActivationStep({
           <button
             type="button"
             onClick={onFinish}
-            disabled={profileLoading || (!alreadyEnabled && !activating)}
+            disabled={profileLoading || !alreadyEnabled}
             className={`px-8 py-3 font-semibold rounded-xl transition-all ${
-              profileLoading || (!alreadyEnabled && !activating)
+              profileLoading || !alreadyEnabled
                 ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
             }`}
