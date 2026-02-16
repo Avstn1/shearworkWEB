@@ -322,9 +322,9 @@ export default function Navbar() {
 
   let rightSideContent
 
-  // During onboarding, hide all controls (credits, notifications, avatar, etc.)
+  // During onboarding, only show avatar with Sign Out option (no credits, notifications, settings)
   if (isOnboarding) {
-    rightSideContent = null
+    rightSideContent = <UserProfile signOutOnly />
   } else if (!user) {
     rightSideContent = (
       <div className="hidden md:flex items-center gap-4 text-[clamp(0.8rem,2vw,1rem)]">

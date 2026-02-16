@@ -48,6 +48,19 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     const subStatus = profile?.stripe_subscription_status
     const hasTrialAccess = isTrialActive(profile)
 
+    // Onboarding check - redirect non-onboarded users to onboarding flow
+    if (
+      user &&
+      profile &&
+      !profile.onboarded &&
+      role !== 'admin' &&
+      role !== 'owner' &&
+      pathname !== '/pricing/return'
+    ) {
+      router.push('/pricing/return')
+      return
+    }
+
     // Redirect active/trial users away from /pricing
     if ((subStatus === 'active' || hasTrialAccess) && pathname === '/pricing') {
       router.push('/dashboard')
@@ -76,16 +89,14 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       return
     }
 
-    // Redirect non-admin authenticated users from home to dashboard
-    if (user && role !== 'admin' && role !== 'owner' && pathname === '/') {
-      console.log('🟡 REDIRECTING to:', '/dashboard')
+    // Redirect non-admin authenticated users from home to dashboard (only if onboarded)
+    if (user && profile?.onboarded && role !== 'admin' && role !== 'owner' && pathname === '/') {
       router.push('/dashboard')
       return
     }
 
-    // Redirect authenticated users away from login/signup
-    if (user && (pathname === '/login' || pathname === '/signup')) {
-      console.log('🟡 REDIRECTING to:', '/dashboard')
+    // Redirect authenticated users away from login/signup (only if onboarded)
+    if (user && profile?.onboarded && (pathname === '/login' || pathname === '/signup')) {
       router.push('/dashboard')
       return
     }

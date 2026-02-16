@@ -13,7 +13,12 @@ interface ProfileData {
   email: string
 }
 
-export default function UserProfile() {
+interface UserProfileProps {
+  /** When true, only shows Sign Out button (hides Settings link) - used during onboarding */
+  signOutOnly?: boolean
+}
+
+export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -149,14 +154,17 @@ export default function UserProfile() {
               className="my-3 border-white/10"
             />
 
-            <motion.div variants={itemVariants}>
-              <Link
-                href="/settings"
-                className="block w-full text-center py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-400/30 to-lime-500/30 border border-white/10 text-white hover:shadow-md hover:scale-[1.02] transition-all"
-              >
-                ⚙️ Settings
-              </Link>
-            </motion.div>
+            {/* Hide Settings link during onboarding (signOutOnly mode) */}
+            {!signOutOnly && (
+              <motion.div variants={itemVariants}>
+                <Link
+                  href="/settings"
+                  className="block w-full text-center py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-400/30 to-lime-500/30 border border-white/10 text-white hover:shadow-md hover:scale-[1.02] transition-all"
+                >
+                  Settings
+                </Link>
+              </motion.div>
+            )}
 
             <motion.div variants={itemVariants}>
               <SignOutButton className="w-full bg-white/10 border border-white/10 text-white py-2 rounded-lg text-sm font-semibold hover:bg-white/20 hover:scale-[1.02] transition-all" />
