@@ -75,8 +75,6 @@ function PricingPageContent() {
   const [trialUsed, setTrialUsed] = useState(false)
   const [trialStatusLoading, setTrialStatusLoading] = useState(true)
 
-
-
   // Handle authentication from mobile app code or existing session
   useEffect(() => {
     const authenticateUser = async () => {
@@ -146,15 +144,16 @@ function PricingPageContent() {
       try {
         const res = await fetch('/api/stripe/pricing')
         const data = await res.json()
+        console.log('Fetched pricing:', res.status, data)
 
         if (!res.ok) {
           throw new Error(data.error || 'Failed to load pricing')
         }
 
         setPricing(data)
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Could not load pricing'
-        console.error(message)
+      } catch (err: any) {
+        const message = err.message || 'Failed to load pricing'
+        console.error("error: " + message)
         toast.error(message)
       } finally {
         setLoadingPrices(false)
@@ -280,7 +279,6 @@ function PricingPageContent() {
       setShowCancelModal(true)
     }
   }
-
 
   // Show loading state while authenticating
   if (authenticating) {

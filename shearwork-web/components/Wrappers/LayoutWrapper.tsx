@@ -57,7 +57,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       role !== 'owner' &&
       pathname !== '/pricing/return'
     ) {
-      router.push('/pricing/return')
+      router.push('/pricing')
       return
     }
 

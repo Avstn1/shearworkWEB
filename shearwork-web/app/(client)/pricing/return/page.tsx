@@ -146,7 +146,6 @@ function PricingReturnContent() {
         if (error) throw error
 
         setProfile(data)
-        console.log(data)
         setFullName(data?.full_name ?? '')
         
         // Format phone from E.164 (+12223334444) to display format (222) 333-4444

@@ -16,7 +16,7 @@ export function useCheckOnboarding() {
     }
 
     if (profile?.onboarded === false) {
-      router.push('/pricing/return')
+      router.push('/pricing')
     }
   }, [isLoading, profile?.onboarded, router, user])
 }

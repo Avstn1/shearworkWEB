@@ -158,8 +158,6 @@ export default function TrialStatusHub({
   const nextNudgeDate = dateAutoNudgeEnabled ? calculateNextNudgeDate(dateAutoNudgeEnabled) : null
 
   // Debug: log trial info (remove after debugging)
-  console.log('[TrialStatusHub] daysRemaining:', daysRemaining, 'daysPassed:', daysPassed, 'dateAutoNudgeEnabled:', dateAutoNudgeEnabled)
-
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
