@@ -298,7 +298,7 @@ function PricingPageContent() {
   const yearlySavings = monthly && yearly ? (monthly.amount * 12) - yearly.amount : null
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#181818] px-4 py-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#181818] px-4 pt-20 sm:pt-24 pb-8">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
