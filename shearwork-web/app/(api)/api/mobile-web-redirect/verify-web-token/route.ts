@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authCodeCache } from '@/lib/redis'
+import { isValidUUID } from '@/utils/validation'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,6 +29,15 @@ export async function POST(req: NextRequest) {
       console.error('❌ Code not found or expired:', code)
       return NextResponse.json({ 
         error: 'Invalid or expired code. Please try again from the app.' 
+      }, { status: 401 })
+    }
+
+    // Validate userId is a proper UUID before using it
+    if (!isValidUUID(userId)) {
+      console.error('❌ Invalid userId format from cache:', userId)
+      await authCodeCache.delete(code) // Clean up invalid entry
+      return NextResponse.json({ 
+        error: 'Invalid user session. Please try again from the app.' 
       }, { status: 401 })
     }
 

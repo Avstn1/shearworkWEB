@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { isValidUUID } from '@/utils/validation'
 
 export interface StripeSubscriptionFixed {
   id: string
@@ -43,6 +44,12 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
         const supabaseUserId = session.metadata?.supabase_user_id
         if (!supabaseUserId) break
+
+        // Validate userId is a proper UUID before database operations
+        if (!isValidUUID(supabaseUserId)) {
+          console.error('❌ Invalid supabase_user_id in checkout metadata:', supabaseUserId)
+          break
+        }
 
         const subscriptionId = session.subscription as string | null
         const customerId = session.customer as string | null

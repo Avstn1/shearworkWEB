@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import { TRIAL_DAYS } from '@/lib/constants/trial'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { isValidUUID } from '@/utils/validation'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -167,6 +168,14 @@ function PricingPageContent() {
     if (!userId) return
 
     const fetchTrialStatus = async () => {
+      // Validate userId before querying database
+      if (!isValidUUID(userId)) {
+        console.error('Invalid userId format:', userId)
+        toast.error('Session error. Please login again.')
+        router.push('/login')
+        return
+      }
+
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -189,7 +198,7 @@ function PricingPageContent() {
     }
 
     fetchTrialStatus()
-  }, [userId])
+  }, [userId, router])
 
   const formatAmount = (amount: number, currency: string) =>
     new Intl.NumberFormat('en-US', {

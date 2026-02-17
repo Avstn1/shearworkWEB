@@ -1,5 +1,6 @@
 // utils/api-auth.ts
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { isValidUUID } from '@/utils/validation'
 
 export async function getAuthenticatedUser(request: Request) {
   const supabase = await createSupabaseServerClient();
@@ -10,6 +11,11 @@ export async function getAuthenticatedUser(request: Request) {
     // Get user_id from custom header for service role requests
     const userId = request.headers.get('x-user-id');
     if (userId) {
+      // Validate userId is a proper UUID before querying
+      if (!isValidUUID(userId)) {
+        console.error('Invalid x-user-id format:', userId);
+        return { user: null, supabase };
+      }
       // console.log('Authenticated via service role for user:', userId);
       const { data: { user }, error } = await supabase.auth.admin.getUserById(userId);
       if (user) {
