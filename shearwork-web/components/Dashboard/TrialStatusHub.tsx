@@ -190,7 +190,7 @@ export default function TrialStatusHub({
                 <Zap className={`w-3 h-3 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9ca3af]'}`} />
               )}
               <span className={`text-xs font-medium ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9ca3af]'}`}>
-                {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Active' : 'Inactive'}
+                {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Auto-Nudge: Active' : 'Auto-Nudge: Inactive'}
               </span>
             </div>
             
