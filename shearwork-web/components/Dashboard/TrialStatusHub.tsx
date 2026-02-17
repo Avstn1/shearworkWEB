@@ -313,7 +313,7 @@ export default function TrialStatusHub({
               </div>
               <span className="text-sm whitespace-nowrap">
                 <span className={`font-semibold ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9ca3af]'}`}>
-                  {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Active' : 'Not active'}
+                  {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Auto-Nudge: Active' : 'Auto-Nudge: Inactive'}
                 </span>
               </span>
             </div>
