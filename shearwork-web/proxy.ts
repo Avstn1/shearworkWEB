@@ -71,6 +71,14 @@ export default async function middleware(request: NextRequest) {
   // -----------------------------
   // ACTIVE/TRIAL REDIRECTS
   // -----------------------------
+
+
+  // -----------------------------
+  // PREMIUM ACCESS
+  // -----------------------------
+
+  const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
+
   if (subStatus === 'active' || hasTrialAccess) {
     if (pathname === '/pricing') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
@@ -80,9 +88,6 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // -----------------------------
-  // PREMIUM ACCESS
-  // -----------------------------
   const premiumRoutes = [
     '/dashboard',
     '/account',
@@ -91,15 +96,13 @@ export default async function middleware(request: NextRequest) {
     '/expenses'
   ]
 
-  const hasPremiumAccess =
-    subStatus === 'active' || hasTrialAccess
-
   if (
     role !== 'admin' &&
     role !== 'owner' &&
     premiumRoutes.some(path => pathname.startsWith(path))
   ) {
     if (!hasPremiumAccess) {
+      console.log('User does not have premium access, redirecting to pricing')  
       return NextResponse.redirect(new URL('/pricing', request.url))
     }
   }
@@ -123,6 +126,6 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
+    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
   ]
 }

@@ -74,8 +74,6 @@ export default function LoginPage() {
       const { data: sessionId, error: sessionError } = await supabase
         .rpc('get_current_session_id')
 
-      console.log('Session ID from RPC:', sessionId)
-
       await supabase.from('user_devices').upsert({
         user_id: userProfile.user.id,
         device_type: 'web',

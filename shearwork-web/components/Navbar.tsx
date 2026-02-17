@@ -40,7 +40,7 @@ export default function Navbar() {
   const pathname = usePathname()
   
   // During onboarding, only show the logo - hide all other navbar controls
-  const isOnboarding = pathname === '/pricing/return' || (user && profile?.onboarded === false)
+  const isOnboardingOrPricing = pathname === '/pricing/return' || pathname === '/pricing' || (user && profile?.onboarded === false)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -323,7 +323,7 @@ export default function Navbar() {
   let rightSideContent
 
   // During onboarding, only show avatar with Sign Out option (no credits, notifications, settings)
-  if (isOnboarding) {
+  if (isOnboardingOrPricing) {
     rightSideContent = <UserProfile signOutOnly />
   } else if (!user) {
     rightSideContent = (
@@ -474,7 +474,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 sm:gap-4 ml-auto">
             {rightSideContent}
             {/* Hide hamburger menu during onboarding */}
-            {!isOnboarding && (
+            {!isOnboardingOrPricing && (
               <button
                 className="md:hidden p-[clamp(4px,1vw,8px)] rounded transition-colors"
                 style={{

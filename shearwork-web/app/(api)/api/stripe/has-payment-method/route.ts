@@ -1,21 +1,28 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-11-17.clover' as Stripe.LatestApiVersion,
 })
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const supabase = await createSupabaseServerClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    // const supabase = await createSupabaseServerClient()
+    // const {
+    //   data: { user },
+    //   error: authError,
+    // } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    // if (authError || !user) {
+    //   return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    // }
+
+    const { user, supabase } = await getAuthenticatedUser(request)
+
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_SITE_URL))
     }
 
     const { data: profile, error: profileError } = await supabase
