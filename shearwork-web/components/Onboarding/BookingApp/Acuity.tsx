@@ -69,17 +69,31 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
 
   const fetchFirstAppointment = async () => {
     try {
-      const response = await fetch('/api/onboarding/get-first-appointment', {
-        headers: {
-          'x-client-access-token': await getAccessToken(),
-        },
-      })
+      const fetchWithRetry = async (delay = 1000) => {
+        let attempt = 0
+        while (true) {
+          attempt++
+          const response = await fetch('/api/onboarding/get-first-appointment', {
+            headers: {
+              'x-client-access-token': await getAccessToken(),
+            },
+          })
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch first appointment')
+          if (response.status === 404) {
+            console.warn(`Route not ready, retrying in ${delay}ms... (attempt ${attempt})`)
+            await new Promise(resolve => setTimeout(resolve, delay))
+            continue
+          }
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch first appointment: ${response.status}`)
+          }
+
+          return response.json()
+        }
       }
 
-      const data = await response.json()
+      const data = await fetchWithRetry()
 
       if (data.firstAppointment) {
         const first = data.firstAppointment
@@ -93,21 +107,18 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
           datetime: first.datetime
         })
 
-        // Calculate priority months (last 12 months or less if first appointment is recent)
         const now = new Date()
         const currentMonth = now.getMonth()
         const currentYear = now.getFullYear()
-        
-        // Calculate months between first appointment and now
-        const monthsSinceFirst = (currentYear - year) * 12 + (currentMonth - appointmentDate.getMonth()) + 1
+
+        const monthsSinceFirst = Math.max(1, (currentYear - year) * 12 + (currentMonth - appointmentDate.getMonth()) + 1)
         const priorityCount = Math.min(12, monthsSinceFirst)
-        
+
         setTotalPriorityMonths(priorityCount)
-        
-        // Calculate the date range for priority months
+
         const priorityStartDate = new Date(now)
         priorityStartDate.setMonth(priorityStartDate.getMonth() - (priorityCount - 1))
-        
+
         setPriorityMonthsInfo({
           startMonth: MONTHS[priorityStartDate.getMonth()],
           startYear: priorityStartDate.getFullYear(),
