@@ -172,16 +172,19 @@ export async function POST(request: NextRequest) {
         })
 
         // Race against a 45s slot timeout — Vercel can silently kill functions
-        // without triggering the AbortController, leaving the slot hung forever
-        const slotTimeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('slot timeout after 45s')), SLOT_TIMEOUT)
-        )
+        // without triggering the AbortController, leaving the slot hung forever.
+        // We capture the timeout ID so we can clear it and prevent a leak when fetch wins.
+        let slotTimeoutId!: ReturnType<typeof setTimeout>
+        const slotTimeoutPromise = new Promise<never>((_, reject) => {
+          slotTimeoutId = setTimeout(() => reject(new Error('slot timeout after 45s')), SLOT_TIMEOUT)
+        })
 
         let response: Response
         try {
           response = await Promise.race([fetchPromise, slotTimeoutPromise])
         } finally {
           clearTimeout(timeoutId)
+          clearTimeout(slotTimeoutId) // Always clear to prevent leak when fetch wins the race
         }
 
         console.log(`[${phase}] Response status for ${month} ${year}: ${response.status} ${response.statusText}`)
@@ -212,7 +215,6 @@ export async function POST(request: NextRequest) {
 
         // Only fail if there's an explicit error, not just missing success field
         if (data.error) {
-          // Extract error details if available
           let errorDetail = 'Unknown error from pull endpoint'
 
           if (typeof data.error === 'string') {
@@ -261,7 +263,6 @@ export async function POST(request: NextRequest) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         console.error(`✗ Failed [${phase}]: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
 
-        // Check error types
         const isTimeout = errorMessage.includes('aborted') ||
           errorMessage.includes('timeout') ||
           errorMessage.includes('57014') ||
@@ -282,7 +283,6 @@ export async function POST(request: NextRequest) {
 
           console.log(`⏳ Retrying [${phase}] ${month} ${year} due to ${retryReason} in ${retryDelay}ms... (retry #${retryCount + 1})`)
 
-          // Update status to show retry pending
           await supabase
             .from('sync_status')
             .update({
@@ -315,33 +315,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Worker pool: N workers all pull from a shared queue until it's empty.
+    // This is fundamentally different from the chained-slot semaphore approach:
+    // - Semaphore: assigns months to slots upfront, slot chain resolves independent of actual completion
+    // - Worker pool: workers only pick up the next item after fully completing the previous one
+    // This guarantees every month is processed to completion before the pool resolves.
+    const runWithWorkerPool = async (
+      months: { month: string; year: number; phase: 'priority' | 'background' }[],
+      concurrency: number
+    ): Promise<any[]> => {
+      const queue = [...months] // Shared mutable queue — workers pop from this
+      const results: any[] = []
+
+      const worker = async () => {
+        while (queue.length > 0) {
+          const item = queue.shift() // JS is single-threaded so shift() is atomic
+          if (!item) break
+          const result = await processMonth(item.month, item.year, item.phase)
+          results.push(result)
+        }
+      }
+
+      // Spin up N workers, all pulling from the same queue
+      await Promise.all(Array.from({ length: concurrency }, () => worker()))
+
+      return results
+    }
+
     // PHASE 1: Process priority months first (concurrency = 6)
     const processPriorityMonths = async () => {
       const priorityMonths = monthsToSync.filter(m => m.phase === 'priority')
       if (priorityMonths.length === 0) return []
 
-      const PRIORITY_CONCURRENCY = 6
-      console.log(`🎯 Starting PRIORITY phase: ${priorityMonths.length} months (concurrency = ${PRIORITY_CONCURRENCY})`)
-
-      const results: any[] = []
-      // Semaphore pattern: chain work onto fixed slots to avoid concurrency pool bugs
-      const semaphore = new Array(PRIORITY_CONCURRENCY).fill(Promise.resolve())
-      let slotIndex = 0
-
-      for (const { month, year, phase } of priorityMonths) {
-        const slot = slotIndex % PRIORITY_CONCURRENCY
-        slotIndex++
-
-        semaphore[slot] = semaphore[slot].then(() =>
-          processMonth(month, year, phase).then(result => {
-            results.push(result)
-            return result
-          })
-        )
-      }
-
-      await Promise.all(semaphore)
-      return results
+      console.log(`🎯 Starting PRIORITY phase: ${priorityMonths.length} months (concurrency = 6)`)
+      return runWithWorkerPool(priorityMonths, 6)
     }
 
     // PHASE 2: Process background months after priority (concurrency = 4)
@@ -349,28 +356,8 @@ export async function POST(request: NextRequest) {
       const backgroundMonths = monthsToSync.filter(m => m.phase === 'background')
       if (backgroundMonths.length === 0) return []
 
-      const BACKGROUND_CONCURRENCY = 4
-      console.log(`📦 Starting BACKGROUND phase: ${backgroundMonths.length} months (concurrency = ${BACKGROUND_CONCURRENCY})`)
-
-      const results: any[] = []
-      // Semaphore pattern: chain work onto fixed slots to avoid concurrency pool bugs
-      const semaphore = new Array(BACKGROUND_CONCURRENCY).fill(Promise.resolve())
-      let slotIndex = 0
-
-      for (const { month, year, phase } of backgroundMonths) {
-        const slot = slotIndex % BACKGROUND_CONCURRENCY
-        slotIndex++
-
-        semaphore[slot] = semaphore[slot].then(() =>
-          processMonth(month, year, phase).then(result => {
-            results.push(result)
-            return result
-          })
-        )
-      }
-
-      await Promise.all(semaphore)
-      return results
+      console.log(`📦 Starting BACKGROUND phase: ${backgroundMonths.length} months (concurrency = 4)`)
+      return runWithWorkerPool(backgroundMonths, 4)
     }
 
     // Start both phases in sequence (priority first, then background)
