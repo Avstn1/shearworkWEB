@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { TRIAL_BONUS_CREDITS, TRIAL_DAYS } from '@/lib/constants/trial'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 

@@ -350,7 +350,7 @@ export async function POST(request: NextRequest) {
     const processPriorityMonths = async () => {
       const priorityMonths = monthsToSync.filter(m => m.phase === 'priority')
       if (priorityMonths.length === 0) return []
-      return runWithWorkerPool(priorityMonths, 6, 'PRIORITY')
+      return runWithWorkerPool(priorityMonths, 3, 'PRIORITY')
     }
 
     const processBackgroundMonths = async () => {
@@ -406,7 +406,7 @@ export async function POST(request: NextRequest) {
       totalMonths: monthsToSync.length,
       priorityMonths: priorityMonthsCount,
       backgroundMonths: backgroundMonthsCount,
-      priorityConcurrency: 6,
+      priorityConcurrency: 3,
       backgroundConcurrency: 4,
     })
   } catch (error) {

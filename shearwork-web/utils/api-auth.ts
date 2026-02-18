@@ -68,7 +68,8 @@ export async function getAuthenticatedUser(request: Request) {
   const token = getTokenFromRequest();
 
   if (token) {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    console.log('Attempting token authentication with token:', token ? '***redacted***' : 'none');
+    const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error) {
       console.log('Auth error via token:', error);
     }
