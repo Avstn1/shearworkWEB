@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { TRIAL_BONUS_CREDITS, TRIAL_DAYS } from '@/lib/constants/trial'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    const supabase = await createSupabaseServerClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    const { user, supabase } = await getAuthenticatedUser(request)
+    console.log('Authenticated user for trial start:', user?.id)
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_SITE_URL))
     }
 
     const { data: profile, error: profileError } = await supabase
