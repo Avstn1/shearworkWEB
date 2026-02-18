@@ -15,10 +15,11 @@ const SLOT_TIMEOUT = 45000     // 45s — wraps the ENTIRE attempt including all
 // Wraps any promise with a timeout. If the promise doesn't resolve in time,
 // rejects with a descriptive error so we know exactly which operation hung.
 const withTimeout = <T>(
-  promise: Promise<T>,
+  promiseLike: PromiseLike<T>,
   ms: number,
   label: string
 ): Promise<T> => {
+  const promise = Promise.resolve(promiseLike) // Normalize PromiseLike → Promise
   let timeoutId: ReturnType<typeof setTimeout>
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -149,7 +150,8 @@ export async function POST(request: NextRequest) {
               .update({ status: 'processing', updated_at: new Date().toISOString(), retry_count: retryCount })
               .eq('user_id', userId)
               .eq('month', month)
-              .eq('year', year),
+              .eq('year', year)
+              .then(),
             10000,
             `${tag} sync_status update to processing`
           )
@@ -230,7 +232,8 @@ export async function POST(request: NextRequest) {
               .update({ status: 'completed', updated_at: new Date().toISOString(), retry_count: retryCount, error_message: null })
               .eq('user_id', userId)
               .eq('month', month)
-              .eq('year', year),
+              .eq('year', year)
+              .then(),
             10000,
             `${tag} sync_status update to completed`
           )
@@ -266,12 +269,12 @@ export async function POST(request: NextRequest) {
             console.log(`⏳ ${tag} Will retry in ${retryDelay}ms due to: ${retryReason}`)
 
             // Fire-and-forget the status update — don't await it, it might also hang
-            supabase
+            Promise.resolve(supabase
               .from('sync_status')
               .update({ status: 'retrying', retry_count: retryCount + 1, error_message: `Retry ${retryCount + 1} (${retryReason}): ${errorMessage}` })
               .eq('user_id', userId)
               .eq('month', month)
-              .eq('year', year)
+              .eq('year', year))
               .then(() => console.log(`📝 ${tag} retry status update done`))
               .catch((e: Error) => console.error(`📝 ${tag} retry status update failed (non-blocking):`, e))
 
@@ -283,12 +286,12 @@ export async function POST(request: NextRequest) {
 
           // Non-retryable — fire-and-forget status update and return failed
           console.error(`🚫 ${tag} Non-retryable error, marking as failed`)
-          supabase
+          Promise.resolve(supabase
             .from('sync_status')
             .update({ status: 'failed', updated_at: new Date().toISOString(), retry_count: retryCount, error_message: errorMessage })
             .eq('user_id', userId)
             .eq('month', month)
-            .eq('year', year)
+            .eq('year', year))
             .then(() => console.log(`📝 ${tag} failed status update done`))
             .catch((e: Error) => console.error(`📝 ${tag} failed status update error (non-blocking):`, e))
 

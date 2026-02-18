@@ -6,6 +6,7 @@ import { getAuthenticatedUser } from '@/utils/api-auth'
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthenticatedUser(request)
+    console.log('Authenticated user for trial start:', user?.id)
 
     if (!user) {
       return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_SITE_URL))
