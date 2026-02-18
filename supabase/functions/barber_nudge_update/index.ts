@@ -36,34 +36,49 @@ function getRandomMessage(filled: number, total: number, takenSlots: number, rec
     .replace('{takenSlots}', takenSlots.toString())
 }
 
+function getTorontoDateComponents(date: Date = new Date()): { year: number; month: number; day: number; hours: number; minutes: number; seconds: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TORONTO_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  return {
+    year: parseInt(parts.find(p => p.type === 'year')!.value),
+    month: parseInt(parts.find(p => p.type === 'month')!.value) - 1, // 0-indexed
+    day: parseInt(parts.find(p => p.type === 'day')!.value),
+    hours: parseInt(parts.find(p => p.type === 'hour')!.value),
+    minutes: parseInt(parts.find(p => p.type === 'minute')!.value),
+    seconds: parseInt(parts.find(p => p.type === 'second')!.value),
+  }
+}
+
 function getTorontoDate(date: Date = new Date()): Date {
-  // Convert UTC date to Toronto timezone
-  const torontoTimeString = date.toLocaleString('en-CA', { timeZone: TORONTO_TZ })
-  return new Date(torontoTimeString)
+  const c = getTorontoDateComponents(date)
+  return new Date(c.year, c.month, c.day, c.hours, c.minutes, c.seconds)
 }
 
 function getCurrentDayOfWeek(): number {
   // Returns 0 (Sunday) to 6 (Saturday) in Toronto time
-  const torontoDate = getTorontoDate()
-  return torontoDate.getDay()
+  const c = getTorontoDateComponents()
+  return new Date(c.year, c.month, c.day).getDay()
 }
 
 function getISOWeek(): string {
-  const now = new Date(
-    new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date())
-  )
+  const c = getTorontoDateComponents()
+  const torontoDate = new Date(c.year, c.month, c.day)
 
-  const day = now.getDay() || 7
-  now.setDate(now.getDate() + 4 - day)
+  const day = torontoDate.getDay() || 7
+  torontoDate.setDate(torontoDate.getDate() + 4 - day)
 
-  const yearStart = new Date(now.getFullYear(), 0, 1)
-  const week = Math.ceil(((+now - +yearStart) / 86400000 + 1) / 7)
-  const year = now.getFullYear()
+  const yearStart = new Date(torontoDate.getFullYear(), 0, 1)
+  const week = Math.ceil(((+torontoDate - +yearStart) / 86400000 + 1) / 7)
+  const year = torontoDate.getFullYear()
 
   return `${year}-W${week.toString().padStart(2, '0')}`
 }

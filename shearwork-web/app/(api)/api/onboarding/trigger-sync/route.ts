@@ -11,7 +11,7 @@ const PRIORITY_RETRY_DELAY = 6000 // 6 seconds for priority months
 const BACKGROUND_RETRY_DELAY_BASE = 2000 // Base 2 seconds for background, exponential backoff
 const BACKGROUND_RETRY_DELAY_MAX = 30000 // Max 30 seconds for background
 const REQUEST_TIMEOUT = 120000 // 2 minutes
-const SLOT_TIMEOUT = 45000 // 45 seconds - force retry if Vercel silently kills the function
+const SLOT_TIMEOUT = 45000 // 45 seconds - wraps the ENTIRE attempt, not just the fetch
 
 export async function POST(request: NextRequest) {
   try {
@@ -131,195 +131,202 @@ export async function POST(request: NextRequest) {
       return Math.min(delay, BACKGROUND_RETRY_DELAY_MAX)
     }
 
-    // Function to process a single month with INFINITE retry logic
+    // Function to process a single month with INFINITE retry logic.
+    // The SLOT_TIMEOUT wraps the ENTIRE attempt — including Supabase status updates —
+    // not just the fetch. This catches hangs anywhere in the pipeline, not just the HTTP call.
     const processMonth = async (
       month: string,
       year: number,
       phase: 'priority' | 'background',
       retryCount = 0
     ): Promise<any> => {
-      try {
-        const attemptLabel = retryCount === 0 ? 'initial attempt' : `retry #${retryCount}`
-        console.log(`🚀 Starting sync [${phase}]: ${userId} - ${month} ${year} (${attemptLabel})`)
+      // Create a fresh slot timeout for each attempt
+      let slotTimeoutId!: ReturnType<typeof setTimeout>
+      const slotTimeoutPromise = new Promise<never>((_, reject) => {
+        slotTimeoutId = setTimeout(
+          () => reject(new Error('slot timeout after 45s')),
+          SLOT_TIMEOUT
+        )
+      })
 
-        // Update status to processing
-        await supabase
-          .from('sync_status')
-          .update({
-            status: 'processing',
-            updated_at: new Date().toISOString(),
-            retry_count: retryCount
-          })
-          .eq('user_id', userId)
-          .eq('month', month)
-          .eq('year', year)
-
-        // Call the pull endpoint with timeout
-        const targetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${year}`
-
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
-
-        const fetchPromise = fetch(targetUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'X-User-Id': userId,
-            'x-vercel-protection-bypass': BYPASS_TOKEN,
-          },
-          signal: controller.signal
-        })
-
-        // Race against a 45s slot timeout — Vercel can silently kill functions
-        // without triggering the AbortController, leaving the slot hung forever.
-        // We capture the timeout ID so we can clear it and prevent a leak when fetch wins.
-        let slotTimeoutId!: ReturnType<typeof setTimeout>
-        const slotTimeoutPromise = new Promise<never>((_, reject) => {
-          slotTimeoutId = setTimeout(() => reject(new Error('slot timeout after 45s')), SLOT_TIMEOUT)
-        })
-
-        let response: Response
+      const attempt = async (): Promise<any> => {
         try {
-          response = await Promise.race([fetchPromise, slotTimeoutPromise])
-        } finally {
-          clearTimeout(timeoutId)
-          clearTimeout(slotTimeoutId) // Always clear to prevent leak when fetch wins the race
-        }
+          const attemptLabel = retryCount === 0 ? 'initial attempt' : `retry #${retryCount}`
+          console.log(`🚀 Starting sync [${phase}]: ${userId} - ${month} ${year} (${attemptLabel})`)
 
-        console.log(`[${phase}] Response status for ${month} ${year}: ${response.status} ${response.statusText}`)
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error(`[${phase}] HTTP error ${response.status} for ${month} ${year}:`, errorText)
-          throw new Error(`HTTP ${response.status}: ${errorText}`)
-        }
-
-        // Clone response to read it twice (for debugging)
-        const responseClone = response.clone()
-        const rawText = await responseClone.text()
-        console.log(`[${phase}] Raw response length for ${month} ${year}:`, rawText.length, 'chars')
-        console.log(`[${phase}] Raw response preview:`, rawText.substring(0, 300))
-
-        // Check response body for errors (API may return 200 with error in body)
-        let data
-        try {
-          data = await response.json()
-        } catch (parseError) {
-          console.error(`[${phase}] JSON parse error for ${month} ${year}:`, parseError)
-          console.error(`[${phase}] Raw response was:`, rawText)
-          throw new Error('Failed to parse response from pull endpoint')
-        }
-
-        console.log(`[${phase}] Pull response for ${month} ${year}:`, { success: data.success, hasError: !!data.error, errorType: typeof data.error })
-
-        // Only fail if there's an explicit error, not just missing success field
-        if (data.error) {
-          let errorDetail = 'Unknown error from pull endpoint'
-
-          if (typeof data.error === 'string') {
-            errorDetail = data.error
-          } else if (typeof data.error === 'object') {
-            // Handle PostgreSQL error objects
-            if (data.error.message) {
-              errorDetail = data.error.message
-            } else if (data.error.code) {
-              errorDetail = `DB Error ${data.error.code}: ${data.error.details || data.error.hint || 'Database error'}`
-            } else {
-              errorDetail = JSON.stringify(data.error)
-            }
-          }
-
-          console.error(`[${phase}] Pull endpoint error for ${month} ${year}:`, data.error)
-          throw new Error(errorDetail)
-        }
-
-        // If no error and success is explicitly false, that's also an error
-        if (data.success === false) {
-          console.error(`[${phase}] Pull endpoint returned success=false for ${month} ${year}`)
-          throw new Error('Pull endpoint returned success: false')
-        }
-
-        // If we get here, consider it successful (even if success field is missing)
-        console.log(`✓ Pull successful for ${month} ${year} (success: ${data.success})`)
-
-        // Only mark as completed if both HTTP status and response body indicate success
-        await supabase
-          .from('sync_status')
-          .update({
-            status: 'completed',
-            updated_at: new Date().toISOString(),
-            retry_count: retryCount,
-            error_message: null
-          })
-          .eq('user_id', userId)
-          .eq('month', month)
-          .eq('year', year)
-
-        console.log(`✓ Completed [${phase}]: ${userId} - ${month} ${year} (after ${retryCount} retries)`)
-
-        return { month, year, phase, status: 'completed' }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        console.error(`✗ Failed [${phase}]: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
-
-        const isTimeout = errorMessage.includes('aborted') ||
-          errorMessage.includes('timeout') ||
-          errorMessage.includes('57014') ||
-          errorMessage.includes('canceling statement due to statement timeout') ||
-          errorMessage.includes('slot timeout') ||
-          (typeof error === 'object' && error !== null && 'code' in error && error.code === '57014')
-
-        const isDeadlock = errorMessage.includes('40P01') ||
-          errorMessage.includes('deadlock detected') ||
-          (typeof error === 'object' && error !== null && 'code' in error && error.code === '40P01')
-
-        const isServerError = errorMessage.includes('500')
-
-        // INFINITE RETRY - Always retry on timeout, deadlock, or server errors
-        if (isTimeout || isDeadlock || isServerError) {
-          const retryReason = isDeadlock ? 'deadlock' : isTimeout ? 'timeout' : 'server error'
-          const retryDelay = getRetryDelay(phase, retryCount)
-
-          console.log(`⏳ Retrying [${phase}] ${month} ${year} due to ${retryReason} in ${retryDelay}ms... (retry #${retryCount + 1})`)
-
+          // Update status to processing
           await supabase
             .from('sync_status')
             .update({
-              status: 'retrying',
-              retry_count: retryCount + 1,
-              error_message: `Retry ${retryCount + 1} (${retryReason}): ${errorMessage}`
+              status: 'processing',
+              updated_at: new Date().toISOString(),
+              retry_count: retryCount
             })
             .eq('user_id', userId)
             .eq('month', month)
             .eq('year', year)
 
-          await new Promise(resolve => setTimeout(resolve, retryDelay))
-          return processMonth(month, year, phase, retryCount + 1)
+          // Call the pull endpoint with timeout
+          const targetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${year}`
+
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
+
+          let response: Response
+          try {
+            response = await fetch(targetUrl, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'X-User-Id': userId,
+                'x-vercel-protection-bypass': BYPASS_TOKEN,
+              },
+              signal: controller.signal
+            })
+          } finally {
+            clearTimeout(timeoutId)
+          }
+
+          console.log(`[${phase}] Response status for ${month} ${year}: ${response.status} ${response.statusText}`)
+
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.error(`[${phase}] HTTP error ${response.status} for ${month} ${year}:`, errorText)
+            throw new Error(`HTTP ${response.status}: ${errorText}`)
+          }
+
+          // Clone response to read it twice (for debugging)
+          const responseClone = response.clone()
+          const rawText = await responseClone.text()
+          console.log(`[${phase}] Raw response length for ${month} ${year}:`, rawText.length, 'chars')
+          console.log(`[${phase}] Raw response preview:`, rawText.substring(0, 300))
+
+          // Check response body for errors (API may return 200 with error in body)
+          let data
+          try {
+            data = await response.json()
+          } catch (parseError) {
+            console.error(`[${phase}] JSON parse error for ${month} ${year}:`, parseError)
+            console.error(`[${phase}] Raw response was:`, rawText)
+            throw new Error('Failed to parse response from pull endpoint')
+          }
+
+          console.log(`[${phase}] Pull response for ${month} ${year}:`, { success: data.success, hasError: !!data.error, errorType: typeof data.error })
+
+          // Only fail if there's an explicit error, not just missing success field
+          if (data.error) {
+            let errorDetail = 'Unknown error from pull endpoint'
+
+            if (typeof data.error === 'string') {
+              errorDetail = data.error
+            } else if (typeof data.error === 'object') {
+              // Handle PostgreSQL error objects
+              if (data.error.message) {
+                errorDetail = data.error.message
+              } else if (data.error.code) {
+                errorDetail = `DB Error ${data.error.code}: ${data.error.details || data.error.hint || 'Database error'}`
+              } else {
+                errorDetail = JSON.stringify(data.error)
+              }
+            }
+
+            console.error(`[${phase}] Pull endpoint error for ${month} ${year}:`, data.error)
+            throw new Error(errorDetail)
+          }
+
+          // If no error and success is explicitly false, that's also an error
+          if (data.success === false) {
+            console.error(`[${phase}] Pull endpoint returned success=false for ${month} ${year}`)
+            throw new Error('Pull endpoint returned success: false')
+          }
+
+          // If we get here, consider it successful (even if success field is missing)
+          console.log(`✓ Pull successful for ${month} ${year} (success: ${data.success})`)
+
+          await supabase
+            .from('sync_status')
+            .update({
+              status: 'completed',
+              updated_at: new Date().toISOString(),
+              retry_count: retryCount,
+              error_message: null
+            })
+            .eq('user_id', userId)
+            .eq('month', month)
+            .eq('year', year)
+
+          console.log(`✓ Completed [${phase}]: ${userId} - ${month} ${year} (after ${retryCount} retries)`)
+
+          return { month, year, phase, status: 'completed' }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          console.error(`✗ Failed [${phase}]: ${userId} - ${month} ${year} (attempt ${retryCount + 1})`, errorMessage)
+
+          const isTimeout = errorMessage.includes('aborted') ||
+            errorMessage.includes('timeout') ||
+            errorMessage.includes('57014') ||
+            errorMessage.includes('canceling statement due to statement timeout') ||
+            errorMessage.includes('slot timeout') ||
+            (typeof error === 'object' && error !== null && 'code' in error && error.code === '57014')
+
+          const isDeadlock = errorMessage.includes('40P01') ||
+            errorMessage.includes('deadlock detected') ||
+            (typeof error === 'object' && error !== null && 'code' in error && error.code === '40P01')
+
+          const isServerError = errorMessage.includes('500')
+
+          // INFINITE RETRY - Always retry on timeout, deadlock, or server errors
+          if (isTimeout || isDeadlock || isServerError) {
+            const retryReason = isDeadlock ? 'deadlock' : isTimeout ? 'timeout' : 'server error'
+            const retryDelay = getRetryDelay(phase, retryCount)
+
+            console.log(`⏳ Retrying [${phase}] ${month} ${year} due to ${retryReason} in ${retryDelay}ms... (retry #${retryCount + 1})`)
+
+            await supabase
+              .from('sync_status')
+              .update({
+                status: 'retrying',
+                retry_count: retryCount + 1,
+                error_message: `Retry ${retryCount + 1} (${retryReason}): ${errorMessage}`
+              })
+              .eq('user_id', userId)
+              .eq('month', month)
+              .eq('year', year)
+
+            await new Promise(resolve => setTimeout(resolve, retryDelay))
+            return processMonth(month, year, phase, retryCount + 1)
+          }
+
+          // For non-retryable errors, mark as failed
+          await supabase
+            .from('sync_status')
+            .update({
+              status: 'failed',
+              updated_at: new Date().toISOString(),
+              retry_count: retryCount,
+              error_message: errorMessage
+            })
+            .eq('user_id', userId)
+            .eq('month', month)
+            .eq('year', year)
+
+          return { month, year, phase, status: 'failed', error: errorMessage }
         }
+      }
 
-        // For non-retryable errors, mark as failed
-        await supabase
-          .from('sync_status')
-          .update({
-            status: 'failed',
-            updated_at: new Date().toISOString(),
-            retry_count: retryCount,
-            error_message: errorMessage
-          })
-          .eq('user_id', userId)
-          .eq('month', month)
-          .eq('year', year)
-
-        return { month, year, phase, status: 'failed', error: errorMessage }
+      // Race the entire attempt against the slot timeout.
+      // This catches hangs anywhere — Supabase calls, fetch, JSON parsing — not just the HTTP request.
+      try {
+        return await Promise.race([attempt(), slotTimeoutPromise])
+      } finally {
+        clearTimeout(slotTimeoutId) // Always clear to prevent leak
       }
     }
 
     // Worker pool: N workers all pull from a shared queue until it's empty.
-    // This is fundamentally different from the chained-slot semaphore approach:
-    // - Semaphore: assigns months to slots upfront, slot chain resolves independent of actual completion
-    // - Worker pool: workers only pick up the next item after fully completing the previous one
-    // This guarantees every month is processed to completion before the pool resolves.
+    // Workers only pick up the next item after fully completing the previous one,
+    // so every month is guaranteed to be processed to completion.
     const runWithWorkerPool = async (
       months: { month: string; year: number; phase: 'priority' | 'background' }[],
       concurrency: number
