@@ -14,7 +14,7 @@ const COLORS = {
 export default function Hero() {
   return (
     <section 
-      className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-20 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16 pb-24 sm:py-20 relative overflow-hidden"
       style={{ 
         backgroundColor: COLORS.background,
         color: COLORS.text,

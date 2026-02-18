@@ -182,6 +182,16 @@ export default function DashboardPage() {
     setIsRefreshing(true)
     const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
 
+    // Set a timeout to prevent sync from getting stuck (60 seconds max)
+    const timeoutId = setTimeout(() => {
+      if (isSyncing.current) {
+        console.warn('Sync timeout reached, resetting state')
+        isSyncing.current = false
+        setIsRefreshing(false)
+        toast.error('Sync timed out. Please try again.', { id: toastId })
+      }
+    }, 60000)
+
     try {
       // New pipeline endpoint: triggers provider pull + truth table upserts + aggregations
       const res = await fetch(
@@ -193,10 +203,12 @@ export default function DashboardPage() {
 
       setRefreshKey(prev => prev + 1)
       toast.success(`Data updated for ${selectedMonth} ${selectedYear}`, { id: toastId })
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error syncing data.'
       console.error(err)
-      toast.error(err.message || 'Error syncing data.', { id: toastId })
+      toast.error(message, { id: toastId })
     } finally {
+      clearTimeout(timeoutId)
       isSyncing.current = false
       setIsRefreshing(false)
       toast.dismiss(toastId)
@@ -320,7 +332,7 @@ export default function DashboardPage() {
           title="Sync data"
         >
           <Loader2 className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">Re-sync</span>
+          <span className="sm:inline">Sync</span>
         </button>
 
         {isRefreshing && (

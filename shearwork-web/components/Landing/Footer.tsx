@@ -16,9 +16,10 @@ const COLORS = {
 export default function Footer() {
   return (
     <footer 
-      className="absolute bottom-0 left-0 right-0 py-3 text-center text-sm"
+      className="absolute bottom-0 left-0 right-0 py-2 sm:py-3 text-center text-xs sm:text-sm safe-area-inset-bottom"
       style={{
         backgroundColor: 'transparent',
+        paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
       }}
     >
       <div style={{ 
