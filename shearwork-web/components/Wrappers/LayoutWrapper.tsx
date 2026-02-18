@@ -54,7 +54,6 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       profile &&
       !profile.onboarded &&
       role !== 'admin' &&
-      role !== 'owner' &&
       pathname !== '/pricing/return'
     ) {
       router.push('/pricing')

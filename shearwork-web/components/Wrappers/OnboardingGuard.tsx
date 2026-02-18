@@ -18,7 +18,7 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
     // Redirect to pricing/return if profile exists but onboarded is false
     if (profile && !profile.onboarded) {
       console.log('🟢 Redirecting to pricing/return - onboarded:', profile.onboarded)
-      router.replace('/pricing')
+      router.replace('/pricing/return')
     }
   }, [isLoading, user, profile, router])
 
