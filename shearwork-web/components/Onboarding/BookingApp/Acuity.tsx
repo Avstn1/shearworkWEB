@@ -31,7 +31,6 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
   const [loadingFirstAppointment, setLoadingFirstAppointment] = useState(true)
   const [priorityMonthsInfo, setPriorityMonthsInfo] = useState<{ startMonth: string; startYear: number; endMonth: string; endYear: number } | null>(null)
 
-  // Load first appointment on mount
   useEffect(() => {
     checkExistingSync()
     fetchFirstAppointment()
@@ -41,7 +40,6 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     if (!userId) return
 
     try {
-      // Check if priority syncs are already complete
       const { data: prioritySyncs, error } = await supabase
         .from('sync_status')
         .select('status')
@@ -55,11 +53,10 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
 
       if (prioritySyncs && prioritySyncs.length > 0) {
         const allComplete = prioritySyncs.every(s => s.status === 'completed')
-        
         if (allComplete) {
           console.log('Priority syncs already completed')
           setSyncComplete(true)
-          setSyncStarted(false) // Don't show progress bar, just enable Next button
+          setSyncStarted(false)
         }
       }
     } catch (error) {
@@ -101,11 +98,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
         const month = MONTHS[appointmentDate.getMonth()]
         const year = appointmentDate.getFullYear()
 
-        setFirstAppointment({
-          month,
-          year,
-          datetime: first.datetime
-        })
+        setFirstAppointment({ month, year, datetime: first.datetime })
 
         const now = new Date()
         const currentMonth = now.getMonth()
@@ -138,7 +131,6 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     return session?.access_token || ''
   }
 
-  // If there's an existing sync, skip and show progress
   useEffect(() => {
     if (existingSync?.hasPending) {
       setSyncStarted(true)
@@ -171,8 +163,9 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
         throw new Error(data.error || 'Failed to start sync')
       }
 
-      toast.success(`Starting sync for ${data.priorityMonths} priority months!`)
-      setTotalPriorityMonths(data.priorityMonths)
+      const monthsCount = data.priorityMonths ?? totalPriorityMonths
+      toast.success(`Starting sync for ${monthsCount} priority months!`)
+      setTotalPriorityMonths(monthsCount)
       setSyncStarted(true)
       setSyncStartTime(Date.now())
       onSyncStateChange(true)
@@ -185,7 +178,6 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
   }
 
   const handleRetry = async () => {
-    // Clear sync status and restart
     setSyncStarted(false)
     setSyncComplete(false)
     setTotalPriorityMonths(0)
@@ -196,13 +188,12 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     setSyncComplete(true)
     onSyncStateChange(false)
     onSyncComplete()
-    
-    // Calculate sync duration
+
     if (syncStartTime) {
       const durationMs = Date.now() - syncStartTime
       const durationSeconds = (durationMs / 1000).toFixed(2)
       const durationMinutes = (durationMs / 60000).toFixed(2)
-      console.log(`🎉 Priority sync completed in ${durationSeconds}s (${durationMinutes}min) for ${totalPriorityMonths} months`)
+      console.log(`🎉 Sync completed in ${durationSeconds}s (${durationMinutes}min) for ${totalPriorityMonths} months`)
       console.log(`⏱️  Average time per month: ${(durationMs / totalPriorityMonths / 1000).toFixed(2)}s`)
     }
   }
@@ -212,7 +203,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
       <div className="space-y-6">
         <div className="rounded-xl border border-white/10 bg-black/20 p-6">
           <h4 className="text-sm font-semibold text-white mb-4">Syncing Priority Data</h4>
-          
+
           <SyncProgressBar
             userId={userId}
             totalMonths={totalPriorityMonths}
@@ -245,24 +236,18 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     )
   }
 
-  // If already complete (user navigated back), show the same completion UI
   if (syncComplete && !loadingFirstAppointment) {
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-white/10 bg-black/20 p-6">
           <h4 className="text-sm font-semibold text-white mb-4">Syncing Priority Data</h4>
-          
-          {/* Show progress bar at 100% */}
+
           <div className="space-y-3 mb-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-white font-medium">
-                Priority sync complete!
-              </span>
-              <span className="text-emerald-300 font-bold">
-                100%
-              </span>
+              <span className="text-white font-medium">Priority sync complete!</span>
+              <span className="text-emerald-300 font-bold">100%</span>
             </div>
-            
+
             <div className="w-full bg-black/40 rounded-full h-3 overflow-hidden border border-white/10">
               <div
                 className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#3af1f7]"
@@ -270,11 +255,9 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
               />
             </div>
           </div>
-          
+
           <div className="p-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10">
-            <p className="text-sm text-emerald-200">
-              ✓ Priority sync completed successfully!
-            </p>
+            <p className="text-sm text-emerald-200">✓ Priority sync completed successfully!</p>
             <p className="text-xs text-emerald-300 mt-1">
               Older data will continue syncing in the background. You'll receive a notification when complete.
             </p>
@@ -284,7 +267,6 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
     )
   }
 
-  // Show loading state while fetching first appointment
   if (loadingFirstAppointment) {
     return (
       <div className="space-y-4">
@@ -292,12 +274,8 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
           <div className="flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
             <div className="text-center">
-              <p className="text-sm font-semibold text-white mb-1">
-                Finding your first appointment...
-              </p>
-              <p className="text-xs text-gray-400">
-                This helps us sync your data accurately
-              </p>
+              <p className="text-sm font-semibold text-white mb-1">Finding your first appointment...</p>
+              <p className="text-xs text-gray-400">This helps us sync your data accurately</p>
             </div>
           </div>
         </div>
@@ -308,33 +286,25 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4">
-        {/* First Appointment Info */}
         {!loadingFirstAppointment && firstAppointment && (
           <div className="p-4 rounded-xl border-2 border-cyan-400/30 bg-cyan-400/10">
             <div className="flex items-center gap-2 mb-2">
               <Calendar size={18} className="text-cyan-400" />
-              <h4 className="text-sm font-semibold text-cyan-200">
-                Your First Appointment
-              </h4>
+              <h4 className="text-sm font-semibold text-cyan-200">Your First Appointment</h4>
             </div>
             <p className="text-sm text-gray-300 leading-relaxed">
               Based on your calendar, your first appointment was in{' '}
-              <span className="font-bold text-white">
-                {firstAppointment.month} {firstAppointment.year}
-              </span>
+              <span className="font-bold text-white">{firstAppointment.month} {firstAppointment.year}</span>
             </p>
           </div>
         )}
 
-        {/* Sync Strategy Explanation */}
         {priorityMonthsInfo && (
           <div className="space-y-3">
             <div className="p-4 rounded-xl border-2 border-emerald-400/40 bg-emerald-400/10 flex items-start gap-3">
               <Info size={18} className="text-emerald-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-emerald-300 mb-1">
-                  📊 Smart Sync Strategy
-                </p>
+                <p className="text-sm font-semibold text-emerald-300 mb-1">📊 Smart Sync Strategy</p>
                 <p className="text-xs text-gray-300 leading-relaxed mb-2">
                   We'll sync your <span className="font-bold text-white">last {totalPriorityMonths} months</span> ({priorityMonthsInfo.startMonth} {priorityMonthsInfo.startYear} - {priorityMonthsInfo.endMonth} {priorityMonthsInfo.endYear}) right now. This is your most recent and relevant data.
                 </p>
@@ -347,9 +317,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
             <div className="p-4 rounded-xl border-2 border-amber-400/40 bg-amber-400/10 flex items-start gap-3">
               <Info size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-amber-300 mb-1">
-                  ⚠️ Data Accuracy Note
-                </p>
+                <p className="text-sm font-semibold text-amber-300 mb-1">⚠️ Data Accuracy Note</p>
                 <p className="text-xs text-gray-300 leading-relaxed">
                   Some client metrics (total visits, first appointment date, etc.) may be incomplete until your full history is synced. Once you receive the "Full Sync Complete" notification, all data will be accurate.
                 </p>
@@ -359,12 +327,8 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
         )}
 
         <div>
-          <h4 className="text-sm font-semibold text-white mb-2">
-            Ready to Sync Your Data
-          </h4>
-          <p className="text-xs text-gray-400 mb-4">
-            Click "Start Sync" to begin importing your appointment history.
-          </p>
+          <h4 className="text-sm font-semibold text-white mb-2">Ready to Sync Your Data</h4>
+          <p className="text-xs text-gray-400 mb-4">Click "Start Sync" to begin importing your appointment history.</p>
         </div>
 
         <button
