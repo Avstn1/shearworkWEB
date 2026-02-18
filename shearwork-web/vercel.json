@@ -4,10 +4,5 @@
       "path": "/api/acuity/pull-all",
       "schedule": "0 9 * * 4"
     }
-  ],
-  "functions": {
-    "app/(api)/api/onboarding/trigger-sync/route.ts": {
-      "maxDuration": 800
-    }
-  }
+  ]
 }
