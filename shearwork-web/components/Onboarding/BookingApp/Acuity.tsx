@@ -104,17 +104,15 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
         const currentMonth = now.getMonth()
         const currentYear = now.getFullYear()
 
-        const monthsSinceFirst = Math.max(1, (currentYear - year) * 12 + (currentMonth - appointmentDate.getMonth()) + 1)
-        const priorityCount = Math.min(12, monthsSinceFirst)
+        // Priority = current year months only
+        const firstMonthOfYear = year === currentYear ? appointmentDate.getMonth() : 0
+        const priorityCount = currentMonth - firstMonthOfYear + 1
 
         setTotalPriorityMonths(priorityCount)
 
-        const priorityStartDate = new Date(now)
-        priorityStartDate.setMonth(priorityStartDate.getMonth() - (priorityCount - 1))
-
         setPriorityMonthsInfo({
-          startMonth: MONTHS[priorityStartDate.getMonth()],
-          startYear: priorityStartDate.getFullYear(),
+          startMonth: MONTHS[firstMonthOfYear],
+          startYear: currentYear,
           endMonth: MONTHS[currentMonth],
           endYear: currentYear
         })

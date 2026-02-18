@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No months to sync' }, { status: 400 })
     }
 
-    // Split into priority (last 12) and background (older)
-    const priorityMonths = allMonths.slice(0, Math.min(12, allMonths.length))
-    const backgroundMonths = allMonths.slice(priorityMonths.length)
+    // Split into priority (current year) and background (older)
+    const priorityMonths = allMonths.filter(m => m.year === currentYear)
+    const backgroundMonths = allMonths.filter(m => m.year !== currentYear)
 
     console.log(`📊 [trigger-sync] ${priorityMonths.length} priority months, ${backgroundMonths.length} background months`)
     console.log(`📊 Priority: ${priorityMonths.map(m => `${m.month} ${m.year}`).join(', ')}`)
