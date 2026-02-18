@@ -1,5 +1,6 @@
 // utils/api-auth.ts
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createClient } from '@supabase/supabase-js'
 import { isValidUUID } from '@/utils/validation'
 
 export async function getAuthenticatedUser(request: Request) {
@@ -8,38 +9,27 @@ export async function getAuthenticatedUser(request: Request) {
   // Check for service role key (for Edge Functions and internal calls)
   const authHeader = request.headers.get('Authorization');
   if (authHeader === `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`) {
-    // Get user_id from custom header for service role requests
     const userId = request.headers.get('x-user-id');
     if (userId) {
-      // Validate userId is a proper UUID before querying
       if (!isValidUUID(userId)) {
         console.error('Invalid x-user-id format:', userId);
         return { user: null, supabase };
       }
-      // console.log('Authenticated via service role for user:', userId);
       const { data: { user }, error } = await supabase.auth.admin.getUserById(userId);
-      if (user) {
-        return { user, supabase };
-      }
-
-      if (error) {
-        console.log("error: " + error)
-      }
+      if (user) return { user, supabase };
+      if (error) console.log("error: " + error)
     }
-    // If no user_id provided, this is a system-level call
     console.log('Authenticated via service role (system)');
-    return { user: null, supabase }; // Or handle differently based on your needs
+    return { user: null, supabase };
   }
 
   const getTokenFromRequest = () => {
     let token = authHeader?.replace(/^Bearer\s+/i, '');
 
-    // Custom header from client
     if (!token) {
       token = request.headers.get('x-client-access-token') || undefined;
     }
 
-    // Check URL query parameters for token
     if (!token) {
       try {
         const url = new URL(request.url);
@@ -49,7 +39,6 @@ export async function getAuthenticatedUser(request: Request) {
       }
     }
 
-    // Fallback to Vercel proxy headers
     if (!token) {
       const scHeaders = request.headers.get('x-vercel-sc-headers');
       if (scHeaders) {
@@ -68,13 +57,18 @@ export async function getAuthenticatedUser(request: Request) {
   const token = getTokenFromRequest();
 
   if (token) {
-    console.log('Attempting token authentication with token:', token ? '***redacted***' : 'none');
-    const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
+    // Use a plain anon client (not cookie-bound) to validate the Bearer token
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { user }, error } = await anonClient.auth.getUser(token);
     if (error) {
-      console.log('Auth error via token:', error);
+      console.log('Auth error via token:', error.message);
     }
     if (user) {
       console.log('Authenticated via token:', user.id);
+      // Return cookie-based supabase for DB ops (RLS), but with user confirmed
       return { user, supabase };
     }
   }
