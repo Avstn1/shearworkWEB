@@ -54,6 +54,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       profile &&
       !profile.onboarded &&
       role !== 'admin' &&
+      role !== 'owner' &&
       pathname !== '/pricing/return'
     ) {
       router.push('/pricing')
@@ -82,14 +83,14 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       }
     }
 
-    // Role-based redirects for admins/owners
-    if ((role === 'admin' || role === 'owner') && (pathname === '/' || pathname === '/dashboard')) {
+    // Role-based redirects for admins only
+    if (role === 'admin' && (pathname === '/' || pathname === '/dashboard')) {
       router.push('/admin/dashboard')
       return
     }
 
     // Redirect non-admin authenticated users from home to dashboard (only if onboarded)
-    if (user && profile?.onboarded && role !== 'admin' && role !== 'owner' && pathname === '/') {
+    if (user && profile?.onboarded && role !== 'admin' && pathname === '/') {
       router.push('/dashboard')
       return
     }
