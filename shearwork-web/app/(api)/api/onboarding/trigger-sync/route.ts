@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 const MONTHS = [
@@ -82,87 +83,89 @@ export async function POST(request: NextRequest) {
 
     const BYPASS_TOKEN = process.env.BYPASS_TOKEN!
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-    // Sync one month — retries forever on failure
-    const syncMonth = async (month: string, year: number, phase: 'priority' | 'background') => {
-      let attempt = 0
-
-      while (true) {
-        attempt++
-        console.log(`🚀 [${phase}][${month} ${year}] attempt ${attempt}`)
-
-        try {
-          await supabase
-            .from('sync_status')
-            .update({ status: 'processing', retry_count: attempt - 1, updated_at: new Date().toISOString() })
-            .eq('user_id', userId).eq('month', month).eq('year', year)
-
-          const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${year}`
-          console.log(`🌐 [${phase}][${month} ${year}] fetching...`)
-
-          const res = await fetch(url, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              'X-User-Id': userId,
-              'x-vercel-protection-bypass': BYPASS_TOKEN,
-            },
-          })
-
-          console.log(`📡 [${phase}][${month} ${year}] response: ${res.status}`)
-          const text = await res.text()
-          console.log(`📄 [${phase}][${month} ${year}] body: ${text.substring(0, 200)}`)
-
-          let data: any
-          try { data = JSON.parse(text) } catch { throw new Error(`Bad JSON: ${text.substring(0, 100)}`) }
-
-          if (!res.ok || data.error) {
-            throw new Error(data.error?.message || data.error || `HTTP ${res.status}`)
-          }
-
-          await supabase
-            .from('sync_status')
-            .update({ status: 'completed', retry_count: attempt - 1, error_message: null, updated_at: new Date().toISOString() })
-            .eq('user_id', userId).eq('month', month).eq('year', year)
-
-          console.log(`✅ [${phase}][${month} ${year}] done on attempt ${attempt}`)
-          return
-
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          console.error(`❌ [${phase}][${month} ${year}] attempt ${attempt} failed: ${msg}`)
-
-          await supabase
-            .from('sync_status')
-            .update({ status: 'retrying', retry_count: attempt, error_message: msg })
-            .eq('user_id', userId).eq('month', month).eq('year', year)
-
-          const delay = Math.min(5000 * attempt, 30000)
-          console.log(`⏳ [${phase}][${month} ${year}] retrying in ${delay}ms...`)
-          await new Promise(r => setTimeout(r, delay))
-        }
-      }
-    }
-
-    // Process a list of months in batches
-    const runBatches = async (months: { month: string; year: number }[], phase: 'priority' | 'background') => {
-      for (let i = 0; i < months.length; i += BATCH_SIZE) {
-        const batch = months.slice(i, i + BATCH_SIZE)
-        console.log(`\n📦 [${phase}] Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.map(m => `${m.month} ${m.year}`).join(', ')}`)
-        await Promise.all(batch.map(({ month, year }) => syncMonth(month, year, phase)))
-        console.log(`✅ [${phase}] Batch ${Math.floor(i / BATCH_SIZE) + 1} complete`)
-      }
-    }
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
     const runSync = async () => {
+      // Create a fresh admin client inside runSync — the request-scoped supabase
+      // client from getAuthenticatedUser becomes invalid after the response is returned
+      // on Vercel serverless, causing all DB calls to silently hang.
+      const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+      const syncMonth = async (month: string, year: number, phase: 'priority' | 'background') => {
+        let attempt = 0
+
+        while (true) {
+          attempt++
+          console.log(`🚀 [${phase}][${month} ${year}] attempt ${attempt}`)
+
+          try {
+            await adminSupabase
+              .from('sync_status')
+              .update({ status: 'processing', retry_count: attempt - 1, updated_at: new Date().toISOString() })
+              .eq('user_id', userId).eq('month', month).eq('year', year)
+
+            const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${year}`
+            console.log(`🌐 [${phase}][${month} ${year}] fetching ${url}`)
+
+            const res = await fetch(url, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'X-User-Id': userId,
+                'x-vercel-protection-bypass': BYPASS_TOKEN,
+              },
+            })
+
+            console.log(`📡 [${phase}][${month} ${year}] response: ${res.status}`)
+            const text = await res.text()
+            console.log(`📄 [${phase}][${month} ${year}] body: ${text.substring(0, 200)}`)
+
+            let data: any
+            try { data = JSON.parse(text) } catch { throw new Error(`Bad JSON: ${text.substring(0, 100)}`) }
+
+            if (!res.ok || data.error) {
+              throw new Error(data.error?.message || data.error || `HTTP ${res.status}`)
+            }
+
+            await adminSupabase
+              .from('sync_status')
+              .update({ status: 'completed', retry_count: attempt - 1, error_message: null, updated_at: new Date().toISOString() })
+              .eq('user_id', userId).eq('month', month).eq('year', year)
+
+            console.log(`✅ [${phase}][${month} ${year}] done on attempt ${attempt}`)
+            return
+
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            console.error(`❌ [${phase}][${month} ${year}] attempt ${attempt} failed: ${msg}`)
+
+            await adminSupabase
+              .from('sync_status')
+              .update({ status: 'retrying', retry_count: attempt, error_message: msg })
+              .eq('user_id', userId).eq('month', month).eq('year', year)
+
+            const delay = Math.min(5000 * attempt, 30000)
+            console.log(`⏳ [${phase}][${month} ${year}] retrying in ${delay}ms...`)
+            await new Promise(r => setTimeout(r, delay))
+          }
+        }
+      }
+
+      const runBatches = async (months: { month: string; year: number }[], phase: 'priority' | 'background') => {
+        for (let i = 0; i < months.length; i += BATCH_SIZE) {
+          const batch = months.slice(i, i + BATCH_SIZE)
+          console.log(`\n📦 [${phase}] Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.map(m => `${m.month} ${m.year}`).join(', ')}`)
+          await Promise.all(batch.map(({ month, year }) => syncMonth(month, year, phase)))
+          console.log(`✅ [${phase}] Batch ${Math.floor(i / BATCH_SIZE) + 1} complete`)
+        }
+      }
+
       try {
-        // Phase 1: priority months first (last 12)
         console.log('\n🎯 [trigger-sync] Starting PRIORITY phase...')
         await runBatches(priorityMonths, 'priority')
         console.log('✅ [trigger-sync] PRIORITY phase complete')
 
-        // Phase 2: background months (older history)
         if (backgroundMonths.length > 0) {
           console.log('\n📦 [trigger-sync] Starting BACKGROUND phase...')
           await runBatches(backgroundMonths, 'background')
@@ -171,7 +174,7 @@ export async function POST(request: NextRequest) {
 
         console.log('🎉 [trigger-sync] All months synced!')
 
-        await supabase
+        await adminSupabase
           .from('notifications')
           .insert({
             user_id: userId,
