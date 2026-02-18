@@ -98,6 +98,7 @@ export default async function middleware(request: NextRequest) {
 
   if (
     role !== 'admin' &&
+    role !== 'owner' &&
     premiumRoutes.some(path => pathname.startsWith(path))
   ) {
     if (!hasPremiumAccess) {
@@ -116,7 +117,7 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/admin/dashboard', request.url))
   }
 
-  if (role !== 'admin' && role !== 'owner' && pathname === '/') {
+  if (role !== 'admin' && pathname === '/') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

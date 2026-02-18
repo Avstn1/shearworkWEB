@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import { TRIAL_DAYS } from '@/lib/constants/trial'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { isValidUUID } from '@/utils/validation'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -167,6 +168,14 @@ function PricingPageContent() {
     if (!userId) return
 
     const fetchTrialStatus = async () => {
+      // Validate userId before querying database
+      if (!isValidUUID(userId)) {
+        console.error('Invalid userId format:', userId)
+        toast.error('Session error. Please login again.')
+        router.push('/login')
+        return
+      }
+
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -189,7 +198,7 @@ function PricingPageContent() {
     }
 
     fetchTrialStatus()
-  }, [userId])
+  }, [userId, router])
 
   const formatAmount = (amount: number, currency: string) =>
     new Intl.NumberFormat('en-US', {
@@ -298,7 +307,7 @@ function PricingPageContent() {
   const yearlySavings = monthly && yearly ? (monthly.amount * 12) - yearly.amount : null
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#181818] px-4 py-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#181818] px-4 pt-20 sm:pt-24 pb-8">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
