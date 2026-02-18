@@ -9,17 +9,15 @@ const MONTHS = [
 const PRIORITY_RETRY_DELAY = 6000
 const BACKGROUND_RETRY_DELAY_BASE = 2000
 const BACKGROUND_RETRY_DELAY_MAX = 30000
-const REQUEST_TIMEOUT = 40000  // 40s — must be less than SLOT_TIMEOUT
-const SLOT_TIMEOUT = 45000     // 45s — wraps the ENTIRE attempt including all Supabase calls
+const REQUEST_TIMEOUT = 40000  // 40s fetch abort
+const SLOT_TIMEOUT = 45000     // 45s per attempt — covers Supabase calls + fetch
 
-// Wraps any promise with a timeout. If the promise doesn't resolve in time,
-// rejects with a descriptive error so we know exactly which operation hung.
 const withTimeout = <T>(
   promiseLike: PromiseLike<T>,
   ms: number,
   label: string
 ): Promise<T> => {
-  const promise = Promise.resolve(promiseLike) // Normalize PromiseLike → Promise
+  const promise = Promise.resolve(promiseLike)
   let timeoutId: ReturnType<typeof setTimeout>
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -120,30 +118,29 @@ export async function POST(request: NextRequest) {
       return Math.min(BACKGROUND_RETRY_DELAY_BASE * Math.pow(2, retryCount), BACKGROUND_RETRY_DELAY_MAX)
     }
 
-    const processMonth = async (
+    // Attempts a single pull for one month with a slot timeout.
+    // Returns 'completed', 'retry', or 'failed'.
+    // NO recursion — retry looping is handled by processMonth below.
+    const attemptMonth = async (
       month: string,
       year: number,
       phase: 'priority' | 'background',
-      retryCount = 0
-    ): Promise<any> => {
+      retryCount: number
+    ): Promise<'completed' | 'retry' | 'failed'> => {
       const tag = `[${phase}][${month} ${year}][attempt ${retryCount + 1}]`
-      console.log(`\n${'='.repeat(60)}`)
-      console.log(`🚀 ${tag} START`)
-      console.log(`${'='.repeat(60)}`)
 
-      // Slot timeout wraps the ENTIRE attempt — Supabase calls, fetch, everything
       let slotTimeoutId!: ReturnType<typeof setTimeout>
       const slotTimeoutPromise = new Promise<never>((_, reject) => {
         slotTimeoutId = setTimeout(() => {
-          console.error(`⏰ ${tag} SLOT TIMEOUT FIRED after ${SLOT_TIMEOUT}ms — something hung and never resolved`)
+          console.error(`⏰ ${tag} SLOT TIMEOUT FIRED after ${SLOT_TIMEOUT}ms`)
           reject(new Error('slot timeout after 45s'))
         }, SLOT_TIMEOUT)
       })
 
-      const attempt = async (): Promise<any> => {
+      const attempt = async (): Promise<'completed' | 'retry' | 'failed'> => {
         try {
-          // ── STEP 1: Mark as processing ──────────────────────────────────
-          console.log(`📝 ${tag} STEP 1: Updating sync_status to 'processing'...`)
+          // ── STEP 1: Mark as processing ────────────────────────────────
+          console.log(`📝 ${tag} STEP 1: Updating to 'processing'...`)
           await withTimeout(
             supabase
               .from('sync_status')
@@ -153,11 +150,11 @@ export async function POST(request: NextRequest) {
               .eq('year', year)
               .then(),
             10000,
-            `${tag} sync_status update to processing`
+            `${tag} update to processing`
           )
           console.log(`✅ ${tag} STEP 1 done`)
 
-          // ── STEP 2: Call pull endpoint ──────────────────────────────────
+          // ── STEP 2: Fetch pull endpoint ───────────────────────────────
           const targetUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${year}`
           console.log(`🌐 ${tag} STEP 2: Fetching ${targetUrl}`)
 
@@ -183,49 +180,47 @@ export async function POST(request: NextRequest) {
             clearTimeout(fetchTimeoutId)
           }
 
-          console.log(`📡 ${tag} STEP 2: Response received — status ${response.status} ${response.statusText}`)
+          console.log(`📡 ${tag} STEP 2: Response ${response.status} ${response.statusText}`)
 
           if (!response.ok) {
             const errorText = await response.text()
-            console.error(`❌ ${tag} STEP 2: HTTP error ${response.status}:`, errorText)
+            console.error(`❌ ${tag} HTTP error ${response.status}:`, errorText)
             throw new Error(`HTTP ${response.status}: ${errorText}`)
           }
 
-          // ── STEP 3: Parse response ──────────────────────────────────────
+          // ── STEP 3: Parse response ────────────────────────────────────
           console.log(`🔍 ${tag} STEP 3: Reading response body...`)
           const rawText = await response.text()
-          console.log(`📄 ${tag} STEP 3: Body length: ${rawText.length} chars`)
-          console.log(`📄 ${tag} STEP 3: Body preview: ${rawText.substring(0, 300)}`)
+          console.log(`📄 ${tag} STEP 3: ${rawText.length} chars — ${rawText.substring(0, 300)}`)
 
           let data
           try {
             data = JSON.parse(rawText)
           } catch (parseError) {
-            console.error(`❌ ${tag} STEP 3: JSON parse failed:`, parseError)
+            console.error(`❌ ${tag} JSON parse failed:`, parseError)
             throw new Error('Failed to parse response from pull endpoint')
           }
-          console.log(`✅ ${tag} STEP 3: Parsed — success=${data.success}, hasError=${!!data.error}`)
+          console.log(`✅ ${tag} STEP 3: success=${data.success}, hasError=${!!data.error}`)
 
           if (data.error) {
             let errorDetail = 'Unknown error from pull endpoint'
-            if (typeof data.error === 'string') {
-              errorDetail = data.error
-            } else if (typeof data.error === 'object') {
+            if (typeof data.error === 'string') errorDetail = data.error
+            else if (typeof data.error === 'object') {
               if (data.error.message) errorDetail = data.error.message
               else if (data.error.code) errorDetail = `DB Error ${data.error.code}: ${data.error.details || data.error.hint || 'Database error'}`
               else errorDetail = JSON.stringify(data.error)
             }
-            console.error(`❌ ${tag} STEP 3: Pull endpoint returned error:`, errorDetail)
+            console.error(`❌ ${tag} Pull error:`, errorDetail)
             throw new Error(errorDetail)
           }
 
           if (data.success === false) {
-            console.error(`❌ ${tag} STEP 3: Pull endpoint returned success=false`)
+            console.error(`❌ ${tag} success=false`)
             throw new Error('Pull endpoint returned success: false')
           }
 
-          // ── STEP 4: Mark as completed ───────────────────────────────────
-          console.log(`📝 ${tag} STEP 4: Updating sync_status to 'completed'...`)
+          // ── STEP 4: Mark as completed ─────────────────────────────────
+          console.log(`📝 ${tag} STEP 4: Updating to 'completed'...`)
           await withTimeout(
             supabase
               .from('sync_status')
@@ -235,78 +230,112 @@ export async function POST(request: NextRequest) {
               .eq('year', year)
               .then(),
             10000,
-            `${tag} sync_status update to completed`
+            `${tag} update to completed`
           )
           console.log(`✅ ${tag} STEP 4 done`)
-
-          console.log(`🎉 ${tag} FULLY COMPLETE after ${retryCount} retries`)
-          return { month, year, phase, status: 'completed' }
+          console.log(`🎉 ${tag} FULLY COMPLETE`)
+          return 'completed'
 
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-          console.error(`\n💥 ${tag} CAUGHT ERROR: ${errorMessage}`)
-          console.error(`💥 ${tag} Error type: ${error instanceof Error ? error.constructor.name : typeof error}`)
+          console.error(`💥 ${tag} ERROR: ${errorMessage}`)
 
-          const isTimeout = errorMessage.includes('aborted') ||
+          const isRetryable =
+            errorMessage.includes('aborted') ||
             errorMessage.includes('timeout') ||
             errorMessage.includes('HUNG') ||
             errorMessage.includes('57014') ||
-            errorMessage.includes('canceling statement due to statement timeout') ||
             errorMessage.includes('slot timeout') ||
-            (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === '57014')
+            errorMessage.includes('canceling statement due to statement timeout') ||
+            errorMessage.includes('500') ||
+            errorMessage.includes('40P01') ||
+            errorMessage.includes('deadlock') ||
+            (typeof error === 'object' && error !== null && 'code' in error &&
+              ((error as any).code === '57014' || (error as any).code === '40P01'))
 
-          const isDeadlock = errorMessage.includes('40P01') ||
-            errorMessage.includes('deadlock detected') ||
-            (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === '40P01')
+          console.log(`💥 ${tag} isRetryable=${isRetryable}`)
 
-          const isServerError = errorMessage.includes('500')
-
-          console.log(`💥 ${tag} isTimeout=${isTimeout}, isDeadlock=${isDeadlock}, isServerError=${isServerError}`)
-
-          if (isTimeout || isDeadlock || isServerError) {
-            const retryReason = isDeadlock ? 'deadlock' : isTimeout ? 'timeout/hang' : 'server error'
-            const retryDelay = getRetryDelay(phase, retryCount)
-            console.log(`⏳ ${tag} Will retry in ${retryDelay}ms due to: ${retryReason}`)
-
-            // Fire-and-forget the status update — don't await it, it might also hang
-            Promise.resolve(supabase
-              .from('sync_status')
-              .update({ status: 'retrying', retry_count: retryCount + 1, error_message: `Retry ${retryCount + 1} (${retryReason}): ${errorMessage}` })
-              .eq('user_id', userId)
-              .eq('month', month)
-              .eq('year', year))
-              .then(() => console.log(`📝 ${tag} retry status update done`))
-              .catch((e: Error) => console.error(`📝 ${tag} retry status update failed (non-blocking):`, e))
-
-            console.log(`⏳ ${tag} Waiting ${retryDelay}ms before retry...`)
-            await new Promise(resolve => setTimeout(resolve, retryDelay))
-            console.log(`🔁 ${tag} Retrying now as attempt ${retryCount + 2}`)
-            return processMonth(month, year, phase, retryCount + 1)
+          if (isRetryable) {
+            return 'retry'
           }
 
-          // Non-retryable — fire-and-forget status update and return failed
-          console.error(`🚫 ${tag} Non-retryable error, marking as failed`)
-          Promise.resolve(supabase
-            .from('sync_status')
-            .update({ status: 'failed', updated_at: new Date().toISOString(), retry_count: retryCount, error_message: errorMessage })
-            .eq('user_id', userId)
-            .eq('month', month)
-            .eq('year', year))
-            .then(() => console.log(`📝 ${tag} failed status update done`))
-            .catch((e: Error) => console.error(`📝 ${tag} failed status update error (non-blocking):`, e))
+          // Non-retryable — mark failed and return
+          Promise.resolve(
+            supabase
+              .from('sync_status')
+              .update({ status: 'failed', updated_at: new Date().toISOString(), retry_count: retryCount, error_message: errorMessage })
+              .eq('user_id', userId)
+              .eq('month', month)
+              .eq('year', year)
+          )
+            .then(() => console.log(`📝 ${tag} marked as failed`))
+            .catch((e: Error) => console.error(`📝 ${tag} failed status update error:`, e))
 
-          return { month, year, phase, status: 'failed', error: errorMessage }
+          return 'failed'
         }
       }
 
       try {
-        console.log(`⏱️  ${tag} Racing attempt() against ${SLOT_TIMEOUT}ms slot timeout...`)
+        console.log(`⏱️  ${tag} Racing attempt against ${SLOT_TIMEOUT}ms slot timeout...`)
         const result = await Promise.race([attempt(), slotTimeoutPromise])
-        console.log(`✅ ${tag} Promise.race resolved with status: ${result?.status}`)
+        console.log(`✅ ${tag} attempt resolved: ${result}`)
         return result
+      } catch (e) {
+        // Slot timeout fired — treat as retryable
+        const msg = e instanceof Error ? e.message : 'unknown'
+        console.error(`⏰ ${tag} Slot timeout caught at race level: ${msg}`)
+        return 'retry'
       } finally {
         clearTimeout(slotTimeoutId)
         console.log(`🧹 ${tag} Slot timeout cleared`)
+      }
+    }
+
+    // Processes a month with an infinite retry loop.
+    // No recursion — retries are a plain while loop so the call stack never grows
+    // and the result is always awaited by the worker that called this.
+    const processMonth = async (
+      month: string,
+      year: number,
+      phase: 'priority' | 'background'
+    ): Promise<{ month: string; year: number; phase: string; status: string }> => {
+      let retryCount = 0
+
+      while (true) {
+        const tag = `[${phase}][${month} ${year}]`
+        console.log(`\n${'='.repeat(60)}`)
+        console.log(`🚀 ${tag} Starting attempt ${retryCount + 1}`)
+        console.log(`${'='.repeat(60)}`)
+
+        const result = await attemptMonth(month, year, phase, retryCount)
+
+        if (result === 'completed') {
+          return { month, year, phase, status: 'completed' }
+        }
+
+        if (result === 'failed') {
+          return { month, year, phase, status: 'failed' }
+        }
+
+        // result === 'retry'
+        const retryDelay = getRetryDelay(phase, retryCount)
+        console.log(`⏳ ${tag} Retrying in ${retryDelay}ms (retry #${retryCount + 1})`)
+
+        // Fire-and-forget retrying status update
+        Promise.resolve(
+          supabase
+            .from('sync_status')
+            .update({ status: 'retrying', retry_count: retryCount + 1, error_message: `Retry ${retryCount + 1}` })
+            .eq('user_id', userId)
+            .eq('month', month)
+            .eq('year', year)
+        )
+          .then(() => console.log(`📝 ${tag} marked as retrying`))
+          .catch((e: Error) => console.error(`📝 ${tag} retrying status update error:`, e))
+
+        await new Promise(resolve => setTimeout(resolve, retryDelay))
+        retryCount++
+        console.log(`🔁 ${tag} Starting retry attempt ${retryCount + 1}`)
       }
     }
 
@@ -326,24 +355,24 @@ export async function POST(request: NextRequest) {
 
       const worker = async (workerId: number) => {
         console.log(`👷 [${label}] Worker ${workerId} started`)
-        while (queue.length > 0) {
+        while (true) {
           const item = queue.shift()
           if (!item) {
-            console.log(`👷 [${label}] Worker ${workerId} found empty queue, exiting`)
+            console.log(`👷 [${label}] Worker ${workerId} — queue empty, exiting`)
             break
           }
-          console.log(`👷 [${label}] Worker ${workerId} picked up ${item.month} ${item.year} (${queue.length} remaining in queue)`)
+          console.log(`👷 [${label}] Worker ${workerId} picked up ${item.month} ${item.year} (${queue.length} remaining)`)
           const result = await processMonth(item.month, item.year, item.phase)
           results.push(result)
           completed++
-          console.log(`👷 [${label}] Worker ${workerId} finished ${item.month} ${item.year} — ${completed}/${total} total done`)
+          console.log(`👷 [${label}] Worker ${workerId} finished ${item.month} ${item.year} — ${completed}/${total} done`)
         }
-        console.log(`👷 [${label}] Worker ${workerId} exiting — queue empty`)
+        console.log(`👷 [${label}] Worker ${workerId} exiting`)
       }
 
       await Promise.all(Array.from({ length: concurrency }, (_, i) => worker(i + 1)))
 
-      console.log(`🏁 [${label}] Worker pool done. Results: ${results.map(r => `${r.month} ${r.year}=${r.status}`).join(', ')}`)
+      console.log(`🏁 [${label}] Pool done. Results: ${results.map(r => `${r.month} ${r.year}=${r.status}`).join(', ')}`)
       return results
     }
 
@@ -385,7 +414,7 @@ export async function POST(request: NextRequest) {
           if (notificationError) {
             console.error('[trigger-sync] Failed to create notification:', notificationError)
           } else {
-            console.log('📬 [trigger-sync] Notification sent: Full sync complete')
+            console.log('📬 [trigger-sync] Notification sent')
           }
         }
       } catch (err) {
