@@ -11,6 +11,7 @@ const PRIORITY_RETRY_DELAY = 6000 // 6 seconds for priority months
 const BACKGROUND_RETRY_DELAY_BASE = 2000 // Base 2 seconds for background, exponential backoff
 const BACKGROUND_RETRY_DELAY_MAX = 30000 // Max 30 seconds for background
 const REQUEST_TIMEOUT = 120000 // 2 minutes
+const SLOT_TIMEOUT = 45000 // 45 seconds - force retry if Vercel silently kills the function
 
 export async function POST(request: NextRequest) {
   try {
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
-        const response = await fetch(targetUrl, {
+        const fetchPromise = fetch(targetUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -170,7 +171,18 @@ export async function POST(request: NextRequest) {
           signal: controller.signal
         })
 
-        clearTimeout(timeoutId)
+        // Race against a 45s slot timeout — Vercel can silently kill functions
+        // without triggering the AbortController, leaving the slot hung forever
+        const slotTimeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('slot timeout after 45s')), SLOT_TIMEOUT)
+        )
+
+        let response: Response
+        try {
+          response = await Promise.race([fetchPromise, slotTimeoutPromise])
+        } finally {
+          clearTimeout(timeoutId)
+        }
 
         console.log(`[${phase}] Response status for ${month} ${year}: ${response.status} ${response.statusText}`)
 
@@ -254,6 +266,7 @@ export async function POST(request: NextRequest) {
           errorMessage.includes('timeout') ||
           errorMessage.includes('57014') ||
           errorMessage.includes('canceling statement due to statement timeout') ||
+          errorMessage.includes('slot timeout') ||
           (typeof error === 'object' && error !== null && 'code' in error && error.code === '57014')
 
         const isDeadlock = errorMessage.includes('40P01') ||
