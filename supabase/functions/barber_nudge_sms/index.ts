@@ -216,9 +216,9 @@ Deno.serve(async (req) => {
     console.log(`Edge function triggered. Current day: ${dayOfWeek} (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)`)
     console.log(`Current Toronto time: ${getTorontoDate().toISOString()}`)
     
-    // Thursday-Sunday: Skip execution
-    if (dayOfWeek >= 4 || dayOfWeek === 0) {
-      console.log('Skipping execution (Thursday-Sunday)')
+    // Friday-Sunday: Skip execution
+    if (dayOfWeek >= 5 || dayOfWeek === 0) {
+      console.log('Skipping execution (Friday-Sunday)')
       return new Response(JSON.stringify({ message: 'Skipped - not an active send day' }), {
         headers: { 'Content-Type': 'application/json' },
         status: 200,
@@ -237,12 +237,35 @@ Deno.serve(async (req) => {
     // query = query.or('stripe_subscription_status.eq.active,trial_active.eq.true')
     
     if (dayOfWeek === 1) {
-      // Monday: Regular flow - send to everyone with date_autonudge_enabled set
-      console.log('Monday flow: Sending to all barbers with auto-nudge enabled')
-      query = query.not('date_autonudge_enabled', 'is', null)
+      // Monday: Send to barbers who signed up Thursday-Sunday (before today)
+      // i.e., date_autonudge_enabled < start of today (Monday)
+      console.log('Monday flow: Sending to barbers who signed up Thursday-Sunday')
+      
+      // Get start of today (Monday) in Toronto time as UTC
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: TORONTO_TZ,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      const now = new Date()
+      const parts = formatter.formatToParts(now)
+      const year = parseInt(parts.find(p => p.type === 'year')!.value)
+      const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1
+      const day = parseInt(parts.find(p => p.type === 'day')!.value)
+      
+      // Start of today (Monday 00:00 Toronto time) in UTC
+      const todayStartUTC = new Date(Date.UTC(year, month, day, 5, 0, 0)) // 00:00 Toronto = 05:00 UTC (EST)
+      
+      console.log(`Looking for date_autonudge_enabled before ${todayStartUTC.toISOString()} (start of Monday Toronto time)`)
+      
+      // Only send to barbers who enabled auto-nudge BEFORE Monday (i.e., Thu-Sun signups)
+      query = query
+        .not('date_autonudge_enabled', 'is', null)
+        .lt('date_autonudge_enabled', todayStartUTC.toISOString())
     } else {
-      // Tuesday-Wednesday: Catch-up flow - send to barbers who onboarded yesterday
-      console.log('Tuesday-Wednesday catch-up flow: Sending to barbers who onboarded yesterday')
+      // Tuesday-Thursday: Send to barbers who signed up yesterday (Mon, Tue, or Wed)
+      console.log('Tuesday-Thursday flow: Sending to barbers who signed up yesterday')
       
       const { start, end } = getYesterdayInTorontoAsUTC()
       
@@ -329,7 +352,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ 
       success: true,
       day_of_week: dayOfWeek,
-      flow_type: dayOfWeek === 1 ? 'monday_regular' : 'tuesday_wednesday_catchup',
+      flow_type: dayOfWeek === 1 ? 'monday_regular' : 'weekday_catchup',
       sent: results.filter(r => r.status === 'sent').length,
       failed: results.filter(r => r.status === 'failed').length,
       results 

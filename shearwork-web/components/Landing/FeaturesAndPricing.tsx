@@ -32,6 +32,7 @@ export default function FeaturesAndPricing() {
 
   return (
     <section
+      id="how-it-works"
       className="h-screen flex items-center justify-center px-4 md:px-6 lg:px-8"
       style={{
         background: `linear-gradient(135deg, #181818 0%, #1a1a1a 30%, #1c1e1c 70%, #181818 100%)`,
