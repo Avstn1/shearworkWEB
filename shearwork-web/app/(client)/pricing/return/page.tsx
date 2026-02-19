@@ -42,7 +42,11 @@ type BillingSummary = {
 function PricingReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { refreshProfile } = useAuth()
+  const { profileFromAuth, refreshProfile } = useAuth()
+
+  if (profileFromAuth?.trial_active === false) {
+    router.replace('/pricing')
+  }
   
   // State
   const [loading, setLoading] = useState(true)

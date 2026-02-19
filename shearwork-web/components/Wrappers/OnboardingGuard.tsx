@@ -15,6 +15,11 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
     // Don't check if no user
     if (!user) return
     
+    // Redirect to pricing if profile exists but trial is not active
+    if (profile && !profile.trial_active) {
+      router.replace('/pricing')
+    }
+
     // Redirect to pricing/return if profile exists but onboarded is false
     if (profile && !profile.onboarded) {
       console.log('🟢 Redirecting to pricing/return - onboarded:', profile.onboarded)

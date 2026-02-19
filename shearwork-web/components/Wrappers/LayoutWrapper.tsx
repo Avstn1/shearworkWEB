@@ -54,7 +54,6 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       profile &&
       !profile.onboarded &&
       role !== 'admin' &&
-      role !== 'owner' &&
       pathname !== '/pricing/return'
     ) {
       router.push('/pricing')
@@ -74,7 +73,6 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     if (
       user &&
       role !== 'admin' &&
-      role !== 'owner' &&
       premiumRoutes.some(path => pathname.startsWith(path))
     ) {
       if (!hasPremiumAccess) {

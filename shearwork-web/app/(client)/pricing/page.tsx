@@ -36,17 +36,21 @@ type PricingResponse = {
 // Feature list for each plan - must match actual functionality
 const FEATURES = {
   trial: [
-    'See your revenue & profits',
-    'Preview Auto-Fill setup',
-    '10 SMS credits included',
-    'Connect your booking system',
+    'Auto-Fill your empty slots',
+    'Smart booking reminders to past clients',
+    'Real-time booking alerts',
+    'Weekly performance insights',
   ],
   pro: [
-    'Activate Auto-Fill',
-    'Automated client reminders',
-    'See your revenue & profits',
-    'Buy SMS credits as needed',
+    'Everything in trial',
+    'Full analytics dashboard',
+    'Revenue & profit tracking',
     'Priority support',
+  ],
+  proYearly: [
+    'Everything in Monthly',
+    'Save CA$20/year',
+    'Locked-in annual price',
   ],
 }
 
@@ -145,7 +149,6 @@ function PricingPageContent() {
       try {
         const res = await fetch('/api/stripe/pricing')
         const data = await res.json()
-        console.log('Fetched pricing:', res.status, data)
 
         if (!res.ok) {
           throw new Error(data.error || 'Failed to load pricing')
@@ -332,7 +335,7 @@ function PricingPageContent() {
             <div className="mb-1">
               <span className="text-4xl font-bold text-white">$0</span>
             </div>
-            <p className="text-sm text-gray-500 mb-5">{TRIAL_DAYS} days • No card required</p>
+            <p className="text-sm text-gray-500 mb-6.5">{TRIAL_DAYS} days • No card required <br/> Takes 2 minutes to set up</p>
 
             <button
               onClick={() => startCheckout('trial')}
@@ -395,12 +398,12 @@ function PricingPageContent() {
             {loading && selectedPlan === 'yearly' ? (
               <Loader2 className="h-4 w-4 mx-auto animate-spin" />
             ) : (
-              'Get Pro Yearly'
+              'Subscribe Yearly'
             )}
           </button>
 
           <ul className="space-y-3">
-            {FEATURES.pro.map((feature, i) => (
+            {FEATURES.proYearly.map((feature, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
                 <Check className="h-4 w-4 text-[#73aa57] flex-shrink-0" />
                 {feature}
@@ -424,7 +427,7 @@ function PricingPageContent() {
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500 mb-5">per month</p>
+          <p className="text-sm text-gray-500 mb-11">per month</p>
 
           <button
             onClick={() => startCheckout('monthly')}
@@ -434,7 +437,7 @@ function PricingPageContent() {
             {loading && selectedPlan === 'monthly' ? (
               <Loader2 className="h-4 w-4 mx-auto animate-spin" />
             ) : (
-              'Get Pro Monthly'
+              'Subscribe Monthly'
             )}
           </button>
 

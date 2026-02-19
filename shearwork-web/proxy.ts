@@ -81,6 +81,7 @@ export default async function middleware(request: NextRequest) {
 
   if (subStatus === 'active' || hasTrialAccess) {
     if (pathname === '/pricing') {
+      console.log('User has active subscription or trial, redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
     if (pathname === '/pricing/return') {
