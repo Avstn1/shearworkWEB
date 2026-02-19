@@ -104,14 +104,11 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
         const currentMonth = now.getMonth()
         const currentYear = now.getFullYear()
 
-        // Priority = current year months only
-        const firstMonthOfYear = year === currentYear ? appointmentDate.getMonth() : 0
-        const priorityCount = currentMonth - firstMonthOfYear + 1
-
-        setTotalPriorityMonths(priorityCount)
+        // Priority = current month only
+        setTotalPriorityMonths(1)
 
         setPriorityMonthsInfo({
-          startMonth: MONTHS[firstMonthOfYear],
+          startMonth: MONTHS[currentMonth],
           startYear: currentYear,
           endMonth: MONTHS[currentMonth],
           endYear: currentYear
@@ -304,7 +301,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
               <div>
                 <p className="text-sm font-semibold text-emerald-300 mb-1">📊 Smart Sync Strategy</p>
                 <p className="text-xs text-gray-300 leading-relaxed mb-2">
-                  We'll sync your <span className="font-bold text-white">last {totalPriorityMonths} months</span> ({priorityMonthsInfo.startMonth} {priorityMonthsInfo.startYear} - {priorityMonthsInfo.endMonth} {priorityMonthsInfo.endYear}) right now. This is your most recent and relevant data.
+                  We'll sync <span className="font-bold text-white">{priorityMonthsInfo.startMonth} {priorityMonthsInfo.startYear}</span> right now. This is your most recent and relevant data.
                 </p>
                 <p className="text-xs text-gray-300 leading-relaxed">
                   All older data will sync in the background after onboarding. You'll get a notification when everything is complete.
