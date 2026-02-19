@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No months to sync' }, { status: 400 })
     }
 
-    // Priority = current year, background = everything older
-    const priorityMonths = allMonths.filter(m => m.year === currentYear)
-    const backgroundMonths = allMonths.filter(m => m.year !== currentYear)
+    // Priority = current month only, background = everything else
+    const priorityMonths = allMonths.filter(m => m.year === currentYear && MONTHS.indexOf(m.month) === currentMonth)
+    const backgroundMonths = allMonths.filter(m => !(m.year === currentYear && MONTHS.indexOf(m.month) === currentMonth))
     const orderedMonths = [...priorityMonths, ...backgroundMonths]
 
     console.log(`[trigger-sync] ${priorityMonths.length} priority, ${backgroundMonths.length} background`)
