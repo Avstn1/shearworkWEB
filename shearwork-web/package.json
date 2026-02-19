@@ -20,6 +20,7 @@
     "@tinymce/tinymce-react": "^6.3.0",
     "@upstash/qstash": "^2.8.4",
     "@upstash/redis": "^1.35.7",
+    "@vercel/functions": "^3.4.2",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
     "easymde": "^2.20.0",

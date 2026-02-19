@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { waitUntil } from '@vercel/functions'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 const MONTHS = [
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fire and forget
-    runSync().catch(err => console.error('[trigger-sync] fatal error:', err))
+    waitUntil(runSync())
 
     return NextResponse.json({
       success: true,
