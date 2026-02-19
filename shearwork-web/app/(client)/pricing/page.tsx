@@ -149,7 +149,6 @@ function PricingPageContent() {
       try {
         const res = await fetch('/api/stripe/pricing')
         const data = await res.json()
-        console.log('Fetched pricing:', res.status, data)
 
         if (!res.ok) {
           throw new Error(data.error || 'Failed to load pricing')
