@@ -12,6 +12,7 @@ export default function MobileAuthHandler() {
 
   useEffect(() => {
     const code = searchParams.get('code')
+    const src = searchParams.get('src')
     if (!code) return
 
     const run = async () => {
@@ -36,7 +37,11 @@ export default function MobileAuthHandler() {
         })
 
         toast.success('Successfully authenticated!')
-        globalThis.location.href = '/settings?openCredits=true'
+        
+        // Redirect to credits if src is not provided, otherwise go to pricing (src is set for users coming from the pricing page)
+        if (!src) {
+          globalThis.location.href = '/settings?openCredits=true'
+        }
       } catch {
         toast.error('Authentication failed')
         router.push('/login')
