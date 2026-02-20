@@ -165,8 +165,8 @@ export default function ClientManagerPage() {
 
             {activeView === 'sms' && (
               <div data-tutorial-id="client-manager-auto-nudge">
-                <SMSAutoNudge_SmartBucket />
-                {/* <SMSAutoNudge /> */}
+                {/* <SMSAutoNudge_SmartBucket /> */}
+                <SMSAutoNudge />
               </div>
             )}
 

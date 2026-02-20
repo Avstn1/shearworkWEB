@@ -153,6 +153,7 @@ export function normalizeSquareBooking(
     serviceType,
     price,
     tip: 0,
+    datetimeCreated: booking.start_at || null,
     notes: booking.customer_note || null,
     referralSource: null,
     customerId: booking.customer_id || null,
