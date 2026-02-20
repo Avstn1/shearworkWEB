@@ -23,7 +23,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
   } = useAuth()
 
   // Public routes that don't need authentication
-  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/book']
+  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/book', '/privacy-policy']
   const isPublicRoute = publicRoutes.includes(pathname)
 
   // Show strong prompt modal when trial has ended (Day 21+)

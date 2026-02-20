@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Landing/Footer';
 import { motion } from 'framer-motion';
-
+import Link from "next/link";
 
 // Color palette
 const COLORS = {
@@ -320,8 +320,19 @@ export default function SignUpPage() {
                   />
                 </button>
 
-                <p className="text-center text-[9px] lg:text-xs leading-tight" style={{ color: COLORS.textMuted }}>
-                  By signing up, you agree to our Terms
+                <p
+                  className="text-center text-[9px] lg:text-xs leading-tight"
+                  style={{ color: COLORS.textMuted }}
+                >
+                  By signing up, you agree to our{" "}
+                  <a
+                    href="/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:opacity-80"
+                  >
+                    Privacy Policy
+                  </a>
                 </p>
               </form>
 

@@ -293,6 +293,20 @@ export default function LoginPage() {
                 <p className="text-center text-[9px] lg:text-xs leading-tight" style={{ color: COLORS.textMuted }}>
                   Secure login protected by encryption
                 </p>
+                <p
+                  className="text-center text-[9px] lg:text-xs leading-tight"
+                  style={{ color: COLORS.textMuted }}
+                >
+                  By signing in, you agree to our{" "}
+                  <a
+                    href="/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:opacity-80"
+                  >
+                    Privacy Policy
+                  </a>
+                </p>
               </form>
 
               {/* Bottom decoration/info */}

@@ -90,6 +90,7 @@ Deno.serve(async (req) => {
 
       // If not update, then it's a monday so reset sms_engaged_current week for everyone
       if (!update) {
+        
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
@@ -97,6 +98,7 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString()
           })
           .eq('sms_engaged_current_week', true)
+          .in('user_id', targetUserIds || [])
         
         if (updateError) {
           console.error('Failed to update profile engagement:', updateError)

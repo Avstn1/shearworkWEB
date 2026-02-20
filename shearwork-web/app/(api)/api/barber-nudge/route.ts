@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { ClientSMSFromBarberNudge } from '@/lib/client_sms_from_barber_nudge/index'
+import { createSmartBuckets } from '@/lib/client_sms_from_barber_nudge/create_smart_buckets'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -11,6 +11,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
+
+    console.log("Running local version...")
     
     // Extract Twilio webhook data
     const from = formData.get('From') as string 
@@ -27,11 +29,13 @@ export async function POST(request: Request) {
     // Ensure phone number is in E.164 format (+1XXXXXXXXXX)
     const digitsOnly = from.replace(/\D/g, '')
     const normalizedPhone = digitsOnly.startsWith('1') ? `+${digitsOnly}` : `+1${digitsOnly}`
+
+    console.log("digits only: ", digitsOnly)
     
     // Find the profile by normalized phone number
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_id, sms_engaged_current_week, trial_active, stripe_subscription_status')
+      .select('user_id, sms_engaged_current_week, trial_active, stripe_subscription_status, phone')
       .eq('phone', normalizedPhone)
       .single()
     
@@ -85,62 +89,46 @@ export async function POST(request: Request) {
       console.error('Failed to update profile engagement:', updateError)
     }
 
-    // Activate ClientSMSFromBarberNudge - fetch full profile data
-    const { data: fullProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_id, full_name, email, phone, username, booking_link')
-      .eq('user_id', profile.user_id)
-      .single()
+    // Create smart bucket for this barber
+    console.log(`Creating smart bucket for user ${profile.user_id}`)
 
-    if (profileError || !fullProfile) {
-      console.error('Failed to fetch full profile:', profileError)
+    const bucketResult = await createSmartBuckets(profile.user_id)
+
+    if (!bucketResult.success) {
+      console.error('createSmartBuckets failed:', bucketResult.error)
       return NextResponse.json({ 
         success: true, 
-        warning: 'Reply logged but failed to trigger SMS campaign' 
+        warning: 'Reply logged but smart bucket creation failed',
+        bucketError: bucketResult.error
       })
     }
 
-    //Trigger the client SMS campaign
-    console.log(`Triggering ClientSMSFromBarberNudge for ${fullProfile.full_name}`)
-    
-    const smsResult = await ClientSMSFromBarberNudge(profile.user_id, {
-      full_name: fullProfile.full_name,
-      email: fullProfile.email,
-      phone: fullProfile.phone,
-      username: fullProfile.username,
-      booking_link: fullProfile.booking_link
-    })
-
-    if (!smsResult.success) {
-      console.error('ClientSMSFromBarberNudge failed:', smsResult.error)
-      return NextResponse.json({ 
-        success: true, 
-        warning: 'Reply logged but SMS campaign failed',
-        campaignError: smsResult.error
-      })
+    if (!bucketResult.bucket_id) {
+      console.log(`No bucket created for user ${profile.user_id} (no recipients or already exists)`)
+      return NextResponse.json({ success: true, campaignTriggered: false })
     }
 
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: profile.user_id,
-        header: "Weekly auto-nudge authorized",
-        message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
-        reference: smsResult.scheduledMessageId,
-        reference_type: 'sms_auto_nudge',
-      });
+    // Removed while testing. CHANGE LATER
+    // const { error: notificationError } = await supabase
+    //   .from('notifications')
+    //   .insert({
+    //     user_id: profile.user_id,
+    //     header: "Weekly auto-nudge authorized",
+    //     message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
+    //     reference: bucketResult.bucket_id,
+    //     reference_type: 'sms_auto_nudge',
+    //   })
 
-    if (notificationError) {
-      console.error('Failed to insert notifications. Continuing without notification', notificationError)
-    }
+    // if (notificationError) {
+    //   console.error('Failed to insert notification. Continuing without notification.', notificationError)
+    // }
 
-    console.log(`ClientSMSFromBarberNudge completed: ${smsResult.sent} sent, ${smsResult.failed} failed`)
+    console.log(`Smart bucket created: ${bucketResult.bucket_id}`)
     
     return NextResponse.json({ 
       success: true,
       campaignTriggered: true,
-      sent: smsResult.sent,
-      failed: smsResult.failed
+      bucket_id: bucketResult.bucket_id,
     })
   } catch (error) {
     console.error('Webhook error:', error)
