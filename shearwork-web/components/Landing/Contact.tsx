@@ -48,25 +48,6 @@ export default function Contact() {
       >
         Let&apos;s show you how Corva turns your numbers into a clear plan. Get a free walkthrough.
       </motion.p>
-
-      {/* Contact Button — opens email client */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-      >
-        <a
-          href="/support" 
-          className="inline-block font-semibold text-lg px-10 py-4 rounded-full hover:scale-105 hover:shadow-lg transition-transform duration-300"
-          style={{ 
-            background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
-            color: '#000000',
-            boxShadow: `0 4px 20px ${COLORS.greenGlow}`,
-          }}
-        >
-          Contact Us
-        </a>
-      </motion.div>
     </section>
   )
 }
