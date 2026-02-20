@@ -156,7 +156,7 @@ export default function Hero() {
 
   return (
     <section
-      className="min-h-screen flex items-center relative overflow-hidden"
+      className="w-full relative overflow-hidden"
       style={{
         background: 'linear-gradient(135deg, #050505 0%, #0a0a0a 30%, #0d1210 60%, #080808 100%)',
         color: COLORS.text,
@@ -175,7 +175,7 @@ export default function Hero() {
       <div className="absolute left-0 top-0 w-[55%] h-full pointer-events-none bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
 
       {/* Main content */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-16 pt-32 lg:pt-36 pb-24">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-16 pt-20 sm:pt-24 lg:pt-36 pb-8 sm:pb-12 lg:pb-24">
         <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-12 lg:gap-20 xl:gap-28 items-center">
           
           {/* Left Column - Copy (DOMINANT) */}
@@ -184,19 +184,19 @@ export default function Hero() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: 'easeOut' }}
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-10 tracking-tight"
+              className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 sm:mb-8 lg:mb-10 tracking-tight"
               style={{ lineHeight: '1.08' }}
             >
-              <span className="whitespace-nowrap">Stop Relying on Hustle</span>
+              <span className="sm:whitespace-nowrap">Stop Relying on Hustle</span>
               <br />
-              <span className="whitespace-nowrap bg-gradient-to-r from-white via-white to-emerald-300 bg-clip-text text-transparent">to Stay Booked.</span>
+              <span className="sm:whitespace-nowrap bg-gradient-to-r from-white via-white to-emerald-300 bg-clip-text text-transparent">to Stay Booked.</span>
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.12, ease: 'easeOut' }}
-              className="text-lg sm:text-xl lg:text-2xl mb-8 max-w-xl"
+              className="text-base sm:text-lg lg:text-2xl mb-4 sm:mb-6 lg:mb-8 max-w-xl"
               style={{ color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}
             >
               Corva detects your open spots and automatically reminds past clients so you recover bookings you would have missed.
@@ -206,7 +206,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.18, ease: 'easeOut' }}
-              className="text-base sm:text-lg mb-12 max-w-lg"
+              className="text-sm sm:text-base lg:text-lg mb-6 sm:mb-8 lg:mb-12 max-w-lg"
               style={{ color: 'rgba(255,255,255,0.45)', lineHeight: '1.5' }}
             >
               Independent barbers do not need more hustle. They need a system.
@@ -216,7 +216,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.24, ease: 'easeOut' }}
-              className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-8"
+              className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-4 sm:mb-6 lg:mb-8"
             >
               <a
                 href="/signup"
@@ -283,8 +283,8 @@ export default function Hero() {
             </motion.a>
           </div>
 
-          {/* Right Column - Mockup */}
-          <div className="relative">
+          {/* Right Column - Mockup (hidden on mobile) */}
+          <div className="relative hidden lg:block">
             <MockupCard />
           </div>
         </div>
