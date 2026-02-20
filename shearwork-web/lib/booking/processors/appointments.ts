@@ -14,7 +14,7 @@ export interface AppointmentUpsertRow {
   client_id: string
   phone_normalized: string | null
   appointment_date: string
-  appointment_datecreated: string
+  appointment_datecreated: string | null
   datetime: string
   service_type: string | null
   revenue: number | null
