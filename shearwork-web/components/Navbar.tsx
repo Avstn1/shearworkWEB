@@ -345,25 +345,21 @@ export default function Navbar() {
   } else if (!user) {
     rightSideContent = (
       <div className="hidden md:flex items-center gap-4 text-[clamp(0.8rem,2vw,1rem)]">
-        <a
-          href="mailto:support@corva.ca"
-          className="px-4 sm:px-5 py-1 sm:py-2 rounded-md font-semibold hover:scale-105 transition"
-          style={{ 
-            backgroundColor: 'transparent',
-            color: COLORS.text,
-            border: `1px solid`
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = COLORS.green
-            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = COLORS.text
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
-        >
-          Contact Us
-        </a>
+      <Link
+        href="/support"
+        className="transition font-medium px-4 py-2 rounded-md border border-white"
+        style={{ color: COLORS.text }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = COLORS.green
+          e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = COLORS.text
+          e.currentTarget.style.backgroundColor = 'transparent'
+        }}
+      >
+        Contact Us
+      </Link>
         <Link 
           href="/login" 
           className="transition font-medium"

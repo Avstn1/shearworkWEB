@@ -403,7 +403,7 @@ export default function PrivacyPolicyPage() {
               <p className="text-sm text-white/55">Don't hesitate to reach out — we're here to help.</p>
             </div>
             <a
-              href="mailto:privacy@corva.ca"
+              href="mailto:support@corva.ca"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-black flex-shrink-0 transition-all duration-300 hover:scale-[1.03]"
               style={{
                 background: 'linear-gradient(135deg, #73aa57 0%, #5b8f52 100%)',

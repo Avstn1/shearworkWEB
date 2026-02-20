@@ -283,7 +283,7 @@ export default function Hero() {
             </motion.a>
 
             <motion.a
-              href="mailto:support@corva.ca"
+              href="/support" 
               initial={{ opacity: 0, y: 0, scale: 1 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               whileHover={{ scale: 1 }}
