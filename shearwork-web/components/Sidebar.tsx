@@ -245,7 +245,15 @@ export default function Sidebar() {
               ©
             </div>
             <div className="text-xs text-white/40 text-center hidden group-hover:block">
-              © {new Date().getFullYear()} Corva
+              © {new Date().getFullYear()} Corva ·{" "}
+              <a
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:opacity-80"
+              >
+                Privacy Policy
+              </a>
             </div>
           </div>
         </div>

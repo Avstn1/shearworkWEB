@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import OnboardingGuard from '@/components/Wrappers/OnboardingGuard';
 import SMSAutoNudge from '@/components/Dashboard/ClientManager/SMSAutoNudge/SMSAutoNudge'
+import SMSAutoNudge_SmartBucket from '@/components/Dashboard/ClientManager/SMSAutoNudge/SMSAutoNudge_SmartBucket'
 import SMSCampaigns from '@/components/Dashboard/ClientManager/SMSCampaigns/SMSCampaigns';
 import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
@@ -164,7 +165,8 @@ export default function ClientManagerPage() {
 
             {activeView === 'sms' && (
               <div data-tutorial-id="client-manager-auto-nudge">
-                <SMSAutoNudge />
+                <SMSAutoNudge_SmartBucket />
+                {/* <SMSAutoNudge /> */}
               </div>
             )}
 

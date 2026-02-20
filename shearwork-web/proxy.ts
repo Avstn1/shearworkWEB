@@ -25,9 +25,10 @@ export default async function middleware(request: NextRequest) {
     '/signup',
     '/_next',
     '/api',
-    '/images',
+    '/images', 
     '/heroImages',
-    '/book'
+    '/book',
+    '/privacy-policy',
   ]
 
   if (!user) {

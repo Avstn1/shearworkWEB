@@ -191,9 +191,6 @@ async fetchAppointments(
       offset += pageSize
     }
 
-    // console.log('Last item of results:')
-    // console.log(results[results.length - 1])
-
     return results
   }
 
@@ -204,6 +201,8 @@ async fetchAppointments(
 
     const datetime = raw.datetime || ''
     const date = datetime.split('T')[0]
+
+    const datetimeCreated = raw.datetimeCreated || ''
 
     const email = raw.email?.toLowerCase?.().trim() || null
     const phone = raw.phone || null
@@ -227,6 +226,7 @@ async fetchAppointments(
       serviceType: raw.type || null,
       price: parseFloat(raw.priceSold || '0'),
       tip: parseFloat(raw.tip || '0'),
+      datetimeCreated: raw.datetimeCreated || null,
       notes: raw.notes || null,
       referralSource: extractSourceFromForms(raw.forms),
       forms: raw.forms,

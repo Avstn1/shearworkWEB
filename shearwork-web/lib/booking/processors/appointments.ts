@@ -14,6 +14,7 @@ export interface AppointmentUpsertRow {
   client_id: string
   phone_normalized: string | null
   appointment_date: string
+  appointment_datecreated: string
   datetime: string
   service_type: string | null
   revenue: number | null
@@ -109,6 +110,7 @@ export class AppointmentProcessor {
           phone_normalized: appt.phoneNormalized,
           appointment_date: appt.date,
           datetime: appt.datetime,
+          appointment_datecreated: appt.datetimeCreated,
           service_type: appt.serviceType,
           revenue: null,
           tip: null,
@@ -185,6 +187,7 @@ export class AppointmentProcessor {
       client_id: a.row.client_id,
       phone_normalized: a.row.phone_normalized,
       appointment_date: a.row.appointment_date,
+      appointment_datecreated: a.row.appointment_datecreated,
       datetime: a.row.datetime,
       service_type: a.row.service_type,
       notes: a.row.notes,

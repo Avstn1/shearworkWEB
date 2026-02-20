@@ -22,11 +22,21 @@ export default function Footer() {
         paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
       }}
     >
-      <div style={{ 
-        filter: 'brightness(0.6)',
-        color: '#FFFFFF',
-      }}>
-        © {new Date().getFullYear()} Corva. All rights reserved.
+      <div
+        style={{ 
+          filter: 'brightness(0.6)',
+          color: '#FFFFFF',
+        }}
+      >
+        © {new Date().getFullYear()} Corva. All rights reserved. ·{" "}
+        <a
+          href="/privacy-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:opacity-80"
+        >
+          Privacy Policy
+        </a>
       </div>
     </footer>
   )
