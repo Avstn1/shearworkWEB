@@ -29,6 +29,7 @@ export default async function middleware(request: NextRequest) {
     '/heroImages',
     '/book',
     '/privacy-policy',
+    '/support'
   ]
 
   if (!user) {
