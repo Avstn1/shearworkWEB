@@ -86,7 +86,7 @@ export default function HorizontalLandingPage() {
       <div
         ref={containerRef}
         data-scroll-container
-        className="h-screen overflow-x-scroll overflow-y-hidden snap-x snap-mandatory"
+        className="h-screen overflow-x-scroll overflow-y-auto lg:overflow-y-hidden snap-x snap-mandatory"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -100,20 +100,32 @@ export default function HorizontalLandingPage() {
         
         <div className="flex h-full" style={{ width: `${totalSections * 100}vw` }}>
           {/* Section 1: Hero */}
-          <div className="w-screen h-screen snap-start flex-shrink-0 overflow-hidden" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-            <Hero />
+          <div 
+            className="relative w-screen h-screen snap-start flex-shrink-0 overflow-hidden flex flex-col" 
+            style={{ 
+              color: 'rgba(255, 255, 255, 0.6)',
+              background: 'linear-gradient(135deg, #050505 0%, #0a0a0a 30%, #0d1210 60%, #080808 100%)'
+            }}
+          >
+            <div className="flex-1 flex items-center">
+              <Hero />
+            </div>
             <Footer />
           </div>
 
           {/* Section 2: Features + Pricing */}
-          <div className="w-screen h-screen snap-start flex-shrink-0 overflow-hidden" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-            <FeaturesAndPricing />
+          <div className="relative w-screen h-screen snap-start flex-shrink-0 overflow-hidden flex flex-col" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div className="flex-1 overflow-auto">
+              <FeaturesAndPricing />
+            </div>
             <Footer />
           </div>
 
           {/* Section 3: Contact */}
-          <div className="w-screen h-screen snap-start flex-shrink-0 overflow-hidden" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-            <Contact />
+          <div className="relative w-screen h-screen snap-start flex-shrink-0 overflow-hidden flex flex-col" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div className="flex-1 overflow-auto">
+              <Contact />
+            </div>
             <Footer />
           </div>
         </div>
