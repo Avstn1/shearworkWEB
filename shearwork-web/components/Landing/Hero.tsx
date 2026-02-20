@@ -281,6 +281,18 @@ export default function Hero() {
                 Sign in
               </span>
             </motion.a>
+
+            <motion.a
+              href="mailto:support@corva.ca"
+              initial={{ opacity: 0, y: 0, scale: 1 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              whileHover={{ scale: 1 }}
+              className="block text-xs sm:text-sm mt-6 mb-3 cursor-pointer"
+              style={{ color: COLORS.textSubtle }}
+            >
+              Contact Us
+            </motion.a>
+
           </div>
 
           {/* Right Column - Mockup */}

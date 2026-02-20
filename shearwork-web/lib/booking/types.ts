@@ -84,7 +84,7 @@ export interface NormalizedAppointment {
   externalId: string                    // e.g., '1390866002' (Acuity appointment ID)
   datetime: string                      // e.g., '2025-01-03T19:00:00-0500' (ISO with timezone)
   date: string                          // e.g., '2025-01-03' (YYYY-MM-DD)
-  datetimeCreated: string               // e.g., '2024-12-15T14:30:00-0500' (when the appointment was originally created)
+  datetimeCreated: string | null        // e.g., '2024-12-15T14:30:00-0500' (when the appointment was originally created)
   
   email: string | null                  // e.g., 'john@example.com' (lowercase, trimmed)
   phone: string | null                  // e.g., '(416) 555-1234' (raw from API)
