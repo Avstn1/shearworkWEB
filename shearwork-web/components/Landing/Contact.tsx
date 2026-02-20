@@ -56,7 +56,7 @@ export default function Contact() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
         <a
-          href="mailto:trackingvalid@gmail.com?subject=Barber Stats Inquiry&body=Hi!%20I'd%20like%20to%20learn%20more%20about%Corva."
+          href="/support" 
           className="inline-block font-semibold text-lg px-10 py-4 rounded-full hover:scale-105 hover:shadow-lg transition-transform duration-300"
           style={{ 
             background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
