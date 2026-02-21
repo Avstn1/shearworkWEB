@@ -14,6 +14,7 @@ import FAQModal from '@/components/Dashboard/ClientManager/FAQModal';
 import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
 import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
 import { CLIENT_MANAGER_TUTORIAL_STEPS } from '@/lib/tutorials/client-manager'
+import { useAuth } from '@/contexts/AuthContext'
 
 type ViewType = 'sheets' | 'sms' | 'sms-campaign';
 
@@ -30,6 +31,8 @@ export default function ClientManagerPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const viewParam = searchParams.get('view');
+
+  const { profile } = useAuth()
   
   // Derive active view from URL param (URL is source of truth for initial load)
   const getActiveView = (): ViewType => {
@@ -165,8 +168,7 @@ export default function ClientManagerPage() {
 
             {activeView === 'sms' && (
               <div data-tutorial-id="client-manager-auto-nudge">
-                {/* <SMSAutoNudge_SmartBucket /> */}
-                <SMSAutoNudge />
+                {profile?.special_access ? <SMSAutoNudge_SmartBucket /> : <SMSAutoNudge />}
               </div>
             )}
 
