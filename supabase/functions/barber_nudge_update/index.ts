@@ -301,7 +301,7 @@ async function sendUpdateMessage(barber: any, isoWeek: string): Promise<any> {
   if (filledSlots > 0) {
     message = getRandomMessage(filledSlots, totalSlots, takenSlots, estimatedRecovery)
   } else {
-    message = `Hey ${barber.full_name}, none of the batch recipients booked this week. Let's try again next week.\n\nFull details in Corva.`
+    message = `Hey ${barber.full_name}, Corva has contacted your highest-probability clients. Results may still come in.`
   }
 
   const statusCallbackUrl = `${siteUrl}/api/barber-nudge/sms-status`
