@@ -120,6 +120,7 @@ export async function createSmartBuckets(
     phone: client.phone_normalized,
     appointment_datecreated_bucket: client.appointment_datecreated_bucket ?? null,
     full_name: `${capitalize(client.first_name)} ${capitalize(client.last_name)}`.trim(),
+    holiday_cohort: client.holiday_cohort ?? null,  // Holiday sensitivity tracking
   }))
 
   // 5. Insert bucket

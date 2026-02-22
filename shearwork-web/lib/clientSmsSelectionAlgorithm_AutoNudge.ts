@@ -1,5 +1,9 @@
 // lib/sms/clientSmsSelectionAlgorithm.ts
 import { SupabaseClient } from '@supabase/supabase-js';
+import {
+  getActiveHolidayForBoosting,
+  calculateHolidaySensitivityBatch,
+} from './nudge';
 
 export interface AcuityClient {
   client_id: string;
@@ -20,6 +24,7 @@ export interface ScoredClient extends AcuityClient {
   days_since_last_visit: number;
   expected_visit_interval_days: number;
   days_overdue: number;
+  holiday_cohort?: string | null;  // Holiday experiment tracking (e.g., 'march_break_2026')
 }
 
 /**
@@ -89,6 +94,28 @@ export async function selectClientsForSMS_AutoNudge(
           return daysSinceLastVisit < 90;
       }
     });
+
+  // Apply holiday sensitivity boost if we're in an activation window
+  const activeHoliday = getActiveHolidayForBoosting(today);
+  
+  if (activeHoliday && allScoredClients.length > 0) {
+    const clientIds = allScoredClients.map(c => c.client_id);
+    const sensitivityMap = await calculateHolidaySensitivityBatch(
+      supabase,
+      clientIds,
+      userId,
+      activeHoliday
+    );
+    
+    // Apply boosts and set holiday cohort
+    for (const client of allScoredClients) {
+      const sensitivity = sensitivityMap.get(client.client_id);
+      if (sensitivity && sensitivity.boost > 0) {
+        client.score += sensitivity.boost;
+        client.holiday_cohort = sensitivity.holidayCohort;
+      }
+    }
+  }
 
   // Remove duplicates based on phone_normalized (keep the one with highest score)
   const uniqueClients = deduplicateByPhone(allScoredClients);
