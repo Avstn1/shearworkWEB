@@ -142,62 +142,61 @@ export async function POST(request: Request) {
     // OLD FLOW — ClientSMSFromBarberNudge (everyone else)
     // ----------------------------------------------------------------
 
-    console.log("Old flow")
-    // const { data: fullProfile, error: profileError } = await supabase
-    //   .from('profiles')
-    //   .select('user_id, full_name, email, phone, username, booking_link')
-    //   .eq('user_id', profile.user_id)
-    //   .single()
+    const { data: fullProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, email, phone, username, booking_link')
+      .eq('user_id', profile.user_id)
+      .single()
 
-    // if (profileError || !fullProfile) {
-    //   console.error('Failed to fetch full profile:', profileError)
-    //   return NextResponse.json({ 
-    //     success: true, 
-    //     warning: 'Reply logged but failed to trigger SMS campaign' 
-    //   })
-    // }
+    if (profileError || !fullProfile) {
+      console.error('Failed to fetch full profile:', profileError)
+      return NextResponse.json({ 
+        success: true, 
+        warning: 'Reply logged but failed to trigger SMS campaign' 
+      })
+    }
 
-    // console.log(`Triggering ClientSMSFromBarberNudge for ${fullProfile.full_name}`)
+    console.log(`Triggering ClientSMSFromBarberNudge for ${fullProfile.full_name}`)
     
-    // const smsResult = await ClientSMSFromBarberNudge(profile.user_id, {
-    //   full_name: fullProfile.full_name,
-    //   email: fullProfile.email,
-    //   phone: fullProfile.phone,
-    //   username: fullProfile.username,
-    //   booking_link: fullProfile.booking_link
-    // })
+    const smsResult = await ClientSMSFromBarberNudge(profile.user_id, {
+      full_name: fullProfile.full_name,
+      email: fullProfile.email,
+      phone: fullProfile.phone,
+      username: fullProfile.username,
+      booking_link: fullProfile.booking_link
+    })
 
-    // if (!smsResult.success) {
-    //   console.error('ClientSMSFromBarberNudge failed:', smsResult.error)
-    //   return NextResponse.json({ 
-    //     success: true, 
-    //     warning: 'Reply logged but SMS campaign failed',
-    //     campaignError: smsResult.error
-    //   })
-    // }
+    if (!smsResult.success) {
+      console.error('ClientSMSFromBarberNudge failed:', smsResult.error)
+      return NextResponse.json({ 
+        success: true, 
+        warning: 'Reply logged but SMS campaign failed',
+        campaignError: smsResult.error
+      })
+    }
 
-    // const { error: notificationError } = await supabase
-    //   .from('notifications')
-    //   .insert({
-    //     user_id: profile.user_id,
-    //     header: "Weekly auto-nudge authorized",
-    //     message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
-    //     reference: smsResult.scheduledMessageId,
-    //     reference_type: 'sms_auto_nudge',
-    //   })
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: profile.user_id,
+        header: "Weekly auto-nudge authorized",
+        message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
+        reference: smsResult.scheduledMessageId,
+        reference_type: 'sms_auto_nudge',
+      })
 
-    // if (notificationError) {
-    //   console.error('Failed to insert notifications. Continuing without notification', notificationError)
-    // }
+    if (notificationError) {
+      console.error('Failed to insert notifications. Continuing without notification', notificationError)
+    }
 
-    // console.log(`ClientSMSFromBarberNudge completed: ${smsResult.sent} sent, ${smsResult.failed} failed`)
+    console.log(`ClientSMSFromBarberNudge completed: ${smsResult.sent} sent, ${smsResult.failed} failed`)
     
-    // return NextResponse.json({ 
-    //   success: true,
-    //   campaignTriggered: true,
-    //   sent: smsResult.sent,
-    //   failed: smsResult.failed
-    // })
+    return NextResponse.json({ 
+      success: true,
+      campaignTriggered: true,
+      sent: smsResult.sent,
+      failed: smsResult.failed
+    })
 
   } catch (error) {
     console.error('Webhook error:', error)
