@@ -69,6 +69,8 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     // Premium access check for protected routes
     const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses']
     const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
+
+    // console.log(`User ${user?.id} - Role: ${role}, Subscription status: ${subStatus}, Trial active: ${hasTrialAccess}, Premium access: ${hasPremiumAccess}`)
     
     if (
       user &&
