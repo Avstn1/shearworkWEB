@@ -100,7 +100,7 @@ export default function Navbar() {
       return (
         <>
           <a
-            href="mailto:support@corva.ca"
+            href="/support"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
