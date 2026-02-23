@@ -149,25 +149,25 @@ export default function DashboardPage() {
   }, [user, profile])
 
   // -------------------- INITIAL ACUITY SYNC --------------------
-  useEffect(() => {
-    if (!user || hasSyncedInitially.current) return
+  // useEffect(() => {
+  //   if (!user || hasSyncedInitially.current) return
 
-    const handleInitialSync = async () => {
-      hasSyncedInitially.current = true
-      if (firstSyncAfterConnect.current) {
-        toast('Performing first-time Acuity sync...')
-        await handleFullAcuitySync()
-      }
-    }
-    handleInitialSync()
-    syncAcuityData() // sync on refresh  --  Comment out to remove autosync
-  }, [user])
+  //   const handleInitialSync = async () => {
+  //     hasSyncedInitially.current = true
+  //     if (firstSyncAfterConnect.current) {
+  //       toast('Performing first-time Acuity sync...')
+  //       await handleFullAcuitySync()
+  //     }
+  //   }
+  //   handleInitialSync()
+  //   syncAcuityData() // sync on refresh  --  Comment out to remove autosync
+  // }, [user])
 
   // -------------------- RE-SYNC ON MONTH/YEAR CHANGE -------------------- Comment out to remove autosync
-  useEffect(() => {
-    if (!user || !hasSyncedInitially.current) return
-    syncAcuityData()
-  }, [selectedMonth, selectedYear])
+  // useEffect(() => {
+  //   if (!user || !hasSyncedInitially.current) return
+  //   syncAcuityData()
+  // }, [selectedMonth, selectedYear])
 
   if (!user) {
     return <div className="flex justify-center items-center h-screen text-white">Please log in to access your dashboard.</div>
