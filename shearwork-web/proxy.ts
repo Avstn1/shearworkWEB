@@ -80,7 +80,7 @@ export default async function middleware(request: NextRequest) {
   // -----------------------------
 
   const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
-  console.log(`User ${user.id} - Subscription status: ${subStatus}, Trial active: ${hasTrialAccess}, Premium access: ${hasPremiumAccess}`)
+  // console.log(`User ${user.id} - Subscription status: ${subStatus}, Trial active: ${hasTrialAccess}, Premium access: ${hasPremiumAccess}`)
 
   if (subStatus === 'active' || hasTrialAccess) {
     if (pathname === '/pricing') {
