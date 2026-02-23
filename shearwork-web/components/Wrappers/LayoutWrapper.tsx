@@ -70,7 +70,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses']
     const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
 
-    console.log(`User ${user?.id} - Role: ${role}, Subscription status: ${subStatus}, Trial active: ${hasTrialAccess}, Premium access: ${hasPremiumAccess}`)
+    // console.log(`User ${user?.id} - Role: ${role}, Subscription status: ${subStatus}, Trial active: ${hasTrialAccess}, Premium access: ${hasPremiumAccess}`)
     
     if (
       user &&
