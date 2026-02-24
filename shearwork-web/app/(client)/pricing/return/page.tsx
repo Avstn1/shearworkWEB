@@ -43,10 +43,6 @@ function PricingReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { profile: profileFromAuth, refreshProfile } = useAuth()
-
-  if (profileFromAuth?.trial_active === false) {
-    router.replace('/pricing')
-  }
   
   // State
   const [loading, setLoading] = useState(true)
@@ -133,6 +129,26 @@ function PricingReturnContent() {
 
     fetchSummary()
   }, [searchParams])
+
+  // Bring user back to pricing if they somehow got here without completing trial onboarding
+  useEffect(() => {
+    const check = async () => {
+      await refreshProfile()
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) { router.replace('/pricing'); return }
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('trial_active, trial_start')
+        .eq('user_id', currentUser.id)
+        .single()
+
+      if (!data?.trial_active && !data?.trial_start) {
+        router.replace('/pricing')
+      }
+    }
+    check()
+  }, []) // run once on mount only
 
   // Load profile
   useEffect(() => {
@@ -459,7 +475,7 @@ function PricingReturnContent() {
   const hasSub = summary?.hasSubscription ?? false
   const trialActive = isTrialActive(profile)
   const hasCheckoutComplete = sessionStatus === 'complete'
-  const hasAccess = hasSub || trialActive || hasCheckoutComplete 
+  const hasAccess = hasSub || trialActive || hasCheckoutComplete || !!profileFromAuth?.trial_active
   const calendarConnected = calendarStatus.acuity || calendarStatus.square
   const interval = summary?.price?.interval
   const amountText = summary?.price && formatAmount(summary.price.amount, summary.price.currency)
@@ -519,6 +535,17 @@ function PricingReturnContent() {
 
     return null
   })()
+
+  console.log('DEBUG', {
+    profileFromAuth,
+    profile,
+    trialActive,
+    hasSub,
+    hasCheckoutComplete,
+    hasAccess,
+    loading,
+    sessionStatus,
+  })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">

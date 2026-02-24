@@ -13,6 +13,7 @@ import { supabase } from '@/utils/supabaseClient'
 import { TRIAL_DAYS } from '@/lib/constants/trial'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { isValidUUID } from '@/utils/validation'
+import { useAuth } from '@/contexts/AuthContext'
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -68,6 +69,7 @@ function PricingPageLoader() {
 function PricingPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { refreshProfile } = useAuth()
   
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -229,6 +231,7 @@ function PricingPageContent() {
       }
 
       toast.success('Trial started! Redirecting to onboarding...')
+      await refreshProfile()
       router.push('/pricing/return')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not start trial'
