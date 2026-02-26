@@ -50,16 +50,16 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
     // Onboarding check - redirect non-onboarded users to onboarding flow
     if (
-      user &&
-      profile &&
-      !profile.onboarded &&
-      role !== 'admin' &&
-      pathname !== '/pricing/return'
+      user && // User is present (logged in)
+      profile && // profile is present (should be if user is present, but just in case)
+      !profile.onboarded && // User has not completed onboarding
+      role !== 'admin' && // User is not an admin
+      pathname !== '/pricing/return' // User is not on the main onboarding page (profile set up stuff)
     ) {
       router.push('/pricing')
       return
     }
-
+    
     // Redirect active/trial users away from /pricing
     if ((subStatus === 'active' || hasTrialAccess) && pathname === '/pricing') {
       router.push('/dashboard')

@@ -380,7 +380,7 @@ const twilioClient = twilio(
 )
 
 const MESSAGING_SERVICE_SID = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID") ?? ''
-const SITE_URL              = Deno.env.get("SITE_URL") ?? ''
+const SITE_URL = Deno.env.get("NEXT_PUBLIC_SITE_URL") ?? ''
 
 // ----------------------------------------------------------------
 // Constants
@@ -549,8 +549,8 @@ Deno.serve(async (req) => {
 
   try {
     const utcNow  = new Date()
-    // const toronto = torontoNow() // PRODUCTION: uncomment and remove line below
-    const toronto = (() => { const d = torontoNow(); d.setHours(12, 15, 0, 0); return d })() // CHANGE THIS LATER
+    const toronto = torontoNow() // PRODUCTION: uncomment and remove line below
+    // const toronto = (() => { const d = torontoNow(); d.setHours(12, 15, 0, 0); return d })() // CHANGE THIS LATER
 
     const currentHour     = toronto.getHours()
     const currentMinute   = toronto.getMinutes()

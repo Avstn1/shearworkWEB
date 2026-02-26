@@ -12,7 +12,7 @@ export default function SidebarTabs({ activeTab, setActiveTab }: Props) {
 	const tabs = [
 		{ id: 'profile', label: 'Profile', icon: User },
 		{ id: 'acuity', label: 'Acuity', icon: Calendar },
-		{ id: 'square', label: 'Square', icon: Store }, // ← ADD THIS LINE
+		{ id: 'square', label: 'Square', icon: Store }, 
 		{ id: 'security', label: 'Security', icon: Shield },
 		{ id: 'billing', label: 'Billing', icon: CreditCard },
 		{ id: 'logout', label: 'Logout', icon: LogOut },
