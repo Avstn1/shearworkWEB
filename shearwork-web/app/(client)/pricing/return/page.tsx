@@ -42,11 +42,20 @@ type BillingSummary = {
 function PricingReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { profile: profileFromAuth, refreshProfile } = useAuth()
+  const { profile: profileFromAuth, refreshProfile, isLoading: authLoading, profileStatus } = useAuth()
 
-  if (profileFromAuth?.trial_active === false) {
-    router.replace('/pricing')
-  }
+  // Redirect to pricing if profile is loaded and trial is explicitly inactive
+  // Only redirect when we have definitively loaded profile data (not while loading)
+  useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return
+    // Wait for profile fetch to complete (not idle or loading)
+    if (profileStatus === 'idle' || profileStatus === 'loading') return
+    // If profile loaded and trial is explicitly false (not undefined/null), redirect
+    if (profileFromAuth && profileFromAuth.trial_active === false) {
+      router.replace('/pricing')
+    }
+  }, [authLoading, profileStatus, profileFromAuth, router])
   
   // State
   const [loading, setLoading] = useState(true)
