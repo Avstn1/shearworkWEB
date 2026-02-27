@@ -146,7 +146,7 @@ function PricingReturnContent() {
   // Bring user back to pricing if they somehow got here without completing trial onboarding
   useEffect(() => {
     const check = async () => {
-      await refreshProfile()
+      // await refreshProfile()
       const { data: { user: currentUser } } = await supabase.auth.getUser()
       if (!currentUser) { router.replace('/pricing'); return }
 
@@ -156,7 +156,10 @@ function PricingReturnContent() {
         .eq('user_id', currentUser.id)
         .single()
 
+      console.log('Trial status on return page:', data)
+
       if (!data?.trial_active && !data?.trial_start) {
+        console.warn('No active trial found on return page, redirecting to pricing')
         router.replace('/pricing')
       }
     }
@@ -549,16 +552,16 @@ function PricingReturnContent() {
     return null
   })()
 
-  console.log('DEBUG', {
-    profileFromAuth,
-    profile,
-    trialActive,
-    hasSub,
-    hasCheckoutComplete,
-    hasAccess,
-    loading,
-    sessionStatus,
-  })
+  // console.log('DEBUG', {
+  //   profileFromAuth,
+  //   profile,
+  //   trialActive,
+  //   hasSub,
+  //   hasCheckoutComplete,
+  //   hasAccess,
+  //   loading,
+  //   sessionStatus,
+  // })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
