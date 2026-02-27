@@ -21,7 +21,8 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
     
     // Redirect to pricing if profile exists but trial is not active
     // Use isTrialActive() to properly check trial status (handles undefined/null correctly)
-    if (profile && !isTrialActive(profile)) {
+    // Also check for active subscription
+    if (profile && profile.stripe_subscription_status !== 'active' && !isTrialActive(profile)) {
       router.replace('/pricing')
       return
     }
