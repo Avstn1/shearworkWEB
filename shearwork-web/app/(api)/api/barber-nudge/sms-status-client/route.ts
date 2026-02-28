@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
         .insert({
           user_id: user_id,
           client_id: client_id,
+          smart_bucket_id: message_id,
           is_sent: false,
           purpose: 'client_sms_barber_nudge',
           reason: failureReason,

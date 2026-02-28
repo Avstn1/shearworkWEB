@@ -37,7 +37,8 @@ interface SMSRecipient {
   full_name: string | null;
   phone: string | null;
   appointment_datecreated_bucket: string | null;
-  status: 'booked' | 'messaged' | 'pending';
+  status: 'booked' | 'messaged' | 'pending' | 'failed';
+  failure_reason?: string;
   messaged_at: string | null;
   scheduled_send: Date | null;
   service?: string;
@@ -131,9 +132,10 @@ const getScheduledSendDate = (
 // ----------------------------------------------------------------
 
 const STATUS_BADGE: Record<SMSRecipient['status'], { label: string; classes: string }> = {
-  booked:   { label: '✓ Booked',   classes: 'bg-lime-300/10 text-lime-300 border-lime-300/20' },
-  messaged: { label: 'Messaged',   classes: 'bg-sky-300/10 text-sky-300 border-sky-300/20' },
-  pending:  { label: 'Pending',    classes: 'bg-amber-300/10 text-amber-300 border-amber-300/20' },
+  booked:   { label: '✓ Booked',  classes: 'bg-lime-300/10 text-lime-300 border-lime-300/20' },
+  messaged: { label: 'Messaged',  classes: 'bg-sky-300/10 text-sky-300 border-sky-300/20' },
+  pending:  { label: 'Pending',   classes: 'bg-amber-300/10 text-amber-300 border-amber-300/20' },
+  failed:   { label: '✗ Failed',  classes: 'bg-red-400/10 text-red-400 border-red-400/20' },
 };
 
 // ----------------------------------------------------------------
@@ -219,18 +221,19 @@ export default function SMSAutoNudge() {
         return;
       }
 
-      // Fetch all sms_sent rows for this bucket to determine messaged status
+      // Fetch all sms_sent rows for this bucket — both successful and failed
       const { data: smsSentRows } = await supabase
         .from('sms_sent')
-        .select('phone_normalized, is_sent, created_at')
+        .select('phone_normalized, is_sent, reason, created_at')
         .eq('smart_bucket_id', campaign.bucket_id);
 
       // Map phone_normalized -> sent row for O(1) lookup
-      const smsSentMap = new Map<string, { is_sent: boolean; created_at: string }>();
+      const smsSentMap = new Map<string, { is_sent: boolean; reason: string | null; created_at: string }>();
       for (const row of smsSentRows || []) {
         if (row.phone_normalized) {
           smsSentMap.set(row.phone_normalized, {
             is_sent: row.is_sent,
+            reason: row.reason ?? null,
             created_at: row.created_at,
           });
         }
@@ -254,10 +257,12 @@ export default function SMSAutoNudge() {
         const isBooked = bookedIndex !== -1;
         const sentRow = client.phone ? smsSentMap.get(client.phone) : undefined;
         const isMessaged = sentRow?.is_sent === true;
+        const isFailed = sentRow?.is_sent === false;
 
         let status: SMSRecipient['status'] = 'pending';
         if (isBooked) status = 'booked';
         else if (isMessaged) status = 'messaged';
+        else if (isFailed) status = 'failed';
 
         const scheduledSend = getScheduledSendDate(
           client.appointment_datecreated_bucket,
@@ -270,6 +275,7 @@ export default function SMSAutoNudge() {
           phone: client.phone || null,
           appointment_datecreated_bucket: client.appointment_datecreated_bucket ?? null,
           status,
+          failure_reason: isFailed ? (sentRow?.reason || 'Unknown error') : undefined,
           messaged_at: isMessaged ? sentRow!.created_at : null,
           scheduled_send: scheduledSend,
           service: isBooked ? services[bookedIndex] : undefined,
@@ -278,8 +284,8 @@ export default function SMSAutoNudge() {
         };
       });
 
-      // Sort: booked first, then messaged, then pending
-      const ORDER = { booked: 0, messaged: 1, pending: 2 };
+      // Sort: booked first, then messaged, then pending, then failed
+      const ORDER = { booked: 0, messaged: 1, pending: 2, failed: 3 };
       const sorted = recipientsList.sort((a, b) => {
         if (a.status !== b.status) return ORDER[a.status] - ORDER[b.status];
         if (a.status === 'booked' && b.status === 'booked') {
@@ -494,6 +500,7 @@ export default function SMSAutoNudge() {
                     const badge = STATUS_BADGE[recipient.status];
                     const isBooked = recipient.status === 'booked';
                     const isMessaged = recipient.status === 'messaged';
+                    const isFailed = recipient.status === 'failed';
 
                     return (
                       <div
@@ -503,6 +510,8 @@ export default function SMSAutoNudge() {
                             ? 'bg-lime-300/5 border-lime-300/15'
                             : isMessaged
                             ? 'bg-sky-300/5 border-sky-300/15'
+                            : isFailed
+                            ? 'bg-red-400/5 border-red-400/15'
                             : 'bg-white/[0.03] border-white/8'
                         }`}
                       >
@@ -519,24 +528,28 @@ export default function SMSAutoNudge() {
                           </span>
                         </div>
 
-                        {/* Phone + send time line */}
+                        {/* Phone + send time / failure reason line */}
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs text-white/25">
+                          <span className="text-xs text-white/25 flex-shrink-0">
                             {formatPhoneNumber(recipient.phone)}
                           </span>
-                          <div className="flex items-center gap-1 text-white/35">
-                            <Clock className="w-3 h-3 flex-shrink-0" />
-                            <span className="text-[11px]">
-                              {isMessaged && recipient.messaged_at
-                                ? `Messaged on ${formatAbsolute(new Date(recipient.messaged_at))}`
-                                : isBooked
-                                ? null
-                                : recipient.scheduled_send
-                                ? `Will be messaged on ${formatAbsolute(recipient.scheduled_send)}`
-                                : null
-                              }
-                            </span>
-                          </div>
+                          {isFailed && recipient.failure_reason ? (
+                            <span className="text-[11px] text-red-400/70 truncate text-right">{recipient.failure_reason}</span>
+                          ) : (
+                            <div className="flex items-center gap-1 text-white/35">
+                              <Clock className="w-3 h-3 flex-shrink-0" />
+                              <span className="text-[11px]">
+                                {isMessaged && recipient.messaged_at
+                                  ? `Messaged on ${formatAbsolute(new Date(recipient.messaged_at))}`
+                                  : isBooked
+                                  ? null
+                                  : recipient.scheduled_send
+                                  ? `Will be messaged on ${formatAbsolute(recipient.scheduled_send)}`
+                                  : null
+                                }
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Booking details — only if booked */}

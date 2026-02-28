@@ -365,6 +365,7 @@
 
 // #region SMS Sending Version
 // @ts-nocheck
+// @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import twilio from 'npm:twilio@4'
@@ -549,8 +550,7 @@ Deno.serve(async (req) => {
 
   try {
     const utcNow  = new Date()
-    const toronto = torontoNow() // PRODUCTION: uncomment and remove line below
-    // const toronto = (() => { const d = torontoNow(); d.setHours(12, 15, 0, 0); return d })() // CHANGE THIS LATER
+    const toronto = torontoNow()
 
     const currentHour     = toronto.getHours()
     const currentMinute   = toronto.getMinutes()
@@ -559,10 +559,10 @@ Deno.serve(async (req) => {
     const currentIsoDay   = toIsoDay(currentDayIndex)
     const currentIsoWeek  = getIsoWeek(toronto)
 
-    const currentBatch  = getCurrentBatchLabel(currentDayName, currentHour, currentMinute)
-    const nextBatch     = getNextBatchLabel(currentDayName, currentHour, currentMinute)
-    const isManualFire  = !currentBatch
-    const isInstant     = isManualFire && !nextBatch
+    const currentBatch   = getCurrentBatchLabel(currentDayName, currentHour, currentMinute)
+    const nextBatch      = getNextBatchLabel(currentDayName, currentHour, currentMinute)
+    const isManualFire   = !currentBatch
+    const isInstant      = isManualFire && !nextBatch
     const effectiveBatch = currentBatch ?? nextBatch ?? 'INSTANT'
 
     console.log('================================================================')
@@ -619,28 +619,37 @@ Deno.serve(async (req) => {
       }
 
       // ----------------------------------------------------------------
-      // 2. Fetch sms_sent records for this bucket
+      // 2. Fetch sms_sent records for this bucket (both sent and failed)
       // ----------------------------------------------------------------
       const { data: smsSentRows, error: smsSentError } = await supabase
         .from('sms_sent')
-        .select('client_id, created_at')
+        .select('client_id, created_at, is_sent, reason')
         .eq('smart_bucket_id', bucket_id)
-        .eq('is_sent', true)
 
       if (smsSentError) {
         console.error(`[Bucket ${bucket_id}] ERROR fetching sms_sent:`, smsSentError)
         continue
       }
 
-      console.log(`[Bucket ${bucket_id}] Already sent in this bucket: ${smsSentRows?.length ?? 0}`)
+      console.log(`[Bucket ${bucket_id}] sms_sent records for bucket: ${smsSentRows?.length ?? 0}`)
 
+      // client_id -> most recent successful send date
       const smsSentByClient = new Map<string, Date>()
+      // client_id -> failure reason (permanent skip)
+      const smsFailedByClient = new Map<string, string>()
+
       for (const row of smsSentRows || []) {
         if (!row.client_id) continue
-        const rowDate  = new Date(row.created_at)
-        const existing = smsSentByClient.get(row.client_id)
-        if (!existing || rowDate > existing) smsSentByClient.set(row.client_id, rowDate)
+        if (row.is_sent) {
+          const rowDate  = new Date(row.created_at)
+          const existing = smsSentByClient.get(row.client_id)
+          if (!existing || rowDate > existing) smsSentByClient.set(row.client_id, rowDate)
+        } else if (row.reason) {
+          smsFailedByClient.set(row.client_id, row.reason)
+        }
       }
+
+      console.log(`[Bucket ${bucket_id}] Previously sent: ${smsSentByClient.size} | Previously failed: ${smsFailedByClient.size}`)
 
       const tenDaysAgo      = new Date(utcNow.getTime() - 10 * 24 * 60 * 60 * 1000)
       const eligibleClients: typeof clients = []
@@ -655,6 +664,14 @@ Deno.serve(async (req) => {
 
         const [dayPart, timePart] = appointment_datecreated_bucket.split('|')
 
+        // Skip clients who previously failed — surface the reason in logs
+        if (smsFailedByClient.has(client_id)) {
+          console.log(`[Bucket ${bucket_id}] Skipping ${client.full_name} — previous failure: ${smsFailedByClient.get(client_id)}`)
+          totalSkipped++
+          continue
+        }
+
+        // Dedup: skip if messaged successfully within last 10 days
         const lastSentAt = smsSentByClient.get(client_id)
         if (lastSentAt && lastSentAt > tenDaysAgo) { totalSkipped++; continue }
 
@@ -704,22 +721,25 @@ Deno.serve(async (req) => {
       console.log(`[Bucket ${bucket_id}] Barber: ${profile.full_name} (@${profile.username})`)
 
       // ----------------------------------------------------------------
-      // 4. Insert barber_nudge_success row upfront
+      // 4. Upsert barber_nudge_success row (ignore if already exists)
       // ----------------------------------------------------------------
       const { error: nudgeInsertError } = await supabase
         .from('barber_nudge_success')
-        .insert({
-          user_id,
-          iso_week_number: currentIsoWeek,
-          messages_delivered: 0,
-          clicked_link: 0,
-          client_ids: [],
-          services: [],
-          appointment_dates: [],
-        })
+        .upsert(
+          {
+            user_id,
+            iso_week_number: currentIsoWeek,
+            messages_delivered: 0,
+            clicked_link: 0,
+            client_ids: [],
+            services: [],
+            appointment_dates: [],
+          },
+          { onConflict: 'user_id,iso_week_number', ignoreDuplicates: true }
+        )
 
       if (nudgeInsertError) {
-        console.error(`[Bucket ${bucket_id}] ERROR inserting barber_nudge_success:`, nudgeInsertError)
+        console.error(`[Bucket ${bucket_id}] ERROR upserting barber_nudge_success:`, nudgeInsertError)
         // Non-fatal — continue with messaging
       }
 
@@ -770,7 +790,6 @@ Deno.serve(async (req) => {
 
           console.log(`[Bucket ${bucket_id}] Sent to ${full_name} (${phone}) — SID: ${twilioMessage.sid}`)
 
-          // Insert sms_sent record
           await supabase.from('sms_sent').insert({
             user_id,
             smart_bucket_id: bucket_id,
@@ -785,7 +804,6 @@ Deno.serve(async (req) => {
         } catch (err: any) {
           console.error(`[Bucket ${bucket_id}] FAILED to send to ${full_name} (${phone}):`, err.message)
 
-          // Insert failed sms_sent record
           await supabase.from('sms_sent').insert({
             user_id,
             smart_bucket_id: bucket_id,
