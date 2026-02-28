@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquare, Calendar, CheckCircle, Clock, Zap, AlertCircle, ChevronRight } from 'lucide-react';
 
@@ -11,6 +12,15 @@ const TimelineDot = ({ color }: { color: string }) => (
 );
 
 export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudgeWorksModalProps) {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -18,7 +28,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 overflow-y-auto min-h-screen"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4"
           onClick={onClose}
         >
           <motion.div
@@ -27,7 +37,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
             exit={{ scale: 0.96, opacity: 0, y: 12 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#141414] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden mb-16 sm:mb-0"
+            className="bg-[#141414] border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[85vh] sm:max-h-none sm:mb-0"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 flex-shrink-0 bg-white/[0.02]">
@@ -51,20 +61,15 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
 
-              {/* Intro blurb */}
               <p className="text-sm text-white/50 leading-relaxed">
                 Auto Nudge sends a weekly SMS to your clients to bring them back in. You stay in control: every week, you approve the message before it goes out.
               </p>
 
-              {/* Weekly rhythm */}
               <div>
                 <p className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">Every Week</p>
                 <div className="relative">
-                  {/* Vertical line */}
                   <div className="absolute left-[5px] top-4 bottom-4 w-px bg-white/8" />
-
                   <div className="space-y-0">
-                    {/* Monday */}
                     <div className="flex gap-4 pb-5">
                       <TimelineDot color="bg-sky-400 ring-sky-400/20" />
                       <div className="flex-1 min-w-0">
@@ -79,8 +84,6 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                         </p>
                       </div>
                     </div>
-
-                    {/* Wednesday */}
                     <div className="flex gap-4">
                       <TimelineDot color="bg-lime-400 ring-lime-400/20" />
                       <div className="flex-1 min-w-0">
@@ -97,15 +100,11 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                 </div>
               </div>
 
-              {/* Divider */}
               <div className="h-px bg-white/6" />
 
-              {/* What happens when you first enable */}
               <div>
                 <p className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">When You First Enable It</p>
                 <div className="space-y-2.5">
-
-                  {/* Monday–Wednesday window */}
                   <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/[0.07] border border-emerald-500/15">
                     <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
@@ -120,8 +119,6 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                       </p>
                     </div>
                   </div>
-
-                  {/* Thursday–Sunday window */}
                   <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/[0.07] border border-amber-500/15">
                     <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -139,10 +136,8 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                 </div>
               </div>
 
-              {/* Divider */}
               <div className="h-px bg-white/6" />
 
-              {/* Visual flow summary */}
               <div>
                 <p className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">The Flow at a Glance</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -158,10 +153,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                     'icon' in item ? (
                       <span key={i}>{item.icon}</span>
                     ) : (
-                      <span
-                        key={i}
-                        className={`px-2 py-1 rounded-lg text-[11px] font-medium border ${item.color}`}
-                      >
+                      <span key={i} className={`px-2 py-1 rounded-lg text-[11px] font-medium border ${item.color}`}>
                         {item.label}
                       </span>
                     )
@@ -169,7 +161,6 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                 </div>
               </div>
 
-              {/* Reminder note */}
               <div className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/8">
                 <AlertCircle className="w-4 h-4 text-white/30 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-white/40 leading-relaxed">
