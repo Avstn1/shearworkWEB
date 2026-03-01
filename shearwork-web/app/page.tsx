@@ -101,7 +101,7 @@ export default function HorizontalLandingPage() {
         <div className="flex h-full" style={{ width: `${totalSections * 100}vw` }}>
           {/* Section 1: Hero */}
           <div 
-            className="relative w-screen h-screen snap-start flex-shrink-0 overflow-hidden flex flex-col" 
+            className="relative w-screen min-h-screen lg:h-screen snap-start flex-shrink-0 overflow-y-auto lg:overflow-hidden flex flex-col" 
             style={{ 
               color: 'rgba(255, 255, 255, 0.6)',
               background: 'linear-gradient(135deg, #050505 0%, #0a0a0a 30%, #0d1210 60%, #080808 100%)'
