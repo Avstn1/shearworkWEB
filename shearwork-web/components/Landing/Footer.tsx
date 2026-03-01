@@ -16,10 +16,10 @@ const COLORS = {
 export default function Footer() {
   return (
     <footer 
-      className="lg:absolute lg:bottom-0 lg:left-0 lg:right-0 py-2 sm:py-3 text-center text-xs sm:text-sm safe-area-inset-bottom"
+      className="lg:absolute lg:bottom-0 lg:left-0 lg:right-0 py-3 sm:py-4 text-center text-xs sm:text-sm"
       style={{
         backgroundColor: 'transparent',
-        paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
       }}
     >
       <div

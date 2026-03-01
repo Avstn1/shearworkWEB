@@ -102,12 +102,11 @@ function HighlightBox({ children }: { children: React.ReactNode }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function PrivacyPolicyPage() {
   return (
-    <>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #181818 0%, #1a1a1a 30%, #1c1e1c 70%, #181818 100%)' }}>
       <Navbar />
 
       <main
-        className="min-h-screen relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #181818 0%, #1a1a1a 30%, #1c1e1c 70%, #181818 100%)' }}
+        className="flex-1 relative overflow-hidden"
       >
         {/* Ambient glows */}
         <div
@@ -419,6 +418,6 @@ export default function PrivacyPolicyPage() {
       </main>
 
       <Footer />
-    </>
+    </div>
   );
 }
