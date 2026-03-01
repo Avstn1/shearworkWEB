@@ -69,6 +69,223 @@ function SuccessToast() {
   )
 }
 
+function MobileSmsBubble() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
+      className="absolute top-[-50px] left-1/2 -translate-x-1/2 w-[200px] sm:w-[220px] z-20 pointer-events-none"
+    >
+      <div 
+        className="rounded-xl p-2.5 sm:p-3 bg-zinc-900/85 border border-white/10 backdrop-blur-xl"
+        style={{
+          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.05)',
+        }}
+      >
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+            style={{ backgroundColor: COLORS.green, color: '#000' }}
+          >
+            C
+          </div>
+          <span className="text-[10px] sm:text-xs font-medium text-white">Corva</span>
+          <span className="text-[9px] sm:text-[10px] ml-auto text-white/40">10:00 AM</span>
+        </div>
+        <p className="text-[10px] sm:text-[11px] leading-relaxed mb-1.5 text-white/60">
+          Hey Gavin, you have 22 empty slots this week. Want me to help fill them?
+        </p>
+        <p className="text-[9px] sm:text-[10px] text-white/40">
+          Reply YES to continue
+        </p>
+      </div>
+    </motion.div>
+  )
+}
+
+function MobileSuccessToast() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.4, delay: 0.7, ease: 'easeOut' }}
+      className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[180px] sm:w-[200px] z-20 pointer-events-none"
+      style={{
+        boxShadow: '0 0 0 1px rgba(16,185,129,0.3), 0 12px 36px rgba(16,185,129,0.08), 0 6px 18px rgba(0,0,0,0.25)',
+      }}
+    >
+      <Image
+        src="/heroImages/notification-success.png"
+        alt="SMS Auto-nudge success notification"
+        width={1320}
+        height={266}
+        className="w-full h-auto rounded-lg"
+        quality={90}
+      />
+    </motion.div>
+  )
+}
+
+function CroppedMobileMockup() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
+      className="relative w-full max-w-[280px] sm:max-w-[300px] mx-auto"
+    >
+      {/* Emerald glow behind phone */}
+      <div 
+        className="absolute inset-0 -z-10 rounded-t-[28px] blur-2xl"
+        style={{ background: 'rgba(16,185,129,0.1)' }}
+      />
+
+      {/* Phone shell - cropped, rounded top only */}
+      <div 
+        className="relative rounded-t-[28px] rounded-b-none overflow-hidden border border-white/10 border-b-0 bg-white/5 backdrop-blur"
+        style={{ boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)' }}
+      >
+        {/* Inner highlight - top edge shine */}
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none z-20" />
+
+        {/* Fixed height container for crop effect */}
+        <div className="relative h-[220px] sm:h-[240px] overflow-hidden">
+          
+          {/* Blurred calendar background */}
+          <Image
+            src="/heroImages/corva-calendar.png"
+            alt=""
+            width={267}
+            height={414}
+            className="absolute inset-0 w-full h-auto object-cover object-top"
+            style={{ 
+              filter: 'blur(3px) saturate(0.6) brightness(0.85)',
+              transform: 'scale(1.02)'
+            }}
+            quality={90}
+          />
+
+          {/* SMS notification bubbles - inside phone */}
+          <div className="absolute inset-x-4 top-4 space-y-3 z-10">
+            
+            {/* Bubble 1: Detection */}
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
+              className="rounded-2xl p-3 bg-zinc-900/90 backdrop-blur-xl border border-white/10"
+              style={{
+                boxShadow: '0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(115,170,87,0.08)'
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div 
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                  style={{ backgroundColor: COLORS.green, color: '#000' }}
+                >
+                  C
+                </div>
+                <span className="text-[10px] font-medium text-white">Corva</span>
+                <span className="text-[9px] ml-auto text-white/40">10:00 AM</span>
+              </div>
+              <p className="text-[10px] leading-relaxed text-white/70">
+                You have 22 empty slots this week. Want me to help fill them?
+              </p>
+            </motion.div>
+
+            {/* Bubble 2: Success confirmation - using real image */}
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.8, ease: 'easeOut' }}
+              className="rounded-xl overflow-hidden"
+              style={{
+                boxShadow: '0 0 0 1px rgba(16,185,129,0.3), 0 4px 20px rgba(0,0,0,0.4), 0 0 24px rgba(16,185,129,0.12)'
+              }}
+            >
+              <Image
+                src="/heroImages/notification-success.png"
+                alt="Booking confirmed notification"
+                width={1320}
+                height={266}
+                className="w-full h-auto"
+                quality={90}
+              />
+            </motion.div>
+
+          </div>
+
+          {/* Bottom gradient fade - fades phone into hero background */}
+          <div 
+            className="absolute inset-x-0 bottom-0 h-[80px] pointer-events-none z-10"
+            style={{
+              background: 'linear-gradient(to bottom, transparent 0%, rgba(5,5,5,0.6) 40%, rgba(5,5,5,1) 100%)'
+            }}
+          />
+
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function MobileMockupCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
+      className="relative w-full max-w-[260px] sm:max-w-[280px] mx-auto"
+    >
+      {/* Glow behind the card */}
+      <div className="absolute inset-0 rounded-[24px] blur-xl bg-emerald-500/8 -z-10" />
+
+      {/* Device/Card Shell */}
+      <div
+        className="relative rounded-[24px] border border-white/10 bg-white/5 p-3 sm:p-4 backdrop-blur"
+        style={{
+          boxShadow: '0 20px 80px rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        {/* Shell highlight */}
+        <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-b from-white/10 via-white/5 to-transparent" />
+        
+        {/* Shell vignette */}
+        <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_20%,rgba(0,0,0,0.3)_100%)]" />
+
+        {/* CONTENT AREA */}
+        <div className="relative w-full overflow-hidden rounded-[14px] border border-white/10">
+          <Image
+            src="/heroImages/corva-calendar.png"
+            alt="Schedule"
+            width={267}
+            height={414}
+            className="w-full h-auto"
+            quality={90}
+            style={{ filter: 'saturate(0.72) brightness(0.93) contrast(0.98) blur(2px)' }}
+          />
+
+          {/* Inner card frame */}
+          <div className="pointer-events-none absolute inset-0 rounded-[14px] ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]" />
+          
+          {/* Top fog */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[46%] bg-gradient-to-b from-white/[0.16] via-white/[0.06] to-transparent" />
+          
+          {/* Bottom fade */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-black/20 to-transparent" />
+        </div>
+      </div>
+
+      {/* SMS Bubble - outside the shell so it can overflow */}
+      <MobileSmsBubble />
+
+      {/* Success Toast - outside the shell so it can overflow */}
+      <MobileSuccessToast />
+    </motion.div>
+  )
+}
+
 function MockupCard() {
   return (
     <motion.div
@@ -281,6 +498,20 @@ export default function Hero() {
                 Sign in
               </span>
             </motion.a>
+
+            {/* Mobile Preview - visible on mobile only */}
+            <div className="block lg:hidden mt-8 sm:mt-10">
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="text-center text-[10px] uppercase tracking-[0.2em] mb-4"
+                style={{ color: COLORS.textSubtle }}
+              >
+                Preview
+              </motion.p>
+              <CroppedMobileMockup />
+            </div>
 
           </div>
 
