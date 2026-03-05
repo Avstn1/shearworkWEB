@@ -102,7 +102,6 @@ export default async function middleware(request: NextRequest) {
 
   if (
     role !== 'admin' &&
-    role !== 'owner' &&
     premiumRoutes.some(path => pathname.startsWith(path))
   ) {
     if (!hasPremiumAccess) {

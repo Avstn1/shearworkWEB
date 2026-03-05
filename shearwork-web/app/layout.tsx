@@ -20,7 +20,7 @@ export const metadata = {
     url: 'https://www.corva.ca/',
     images: [
       {
-        url: 'https://www.corva.ca/images/preview-image.png',
+        url: '/images/preview-image.png',
         width: 1200,
         height: 630,
       },
