@@ -48,15 +48,15 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     const subStatus = profile?.stripe_subscription_status
     const hasTrialAccess = isTrialActive(profile)
 
-    // Onboarding check - redirect non-onboarded users to onboarding flow
     if (
       user && // User is present (logged in)
       profile && // profile is present (should be if user is present, but just in case)
       !profile.onboarded && // User has not completed onboarding
-      role !== 'admin' && // User is not an admin
-      pathname !== '/pricing/return' // User is not on the main onboarding page (profile set up stuff)
+      role !== 'admin'  && // User is not an admin
+      profile.trial_active && // Trial is active
+      profile.stripe_subscription_status === 'active' // Subscription is active
     ) {
-      router.push('/pricing')
+      router.push('/pricing/return')
       return
     }
     
@@ -78,6 +78,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       premiumRoutes.some(path => pathname.startsWith(path))
     ) {
       if (!hasPremiumAccess) {
+        console.log('User does not have premium access, redirecting to /pricing')
         router.push('/pricing')
         return
       }

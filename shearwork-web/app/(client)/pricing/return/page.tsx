@@ -156,7 +156,7 @@ function PricingReturnContent() {
         .eq('user_id', currentUser.id)
         .single()
 
-      console.log('Trial status on return page:', data)
+      // console.log('Trial status on return page:', data)
 
       if (!data?.trial_active && !data?.trial_start) {
         console.warn('No active trial found on return page, redirecting to pricing')

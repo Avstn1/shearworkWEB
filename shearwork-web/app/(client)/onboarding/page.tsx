@@ -8,6 +8,7 @@ export default function OnboardingRedirectPage() {
   const router = useRouter()
 
   useEffect(() => {
+    console.log('Redirecting to pricing page from onboarding...')
     router.replace('/pricing')
   }, [router])
 

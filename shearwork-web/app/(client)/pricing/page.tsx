@@ -224,7 +224,7 @@ function PricingPageContent() {
       })
 
       const data = await res.json()
-      console.log('trial/start response:', res.status, data)
+      // console.log('trial/start response:', res.status, data)
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to start trial')
