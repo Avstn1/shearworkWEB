@@ -14,6 +14,18 @@ export const metadata = {
   icons: {
     icon: '/images/corvalogo.png',
   },
+  openGraph: {
+    title: 'Corva',
+    description: 'Stop Relying on Hustle to Stay Booked.',
+    url: 'https://www.corva.ca/',
+    images: [
+      {
+        url: 'https://www.corva.ca/images/preview-image.png',
+        width: 1200,
+        height: 630,
+      },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
