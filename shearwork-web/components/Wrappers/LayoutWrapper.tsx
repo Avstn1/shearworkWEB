@@ -36,41 +36,46 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     router.push('/pricing')
   }
 
-  // -----------------------------
-  // Keep your redirect logic exactly as before
-  // -----------------------------
   useEffect(() => {
-    // console.log('🟡 LayoutWrapper redirect effect:', { isLoading, pathname, user: !!user })
     if (isLoading) return
     if (user && profileStatus !== 'ready') return
 
     const role = profile?.role?.toLowerCase()
     const subStatus = profile?.stripe_subscription_status
     const hasTrialAccess = isTrialActive(profile)
+    const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
 
     if (
-      user && // User is present (logged in)
-      profile && // profile is present (should be if user is present, but just in case)
-      !profile.onboarded && // User has not completed onboarding
-      role !== 'admin'  && // User is not an admin
-      profile.trial_active && // Trial is active
-      profile.stripe_subscription_status === 'active' // Subscription is active
+      user &&
+      profile &&
+      !profile.onboarded &&
+      role !== 'admin'
     ) {
-      router.push('/pricing/return')
-      return
+      if (pathname === '/pricing' && hasPremiumAccess) {
+        router.push('/pricing/return')
+        return
+      }
+
+      if (pathname === '/pricing/return' && !hasPremiumAccess) {
+        router.push('/pricing')
+        return
+      }
+
+      const allowedOnboardingRoutes = ['/pricing', '/pricing/return']
+      if (!allowedOnboardingRoutes.some(path => pathname.startsWith(path))) {
+        router.push(hasPremiumAccess ? '/pricing/return' : '/pricing')
+        return
+      }
     }
     
-    // Redirect active/trial users away from /pricing
-    if ((subStatus === 'active' || hasTrialAccess) && pathname === '/pricing') {
+    // Redirect active/trial users away from /pricing once onboarding is done
+    if (profile?.onboarded && hasPremiumAccess && pathname === '/pricing') {
       router.push('/dashboard')
       return
     }
 
     // Premium access check for protected routes
     const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses']
-    const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
-
-    // console.log(`User ${user?.id} - Role: ${role}, Subscription status: ${subStatus}, Trial active: ${hasTrialAccess}, Premium access: ${hasPremiumAccess}`)
     
     if (
       user &&
