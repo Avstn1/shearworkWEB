@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createSmartBuckets } from '@/lib/client_sms_from_barber_nudge/create_smart_buckets'
-import { ClientSMSFromBarberNudge } from '@/lib/client_sms_from_barber_nudge/index'
+// import { ClientSMSFromBarberNudge } from '@/lib/client_sms_from_barber_nudge/index'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -93,109 +93,47 @@ export async function POST(request: Request) {
     console.log(`special_access: ${profile.special_access} — routing to ${profile.special_access ? 'NEW (smart buckets)' : 'OLD (ClientSMSFromBarberNudge)'} flow`)
 
     // ----------------------------------------------------------------
-    // NEW FLOW — smart buckets (special_access users only)
+    // NEW FLOW — smart buckets 
     // ----------------------------------------------------------------
-    if (profile.special_access) {
-      console.log(`Creating smart bucket for user ${profile.user_id}`)
+    console.log(`Creating smart bucket for user ${profile.user_id}`)
 
-      const bucketResult = await createSmartBuckets(profile.user_id)
+    const bucketResult = await createSmartBuckets(profile.user_id)
 
-      if (!bucketResult.success) {
-        console.error('createSmartBuckets failed:', bucketResult.error)
-        return NextResponse.json({ 
-          success: true, 
-          warning: 'Reply logged but smart bucket creation failed',
-          bucketError: bucketResult.error
-        })
-      }
-
-      if (!bucketResult.bucket_id) {
-        console.log(`No bucket created for user ${profile.user_id} (no recipients or already exists)`)
-        return NextResponse.json({ success: true, campaignTriggered: false })
-      }
-
-      // Remove notifications while testing. CHANGE LATER
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: profile.user_id,
-          header: "Weekly auto-nudge authorized",
-          message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
-          reference: bucketResult.bucket_id,
-          reference_type: 'sms_auto_nudge',
-        })
-
-      if (notificationError) {
-        console.error('Failed to insert notification. Continuing without notification.', notificationError)
-      }
-
-      console.log(`Smart bucket created: ${bucketResult.bucket_id}`)
-      
-      return NextResponse.json({ 
-        success: true,
-        campaignTriggered: true,
-        bucket_id: bucketResult.bucket_id,
-      })
-    }
-
-    // ----------------------------------------------------------------
-    // OLD FLOW — ClientSMSFromBarberNudge (everyone else)
-    // ----------------------------------------------------------------
-
-    const { data: fullProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_id, full_name, email, phone, username, booking_link')
-      .eq('user_id', profile.user_id)
-      .single()
-
-    if (profileError || !fullProfile) {
-      console.error('Failed to fetch full profile:', profileError)
+    if (!bucketResult.success) {
+      console.error('createSmartBuckets failed:', bucketResult.error)
       return NextResponse.json({ 
         success: true, 
-        warning: 'Reply logged but failed to trigger SMS campaign' 
+        warning: 'Reply logged but smart bucket creation failed',
+        bucketError: bucketResult.error
       })
     }
 
-    console.log(`Triggering ClientSMSFromBarberNudge for ${fullProfile.full_name}`)
-    
-    const smsResult = await ClientSMSFromBarberNudge(profile.user_id, {
-      full_name: fullProfile.full_name,
-      email: fullProfile.email,
-      phone: fullProfile.phone,
-      username: fullProfile.username,
-      booking_link: fullProfile.booking_link
-    })
-
-    if (!smsResult.success) {
-      console.error('ClientSMSFromBarberNudge failed:', smsResult.error)
-      return NextResponse.json({ 
-        success: true, 
-        warning: 'Reply logged but SMS campaign failed',
-        campaignError: smsResult.error
-      })
+    if (!bucketResult.bucket_id) {
+      console.log(`No bucket created for user ${profile.user_id} (no recipients or already exists)`)
+      return NextResponse.json({ success: true, campaignTriggered: false })
     }
 
+    // Remove notifications while testing. CHANGE LATER
     const { error: notificationError } = await supabase
       .from('notifications')
       .insert({
         user_id: profile.user_id,
         header: "Weekly auto-nudge authorized",
         message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
-        reference: smsResult.scheduledMessageId,
+        reference: bucketResult.bucket_id,
         reference_type: 'sms_auto_nudge',
       })
 
     if (notificationError) {
-      console.error('Failed to insert notifications. Continuing without notification', notificationError)
+      console.error('Failed to insert notification. Continuing without notification.', notificationError)
     }
 
-    console.log(`ClientSMSFromBarberNudge completed: ${smsResult.sent} sent, ${smsResult.failed} failed`)
+    console.log(`Smart bucket created: ${bucketResult.bucket_id}`)
     
     return NextResponse.json({ 
       success: true,
       campaignTriggered: true,
-      sent: smsResult.sent,
-      failed: smsResult.failed
+      bucket_id: bucketResult.bucket_id,
     })
 
   } catch (error) {
