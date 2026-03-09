@@ -40,8 +40,9 @@ export default function AdminRecurringExpenses({ barberId, month, year, onUpdate
     // Validation
     if (!label.trim()) return toast.error('Enter a label')
     if (!amount || isNaN(parseFloat(amount))) return toast.error('Enter a valid amount')
-    if (frequency === 'monthly' && (monthlyDay < 1 || monthlyDay > 31)) return toast.error('Monthly day must be 1–31')
-    if (frequency === 'yearly' && (yearlyDay < 1 || yearlyDay > 31)) return toast.error('Yearly day must be 1–31')
+    if (frequency === 'monthly' && (monthlyDay < 1 || monthlyDay > 31)) return toast.error('Monthly day must be 1-31')
+    if (frequency === 'yearly' && (yearlyDay < 1 || yearlyDay > 31)) return toast.error('Yearly day must be 1-31')
+    if (frequency === 'weekly' && selectedDays.length === 0) return toast.error('Select at least one day')
 
     const payload = {
       user_id: barberId,
