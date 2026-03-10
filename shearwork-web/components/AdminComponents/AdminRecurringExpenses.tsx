@@ -133,7 +133,7 @@ export default function AdminRecurringExpenses({ barberId, month, year, onUpdate
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6 flex flex-col gap-5">
+    <div className="bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6 flex flex-col gap-5">
       <h3 className="font-semibold text-lg text-white mb-2">Add Recurring Expense</h3>
 
       <input
