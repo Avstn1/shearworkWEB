@@ -847,6 +847,7 @@ async function upsertSummaries(
   options: AvailabilityPullOptions,
 ) {
   if (summaries.length === 0) return
+  console.log("Update mode: ", options.updateMode)
 
   if (options.updateMode) {
     console.log('Update mode - summaries count:', summaries.length)

@@ -32,6 +32,37 @@ export interface ScoredClient extends AcuityClient {
  * Heavily prioritizes consistent and semi-consistent clients (90%).
  * Requires clients to be at least 14 days overdue based on their visit pattern.
  */
+
+// Get current and previous ISO week
+const getISOWeek = (date: Date): string => {
+  const dayOfWeek = date.getDay() || 7
+  const thursday = new Date(date)
+  thursday.setDate(date.getDate() - dayOfWeek + 4)
+  const jan4 = new Date(thursday.getFullYear(), 0, 4)
+  const jan4Day = jan4.getDay() || 7
+  const firstMonday = new Date(jan4)
+  firstMonday.setDate(jan4.getDate() - jan4Day + 1)
+  const weekNumber = Math.round((thursday.getTime() - firstMonday.getTime()) / (7 * 86400000)) + 1
+  return `${thursday.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`
+}
+
+const getLastISOWeekOfYear = (year: number): number => {
+  // Dec 28 is always in the last ISO week of the year
+  const dec28 = new Date(year, 11, 28)
+  return parseInt(getISOWeek(dec28).split('-W')[1])
+}
+
+const getPreviousISOWeek = (isoWeek: string): string => {
+  const [yearStr, weekStr] = isoWeek.split('-W')
+  let year = parseInt(yearStr)
+  let week = parseInt(weekStr) - 1
+  if (week === 0) {
+    year -= 1
+    week = getLastISOWeekOfYear(year)
+  }
+  return `${year}-W${String(week).padStart(2, '0')}`
+}
+
 export async function selectClientsForSMS_AutoNudge(
   supabase: SupabaseClient,
   userId: string,
@@ -69,11 +100,29 @@ export async function selectClientsForSMS_AutoNudge(
     return [];
   }
 
+  const currentWeek = getISOWeek(today)
+  const previousWeek = getPreviousISOWeek(currentWeek)
+
+  const { data: recentBuckets } = await supabase
+    .from('sms_smart_buckets')
+    .select('clients')
+    .eq('user_id', userId)
+    .in('iso_week', [currentWeek, previousWeek])
+
+  const exemptPhones = new Set<string>()
+  for (const bucket of recentBuckets || []) {
+    for (const client of bucket.clients || []) {
+      if (client.phone) exemptPhones.add(client.phone)
+    }
+  }
+
+  const filteredClients = clients.filter(c => !c.phone_normalized || !exemptPhones.has(c.phone_normalized))
+
   // console.log("Clients:")
   // console.log(JSON.stringify(clients))
 
   // Score and filter clients
-  const allScoredClients: ScoredClient[] = clients
+  const allScoredClients: ScoredClient[] = filteredClients
     .map((client) => scoreClient(client, today))
     .filter((client) => {
       if (client.score <= 0) return false;

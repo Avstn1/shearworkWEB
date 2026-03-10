@@ -13,8 +13,6 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
 
-    console.log("Running local version...")
-    
     // Extract Twilio webhook data
     const from = formData.get('From') as string 
     const to = formData.get('To') as string 
@@ -89,8 +87,6 @@ export async function POST(request: Request) {
     if (updateError) {
       console.error('Failed to update profile engagement:', updateError)
     }
-
-    console.log(`special_access: ${profile.special_access} — routing to ${profile.special_access ? 'NEW (smart buckets)' : 'OLD (ClientSMSFromBarberNudge)'} flow`)
 
     // ----------------------------------------------------------------
     // NEW FLOW — smart buckets 

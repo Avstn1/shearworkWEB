@@ -41,6 +41,21 @@ export default function Navbar() {
   
   // During onboarding, only show the logo - hide all other navbar controls
   const isOnboardingOrPricing = pathname === '/pricing/return' || pathname === '/pricing' || (user && profile?.onboarded === false)
+  const navRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const updateNavbarHeight = () => {
+      if (navRef.current) {
+        document.documentElement.style.setProperty(
+          '--navbar-height',
+          `${navRef.current.offsetHeight}px`
+        )
+      }
+    }
+    updateNavbarHeight()
+    window.addEventListener('resize', updateNavbarHeight)
+    return () => window.removeEventListener('resize', updateNavbarHeight)
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -478,6 +493,7 @@ export default function Navbar() {
   return (
     <>
       <nav 
+        ref={navRef}
         className="fixed top-0 w-full z-50 backdrop-blur-md shadow-sm"
         style={{
           backgroundColor: `${COLORS.navBg}f0`,
