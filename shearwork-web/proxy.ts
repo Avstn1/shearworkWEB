@@ -55,18 +55,17 @@ export default async function middleware(request: NextRequest) {
   // -----------------------------
   // ONBOARDING CHECK
   // -----------------------------
-  // Non-onboarded users must complete onboarding before accessing the app
   if (profile && !profile.onboarded && role !== 'admin') {
-    // Allow access to onboarding flow and related API routes
     const allowedDuringOnboarding = [
+      '/onboarding',
       '/pricing/return',
       '/api/onboarding',
       '/api/acuity',
       '/api/square',
     ]
-    
+
     if (!allowedDuringOnboarding.some(route => pathname.startsWith(route))) {
-      return NextResponse.redirect(new URL('/pricing/return', request.url))
+      return NextResponse.redirect(new URL('/onboarding', request.url))
     }
   }
 
