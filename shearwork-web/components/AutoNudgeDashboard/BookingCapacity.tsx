@@ -39,8 +39,8 @@ const getCapacityColor = (pct: number): string => {
 
 export default function BookingCapacity({ user_id }: Props) {
   const [capacity, setCapacity] = useState<number | null>(null)
-  const [totalSlots, setTotalSlots] = useState<number>(0)
-  const [totalUpdated, setTotalUpdated] = useState<number>(0)
+  const [bookedSlots, setBookedSlots] = useState<number>(0)
+  const [openSlots, setOpenSlots] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   const getWeekRange = () => {
@@ -64,32 +64,61 @@ export default function BookingCapacity({ user_id }: Props) {
   const fetchCapacity = async () => {
     const { start, end } = getWeekRange()
 
-    const { data, error } = await supabase
-      .from('availability_daily_summary')
-      .select('slot_count, slot_count_update')
+    // 1. Get open slots from availability_slots for this week
+    // Deduplicate on slot_date + start_time to avoid counting the same
+    // time slot multiple times (once per appointment type)
+    const { data: slotsData, error: slotsError } = await supabase
+      .from('availability_slots')
+      .select('slot_date, start_time')
       .eq('user_id', user_id)
       .gte('slot_date', start)
       .lte('slot_date', end)
 
-    if (error) {
-      console.error('Error fetching capacity:', error)
-      toast.error('Failed to load booking capacity')
+    if (slotsError) {
+      console.error('Error fetching availability slots:', slotsError)
+      toast.error('Failed to load availability slots')
       setCapacity(null)
       return
     }
 
-    const totalSlots = data?.reduce((sum, row) => sum + (row.slot_count || 0), 0) ?? 0
-    const totalUpdated = data?.reduce((sum, row) => sum + (row.slot_count_update || 0), 0) ?? 0
+    // Count unique slot_date + start_time combinations
+    const uniqueSlots = new Set(
+      slotsData?.map(s => `${s.slot_date}|${s.start_time}`) ?? []
+    )
 
-    if (totalSlots === 0) {
+    // 2. Get booked count directly from Acuity via API route
+    // This includes future appointments this week that haven't synced yet
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+
+    const response = await fetch('/api/acuity/booking-rate', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+
+    if (!response.ok) {
+      console.error('Failed to fetch booking rate from Acuity')
+      toast.error('Failed to load booked appointments')
       setCapacity(null)
       return
     }
 
-    setTotalSlots(totalSlots)
-    setTotalUpdated(totalUpdated)
-    const percentage = 100 - (totalUpdated / totalSlots) * 100
-    setCapacity(Math.round(percentage))
+    const { bookedSlotUnits } = await response.json()
+
+    const totalOpen = uniqueSlots.size
+    const totalBooked = bookedSlotUnits ?? 0
+    const total = totalBooked + totalOpen
+
+    setOpenSlots(totalOpen)
+    setBookedSlots(totalBooked)
+
+    if (total === 0) {
+      setCapacity(null)
+      return
+    }
+
+    // Booking rate = booked / (booked + open)
+    const percentage = Math.round((totalBooked / total) * 100)
+    setCapacity(percentage)
   }
 
   useEffect(() => {
@@ -100,29 +129,27 @@ export default function BookingCapacity({ user_id }: Props) {
     init()
   }, [user_id])
 
+  // Realtime: re-fetch when availability slots change
   useEffect(() => {
-    const channel = supabase
-      .channel('booking-capacity-realtime')
+    const availChannel = supabase
+      .channel('booking-capacity-availability')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'availability_daily_summary',
+          table: 'availability_slots',
           filter: `user_id=eq.${user_id}`,
         },
-        () => {
-          fetchCapacity()
-        }
+        () => fetchCapacity()
       )
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(availChannel)
     }
   }, [user_id])
 
-  const filledSlots = totalSlots - totalUpdated
   const color = capacity !== null ? getCapacityColor(capacity) : 'rgba(255,255,255,0.2)'
 
   return (
@@ -135,8 +162,8 @@ export default function BookingCapacity({ user_id }: Props) {
         <p className="text-white/40 text-xs uppercase tracking-widest font-medium">This Week</p>
         <p className="text-white font-black text-2xl leading-tight mt-1">Booking Rate</p>
         <div className="flex gap-3 mt-2 text-xs text-white/30">
-          <span><span className="text-white/60 font-medium">{filledSlots}</span> booked</span>
-          <span><span className="text-white/60 font-medium">{totalUpdated}</span> remaining</span>
+          <span><span className="text-white/60 font-medium">{bookedSlots}</span> booked</span>
+          <span><span className="text-white/60 font-medium">{openSlots}</span> remaining</span>
         </div>
       </div>
 
