@@ -39,8 +39,6 @@ const getCapacityColor = (pct: number): string => {
 
 export default function BookingCapacity({ user_id }: Props) {
   const [capacity, setCapacity] = useState<number | null>(null)
-  const [bookedSlots, setBookedSlots] = useState<number>(0)
-  const [openSlots, setOpenSlots] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   const getWeekRange = () => {
@@ -64,12 +62,12 @@ export default function BookingCapacity({ user_id }: Props) {
   const fetchCapacity = async () => {
     const { start, end } = getWeekRange()
 
-    // 1. Get open slots from availability_slots for this week
-    // Deduplicate on slot_date + start_time to avoid counting the same
-    // time slot multiple times (once per appointment type)
+    // 1. Get total available minutes from availability_slots this week
+    // Each row has duration_minutes; deduplicate on slot_date + start_time
+    // to avoid counting the same time slot multiple times (once per appt type)
     const { data: slotsData, error: slotsError } = await supabase
       .from('availability_slots')
-      .select('slot_date, start_time')
+      .select('slot_date, start_time, duration_minutes')
       .eq('user_id', user_id)
       .gte('slot_date', start)
       .lte('slot_date', end)
@@ -81,13 +79,18 @@ export default function BookingCapacity({ user_id }: Props) {
       return
     }
 
-    // Count unique slot_date + start_time combinations
-    const uniqueSlots = new Set(
-      slotsData?.map(s => `${s.slot_date}|${s.start_time}`) ?? []
-    )
+    // Deduplicate and sum duration_minutes for open slots
+    const seenSlots = new Set<string>()
+    let totalOpenMinutes = 0
+    for (const slot of slotsData ?? []) {
+      const key = `${slot.slot_date}|${slot.start_time}`
+      if (!seenSlots.has(key)) {
+        seenSlots.add(key)
+        totalOpenMinutes += slot.duration_minutes ?? 0
+      }
+    }
 
-    // 2. Get booked count directly from Acuity via API route
-    // This includes future appointments this week that haven't synced yet
+    // 2. Get total booked minutes directly from Acuity
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
 
@@ -102,21 +105,17 @@ export default function BookingCapacity({ user_id }: Props) {
       return
     }
 
-    const { bookedSlotUnits } = await response.json()
-
-    const totalOpen = uniqueSlots.size
-    const totalBooked = bookedSlotUnits ?? 0
-    const total = totalBooked + totalOpen
-
-    setOpenSlots(totalOpen)
-    setBookedSlots(totalBooked)
+    const { bookedMinutes } = await response.json()
+  
+    const totalBooked = bookedMinutes ?? 0
+    const total = totalBooked + totalOpenMinutes
 
     if (total === 0) {
       setCapacity(null)
       return
     }
 
-    // Booking rate = booked / (booked + open)
+    // Booking rate = booked minutes / total minutes
     const percentage = Math.round((totalBooked / total) * 100)
     setCapacity(percentage)
   }
@@ -161,10 +160,7 @@ export default function BookingCapacity({ user_id }: Props) {
       <div className="flex flex-col justify-center">
         <p className="text-white/40 text-xs uppercase tracking-widest font-medium">This Week</p>
         <p className="text-white font-black text-2xl leading-tight mt-1">Booking Rate</p>
-        <div className="flex gap-3 mt-2 text-xs text-white/30">
-          <span><span className="text-white/60 font-medium">{bookedSlots}</span> booked</span>
-          <span><span className="text-white/60 font-medium">{openSlots}</span> remaining</span>
-        </div>
+
       </div>
 
       {/* Right — Ring */}

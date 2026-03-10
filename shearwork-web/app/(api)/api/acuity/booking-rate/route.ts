@@ -21,18 +21,15 @@ function getWeekRange() {
   return { start: toDateStr(start), end: toDateStr(end) }
 }
 
-// Returns the total number of slot units booked for a given day.
-// Each appointment's duration is divided by slotLengthMinutes to get
-// how many slots it occupies (e.g. 60min appt / 30min slot = 2 slots).
-async function fetchDaySlotUnits(
+// Returns total booked minutes for a given day (sum of appointment durations).
+async function fetchDayBookedMinutes(
   accessToken: string,
   calendarId: string,
-  dayStr: string,
-  slotLengthMinutes: number
+  dayStr: string
 ): Promise<number> {
   const pageSize = 100
   let offset = 0
-  let slotUnits = 0
+  let totalMinutes = 0
 
   while (true) {
     const url = new URL(`${ACUITY_API_BASE}/appointments`)
@@ -56,31 +53,22 @@ async function fetchDaySlotUnits(
     if (!Array.isArray(data) || data.length === 0) break
 
     for (const appt of data) {
-      // Skip cancelled and no-show appointments
       if (appt.canceled || appt.noShow) continue
 
-      // duration comes back from Acuity in minutes
       const durationMinutes = typeof appt.duration === 'number'
         ? appt.duration
         : parseInt(appt.duration ?? '0', 10)
 
-      if (!durationMinutes || durationMinutes <= 0) {
-        // If duration is missing, count as 1 slot unit
-        slotUnits += 1
-        continue
+      if (durationMinutes > 0) {
+        totalMinutes += durationMinutes
       }
-
-      // Convert duration to slot units, rounding up
-      // e.g. 45min appointment with 30min slots = ceil(45/30) = 2 slot units
-      const units = Math.ceil(durationMinutes / slotLengthMinutes)
-      slotUnits += units
     }
 
     if (data.length < pageSize) break
     offset += pageSize
   }
 
-  return slotUnits
+  return totalMinutes
 }
 
 export async function GET(request: Request) {
@@ -101,7 +89,7 @@ export async function GET(request: Request) {
     // 1. Get slot_length_minutes from profile
     const { data: profile, error: profileError } = await serviceClient
       .from('profiles')
-      .select('calendar, slot_length_minutes')
+      .select('calendar')
       .eq('user_id', user.id)
       .single()
 
@@ -110,7 +98,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No calendar configured' }, { status: 400 })
     }
 
-    const slotLengthMinutes = profile.slot_length_minutes ?? 30
 
     // 2. Get Acuity access token
     const { data: tokenRow, error: tokenError } = await serviceClient
@@ -176,21 +163,20 @@ export async function GET(request: Request) {
 
     const calendarId = match.id
 
-    // 5. Fetch booked slot units for each day this week
+    // 5. Fetch total booked minutes for each day this week
     const { start, end } = getWeekRange()
     const startDate = new Date(start)
     const endDate = new Date(end)
 
-    let totalBookedSlots = 0
+    let totalBookedMinutes = 0
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dayStr = d.toISOString().split('T')[0]
-      const units = await fetchDaySlotUnits(accessToken, calendarId, dayStr, slotLengthMinutes)
-      totalBookedSlots += units
+      const minutes = await fetchDayBookedMinutes(accessToken, calendarId, dayStr)
+      totalBookedMinutes += minutes
     }
 
     return NextResponse.json({
-      bookedSlotUnits: totalBookedSlots,
-      slotLengthMinutes,
+      bookedMinutes: totalBookedMinutes,
       weekStart: start,
       weekEnd: end,
     })
