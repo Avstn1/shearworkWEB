@@ -97,7 +97,7 @@ export default function AutoNudgeImpact({ user_id }: Props) {
       {/* Left — Label */}
       <div className="flex flex-col justify-center">
         <p className="text-white/40 text-xs uppercase tracking-widest font-medium">This Week</p>
-        <p className="text-white font-black text-2xl leading-tight mt-1">Corva Impact</p>
+        <p className="text-white font-black text-2xl leading-tight mt-1">Corva's Impact</p>
       </div>
 
       {/* Right — Two stats */}

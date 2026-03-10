@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import AutoNudgeStatus from '@/components/AutoNudgeDashboard/AutoNudgeStatus'
 import OpenBookings from '@/components/AutoNudgeDashboard/OpenBookings'
 import BookingCapacity from '@/components/AutoNudgeDashboard/BookingCapacity'
 import AutoNudgeImpact from '@/components/AutoNudgeDashboard/AutoNudgeImpact'
 import ClientHealth from '@/components/AutoNudgeDashboard/ClientHealth'
 import AutoNudgeHistory from '@/components/AutoNudgeDashboard/AutoNudgeHistory'
+import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
   const [user_id, setUser_id] = useState<string | null>(null)
   const [sms_engaged_current_week, setSms_engaged_current_week] = useState<boolean>(false)
   const [profileLoaded, setProfileLoaded] = useState(false)
+  const [availabilityReady, setAvailabilityReady] = useState(false)
+  const [historyKey, setHistoryKey] = useState(0)
+
+  const router = useRouter()
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -22,19 +28,37 @@ export default function DashboardPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      setUser_id(user.id)
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('sms_engaged_current_week')
+        .select('sms_engaged_current_week, special_access')
         .eq('user_id', user.id)
         .single()
 
-      setSms_engaged_current_week(profile?.sms_engaged_current_week ?? false)
+      if (!profile?.special_access) {
+        router.push('/analytics')
+        return
+      }
+
+      setSms_engaged_current_week(profile.sms_engaged_current_week ?? false)
+      setUser_id(user.id)
       setProfileLoaded(true)
+
+      // Call RPC after profile confirmed — top row waits for this
+      try {
+        await supabase.functions.invoke('update_barber_availability', {
+          body: { user_id: user.id }
+        })
+      } catch (err) {
+        console.error('Availability update failed:', err)
+      } finally {
+        setAvailabilityReady(true)
+      }
     }
     getUser()
   }, [])
+
+  if (!profileLoaded) return null
 
   return (
     <div
@@ -45,26 +69,35 @@ export default function DashboardPage() {
       }}
     >
 
-      {/* 3-column row */}
+      {/* Top row — matches bottom row column widths */}
       <div className="grid grid-cols-3 gap-4 flex-shrink-0 h-[28%]">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          {user_id && <OpenBookings user_id={user_id} />}
+          <AutoNudgeStatus user_id={user_id!} />
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          {user_id && <BookingCapacity user_id={user_id} />}
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          {user_id && <AutoNudgeImpact user_id={user_id} />}
+        <div className="col-span-2 grid grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            {availabilityReady && <OpenBookings user_id={user_id!} />}
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            {availabilityReady && <BookingCapacity user_id={user_id!} />}
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            {availabilityReady && <AutoNudgeImpact user_id={user_id!} />}
+          </div>
         </div>
       </div>
 
-      {/* 2-column row */}
+      {/* Bottom row */}
       <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 overflow-hidden">
-          {user_id && profileLoaded && <ClientHealth user_id={user_id} sms_engaged_current_week={sms_engaged_current_week} />}
+          <ClientHealth
+            user_id={user_id!}
+            sms_engaged_current_week={sms_engaged_current_week}
+            onNudgeSuccess={() => setHistoryKey(k => k + 1)}
+          />
         </div>
         <div className="col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4 overflow-hidden">
-          {user_id && <AutoNudgeHistory user_id={user_id} />}
+          <AutoNudgeHistory key={historyKey} user_id={user_id!} />
         </div>
       </div>
 

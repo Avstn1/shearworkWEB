@@ -104,7 +104,7 @@ export default function BookingCapacity({ user_id }: Props) {
       {/* Left — Text */}
       <div className="flex flex-col justify-center">
         <p className="text-white/40 text-xs uppercase tracking-widest font-medium">This Week</p>
-        <p className="text-white font-black text-2xl leading-tight mt-1">Booking Capacity</p>
+        <p className="text-white font-black text-2xl leading-tight mt-1">Booking Rate</p>
         <div className="flex gap-3 mt-2 text-xs text-white/30">
           <span><span className="text-white/60 font-medium">{filledSlots}</span> booked</span>
           <span><span className="text-white/60 font-medium">{totalUpdated}</span> remaining</span>

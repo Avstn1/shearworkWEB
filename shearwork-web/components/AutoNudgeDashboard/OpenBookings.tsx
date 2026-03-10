@@ -53,16 +53,9 @@ export default function OpenBookings({ user_id }: Props) {
 
   useEffect(() => {
     const init = async () => {
-      supabase.functions.invoke('update_barber_availability', {
-        body: { user_id }
-      }).catch(err => {
-        console.error('Background availability update failed:', err)
-      })
-
       await fetchOpenings()
       setLoading(false)
     }
-
     init()
   }, [user_id])
 

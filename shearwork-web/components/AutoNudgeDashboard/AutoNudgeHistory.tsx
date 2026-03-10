@@ -201,10 +201,11 @@ export default function AutoNudgeHistory({ user_id }: Props) {
           <Loader2 className="w-5 h-5 text-[#bdbdbd] animate-spin" />
         </div>
       ) : recipients.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center">
-          <Users className="w-6 h-6 text-white/20" />
-          <p className="text-xs text-[#bdbdbd]">No campaign this week yet</p>
-        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+  <Users className="w-12 h-12 text-white/20" />
+  <p className="text-xl font-semibold text-white/70 leading-relaxed">No campaign this week yet.</p>
+  <p className="text-sm text-white/40 leading-relaxed">Activate your auto-nudge by replying to our SMS or clicking the <span className="text-white/60 font-semibold">Nudge Clients</span> button.</p>
+</div>
       ) : (
         <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 overflow-y-auto auto-rows-fr">
           {recipients.map((recipient, index) => {

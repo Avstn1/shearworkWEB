@@ -11,7 +11,8 @@ import {
   Calendar, 
   CreditCard, 
   Megaphone,
-  Coins
+  Coins,
+  TrendingUp
 } from 'lucide-react'
 import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 
@@ -86,8 +87,17 @@ export default function Sidebar() {
 
   if (!hasSession) return null
 
+  // const navItems = [
+  //   { href: '/dashboard', icon: Grid, label: 'Dashboard' },
+  //   { href: '/analytics', icon: TrendingUp, label: 'Analytics' },
+  //   { href: '/client-manager', icon: UserCog, label: 'Client Manager' },
+  //   { href: '/appointment-manager', icon: Calendar, label: 'Appointments' },
+  //   { href: '/expenses', icon: CreditCard, label: 'Expenses' },
+  // ]
+
   const navItems = [
     { href: '/dashboard', icon: Grid, label: 'Dashboard' },
+    ...(profile?.special_access ? [{ href: '/analytics', icon: TrendingUp, label: 'Analytics' }] : []),
     { href: '/client-manager', icon: UserCog, label: 'Client Manager' },
     { href: '/appointment-manager', icon: Calendar, label: 'Appointments' },
     { href: '/expenses', icon: CreditCard, label: 'Expenses' },
