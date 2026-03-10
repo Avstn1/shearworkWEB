@@ -59,7 +59,6 @@ export default function OpenBookings({ user_id }: Props) {
     init()
   }, [user_id])
 
-  // Real-time subscription
   useEffect(() => {
     const channel = supabase
       .channel('open-bookings-realtime')
@@ -91,15 +90,32 @@ export default function OpenBookings({ user_id }: Props) {
       <div className="flex flex-col justify-center">
         <p className="text-white/40 text-xs uppercase tracking-widest font-medium">This Week</p>
         <p className="text-white font-black text-2xl leading-tight mt-1">Open Bookings</p>
-        <p className="text-white/30 text-xs mt-1.5">Available slots in your schedule</p>
+        <div className="flex gap-3 mt-2 text-xs text-white/30">
+          <span>Available slots in your schedule</span>
+        </div>
       </div>
 
-      {/* Right — Circle */}
+      {/* Right — Ring */}
       {loading ? (
-        <div className="w-20 h-20 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin flex-shrink-0" />
+        <div className="w-16 h-16 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin flex-shrink-0" />
       ) : (
-        <div className="w-24 h-24 rounded-full border-2 border-lime-400 flex items-center justify-center shadow-[0_0_32px_rgba(163,230,53,0.2)] flex-shrink-0">
-          <span className="text-4xl font-black text-lime-400 leading-none">{totalOpenings}</span>
+        <div className="relative flex items-center justify-center flex-shrink-0">
+          <svg width="96" height="96" className="-rotate-90">
+            <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+            <circle
+              cx="48" cy="48" r="40" fill="none"
+              stroke="#a3e635"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 40}`}
+              strokeDashoffset={0}
+              className="transition-all duration-700"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-black text-white leading-none">{totalOpenings}</span>
+            <span className="text-[10px] text-white/30 mt-0.5">slots</span>
+          </div>
         </div>
       )}
 

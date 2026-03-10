@@ -290,7 +290,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
 
       {/* Header */}
       <div className="flex items-center justify-between mb-1 flex-shrink-0">
-        <h2 className="text-[#d1e2c5] font-semibold text-sm sm:text-base">Client Health</h2>
+        <h2 className="text-[#d1e2c5] font-semibold text-sm sm:text-base">Clients at Risk</h2>
         {!loading && (
           <span className="text-xs text-[#bdbdbd]">{activeList.length} clients</span>
         )}
@@ -371,7 +371,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
             : 'bg-lime-400/10 border border-lime-400/20 text-lime-400 hover:bg-lime-400/20 hover:border-lime-400/40'
         }`}
       >
-        {nudging ? 'Nudging...' : engaged ? 'Already nudged this week' : 'Nudge Clients'}
+        Nudge Clients
       </button>
 
       {/* Confirmation Modal */}

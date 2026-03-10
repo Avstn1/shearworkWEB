@@ -8,6 +8,35 @@ interface Props {
   user_id: string
 }
 
+const getCapacityColor = (pct: number): string => {
+  const p = Math.max(0, Math.min(100, pct))
+
+  const stops: [number, number, number, number][] = [
+    [0,   220, 38,  38 ],
+    [25,  234, 88,  12 ],
+    [50,  234, 179, 8  ],
+    [75,  132, 204, 22 ],
+    [100, 34,  197, 94 ],
+  ]
+
+  let lower = stops[0]
+  let upper = stops[stops.length - 1]
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (p >= stops[i][0] && p <= stops[i + 1][0]) {
+      lower = stops[i]
+      upper = stops[i + 1]
+      break
+    }
+  }
+
+  const range = upper[0] - lower[0]
+  const t = range === 0 ? 0 : (p - lower[0]) / range
+  const r = Math.round(lower[1] + (upper[1] - lower[1]) * t)
+  const g = Math.round(lower[2] + (upper[2] - lower[2]) * t)
+  const b = Math.round(lower[3] + (upper[3] - lower[3]) * t)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
 export default function BookingCapacity({ user_id }: Props) {
   const [capacity, setCapacity] = useState<number | null>(null)
   const [totalSlots, setTotalSlots] = useState<number>(0)
@@ -71,7 +100,6 @@ export default function BookingCapacity({ user_id }: Props) {
     init()
   }, [user_id])
 
-  // Real-time subscription
   useEffect(() => {
     const channel = supabase
       .channel('booking-capacity-realtime')
@@ -95,6 +123,7 @@ export default function BookingCapacity({ user_id }: Props) {
   }, [user_id])
 
   const filledSlots = totalSlots - totalUpdated
+  const color = capacity !== null ? getCapacityColor(capacity) : 'rgba(255,255,255,0.2)'
 
   return (
     <div className="relative flex items-center justify-between h-full px-2 overflow-hidden">
@@ -111,7 +140,7 @@ export default function BookingCapacity({ user_id }: Props) {
         </div>
       </div>
 
-      {/* Right — Percentage */}
+      {/* Right — Ring */}
       {loading ? (
         <div className="w-16 h-16 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin flex-shrink-0" />
       ) : capacity === null ? (
@@ -122,20 +151,15 @@ export default function BookingCapacity({ user_id }: Props) {
             <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
             <circle
               cx="48" cy="48" r="40" fill="none"
-              stroke="url(#capacityGrad)" strokeWidth="8"
+              stroke={color}
+              strokeWidth="8"
               strokeLinecap="round"
               strokeDasharray={`${2 * Math.PI * 40}`}
               strokeDashoffset={`${2 * Math.PI * 40 * (1 - capacity / 100)}`}
               className="transition-all duration-700"
             />
-            <defs>
-              <linearGradient id="capacityGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#fde68a" />
-                <stop offset="100%" stopColor="#a3e635" />
-              </linearGradient>
-            </defs>
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-2xl font-black text-white leading-none">{capacity}%</span>
             <span className="text-[10px] text-white/30 mt-0.5">filled</span>
           </div>

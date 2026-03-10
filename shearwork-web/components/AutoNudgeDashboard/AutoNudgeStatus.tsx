@@ -38,13 +38,15 @@ export default function AutoNudgeStatus({ user_id }: Props) {
 
   useEffect(() => {
     const fetchStatus = async () => {
+      const isoWeek = getCurrentISOWeek()
       const { data } = await supabase
-        .from('profiles')
-        .select('sms_engaged_current_week')
+        .from('sms_smart_buckets')
+        .select('bucket_id')
         .eq('user_id', user_id)
+        .eq('iso_week', isoWeek)
         .single()
 
-      setActive(data?.sms_engaged_current_week ?? false)
+      setActive(!!data)
       setLoading(false)
     }
 
@@ -60,25 +62,37 @@ export default function AutoNudgeStatus({ user_id }: Props) {
       <div className="flex flex-col justify-center">
         <p className="text-white/40 text-xs uppercase tracking-widest font-medium">This Week</p>
         <p className="text-white font-black text-2xl leading-tight mt-1">Auto-Nudge</p>
-        <div className="flex items-center gap-1.5 mt-1.5">
-          <Clock className="w-3 h-3 text-sky-400" />
-          <p className="text-sky-400 text-xs">Next: {getNextMonday()} at 10:00 AM</p>
+        <div className="flex items-center gap-1.5 mt-2 text-xs text-white/30">
+          <Clock className="w-3 h-3 text-white/30" />
+          <span>Next: {getNextMonday()} at 10:00 AM</span>
         </div>
       </div>
 
-      {/* Right — Status */}
+      {/* Right — Ring */}
       {loading ? (
-        <div className="w-24 h-24 rounded-full border-2 border-white/10 border-t-white/30 animate-spin flex-shrink-0" />
+        <div className="w-16 h-16 rounded-full border-2 border-white/10 border-t-white/30 animate-spin flex-shrink-0" />
       ) : (
-        <div className={`w-24 h-24 rounded-full border-2 flex flex-col items-center justify-center gap-1 flex-shrink-0 ${
-          active
-            ? 'border-lime-400 shadow-[0_0_32px_rgba(163,230,53,0.2)]'
-            : 'border-white/20'
-        }`}>
-          <Zap className={`w-6 h-6 ${active ? 'text-lime-400' : 'text-white/20'}`} />
-          <span className={`text-xs font-bold ${active ? 'text-lime-400' : 'text-white/30'}`}>
-            {active ? 'Active' : 'Inactive'}
-          </span>
+        <div className="relative flex items-center justify-center flex-shrink-0">
+          <svg width="96" height="96" className="-rotate-90">
+            <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+            {active && (
+              <circle
+                cx="48" cy="48" r="40" fill="none"
+                stroke="#a3e635"
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 40}`}
+                strokeDashoffset={0}
+                className="transition-all duration-700"
+              />
+            )}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <Zap className={`w-5 h-5 ${active ? 'text-lime-400' : 'text-white/20'}`} />
+            <span className={`text-xs font-bold ${active ? 'text-lime-400' : 'text-white/30'}`}>
+              {active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
         </div>
       )}
 
