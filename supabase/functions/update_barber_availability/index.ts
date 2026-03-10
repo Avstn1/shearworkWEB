@@ -39,7 +39,6 @@ Deno.serve(async (req) => {
     // Check for optional user_id (singular) or user_ids (array) parameter
     // Prioritize user_ids if both are present
     const body = await req.json()
-    console.log('Received body:', body)
     
     let targetUserIds = body.user_ids // Array
     const targetUserId = body.user_id  // Single string
@@ -84,7 +83,8 @@ Deno.serve(async (req) => {
       // Tue-Sun = update mode to set slot_count_update (current availability)
       const day = torontoToday.getDay()
       const isMonday = day === 1
-      const update = !isMonday && (!targetUserIds || targetUserIds.length === 0)
+      // const update = !isMonday && (!targetUserIds || targetUserIds.length === 0) && !targetUserId
+      const update = (targetUserIds || targetUserIds.length > 0) && targetUserId
       
       let url;
 
