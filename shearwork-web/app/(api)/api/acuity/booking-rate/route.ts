@@ -4,6 +4,41 @@ import { createClient } from '@supabase/supabase-js'
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1'
 
+async function getAppointmentID(
+  calendarId: string,
+  accessToken: string
+): Promise<number | null> {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  const formattedDate = `${year}-${month}-${day}`
+
+  const url = new URL(`${ACUITY_API_BASE}/appointments`)
+  url.searchParams.set('minDate', formattedDate)
+  url.searchParams.set('maxDate', formattedDate)
+  url.searchParams.set('max', '1')
+  url.searchParams.set('calendarID', String(calendarId))
+  url.searchParams.set('showall', 'true')
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!response.ok) {
+    console.error(`Acuity fetch failed for ${formattedDate}: ${response.status}`)
+    return null
+  }
+
+  const data = await response.json()
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return null
+  }
+
+  return data[0].id ?? null
+}
+
 function getWeekRange() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
   const dayOfWeek = now.getDay()
@@ -30,7 +65,62 @@ async function fetchDayBookedMinutes(
   const pageSize = 100
   let offset = 0
   let totalMinutes = 0
+  console.log(`Fetching booked minutes for ${dayStr}`)
+  while (true) {
+    const url = new URL(`${ACUITY_API_BASE}/appointments`)
+    url.searchParams.set('minDate', dayStr)
+    url.searchParams.set('maxDate', dayStr)
+    url.searchParams.set('max', String(pageSize))
+    url.searchParams.set('offset', String(offset))
+    url.searchParams.set('calendarID', String(calendarId))
+    url.searchParams.set('showall', 'true')
 
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+
+    if (!response.ok) {
+      console.error(`Acuity fetch failed for ${dayStr}: ${response.status}`)
+      break
+    }
+
+    const data = await response.json()
+    if (!Array.isArray(data) || data.length === 0) break
+
+    for (const appt of data) {
+      if (appt.canceled || appt.noShow) continue
+
+      const durationMinutes = typeof appt.duration === 'number'
+        ? appt.duration
+        : parseInt(appt.duration ?? '0', 10)
+
+      if (durationMinutes > 0) {
+        totalMinutes += durationMinutes
+      }
+    }
+
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+
+  return totalMinutes
+}
+
+async function fetchDayOpenMinutes(
+  accessToken: string,
+  calendarId: string,
+  dayStr: string
+): Promise<number> {
+  const pageSize = 100
+  let offset = 0
+  let totalMinutes = 0
+
+  const reference_id = await getAppointmentID(calendarId, accessToken)
+  if (!reference_id) {
+    console.warn(`No appointments found for ${dayStr}, cannot calculate open minutes`)
+    return 0
+  }
+  
   while (true) {
     const url = new URL(`${ACUITY_API_BASE}/appointments`)
     url.searchParams.set('minDate', dayStr)
