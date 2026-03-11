@@ -131,11 +131,9 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
 export default function ClientHealth({ user_id, sms_engaged_current_week, onNudgeSuccess }: Props) {
   const [tab, setTab] = useState<'prospects' | 'unbooked'>('prospects')
 
-  // Tab 1
   const [clients, setClients] = useState<Client[]>([])
   const [loadingProspects, setLoadingProspects] = useState(true)
 
-  // Tab 2
   const [unbookedClients, setUnbookedClients] = useState<Client[]>([])
   const [loadingUnbooked, setLoadingUnbooked] = useState(true)
 
@@ -162,7 +160,6 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
 
   const fetchUnbooked = async () => {
     try {
-      // Fetch the 2 most recent campaigns regardless of current week
       const { data: buckets } = await supabase
         .from('sms_smart_buckets')
         .select('clients, iso_week')
@@ -310,9 +307,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
         <button
           onClick={() => { setTab('prospects'); setSearch('') }}
           className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            tab === 'prospects'
-              ? 'bg-white/10 text-white'
-              : 'text-white/35 hover:text-white/60'
+            tab === 'prospects' ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white/60'
           }`}
         >
           Prospects
@@ -320,9 +315,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
         <button
           onClick={() => { setTab('unbooked'); setSearch('') }}
           className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            tab === 'unbooked'
-              ? 'bg-white/10 text-white'
-              : 'text-white/35 hover:text-white/60'
+            tab === 'unbooked' ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white/60'
           }`}
         >
           Pending Follow-up
@@ -363,7 +356,14 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
+        <div
+          className="flex-1 overflow-y-auto space-y-2 min-h-0"
+          style={{
+            paddingRight: '6px',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.15) transparent',
+          }}
+        >
           {filtered.map((client) => (
             <ClientRow key={client.client_id} client={client} showMessaged={tab === 'unbooked'} />
           ))}
@@ -419,10 +419,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    setShowConfirm(false)
-                    handleNudge()
-                  }}
+                  onClick={() => { setShowConfirm(false); handleNudge() }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-lime-400/10 border border-lime-400/20 text-lime-400 hover:bg-lime-400/20 hover:border-lime-400/40 transition-colors"
                 >
                   Confirm

@@ -42,27 +42,13 @@ type BillingSummary = {
 function PricingReturnContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { profile: profileFromAuth, refreshProfile, isLoading: authLoading, profileStatus } = useAuth()
-
-  // Redirect to pricing if profile is loaded and trial is explicitly inactive
-  // Only redirect when we have definitively loaded profile data (not while loading)
-  useEffect(() => {
-    // Wait for auth to finish loading
-    if (authLoading) return
-    // Wait for profile fetch to complete (not idle or loading)
-    if (profileStatus === 'idle' || profileStatus === 'loading') return
-    // If profile loaded and trial is explicitly false (not undefined/null), redirect
-    if (profileFromAuth && profileFromAuth.trial_active === false) {
-      router.replace('/pricing')
-    }
-  }, [authLoading, profileStatus, profileFromAuth, router])
+  const { profile: profileFromAuth, refreshProfile } = useAuth()
   
   // State
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<BillingSummary | null>(null)
   const [sessionStatus, setSessionStatus] = useState<'open' | 'complete' | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
-  const [profileStepComplete, setProfileStepComplete] = useState(false)
   const [currentOnboardingStep, setCurrentOnboardingStep] = useState<'profile' | 'calendar' | 'booking-sync' | 'auto-nudge'>('profile')
   const [showValidationErrors, setShowValidationErrors] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -83,6 +69,7 @@ function PricingReturnContent() {
     trial_active?: boolean | null
     trial_start?: string | null
     trial_end?: string | null
+    stripe_subscription_status?: string | null
   } | null>(null)
   const [fullName, setFullName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -143,29 +130,6 @@ function PricingReturnContent() {
     fetchSummary()
   }, [searchParams])
 
-  // Bring user back to pricing if they somehow got here without completing trial onboarding
-  useEffect(() => {
-    const check = async () => {
-      // await refreshProfile()
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) { router.replace('/pricing'); return }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('trial_active, trial_start')
-        .eq('user_id', currentUser.id)
-        .single()
-
-      // console.log('Trial status on return page:', data)
-
-      if (!data?.trial_active && !data?.trial_start) {
-        console.warn('No active trial found on return page, redirecting to pricing')
-        router.replace('/pricing')
-      }
-    }
-    check()
-  }, []) // run once on mount only
-
   // Load profile
   useEffect(() => {
     const fetchProfile = async () => {
@@ -175,7 +139,7 @@ function PricingReturnContent() {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('onboarded, full_name, phone, role, barber_type, commission_rate, avatar_url, username, booking_link, trial_active, trial_start, trial_end')
+          .select('onboarded, full_name, phone, role, barber_type, commission_rate, avatar_url, username, booking_link, trial_active, trial_start, trial_end, stripe_subscription_status')
           .eq('user_id', user.id)
           .single()
 
@@ -385,7 +349,7 @@ function PricingReturnContent() {
 
       const { data: currentProfile, error: currentProfileError } = await supabase
         .from('profiles')
-        .select('trial_start, available_credits, reserved_credits')
+        .select('trial_start, stripe_subscription_status, available_credits, reserved_credits')
         .eq('user_id', user.id)
         .single()
 
@@ -397,7 +361,11 @@ function PricingReturnContent() {
         updated_at: new Date().toISOString(),
       }
 
-      if (!currentProfile?.trial_start) {
+      const hasPaidSubscription =
+        currentProfile?.stripe_subscription_status === 'active' ||
+        currentProfile?.stripe_subscription_status === 'trialing'
+
+      if (!currentProfile?.trial_start && !hasPaidSubscription) {
         const now = new Date()
         const trialEnd = new Date(now)
         trialEnd.setDate(trialEnd.getDate() + 7)
@@ -448,7 +416,6 @@ function PricingReturnContent() {
         }
       }
 
-      setProfileStepComplete(true)
       setProfile(prev => (prev ? { ...prev, onboarded: true } : prev))
       toast.success('Onboarding complete!')
       await refreshProfile()
@@ -490,8 +457,21 @@ function PricingReturnContent() {
 
   const hasSub = summary?.hasSubscription ?? false
   const trialActive = isTrialActive(profile)
+  const authTrialActive = isTrialActive(profileFromAuth)
   const hasCheckoutComplete = sessionStatus === 'complete'
-  const hasAccess = hasSub || trialActive || hasCheckoutComplete || !!profileFromAuth?.trial_active
+  const authHasPaidAccess =
+    profileFromAuth?.stripe_subscription_status === 'active' ||
+    profileFromAuth?.stripe_subscription_status === 'trialing'
+  const localHasPaidAccess =
+    profile?.stripe_subscription_status === 'active' ||
+    profile?.stripe_subscription_status === 'trialing'
+  const hasAccess =
+    hasSub ||
+    trialActive ||
+    authTrialActive ||
+    hasCheckoutComplete ||
+    authHasPaidAccess ||
+    localHasPaidAccess
   const calendarConnected = calendarStatus.acuity || calendarStatus.square
   const interval = summary?.price?.interval
   const amountText = summary?.price && formatAmount(summary.price.amount, summary.price.currency)

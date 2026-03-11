@@ -97,7 +97,7 @@ export default function Sidebar() {
 
   const navItems = [
     { href: '/dashboard', icon: Grid, label: 'Dashboard' },
-    ...(profile?.special_access ? [{ href: '/analytics', icon: TrendingUp, label: 'Analytics' }] : []),
+    {href: '/analytics', icon: TrendingUp, label: 'Analytics' },
     { href: '/client-manager', icon: UserCog, label: 'Client Manager' },
     { href: '/appointment-manager', icon: Calendar, label: 'Appointments' },
     { href: '/expenses', icon: CreditCard, label: 'Expenses' },
