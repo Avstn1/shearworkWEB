@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { updateSmsBarberSuccess } from '@/lib/appointment_processors/update_sms_barber_success';
-import { updateBarberClient } from '@/lib/appointment_processors/updateBarberClient';
+import { updateBarberClient } from '@/lib/appointment_processors/update_barber_client';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
