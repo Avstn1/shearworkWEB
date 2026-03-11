@@ -279,6 +279,23 @@ export default function Navbar() {
           <span>Dashboard</span>
         </Link>
         <Link 
+          href="/analytics" 
+          onClick={() => setOpen(false)} 
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.color = COLORS.green
+            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.color = COLORS.text
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
+        >
+          <ChartBar className="w-5 h-5" /> 
+          <span>Analytics</span>
+        </Link>
+        <Link 
           href="/client-manager" 
           onClick={() => setOpen(false)} 
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
