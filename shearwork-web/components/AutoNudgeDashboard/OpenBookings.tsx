@@ -96,29 +96,37 @@ export default function OpenBookings({ user_id }: Props) {
 
   return (
     <div className="relative h-full w-full overflow-hidden
-      flex flex-col justify-between p-3
+      flex flex-col p-3
       md:flex-row md:items-center md:justify-between md:px-2 md:py-0
     ">
       <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-lime-400/8 blur-3xl pointer-events-none" />
 
-      {/* Label */}
-      <div className="flex flex-col justify-center">
-        <p className="text-white/40 uppercase font-medium tracking-widest text-[9px] md:text-xs">This Week</p>
-        <p className="text-white font-black leading-tight mt-0.5 text-sm md:hidden">Open</p>
-        <p className="text-white font-black leading-tight text-sm md:hidden">Bookings</p>
-        <p className="hidden md:block text-white font-black text-2xl leading-tight mt-1">Open Bookings</p>
-        <p className="text-white/30 leading-tight mt-1 text-[9px] md:text-xs">Available slots in your schedule</p>
+      {/* Mobile label — fixed height, no subtitle */}
+      <div className="flex flex-col md:hidden" style={{ height: 46 }}>
+        <p className="text-white/40 uppercase font-medium tracking-widest text-[9px]">This Week</p>
+        <p className="text-white font-black leading-tight mt-0.5 text-sm">Open Bookings</p>
       </div>
 
-      {/* Ring */}
-      {loading ? (
-        <div className="w-8 h-8 md:w-16 md:h-16 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin flex-shrink-0" />
-      ) : (
-        <>
-          <div className="md:hidden">{mobileRing}</div>
-          <div className="hidden md:block">{desktopRing}</div>
-        </>
-      )}
+      {/* Desktop label */}
+      <div className="hidden md:flex flex-col justify-center">
+        <p className="text-white/40 uppercase font-medium tracking-widest text-xs">This Week</p>
+        <p className="text-white font-black text-2xl leading-tight mt-1">Open Bookings</p>
+        <p className="text-white/30 text-xs mt-1">Available slots in your schedule</p>
+      </div>
+
+      {/* Mobile ring */}
+      <div className="md:hidden mt-auto">
+        {loading
+          ? <div className="w-8 h-8 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin" />
+          : mobileRing}
+      </div>
+
+      {/* Desktop ring */}
+      <div className="hidden md:block">
+        {loading
+          ? <div className="w-16 h-16 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin flex-shrink-0" />
+          : desktopRing}
+      </div>
     </div>
   )
 }

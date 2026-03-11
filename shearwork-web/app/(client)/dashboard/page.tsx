@@ -65,30 +65,20 @@ export default function DashboardPage() {
 
       {/* ── TOP ROW ── */}
 
-      {/* Mobile: horizontal scroll */}
-      <div
-        className="flex gap-3 flex-shrink-0 md:hidden"
-        style={{
-          overflowX: 'auto',
-          overflowY: 'visible',
-          scrollbarWidth: 'none',
-          WebkitOverflowScrolling: 'touch',
-          marginLeft: -12,
-          marginRight: -12,
-          paddingLeft: 12,
-          paddingRight: 12,
-        }}
-      >
-        <div className="rounded-2xl border border-white/10 bg-white/5 flex-shrink-0" style={{ width: 170, height: 160 }}>
-          <AutoNudgeStatus user_id={user_id!} />
+      {/* Mobile: 3 cards in a row + Corva's Impact full width below */}
+      <div className="flex flex-col gap-3 flex-shrink-0 md:hidden">
+        <div className="grid grid-cols-3 gap-3" style={{ height: 178 }}>
+          <div className="rounded-2xl border border-white/10 bg-white/5">
+            <AutoNudgeStatus user_id={user_id!} />
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5">
+            {availabilityReady && <OpenBookings user_id={user_id!} />}
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5">
+            {availabilityReady && <BookingCapacity user_id={user_id!} />}
+          </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 flex-shrink-0" style={{ width: 150, height: 160 }}>
-          {availabilityReady && <OpenBookings user_id={user_id!} />}
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 flex-shrink-0" style={{ width: 130, height: 160 }}>
-          {availabilityReady && <BookingCapacity user_id={user_id!} />}
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 flex-shrink-0" style={{ width: 130, height: 160 }}>
+        <div className="rounded-2xl border border-white/10 bg-white/5" style={{ height: 100 }}>
           {availabilityReady && <AutoNudgeImpact user_id={user_id!} />}
         </div>
       </div>
@@ -114,13 +104,7 @@ export default function DashboardPage() {
       {/* ── BOTTOM ROW ── */}
 
       {/* Mobile: stacked + scrollable */}
-      <div
-        className="flex flex-col gap-3 flex-1 min-h-0 md:hidden overflow-y-auto"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255,255,255,0.15) transparent',
-        }}
-      >
+      <div className="flex flex-col gap-3 flex-1 min-h-0 md:hidden overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex-shrink-0" style={{ height: 420 }}>
           <ClientHealth
             user_id={user_id!}

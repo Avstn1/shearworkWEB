@@ -63,51 +63,34 @@ export default function AutoNudgeImpact({ user_id }: Props) {
 
   return (
     <div className="relative h-full w-full overflow-hidden
-      flex flex-col justify-between p-3
-      md:flex-row md:items-center md:justify-between md:px-2 md:py-0
+      flex flex-row items-center justify-between px-3
+      md:px-2
     ">
       <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-sky-400/8 blur-3xl pointer-events-none" />
 
       {/* Label */}
       <div className="flex flex-col justify-center">
         <p className="text-white/40 uppercase font-medium tracking-widest text-[9px] md:text-xs">This Week</p>
-        <p className="text-white font-black leading-tight mt-0.5 text-sm md:hidden">Corva's</p>
-        <p className="text-white font-black leading-tight text-sm md:hidden">Impact</p>
+        <p className="text-white font-black leading-tight mt-0.5 text-sm md:hidden">Corva's Impact</p>
         <p className="hidden md:block text-white font-black text-2xl leading-tight mt-1">Corva's Impact</p>
       </div>
 
-      {/* Stats */}
+      {/* Stats — horizontal on both mobile (full-width banner) and desktop */}
       {loading ? (
-        <div className="w-8 h-8 md:w-6 md:h-6 rounded-full border-2 border-sky-400/30 border-t-sky-400 animate-spin flex-shrink-0" />
+        <div className="w-6 h-6 rounded-full border-2 border-sky-400/30 border-t-sky-400 animate-spin flex-shrink-0" />
       ) : (
-        <>
-          {/* Mobile: stacked */}
-          <div className="flex flex-col gap-2 md:hidden">
-            <div className="flex flex-col">
-              <span className="text-2xl font-black text-lime-300 leading-none">{bookingsRecovered}</span>
-              <span className="text-[9px] text-white/30 uppercase tracking-widest">Bookings</span>
-            </div>
-            <div className="w-full h-px bg-white/10" />
-            <div className="flex flex-col">
-              <span className="text-xl font-black text-white leading-none">${revenueRecovered?.toLocaleString()}</span>
-              <span className="text-[9px] text-white/30 uppercase tracking-widest">Revenue</span>
-            </div>
+        <div className="flex items-center gap-4 md:gap-6 flex-shrink-0">
+          <div className="w-px h-10 bg-white/10" />
+          <div className="flex flex-col items-center">
+            <span className="text-2xl md:text-4xl font-black text-lime-300 leading-none">{bookingsRecovered}</span>
+            <span className="text-[9px] md:text-[10px] text-white/30 mt-1 uppercase tracking-widest">Bookings</span>
           </div>
-
-          {/* Desktop: horizontal with dividers */}
-          <div className="hidden md:flex items-center gap-6 flex-shrink-0">
-            <div className="w-px h-12 bg-white/10" />
-            <div className="flex flex-col items-center">
-              <span className="text-4xl font-black text-lime-300 leading-none">{bookingsRecovered}</span>
-              <span className="text-[10px] text-white/30 mt-1 uppercase tracking-widest">Bookings</span>
-            </div>
-            <div className="w-px h-12 bg-white/10" />
-            <div className="flex flex-col items-center">
-              <span className="text-4xl font-black text-white leading-none">${revenueRecovered?.toLocaleString()}</span>
-              <span className="text-[10px] text-white/30 mt-1 uppercase tracking-widest">Revenue</span>
-            </div>
+          <div className="w-px h-10 bg-white/10" />
+          <div className="flex flex-col items-center">
+            <span className="text-2xl md:text-4xl font-black text-white leading-none">${revenueRecovered?.toLocaleString()}</span>
+            <span className="text-[9px] md:text-[10px] text-white/30 mt-1 uppercase tracking-widest">Revenue</span>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

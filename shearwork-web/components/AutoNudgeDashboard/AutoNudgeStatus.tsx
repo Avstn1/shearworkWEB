@@ -91,41 +91,44 @@ export default function AutoNudgeStatus({ user_id }: Props) {
 
   return (
     <div className={`relative h-full w-full overflow-hidden
-      flex flex-col justify-between p-3
-      md:flex md:flex-row md:items-center md:justify-between md:px-2 md:py-0
+      flex flex-col p-3
+      md:flex-row md:items-center md:justify-between md:px-2 md:py-0
     `}>
       <div className={`absolute -top-10 -right-10 w-48 h-48 rounded-full blur-3xl pointer-events-none ${active ? 'bg-lime-400/8' : 'bg-white/5'}`} />
 
-      {/* Label */}
-      <div className="flex flex-col justify-center">
-        <p className="text-white/40 uppercase font-medium tracking-widest text-[9px] md:text-xs">This Week</p>
-        {/* Mobile: two lines. Desktop: one line */}
-        <p className="text-white font-black leading-tight mt-0.5 text-sm md:hidden">Auto-</p>
-        <p className="text-white font-black leading-tight text-sm md:hidden">Nudge</p>
-        <p className="hidden md:block text-white font-black text-2xl leading-tight mt-1">Auto-Nudge</p>
-        <div className="hidden md:flex items-center gap-1.5 mt-2 text-xs text-white/30">
+      {/* Mobile label — fixed height matching other cards */}
+      <div className="flex flex-col md:hidden" style={{ height: 46 }}>
+        <p className="text-white/40 uppercase font-medium tracking-widest text-[9px]">This Week</p>
+        <p className="text-white font-black leading-tight mt-0.5 text-sm">Auto-Nudge</p>
+        <div className="flex items-center gap-1 text-[9px] text-white/30 mt-1">
+          <Clock className="w-2.5 h-2.5 flex-shrink-0" />
+          <span>Next: {getNextMonday()}</span>
+        </div>
+      </div>
+
+      {/* Desktop label */}
+      <div className="hidden md:flex flex-col justify-center">
+        <p className="text-white/40 uppercase font-medium tracking-widest text-xs">This Week</p>
+        <p className="text-white font-black text-2xl leading-tight mt-1">Auto-Nudge</p>
+        <div className="flex items-center gap-1.5 mt-2 text-xs text-white/30">
           <Clock className="w-3 h-3" />
           <span>Next: {getNextMonday()} at 10:00 AM</span>
         </div>
       </div>
 
-      {/* Ring */}
-      {loading ? (
-        <div className="w-8 h-8 md:w-16 md:h-16 rounded-full border-2 border-white/10 border-t-white/30 animate-spin flex-shrink-0" />
-      ) : (
-        <>
-          <div className="md:hidden">{mobileRing}</div>
-          <div className="hidden md:block">{desktopRing}</div>
-        </>
-      )}
+      {/* Mobile ring */}
+      <div className="md:hidden mt-auto">
+        {loading
+          ? <div className="w-8 h-8 rounded-full border-2 border-white/10 border-t-white/30 animate-spin" />
+          : mobileRing}
+      </div>
 
-      {/* Mobile-only next date */}
-      {!loading && (
-        <div className="flex items-center gap-1 text-[9px] text-white/30 md:hidden">
-          <Clock className="w-2.5 h-2.5 flex-shrink-0" />
-          <span>Next: {getNextMonday()}</span>
-        </div>
-      )}
+      {/* Desktop ring */}
+      <div className="hidden md:block">
+        {loading
+          ? <div className="w-16 h-16 rounded-full border-2 border-white/10 border-t-white/30 animate-spin flex-shrink-0" />
+          : desktopRing}
+      </div>
     </div>
   )
 }
