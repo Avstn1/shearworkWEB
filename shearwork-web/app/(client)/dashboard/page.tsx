@@ -35,12 +35,7 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
-      if (!profile?.special_access) {
-        router.push('/analytics')
-        return
-      }
-
-      setSms_engaged_current_week(profile.sms_engaged_current_week ?? false)
+      setSms_engaged_current_week(profile?.sms_engaged_current_week ?? false)
       setUser_id(user.id)
       setProfileLoaded(true)
 
