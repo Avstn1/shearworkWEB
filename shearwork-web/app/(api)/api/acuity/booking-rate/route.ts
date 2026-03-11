@@ -3,42 +3,10 @@ import { getAuthenticatedUser } from '@/utils/api-auth'
 import { createClient } from '@supabase/supabase-js'
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1'
+const WORK_START_HOUR = 8
+const WORK_END_HOUR = 20
 
-async function getAppointmentID(
-  calendarId: string,
-  accessToken: string
-): Promise<number | null> {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  const formattedDate = `${year}-${month}-${day}`
-
-  const url = new URL(`${ACUITY_API_BASE}/appointments`)
-  url.searchParams.set('minDate', formattedDate)
-  url.searchParams.set('maxDate', formattedDate)
-  url.searchParams.set('max', '1')
-  url.searchParams.set('calendarID', String(calendarId))
-  url.searchParams.set('showall', 'true')
-
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
-
-  if (!response.ok) {
-    console.error(`Acuity fetch failed for ${formattedDate}: ${response.status}`)
-    return null
-  }
-
-  const data = await response.json()
-
-  if (!Array.isArray(data) || data.length === 0) {
-    return null
-  }
-
-  return data[0].id ?? null
-}
-
+// ------------------- Date helpers -------------------
 function getWeekRange() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
   const dayOfWeek = now.getDay()
@@ -52,227 +20,233 @@ function getWeekRange() {
   end.setDate(start.getDate() + 6)
   end.setHours(23, 59, 59, 999)
 
-  const toDateStr = (d: Date) => d.toISOString().split('T')[0]
-  return { start: toDateStr(start), end: toDateStr(end) }
+  const toStr = (d: Date) => d.toISOString().split('T')[0]
+  return { start: toStr(start), end: toStr(end) }
 }
 
-// Returns total booked minutes for a given day (sum of appointment durations).
-async function fetchDayBookedMinutes(
-  accessToken: string,
-  calendarId: string,
-  dayStr: string
-): Promise<number> {
-  const pageSize = 100
-  let offset = 0
-  let totalMinutes = 0
-  console.log(`Fetching booked minutes for ${dayStr}`)
-  while (true) {
-    const url = new URL(`${ACUITY_API_BASE}/appointments`)
-    url.searchParams.set('minDate', dayStr)
-    url.searchParams.set('maxDate', dayStr)
-    url.searchParams.set('max', String(pageSize))
-    url.searchParams.set('offset', String(offset))
-    url.searchParams.set('calendarID', String(calendarId))
-    url.searchParams.set('showall', 'true')
+function getWeekDays(start: string, end: string) {
+  const days: string[] = []
+  for (let d = new Date(start); d <= new Date(end); d.setDate(d.getDate() + 1)) {
+    days.push(d.toISOString().split('T')[0])
+  }
+  return days
+}
 
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+// ------------------- Appointment helpers -------------------
+async function getAppointmentTypeWithShortestDuration(accessToken: string): Promise<number | null> {
+  const res = await fetch(`${ACUITY_API_BASE}/appointment-types`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) return null
+  const types = await res.json()
+  if (!Array.isArray(types) || !types.length) return null
+  return types.reduce((shortest: any, t: any) => (t.duration < shortest.duration ? t : shortest)).id
+}
 
-    if (!response.ok) {
-      console.error(`Acuity fetch failed for ${dayStr}: ${response.status}`)
-      break
+// ------------------- Merge intervals -------------------
+function mergeIntervals(intervals: { start: number; end: number }[]) {
+  if (!intervals.length) return { merged: [], totalMinutes: 0 }
+
+  intervals.sort((a, b) => a.start - b.start)
+  const merged: { start: number; end: number }[] = []
+  let current = { ...intervals[0] }
+
+  for (let i = 1; i < intervals.length; i++) {
+    const slot = intervals[i]
+    if (slot.start <= current.end) current.end = Math.max(current.end, slot.end)
+    else {
+      merged.push({ ...current })
+      current = { ...slot }
     }
+  }
+  merged.push(current)
 
-    const data = await response.json()
-    if (!Array.isArray(data) || data.length === 0) break
+  const totalMinutes = merged.reduce((sum, i) => sum + (i.end - i.start) / 60000, 0)
+  return { merged, totalMinutes }
+}
 
-    for (const appt of data) {
-      if (appt.canceled || appt.noShow) continue
+// ------------------- Interval subtraction -------------------
+function subtractIntervals(
+  open: { start: number; end: number }[],
+  booked: { start: number; end: number }[]
+): { start: number; end: number }[] {
+  const result: { start: number; end: number }[] = []
 
-      const durationMinutes = typeof appt.duration === 'number'
-        ? appt.duration
-        : parseInt(appt.duration ?? '0', 10)
+  for (const o of open) {
+    let currentStart = o.start
+    let currentEnd = o.end
 
-      if (durationMinutes > 0) {
-        totalMinutes += durationMinutes
+    for (const b of booked) {
+      if (b.end <= currentStart || b.start >= currentEnd) continue // no overlap
+
+      if (b.start <= currentStart && b.end < currentEnd) currentStart = b.end
+      else if (b.start > currentStart && b.end >= currentEnd) currentEnd = b.start
+      else if (b.start > currentStart && b.end < currentEnd) {
+        result.push({ start: currentStart, end: b.start })
+        currentStart = b.end
+      } else if (b.start <= currentStart && b.end >= currentEnd) {
+        currentStart = currentEnd // fully covered
       }
     }
 
-    if (data.length < pageSize) break
-    offset += pageSize
+    if (currentStart < currentEnd) result.push({ start: currentStart, end: currentEnd })
   }
 
-  return totalMinutes
+  return result
 }
 
-async function fetchDayOpenMinutes(
-  accessToken: string,
-  calendarId: string,
-  dayStr: string
-): Promise<number> {
-  const pageSize = 100
-  let offset = 0
-  let totalMinutes = 0
+// ------------------- Fetch availability -------------------
+async function fetchDayAvailability(accessToken: string, calendarId: number, appointmentTypeID: number, day: string) {
+  const url = new URL(`${ACUITY_API_BASE}/availability/times`)
+  url.searchParams.set('date', day)
+  url.searchParams.set('calendarID', String(calendarId))
+  url.searchParams.set('appointmentTypeID', String(appointmentTypeID))
 
-  const reference_id = await getAppointmentID(calendarId, accessToken)
-  if (!reference_id) {
-    console.warn(`No appointments found for ${dayStr}, cannot calculate open minutes`)
-    return 0
-  }
-  
-  while (true) {
-    const url = new URL(`${ACUITY_API_BASE}/appointments`)
-    url.searchParams.set('minDate', dayStr)
-    url.searchParams.set('maxDate', dayStr)
-    url.searchParams.set('max', String(pageSize))
-    url.searchParams.set('offset', String(offset))
-    url.searchParams.set('calendarID', String(calendarId))
-    url.searchParams.set('showall', 'true')
+  const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!res.ok) return { raw: [], merged: [], totalMinutes: 0 }
 
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
+  const slots = await res.json()
+  if (!Array.isArray(slots) || !slots.length) return { raw: [], merged: [], totalMinutes: 0 }
+
+  const workStart = new Date(`${day}T00:00:00`)
+  workStart.setHours(WORK_START_HOUR, 0, 0, 0)
+  const workEnd = new Date(`${day}T00:00:00`)
+  workEnd.setHours(WORK_END_HOUR, 0, 0, 0)
+
+  const intervals: { start: number; end: number }[] = slots
+    .map((s: any) => {
+      const start = Math.max(new Date(s.time).getTime(), workStart.getTime())
+      const end = Math.min(start + (s.duration ?? 30) * 60000, workEnd.getTime())
+      return { start, end }
     })
+    .filter(i => i.start < i.end)
 
-    if (!response.ok) {
-      console.error(`Acuity fetch failed for ${dayStr}: ${response.status}`)
-      break
-    }
+  const { merged, totalMinutes } = mergeIntervals(intervals)
 
-    const data = await response.json()
-    if (!Array.isArray(data) || data.length === 0) break
-
-    for (const appt of data) {
-      if (appt.canceled || appt.noShow) continue
-
-      const durationMinutes = typeof appt.duration === 'number'
-        ? appt.duration
-        : parseInt(appt.duration ?? '0', 10)
-
-      if (durationMinutes > 0) {
-        totalMinutes += durationMinutes
-      }
-    }
-
-    if (data.length < pageSize) break
-    offset += pageSize
-  }
-
-  return totalMinutes
+  return { raw: intervals, merged, totalMinutes }
 }
 
+// ------------------- Fetch booked minutes -------------------
+async function fetchDayBookedMinutes(accessToken: string, calendarId: number, day: string) {
+  const url = new URL(`${ACUITY_API_BASE}/appointments`)
+  url.searchParams.set('minDate', day)
+  url.searchParams.set('maxDate', day)
+  url.searchParams.set('calendarID', String(calendarId))
+  url.searchParams.set('showall', 'true')
+
+  const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!res.ok) return { totalMinutes: 0, intervals: [] }
+
+  const data = await res.json()
+  if (!Array.isArray(data)) return { totalMinutes: 0, intervals: [] }
+
+  const intervals: { start: number; end: number }[] = []
+
+  for (const appt of data) {
+    if (appt.canceled || appt.noShow || !appt.datetime || !appt.duration) continue
+    const start = new Date(appt.datetime).getTime()
+    const duration = typeof appt.duration === 'number' ? appt.duration : parseInt(appt.duration ?? '0', 10)
+    intervals.push({ start, end: start + duration * 60000 })
+  }
+
+  const { merged, totalMinutes } = mergeIntervals(intervals)
+  return { totalMinutes, intervals: merged }
+}
+
+// ------------------- API handler -------------------
+// ------------------- API handler -------------------
 export async function GET(request: Request) {
   const { user, supabase } = await getAuthenticatedUser(request)
+  if (!user || !supabase) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
-  if (!user || !supabase) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-  }
-
-  // Use service role client for DB queries to avoid RLS/cookie auth mismatch
   const serviceClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   try {
-
-    // 1. Get slot_length_minutes from profile
-    const { data: profile, error: profileError } = await serviceClient
+    const { data: profile } = await serviceClient
       .from('profiles')
       .select('calendar')
       .eq('user_id', user.id)
       .single()
+    if (!profile?.calendar) return NextResponse.json({ error: 'Calendar not configured' }, { status: 400 })
 
-
-    if (profileError || !profile?.calendar) {
-      return NextResponse.json({ error: 'No calendar configured' }, { status: 400 })
-    }
-
-
-    // 2. Get Acuity access token
-    const { data: tokenRow, error: tokenError } = await serviceClient
+    const { data: tokenRow } = await serviceClient
       .from('acuity_tokens')
-      .select('access_token, expires_in, refresh_token, updated_at')
+      .select('access_token')
       .eq('user_id', user.id)
       .single()
+    if (!tokenRow) return NextResponse.json({ error: 'No Acuity token' }, { status: 400 })
 
+    const accessToken = tokenRow.access_token
 
-    if (tokenError || !tokenRow) {
-      return NextResponse.json({ error: 'No Acuity connection found' }, { status: 400 })
-    }
-
-    // 3. Refresh token if expired
-    let accessToken = tokenRow.access_token
-    const nowSec = Math.floor(Date.now() / 1000)
-    const tokenUpdatedAt = tokenRow.updated_at ? Math.floor(new Date(tokenRow.updated_at).getTime() / 1000) : 0
-    const tokenExpiresAt = tokenUpdatedAt + (tokenRow.expires_in ?? 0)
-    if (tokenRow.expires_in && tokenExpiresAt < nowSec) {
-      const refreshResponse = await fetch('https://acuityscheduling.com/oauth2/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: tokenRow.refresh_token,
-          client_id: process.env.ACUITY_CLIENT_ID!,
-          client_secret: process.env.ACUITY_CLIENT_SECRET!,
-        }),
-      })
-      const newTokens = await refreshResponse.json()
-      if (!refreshResponse.ok) {
-        return NextResponse.json({ error: 'Failed to refresh Acuity token' }, { status: 400 })
-      }
-      accessToken = newTokens.access_token
-      await serviceClient
-        .from('acuity_tokens')
-        .update({
-          access_token: newTokens.access_token,
-          refresh_token: newTokens.refresh_token ?? tokenRow.refresh_token,
-          expires_in: newTokens.expires_in,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
-    }
-
-    // 4. Resolve calendar ID
-    const calendarResponse = await fetch(`${ACUITY_API_BASE}/calendars`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-
-    if (!calendarResponse.ok) {
-      return NextResponse.json({ error: 'Failed to fetch calendars' }, { status: 500 })
-    }
-
-    const calendars: any[] = await calendarResponse.json()
-    const match = calendars.find(
-      (c) => c.name?.trim().toLowerCase() === profile.calendar.trim().toLowerCase()
-    )
-
-    if (!match) {
-      return NextResponse.json({ error: 'No matching calendar found' }, { status: 400 })
-    }
+    const calendarsRes = await fetch(`${ACUITY_API_BASE}/calendars`, { headers: { Authorization: `Bearer ${accessToken}` } })
+    if (!calendarsRes.ok) return NextResponse.json({ error: 'Failed to fetch calendars' }, { status: 500 })
+    const calendars = await calendarsRes.json()
+    const match = calendars.find((c: any) => c.name?.trim().toLowerCase() === profile.calendar.trim().toLowerCase())
+    if (!match) return NextResponse.json({ error: 'Calendar not found' }, { status: 400 })
 
     const calendarId = match.id
+    const appointmentTypeID = await getAppointmentTypeWithShortestDuration(accessToken)
+    if (!appointmentTypeID) return NextResponse.json({ error: 'No appointment types found' }, { status: 400 })
 
-    // 5. Fetch total booked minutes for each day this week
     const { start, end } = getWeekRange()
-    const startDate = new Date(start)
-    const endDate = new Date(end)
+    const days = getWeekDays(start, end)
 
-    let totalBookedMinutes = 0
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dayStr = d.toISOString().split('T')[0]
-      const minutes = await fetchDayBookedMinutes(accessToken, calendarId, dayStr)
-      totalBookedMinutes += minutes
-    }
+    const results = await Promise.all(
+      days.map(async (day) => {
+        const [booked, open] = await Promise.all([
+          fetchDayBookedMinutes(accessToken, calendarId, day),
+          fetchDayAvailability(accessToken, calendarId, appointmentTypeID, day),
+        ])
 
-    return NextResponse.json({
-      bookedMinutes: totalBookedMinutes,
-      weekStart: start,
-      weekEnd: end,
-    })
+        const finalOpenIntervals = subtractIntervals(open.merged, booked.intervals)
+        const finalOpenMinutes = finalOpenIntervals.reduce((sum, i) => sum + (i.end - i.start) / 60000, 0)
 
+        // --- Human-readable logging ---
+        console.log(`\n=== ${day} ===`)
+        console.log(`Booked minutes: ${booked.totalMinutes}`)
+        console.log(`Booked intervals:`)
+        booked.intervals.forEach((i, idx) => {
+          console.log(
+            `  ${idx + 1}. ${new Date(i.start).toLocaleTimeString('en-US', { timeZone: 'America/Toronto' })} → ${new Date(
+              i.end
+            ).toLocaleTimeString('en-US', { timeZone: 'America/Toronto' })}`
+          )
+        })
+
+        console.log(`Open intervals (filtered for bookings):`)
+        finalOpenIntervals.forEach((i, idx) => {
+          console.log(
+            `  ${idx + 1}. ${new Date(i.start).toLocaleTimeString('en-US', { timeZone: 'America/Toronto' })} → ${new Date(
+              i.end
+            ).toLocaleTimeString('en-US', { timeZone: 'America/Toronto' })}`
+          )
+        })
+        console.log(`Open minutes: ${finalOpenMinutes}`)
+
+        return {
+          day,
+          bookedMinutes: booked.totalMinutes,
+          openMinutes: finalOpenMinutes,
+          bookedIntervals: booked.intervals,
+          openIntervals: finalOpenIntervals,
+        }
+      })
+    )
+
+    const totalBooked = results.reduce((sum, r) => sum + r.bookedMinutes, 0)
+    const totalOpen = results.reduce((sum, r) => sum + r.openMinutes, 0)
+
+    console.log(`\n=== Week Summary (${start} → ${end}) ===`)
+    console.log(`Total booked minutes: ${totalBooked}`)
+    console.log(`Total open minutes: ${totalOpen}`)
+    console.log(`Total capacity: ${Math.round((totalBooked / (totalBooked + totalOpen)) * 100)}%`)
+
+    return NextResponse.json({ totalBooked, totalOpen, weekStart: start, weekEnd: end })
   } catch (err) {
-    console.error('Booking rate fetch error:', err)
-    return NextResponse.json({ error: 'Failed to fetch booking rate', details: String(err) }, { status: 500 })
+    console.error(err)
+    return NextResponse.json({ error: 'Failed to calculate booking capacity' }, { status: 500 })
   }
 }
