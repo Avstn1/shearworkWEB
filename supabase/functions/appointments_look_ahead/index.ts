@@ -116,33 +116,98 @@ async function getAllAcuityAppointments(
   return data
 }
 
+async function backfillNextFutureAppointment(
+  userId: string,
+  appointments: any[]
+): Promise<void> {
+  const now = new Date()
+
+  // Only care about future appointments
+  const futureAppointments = appointments.filter(appt => {
+    if (!appt.datetime) return false
+    const dt = new Date(appt.datetime)
+    return !isNaN(dt.getTime()) && dt > now
+  })
+
+  if (futureAppointments.length === 0) return
+
+  // Normalize phone to E.164 (+1XXXXXXXXXX)
+  const normalizeToE164 = (raw: string | null | undefined): string | null => {
+    if (!raw) return null
+    const digits = raw.replace(/\D/g, '')
+    if (!digits) return null
+    if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+    if (digits.length === 10) return `+1${digits}`
+    if (raw.trimStart().startsWith('+') && digits.length >= 11) return `+${digits}`
+    return `+${digits}`
+  }
+
+  // Group future appointments by normalized phone, keeping only the soonest per client
+  const soonestByPhone = new Map<string, Date>()
+  for (const appt of futureAppointments) {
+    const phone = normalizeToE164(appt.phone)
+    if (!phone) continue
+    const dt = new Date(appt.datetime)
+    const existing = soonestByPhone.get(phone)
+    if (!existing || dt < existing) {
+      soonestByPhone.set(phone, dt)
+    }
+  }
+
+  for (const [phone, apptDatetime] of soonestByPhone) {
+    const { data: client, error } = await supabase
+      .from('acuity_clients')
+      .select('client_id, next_future_appointment')
+      .eq('user_id', userId)
+      .eq('phone_normalized', phone)
+      .maybeSingle()
+
+    if (error || !client) continue
+
+    const existing = client.next_future_appointment
+      ? new Date(client.next_future_appointment)
+      : null
+
+    // Skip if stored value is already sooner or equal
+    if (existing && existing <= apptDatetime) continue
+
+    const { error: updateError } = await supabase
+      .from('acuity_clients')
+      .update({ next_future_appointment: apptDatetime.toISOString() })
+      .eq('user_id', userId)
+      .eq('client_id', client.client_id)
+
+    if (updateError) {
+      console.error(`[backfill] Failed to set next_future_appointment for client ${client.client_id}:`, updateError)
+    } else {
+      console.log(`[backfill] ✅ ${client.client_id} → ${apptDatetime.toISOString()}`)
+    }
+  }
+}
+
 async function processBarber(userId: string, isoWeek: string, calendar: string) {
-  const title = `${userId}_${isoWeek}`
+  // Get smart bucket for this user/week
+  const { data: bucket, error: bucketError } = await supabase
+    .from('sms_smart_buckets')
+    .select('bucket_id, campaign_start, clients, total_clients')
+    .eq('user_id', userId)
+    .eq('iso_week', isoWeek)
+    .maybeSingle()
 
-  // Get scheduled message
-  const { data: scheduledMessage, error: messageError } = await supabase
-    .from('sms_scheduled_messages')
-    .select('id')
-    .eq('title', title)
-    .single()
-
-  if (messageError || !scheduledMessage) {
-    console.warn(`No scheduled message for ${userId} with title ${title}`)
-    return { userId, success: false, reason: 'No scheduled message' }
+  if (bucketError || !bucket) {
+    console.warn(`No smart bucket for ${userId} week ${isoWeek}`)
+    return { userId, success: false, reason: 'No smart bucket' }
   }
 
-  const messageId = scheduledMessage.id
+  const bucketClients: Array<{ phone: string; client_id: string; full_name: string }> =
+    typeof bucket.clients === 'string' ? JSON.parse(bucket.clients) : bucket.clients
 
-  // Get sent messages
-  const { data: sentMessages, error: sentError } = await supabase
-    .from('sms_sent')
-    .select('phone_normalized, created_at, is_sent')
-    .eq('message_id', messageId)
-
-  if (sentError || !sentMessages || sentMessages.length === 0) {
-    console.warn(`No sent messages for message_id ${messageId}`)
-    return { userId, success: false, reason: 'No sent messages' }
+  if (!bucketClients || bucketClients.length === 0) {
+    console.warn(`Empty clients array for bucket ${bucket.bucket_id}`)
+    return { userId, success: false, reason: 'No clients in bucket' }
   }
+
+  const messagesDelivered = bucket.total_clients
 
   // Get access token
   const accessToken = await getAccessToken(userId)
@@ -151,13 +216,13 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     return { userId, success: false, reason: 'No access token' }
   }
 
-  const phoneNumbers = sentMessages
-    .filter(msg => msg.phone_normalized)
-    .map(msg => ({
-      phone: msg.phone_normalized!,
-      createdAt: new Date(msg.created_at).toLocaleString('en-CA', { timeZone: 'America/Toronto' }),
-      isSent: msg.is_sent
-    }))
+  const campaignStart = new Date(bucket.campaign_start)
+    .toLocaleString('en-CA', { timeZone: 'America/Toronto' })
+
+  const phoneNumbers = bucketClients.map(client => ({
+    phone: client.phone,
+    createdAt: campaignStart,
+  }))
 
   // Fetch all appointments once
   const allAppointments = await getAllAcuityAppointments(accessToken, calendar)
@@ -186,7 +251,6 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
   const appointmentDatesToAdd: string[] = []
 
   let clickedLinkCount = 0
-  const messagesDelivered = sentMessages.filter(msg => msg.is_sent).length
 
   // Check appointments for each phone number
   for (const { phone, createdAt } of phoneNumbers) {
@@ -312,6 +376,8 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
 
     console.log(`Created barber_nudge_success for user ${userId}`)
   }
+
+  await backfillNextFutureAppointment(userId, allAppointments)
 
   return {
     userId,
