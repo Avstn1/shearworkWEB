@@ -83,6 +83,7 @@ export async function selectClientsForSMS_AutoNudge(
     .gt('total_appointments', 1)
     .gte('avg_weekly_visits', 0.01)
     .lte('avg_weekly_visits', 2.5)
+    .or(`next_future_appointment.is.null,next_future_appointment.lte.${new Date().toISOString()}`)
     .order('last_appt', { ascending: false });
 
   // Conditionally add visiting_type filter if provided

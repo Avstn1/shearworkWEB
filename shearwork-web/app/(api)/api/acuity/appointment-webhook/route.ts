@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { updateSmsBarberSuccess } from '@/lib/appointment_processors/update_sms_barber_success';
+import { updateBarberClient } from '@/lib/appointment_processors/update_barber_client';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -90,7 +91,16 @@ export async function POST(req: NextRequest) {
         console.log(`ℹ️  Not attributed to SMS campaign: ${result.reason}`);
       }
     }
-    
+
+    if (['appointment.scheduled', 'appointment.rescheduled', 'appointment.canceled'].includes(action)) {
+      const result = await updateBarberClient(supabase, token.user_id, action, appointmentDetails);
+      if (result.success) {
+        console.log('✅ next_future_appointment updated');
+      } else {
+        console.log(`ℹ️  updateBarberClient skipped: ${result.reason}`);
+      }
+    }
+        
     console.log('\n=== END WEBHOOK ===\n');
     
     // Return 200 to acknowledge receipt

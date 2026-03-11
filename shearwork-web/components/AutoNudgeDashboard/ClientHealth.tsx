@@ -81,13 +81,19 @@ const computeScore = (
   return { score, days_since_last_visit, expected_visit_interval_days, days_overdue }
 }
 
-function ClientRow({ client }: { client: Client }) {
+
+
+function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: boolean }) {
   const name =
     [toTitleCase(client.first_name), toTitleCase(client.last_name)].filter(Boolean).join(' ') ||
     client.phone_normalized
 
   return (
-    <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+    <div className={`p-4 border rounded-xl ${
+      showMessaged
+        ? 'bg-sky-300/5 border-sky-300/15'
+        : 'bg-white/5 border-white/10'
+    }`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-white text-sm font-semibold truncate">{name}</span>
@@ -98,6 +104,11 @@ function ClientRow({ client }: { client: Client }) {
           >
             {client.visiting_type ?? 'unknown'}
           </span>
+          {showMessaged && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-400/10 text-sky-400 border border-sky-400/20 flex-shrink-0">
+              Messaged
+            </span>
+          )}
         </div>
         <span className="text-xs font-semibold text-sky-300 flex-shrink-0">Score: {client.score}</span>
       </div>
@@ -354,7 +365,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
           }}
         >
           {filtered.map((client) => (
-            <ClientRow key={client.client_id} client={client} />
+            <ClientRow key={client.client_id} client={client} showMessaged={tab === 'unbooked'} />
           ))}
         </div>
       )}
