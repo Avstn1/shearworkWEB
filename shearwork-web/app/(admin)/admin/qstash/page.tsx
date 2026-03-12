@@ -61,7 +61,7 @@ export default function QStashPage() {
         .eq('user_id', user.id)
         .single()
 
-      if (!profile || (profile.role !== 'Owner' && profile.role !== 'Admin')) {
+      if (!profile || (profile.role !== 'Admin')) {
         router.push('/dashboard')
         return
       }

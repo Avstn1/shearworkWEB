@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 export default function DashboardPage() {
   const [user_id, setUser_id] = useState<string | null>(null)
   const [sms_engaged_current_week, setSms_engaged_current_week] = useState<boolean>(false)
+  const [dateAutonudgeEnabled, setDateAutonudgeEnabled] = useState<string | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [availabilityReady, setAvailabilityReady] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
@@ -31,12 +32,13 @@ export default function DashboardPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('sms_engaged_current_week, special_access')
+        .select('sms_engaged_current_week, special_access, date_autonudge_enabled')
         .eq('user_id', user.id)
         .single()
 
-      console.log('profile result:', profile) 
+      console.log('profile result:', profile)
       setSms_engaged_current_week(profile?.sms_engaged_current_week ?? false)
+      setDateAutonudgeEnabled(profile?.date_autonudge_enabled ?? null)
       setUser_id(user.id)
       setProfileLoaded(true)
 
@@ -110,6 +112,7 @@ export default function DashboardPage() {
           <ClientHealth
             user_id={user_id!}
             sms_engaged_current_week={sms_engaged_current_week}
+            date_autonudge_enabled={dateAutonudgeEnabled}
             onNudgeSuccess={() => setHistoryKey(k => k + 1)}
           />
         </div>
@@ -124,6 +127,7 @@ export default function DashboardPage() {
           <ClientHealth
             user_id={user_id!}
             sms_engaged_current_week={sms_engaged_current_week}
+            date_autonudge_enabled={dateAutonudgeEnabled}
             onNudgeSuccess={() => setHistoryKey(k => k + 1)}
           />
         </div>

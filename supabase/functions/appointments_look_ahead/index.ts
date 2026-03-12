@@ -164,6 +164,8 @@ async function backfillNextFutureAppointment(
 
     if (error || !client) continue
 
+    // console.log(`Checking client ${client.client_id} with phone ${phone} for next_future_appointment backfill`)
+
     const existing = client.next_future_appointment
       ? new Date(client.next_future_appointment)
       : null
@@ -179,9 +181,10 @@ async function backfillNextFutureAppointment(
 
     if (updateError) {
       console.error(`[backfill] Failed to set next_future_appointment for client ${client.client_id}:`, updateError)
-    } else {
-      console.log(`[backfill] ✅ ${client.client_id} → ${apptDatetime.toISOString()}`)
-    }
+    } 
+    // else {
+    //   console.log(`[backfill] ✅ ${client.client_id} → ${apptDatetime.toISOString()}`)
+    // }
   }
 }
 
@@ -226,6 +229,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
 
   // Fetch all appointments once
   const allAppointments = await getAllAcuityAppointments(accessToken, calendar)
+  await backfillNextFutureAppointment(userId, allAppointments)
   // console.log("allAppointments: " + JSON.stringify(allAppointments))
 
   // Normalize phone number to compare (remove +1 or 1 prefix)
@@ -266,7 +270,7 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         return dateA - dateB
       })
 
-    console.log("appointmentsAfterSMS: " + JSON.stringify(appointmentsAfterSMS))
+    // console.log("appointmentsAfterSMS: " + JSON.stringify(appointmentsAfterSMS))
 
     if (appointmentsAfterSMS.length > 0) {
       appointmentsFound = true
@@ -377,8 +381,6 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     console.log(`Created barber_nudge_success for user ${userId}`)
   }
 
-  await backfillNextFutureAppointment(userId, allAppointments)
-
   return {
     userId,
     success: true,
@@ -421,6 +423,7 @@ Deno.serve(async (req) => {
       .eq('sms_engaged_current_week', true)
       .not('calendar', 'is', null)
       .neq('calendar', '')
+      // .eq('user_id', 'f4d28cd0-37e9-4117-a67c-0e3c91c1eac7') // TEMP - only AJ for testing
 
     // Mode 2: Add user_id filter if provided
     if (targetUserId) {
