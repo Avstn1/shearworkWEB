@@ -14,6 +14,8 @@ interface EngagementRecord {
   full_name: string
   phone: string
   first_response_at: string
+  bookings_recovered: number
+  total_clients: number
 }
 
 export default function NudgeEngagementPage() {
@@ -39,7 +41,7 @@ export default function NudgeEngagementPage() {
     const year = getYear(date)
     const weekStart = startOfISOWeek(date)
     const weekEnd = endOfISOWeek(date)
-    
+
     return {
       year,
       weekNumber,
@@ -49,16 +51,24 @@ export default function NudgeEngagementPage() {
     }
   }
 
+  // Build ISO week string like "2026-W11"
+  const getISOWeekString = (date: Date) => {
+    const weekNumber = getISOWeek(date)
+    const year = getYear(date)
+    return `${year}-W${String(weekNumber).padStart(2, '0')}`
+  }
+
   const fetchEngagements = async () => {
     setLoading(true)
     try {
       const weekInfo = getWeekInfo(currentWeek)
-      
+      const isoWeekString = getISOWeekString(currentWeek)
+
       // Get Monday 10am of the week
       const mondayDate = weekInfo.weekStart
       const mondayTenAM = new Date(mondayDate)
       mondayTenAM.setHours(10, 0, 0, 0)
-      
+
       // Get end of Sunday
       const sundayEnd = weekInfo.weekEnd
       const sundayEndOfDay = new Date(sundayEnd)
@@ -66,6 +76,7 @@ export default function NudgeEngagementPage() {
 
       console.log('Fetching engagements for week:', {
         week: weekInfo.title,
+        isoWeekString,
         startTime: mondayTenAM.toISOString(),
         endTime: sundayEndOfDay.toISOString()
       })
@@ -90,7 +101,7 @@ export default function NudgeEngagementPage() {
 
       // Group by user_id and get first response per user
       const userFirstResponses = new Map<string, { received_at: string; phone_number: string }>()
-      
+
       replies.forEach(reply => {
         if (!userFirstResponses.has(reply.user_id)) {
           userFirstResponses.set(reply.user_id, {
@@ -102,16 +113,50 @@ export default function NudgeEngagementPage() {
 
       console.log(`${userFirstResponses.size} unique users responded`)
 
-      // Fetch user profiles
       const userIds = Array.from(userFirstResponses.keys())
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, phone')
-        .in('user_id', userIds)
+
+      // Fetch user profiles, barber_nudge_success, and sms_smart_buckets in parallel
+      const [
+        { data: profiles, error: profilesError },
+        { data: nudgeSuccess, error: nudgeSuccessError },
+        { data: smartBuckets, error: smartBucketsError }
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, full_name, phone')
+          .in('user_id', userIds),
+        supabase
+          .from('barber_nudge_success')
+          .select('user_id, client_ids, iso_week_number')
+          .in('user_id', userIds)
+          .eq('iso_week_number', isoWeekString),
+        supabase
+          .from('sms_smart_buckets')
+          .select('user_id, total_clients, iso_week')
+          .in('user_id', userIds)
+          .eq('iso_week', isoWeekString)
+      ])
 
       if (profilesError) throw profilesError
+      if (nudgeSuccessError) throw nudgeSuccessError
+      if (smartBucketsError) throw smartBucketsError
 
       console.log(`Found ${profiles?.length || 0} matching profiles`)
+      console.log(`Found ${nudgeSuccess?.length || 0} nudge success records`)
+      console.log(`Found ${smartBuckets?.length || 0} smart bucket records`)
+
+      // Build lookup maps
+      const nudgeSuccessMap = new Map<string, number>()
+      ;(nudgeSuccess || []).forEach(record => {
+        nudgeSuccessMap.set(record.user_id, record.client_ids?.length ?? 0)
+      })
+
+      const smartBucketsMap = new Map<string, number>()
+      ;(smartBuckets || []).forEach(bucket => {
+        // Sum total_clients in case a user has multiple buckets for the same week
+        const existing = smartBucketsMap.get(bucket.user_id) ?? 0
+        smartBucketsMap.set(bucket.user_id, existing + (bucket.total_clients ?? 0))
+      })
 
       // Combine data
       const engagementRecords: EngagementRecord[] = (profiles || []).map(profile => {
@@ -120,12 +165,14 @@ export default function NudgeEngagementPage() {
           user_id: profile.user_id,
           full_name: profile.full_name || 'Unknown',
           phone: profile.phone || firstResponse.phone_number,
-          first_response_at: firstResponse.received_at
+          first_response_at: firstResponse.received_at,
+          bookings_recovered: nudgeSuccessMap.get(profile.user_id) ?? 0,
+          total_clients: smartBucketsMap.get(profile.user_id) ?? 0
         }
       })
 
       // Sort by first response time (earliest first)
-      engagementRecords.sort((a, b) => 
+      engagementRecords.sort((a, b) =>
         new Date(a.first_response_at).getTime() - new Date(b.first_response_at).getTime()
       )
 
@@ -163,7 +210,6 @@ export default function NudgeEngagementPage() {
   }
 
   const formatPhone = (phone: string) => {
-    // Format as (XXX) XXX-XXXX if 10 digits
     const cleaned = phone.replace(/\D/g, '')
     if (cleaned.length === 10) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
@@ -175,8 +221,9 @@ export default function NudgeEngagementPage() {
   }
 
   const weekInfo = getWeekInfo(currentWeek)
-  const isCurrentWeek = getISOWeek(new Date()) === weekInfo.weekNumber && 
-                        getYear(new Date()) === weekInfo.year
+  const isCurrentWeek =
+    getISOWeek(new Date()) === weekInfo.weekNumber &&
+    getYear(new Date()) === weekInfo.year
 
   return (
     <div className="pt-25 p-4 min-h-screen bg-[#1f2420] text-[#F1F5E9]">
@@ -190,7 +237,7 @@ export default function NudgeEngagementPage() {
             Track client responses from Monday 10:00 AM onwards, showing only first response per week
           </p>
         </div>
-        
+
         {/* Stats Card - Inline */}
         <div className="bg-gradient-to-br from-[#2a2f27] to-[#242924] rounded-xl p-3 border border-[#55694b] shadow-md">
           <div className="flex items-center gap-3">
@@ -296,12 +343,15 @@ export default function NudgeEngagementPage() {
                 <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--highlight)]">
                   First Response
                 </th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--highlight)]">
+                  Bookings Recovered
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#55694b]/50">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
+                  <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-10 h-10 border-4 border-[#55694b] border-t-green-600 rounded-full animate-spin"></div>
                       <span className="text-[#9ca89a]">Loading engagement data...</span>
@@ -310,7 +360,7 @@ export default function NudgeEngagementPage() {
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
+                  <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 rounded-full bg-[#3a4431] flex items-center justify-center">
                         <span className="text-3xl opacity-50">📭</span>
@@ -323,33 +373,55 @@ export default function NudgeEngagementPage() {
                   </td>
                 </tr>
               ) : (
-                records.map((record, index) => (
-                  <tr 
-                    key={record.user_id} 
-                    className="hover:bg-[#3a4431] transition-colors group"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#3a4431] group-hover:bg-[#4b5a42] text-sm font-bold text-[var(--highlight)] transition-colors">
-                        {index + 1}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-base font-semibold text-[#F1F5E9]">
-                        {record.full_name}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono text-[#9ca89a] bg-[#1f2420] px-3 py-1.5 rounded-lg inline-block">
-                        {formatPhone(record.phone)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[#F1F5E9]">
-                        {formatResponseTime(record.first_response_at)}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                records.map((record, index) => {
+                  const hasData = record.total_clients > 0
+                  const fraction = hasData
+                    ? `${record.bookings_recovered}/${record.total_clients}`
+                    : '—'
+                  const isRecovered = record.bookings_recovered > 0
+
+                  return (
+                    <tr
+                      key={record.user_id}
+                      className="hover:bg-[#3a4431] transition-colors group"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#3a4431] group-hover:bg-[#4b5a42] text-sm font-bold text-[var(--highlight)] transition-colors">
+                          {index + 1}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-base font-semibold text-[#F1F5E9]">
+                          {record.full_name}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-mono text-[#9ca89a] bg-[#1f2420] px-3 py-1.5 rounded-lg inline-block">
+                          {formatPhone(record.phone)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-[#F1F5E9]">
+                          {formatResponseTime(record.first_response_at)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${
+                            !hasData
+                              ? 'text-[#9ca89a] bg-[#1f2420]'
+                              : isRecovered
+                              ? 'text-green-400 bg-green-600/15 border border-green-600/30'
+                              : 'text-[#9ca89a] bg-[#1f2420]'
+                          }`}
+                        >
+                          {isRecovered && <span>✓</span>}
+                          {fraction}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

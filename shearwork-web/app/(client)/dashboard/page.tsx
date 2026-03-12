@@ -35,6 +35,7 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
+      console.log('profile result:', profile) 
       setSms_engaged_current_week(profile?.sms_engaged_current_week ?? false)
       setUser_id(user.id)
       setProfileLoaded(true)
