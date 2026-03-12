@@ -9,6 +9,7 @@ import { supabase } from '@/utils/supabaseClient'
 interface Props {
   user_id: string
   sms_engaged_current_week: boolean
+  date_autonudge_enabled: string | null
   onNudgeSuccess: () => void
 }
 
@@ -81,7 +82,71 @@ const computeScore = (
   return { score, days_since_last_visit, expected_visit_interval_days, days_overdue }
 }
 
+const TORONTO_TZ = 'America/Toronto'
 
+function getTorontoDateComponents(date: Date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TORONTO_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  return {
+    year: parseInt(parts.find(p => p.type === 'year')!.value),
+    month: parseInt(parts.find(p => p.type === 'month')!.value) - 1,
+    day: parseInt(parts.find(p => p.type === 'day')!.value),
+    hours: parseInt(parts.find(p => p.type === 'hour')!.value),
+    minutes: parseInt(parts.find(p => p.type === 'minute')!.value),
+    seconds: parseInt(parts.find(p => p.type === 'second')!.value),
+  }
+}
+
+function getReportDateLabel(dateAutonudgeEnabled: string | null): string {
+  const now = new Date()
+  const { year, month, day } = getTorontoDateComponents(now)
+  const todayToronto = new Date(year, month, day)
+
+  // Get this week's Monday
+  const dayOfWeek = todayToronto.getDay()
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(todayToronto)
+  monday.setDate(todayToronto.getDate() + daysToMonday)
+
+  // Monday 10am cutoff
+  const mondayAt10am = new Date(monday)
+  mondayAt10am.setHours(10, 0, 0, 0)
+
+  const isOnTime =
+    dateAutonudgeEnabled !== null &&
+    new Date(dateAutonudgeEnabled) < mondayAt10am
+
+  if (isOnTime) {
+    // Wednesday of this week
+    const wednesday = new Date(monday)
+    wednesday.setDate(monday.getDate() + 2)
+    return wednesday.toLocaleDateString('en-CA', {
+      timeZone: TORONTO_TZ,
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    }) + ' at 10am'
+  } else {
+    // 3 days from now at 10am
+    const reportDay = new Date(todayToronto)
+    reportDay.setDate(todayToronto.getDate() + 3)
+    return reportDay.toLocaleDateString('en-CA', {
+      timeZone: TORONTO_TZ,
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    }) + ' at 10am'
+  }
+}
 
 function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: boolean }) {
   const name =
@@ -128,7 +193,7 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
   )
 }
 
-export default function ClientHealth({ user_id, sms_engaged_current_week, onNudgeSuccess }: Props) {
+export default function ClientHealth({ user_id, sms_engaged_current_week, date_autonudge_enabled, onNudgeSuccess }: Props) {
   const [tab, setTab] = useState<'prospects' | 'unbooked'>('prospects')
 
   const [clients, setClients] = useState<Client[]>([])
@@ -141,6 +206,38 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
   const [engaged, setEngaged] = useState(sms_engaged_current_week)
   const [search, setSearch] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+
+  const reportDateLabel = getReportDateLabel(date_autonudge_enabled)
+
+  const isNudgeButtonDisabled = (): boolean => {
+    if (engaged) return true
+    if (nudging) return true
+    if (!date_autonudge_enabled) return false
+
+    const enabledAt = new Date(date_autonudge_enabled)
+
+    // Get the calendar date of enabledAt + 1 day in Toronto time
+    const nextDay = new Date(enabledAt.getTime() + 24 * 60 * 60 * 1000)
+    const { year, month, day } = getTorontoDateComponents(nextDay)
+
+    // Reconstruct as local Date at 10:00am, then find its UTC equivalent
+    // by comparing what Toronto thinks "midnight" is for that date
+    const localMidnight = new Date(year, month, day, 0, 0, 0)
+    const torontoMidnightStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TORONTO_TZ,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    }).format(localMidnight)
+    // torontoMidnightStr tells us what Toronto clock reads for localMidnight (UTC)
+    // We need the inverse: what UTC instant is 10:00am Toronto on that date?
+    // Use the offset: utcOffset = localMidnight(UTC ms) - toronto-perceived-time(ms)
+    const perceivedMs = new Date(torontoMidnightStr.replace(', ', 'T')).getTime()
+    const utcOffset = localMidnight.getTime() - perceivedMs
+    const unlockTime = new Date(new Date(year, month, day, 10, 0, 0).getTime() + utcOffset)
+
+    return new Date() < unlockTime
+  }
 
   const fetchClients = async () => {
     try {
@@ -373,9 +470,9 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
       {/* Nudge Clients Button */}
       <button
         onClick={() => setShowConfirm(true)}
-        disabled={engaged || nudging}
+        disabled={isNudgeButtonDisabled()}
         className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all flex-shrink-0 ${
-          engaged
+          isNudgeButtonDisabled()
             ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
             : 'bg-lime-400/10 border border-lime-400/20 text-lime-400 hover:bg-lime-400/20 hover:border-lime-400/40'
         }`}
@@ -408,7 +505,8 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, onNudg
                   We'll reach out to your top{' '}
                   <span className="text-white font-semibold">{clientCount} clients</span> who are
                   overdue for a visit — prioritizing your most consistent ones first. You'll get a
-                  report on Wednesday at 10am.
+                  report on{' '}
+                  <span className="text-white font-semibold">{reportDateLabel}</span>.
                 </p>
               </div>
               <div className="flex gap-3">
