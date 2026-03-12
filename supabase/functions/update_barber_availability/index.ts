@@ -42,6 +42,8 @@ Deno.serve(async (req) => {
     
     let targetUserIds = body.user_ids // Array
     const targetUserId = body.user_id  // Single string
+
+    console.log('Received request to update availability with parameters [user_ids, user_id]:', { targetUserIds, targetUserId })
     
     // If user_ids not provided but user_id is, convert to array
     if ((!targetUserIds || targetUserIds.length === 0) && targetUserId) {
@@ -79,18 +81,15 @@ Deno.serve(async (req) => {
       let active = 0
       let index = 0
 
-      // Monday (day 1) = normal mode to set baseline slot_count
-      // Tue-Sun = update mode to set slot_count_update (current availability)
-      const day = torontoToday.getDay()
-      const isMonday = day === 1
-      // const update = !isMonday && (!targetUserIds || targetUserIds.length === 0) && !targetUserId
       const update = (targetUserIds || targetUserIds.length > 0) && targetUserId
+      // If targetUserIds/targetUserId is not provided, then this is called from the Monday, 9:30am cron job. We don't want an update here. We want a reset.
+      // If targetUserIds/targetUserId is provided, then this is called from an API route. We want an update here.
       
       let url;
 
-      // If not update, then it's a monday so reset sms_engaged_current week for everyone
+      // If not update then it's the monday cron job so reset sms_engaged_current week for everyone
       if (!update) {
-        
+        console.log('No specific user IDs provided, performing reset for all users with sms_engaged_current_week = true')
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ 
@@ -106,6 +105,7 @@ Deno.serve(async (req) => {
 
         url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false`
       } else {
+        console.log('Specific user IDs provided, performing update for those users')
         url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false&mode=update`
       }
 
