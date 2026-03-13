@@ -430,14 +430,14 @@ export default function DashboardPage() {
           Use the Re‑sync button above after connecting your calendar.
         </div>
       )}
-      {showGettingStarted && (
+      {/* {showGettingStarted && (
         <TrialStatusHub
           userId={user.id}
           daysRemaining={trialDaysRemaining}
           dateAutoNudgeEnabled={profile?.date_autonudge_enabled}
           onNavigateToAutoNudge={() => router.push('/client-manager?view=sms')}
         />
-      )}
+      )} */}
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={dashboardView}

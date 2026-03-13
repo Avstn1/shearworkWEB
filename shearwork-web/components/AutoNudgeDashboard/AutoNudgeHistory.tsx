@@ -34,8 +34,17 @@ const DAY_OFFSET: Record<string, number> = {
   Friday: 4, Saturday: 5, Sunday: 6,
 }
 
-const TIME_HOUR: Record<string, number> = {
-  Morning: 8, Midday: 12, Afternoon: 16, Night: 20,
+// Updated send times to match new bucket logic:
+// Morning (5am–12pm)  → 6:00 PM (18:00)
+// Midday  (12pm–4pm)  → 6:30 PM (18:30)
+// Afternoon (4pm–8pm) → 4:00 PM (16:00)
+// Night  (8pm–12am)   → 8:00 PM (20:00)
+// Any-time            → 6:30 PM (18:30) next available fire
+const TIME_SEND: Record<string, { hour: number; minute: number }> = {
+  Morning:   { hour: 18, minute: 0  },
+  Midday:    { hour: 18, minute: 30 },
+  Afternoon: { hour: 16, minute: 0  },
+  Night:     { hour: 20, minute: 0  },
 }
 
 const getScheduledSendDate = (bucket: string | null, campaignStart: string): Date => {
@@ -43,17 +52,20 @@ const getScheduledSendDate = (bucket: string | null, campaignStart: string): Dat
   monday.setHours(0, 0, 0, 0)
 
   let dayOffset = 0
-  let hour = 10
+  let hour = 18
+  let minute = 30
 
   if (bucket && bucket !== 'Low-data') {
     const [dayPart, timePart] = bucket.split('|')
     dayOffset = dayPart !== 'Any-day' ? (DAY_OFFSET[dayPart] ?? 0) : 0
-    hour = timePart !== 'Any-time' ? (TIME_HOUR[timePart] ?? 10) : 10
+    const sendTime = timePart !== 'Any-time' ? TIME_SEND[timePart] : null
+    hour   = sendTime?.hour   ?? 18
+    minute = sendTime?.minute ?? 30
   }
 
   const send = new Date(monday)
   send.setDate(monday.getDate() + dayOffset)
-  send.setHours(hour, 0, 0, 0)
+  send.setHours(hour, minute, 0, 0)
   return send
 }
 
@@ -105,14 +117,19 @@ export default function AutoNudgeHistory({ user_id }: Props) {
 
         setTotalClients(bucket.total_clients ?? 0)
 
+        // Fetch sms_sent rows for this bucket scoped to this user
+        // Keyed by phone_normalized → latest sent row
         const { data: smsSentRows } = await supabase
           .from('sms_sent')
           .select('phone_normalized, is_sent, reason, created_at')
           .eq('smart_bucket_id', bucket.bucket_id)
+          .eq('user_id', user_id)
+          .order('created_at', { ascending: false })
 
+        // Build map: phone → latest row (already sorted desc so first hit wins)
         const smsSentMap = new Map<string, { is_sent: boolean; reason: string | null; created_at: string | null }>()
         for (const row of smsSentRows || []) {
-          if (row.phone_normalized) {
+          if (row.phone_normalized && !smsSentMap.has(row.phone_normalized)) {
             smsSentMap.set(row.phone_normalized, {
               is_sent: row.is_sent,
               reason: row.reason ?? null,
@@ -202,10 +219,10 @@ export default function AutoNudgeHistory({ user_id }: Props) {
         </div>
       ) : recipients.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-  <Users className="w-12 h-12 text-white/20" />
-  <p className="text-xl font-semibold text-white/70 leading-relaxed">No campaign this week yet.</p>
-  <p className="text-sm text-white/40 leading-relaxed">Activate your auto-nudge by replying to our SMS or clicking the <span className="text-white/60 font-semibold">Nudge Clients</span> button.</p>
-</div>
+          <Users className="w-12 h-12 text-white/20" />
+          <p className="text-xl font-semibold text-white/70 leading-relaxed">No campaign this week yet.</p>
+          <p className="text-sm text-white/40 leading-relaxed">Activate your auto-nudge by replying to our SMS or clicking the <span className="text-white/60 font-semibold">Nudge Clients</span> button.</p>
+        </div>
       ) : (
         <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 overflow-y-auto auto-rows-fr">
           {recipients.map((recipient, index) => {
