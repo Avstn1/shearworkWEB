@@ -85,8 +85,41 @@ export async function POST(req: NextRequest) {
       console.log('\n--- Checking SMS Campaign Attribution ---');
       const result = await updateSmsBarberSuccess(token.user_id, appointmentDetails);
       
-      if (result.success) {
+      if (result.success && !result.reason) {
         console.log('✅ SMS campaign attribution tracked');
+
+        // Log to system_logs on successful attribution
+        const clientPhone = appointmentDetails.phone;
+        if (clientPhone) {
+          const [{ data: clientData }, { data: profileData }] = await Promise.all([
+            supabase
+              .from('acuity_clients')
+              .select('first_name, last_name, phone_normalized')
+              .eq('user_id', token.user_id)
+              .eq('phone_normalized', clientPhone)
+              .maybeSingle(),
+            supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('user_id', token.user_id)
+              .single()
+          ]);
+
+          const barberName = profileData?.full_name ?? 'Unknown Barber';
+          const clientName = clientData
+            ? `${clientData.first_name ?? ''} ${clientData.last_name ?? ''}`.trim()
+            : `${appointmentDetails.firstName ?? ''} ${appointmentDetails.lastName ?? ''}`.trim();
+          const clientNumber = clientData?.phone_normalized ?? clientPhone;
+
+          await supabase
+            .from('system_logs')
+            .insert({
+              source: 'SYSTEM',
+              action: 'barber_nudge_success',
+              status: 'success',
+              details: `${barberName}: ${clientName} (${clientNumber}) booked`
+            });
+        }
       } else {
         console.log(`ℹ️  Not attributed to SMS campaign: ${result.reason}`);
       }

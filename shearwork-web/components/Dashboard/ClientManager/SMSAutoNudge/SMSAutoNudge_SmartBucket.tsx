@@ -95,9 +95,17 @@ const DAY_OFFSET: Record<string, number> = {
   Friday: 4, Saturday: 5, Sunday: 6,
 };
 
-// Hour of day for each time bucket
-const TIME_HOUR: Record<string, number> = {
-  Morning: 8, Midday: 12, Afternoon: 16, Night: 20,
+// Updated send times to match new bucket logic:
+// Morning (5am–12pm)  → 6:00 PM (18:00)
+// Midday  (12pm–4pm)  → 6:30 PM (18:30)
+// Afternoon (4pm–8pm) → 4:00 PM (16:00)
+// Night  (8pm–12am)   → 8:00 PM (20:00)
+// Any-time            → 6:30 PM (18:30) next available fire
+const TIME_SEND: Record<string, { hour: number; minute: number }> = {
+  Morning:   { hour: 18, minute: 0  },
+  Midday:    { hour: 18, minute: 30 },
+  Afternoon: { hour: 16, minute: 0  },
+  Night:     { hour: 20, minute: 0  },
 };
 
 /**
@@ -112,18 +120,21 @@ const getScheduledSendDate = (
   // Normalise to midnight of that Monday
   monday.setHours(0, 0, 0, 0);
 
-  let dayOffset = 0;  // default: Monday
-  let hour = 10;      // default: 10am
+  let dayOffset = 0;   // default: Monday
+  let hour = 18;       // default: 6:30 PM
+  let minute = 30;
 
   if (bucket && bucket !== 'Low-data') {
     const [dayPart, timePart] = bucket.split('|');
     dayOffset = dayPart !== 'Any-day' ? (DAY_OFFSET[dayPart] ?? 0) : 0;
-    hour = timePart !== 'Any-time' ? (TIME_HOUR[timePart] ?? 10) : 10;
+    const sendTime = timePart !== 'Any-time' ? TIME_SEND[timePart] : null;
+    hour   = sendTime?.hour   ?? 18;
+    minute = sendTime?.minute ?? 30;
   }
 
   const send = new Date(monday);
   send.setDate(monday.getDate() + dayOffset);
-  send.setHours(hour, 0, 0, 0);
+  send.setHours(hour, minute, 0, 0);
   return send;
 };
 
@@ -221,16 +232,19 @@ export default function SMSAutoNudge() {
         return;
       }
 
-      // Fetch all sms_sent rows for this bucket — both successful and failed
+      // Fetch all sms_sent rows for this bucket scoped to this user,
+      // sorted desc so the latest row per phone is encountered first
       const { data: smsSentRows } = await supabase
         .from('sms_sent')
         .select('phone_normalized, is_sent, reason, created_at')
-        .eq('smart_bucket_id', campaign.bucket_id);
+        .eq('smart_bucket_id', campaign.bucket_id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      // Map phone_normalized -> sent row for O(1) lookup
+      // Map phone_normalized -> latest row (first hit wins due to desc sort)
       const smsSentMap = new Map<string, { is_sent: boolean; reason: string | null; created_at: string }>();
       for (const row of smsSentRows || []) {
-        if (row.phone_normalized) {
+        if (row.phone_normalized && !smsSentMap.has(row.phone_normalized)) {
           smsSentMap.set(row.phone_normalized, {
             is_sent: row.is_sent,
             reason: row.reason ?? null,
