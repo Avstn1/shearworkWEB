@@ -209,13 +209,12 @@ export default function MonthlyProfitCard({ userId, selectedMonth, year }: Month
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md relative flex flex-col min-h-[140px] border border-[color:var(--card-profit-border)]"
-      style={{ background: 'var(--card-profit-bg)' }}
+      className="relative flex flex-col min-h-[140px]"
     >
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">💰 Monthly Profit</h2>
+      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">💰 Monthly Profit</h2>
 
       <div className="flex-1 flex items-center">
-        <p className="text-3xl md:text-3xl sm:text-2xl font-bold text-[#F5E6C5]">
+        <p className="text-3xl md:text-3xl sm:text-2xl font-bold text-white">
           {loading
             ? 'Loading...'
             : profit !== null
@@ -229,16 +228,16 @@ export default function MonthlyProfitCard({ userId, selectedMonth, year }: Month
           <p
             className={`text-sm font-semibold ${
               change > 0
-                ? 'text-green-400'
+                ? 'text-[#6ee7b7]'
                 : change < 0
-                  ? 'text-red-400'
-                  : 'text-gray-400'
+                  ? 'text-[#fbbf24]'
+                  : 'text-[#555]'
             }`}
           >
-            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-gray-400">(vs. prior month)</span>
+            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-[#555]">(vs. prior month)</span>
           </p>
         ) : (
-          <p className="text-sm text-gray-500">—</p>
+          <p className="text-sm text-[#555]">—</p>
         )}
       </div>
     </div>

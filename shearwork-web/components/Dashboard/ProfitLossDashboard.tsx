@@ -28,7 +28,7 @@ export default function ProfitLossDashboard({
   selectedMonth,
   selectedYear,
   selectedDay,
-  globalRefreshKey, // 👈 new prop (passed from DashboardPage)
+  globalRefreshKey,
 }: {
   userId: string
   selectedMonth: string
@@ -38,13 +38,12 @@ export default function ProfitLossDashboard({
 }) {
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // Whenever parent triggers sync or month/year changes → refresh children
   useEffect(() => {
     setRefreshKey((prev) => prev + 1)
   }, [selectedMonth, selectedYear, selectedDay, globalRefreshKey])
 
   const cardClass =
-    'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
+    'bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col flex-1'
 
   return (
     <motion.div

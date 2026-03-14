@@ -91,14 +91,12 @@ export default function DashboardPage() {
   // Check if we should show soft/urgent prompt
   useEffect(() => {
     if (trialPromptMode === 'soft') {
-      // Once per day for soft prompt
       const dismissedDate = localStorage.getItem(SOFT_PROMPT_DISMISSED_KEY)
       const today = new Date().toDateString()
       if (dismissedDate !== today) {
         setShowTrialPrompt(true)
       }
     } else if (trialPromptMode === 'urgent') {
-      // Once per session for urgent prompt
       const dismissedThisSession = sessionStorage.getItem(URGENT_PROMPT_DISMISSED_KEY)
       if (!dismissedThisSession) {
         setShowTrialPrompt(true)
@@ -108,9 +106,7 @@ export default function DashboardPage() {
     }
   }, [trialPromptMode])
 
-  // handleAddCard is kept for interface compatibility but modal handles checkout internally
   const handleAddCard = useCallback(() => {
-    // Modal now handles checkout directly, this is a fallback
     router.push('/pricing')
   }, [router])
 
@@ -123,9 +119,13 @@ export default function DashboardPage() {
     }
   }, [trialPromptMode])
 
-
+  /* ─────────────────────────────────────────────
+   * CARD STYLE — matched to AutoNudge dashboard
+   * Removed: backdrop-blur-lg, shadow-xl, bg-white/10
+   * Added:   bg-white/5 (matching AutoNudge cards)
+   * ───────────────────────────────────────────── */
   const cardClass =
-    'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
+    'bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col flex-1'
 
   useEffect(() => {
     if (!user?.id) return
@@ -163,7 +163,7 @@ export default function DashboardPage() {
     syncAcuityData() // sync on refresh  --  Comment out to remove autosync
   }, [user])
 
-  // -------------------- RE-SYNC ON MONTH/YEAR CHANGE -------------------- Comment out to remove autosync
+  // -------------------- RE-SYNC ON MONTH/YEAR CHANGE --------------------
   useEffect(() => {
     if (!user || !hasSyncedInitially.current) return
     syncAcuityData()
@@ -182,7 +182,6 @@ export default function DashboardPage() {
     setIsRefreshing(true)
     const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
 
-    // Set a timeout to prevent sync from getting stuck (60 seconds max)
     const timeoutId = setTimeout(() => {
       if (isSyncing.current) {
         console.warn('Sync timeout reached, resetting state')
@@ -193,7 +192,6 @@ export default function DashboardPage() {
     }, 60000)
 
     try {
-      // New pipeline endpoint: triggers provider pull + truth table upserts + aggregations
       const res = await fetch(
         `/api/pull?granularity=month&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`
       )
@@ -220,7 +218,6 @@ export default function DashboardPage() {
     const toastId = toast.loading('Performing full sync...')
 
     try {
-      // Closest equivalent of "pull-all": sync the selected year
       const res = await fetch(`/api/pull?granularity=year&year=${selectedYear}`)
 
       const body = await res.json().catch(() => ({}))
@@ -236,7 +233,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Scroll helper for weekly reports section (kept for potential future use)
   const _scrollToWeeklyReports = () => {
     if (dashboardView !== 'monthly') {
       setDashboardView('monthly')
@@ -270,19 +266,20 @@ export default function DashboardPage() {
       {/* Welcome + Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
         <div>
-          <h1 className={`font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent ${isMobile ? 'text-xl' : 'text-2xl'} animate-gradient`}>
+          {/* ── Toned-down heading: single white color instead of animated gradient ── */}
+          <h1 className={`font-bold text-white ${isMobile ? 'text-xl' : 'text-2xl'}`}>
             Welcome back!
           </h1>
-          <p className="text-xs text-[#bdbdbd]">Here’s your local daily & monthly summary.</p>
+          <p className="text-xs text-[#bdbdbd]">Here's your local daily & monthly summary.</p>
         </div>
 
-        {/* Controls — stacked nicely on mobile */}
+        {/* ── View switcher: unified muted style, no multi-color glows ── */}
         <div data-tutorial-id="dashboard-view-switcher" className="flex gap-1 w-full sm:w-auto bg-[#1a1a1a] rounded-full p-1">
           <button
             onClick={() => setDashboardView('monthly')}
             className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
               dashboardView === 'monthly'
-                ? 'bg-lime-300 text-black shadow-[0_0_8px_#c4ff85]'
+                ? 'bg-white/10 text-white'
                 : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
             }`}
           >
@@ -292,7 +289,7 @@ export default function DashboardPage() {
             onClick={() => setDashboardView('yearly')}
             className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
               dashboardView === 'yearly'
-                ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
+                ? 'bg-white/10 text-white'
                 : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
             }`}
           >
@@ -302,7 +299,7 @@ export default function DashboardPage() {
             onClick={() => setDashboardView('profit')}
             className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
               dashboardView === 'profit'
-                ? 'bg-rose-300 text-black shadow-[0_0_8px_#ff7f7f]'
+                ? 'bg-white/10 text-white'
                 : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
             }`}
           >
@@ -336,7 +333,7 @@ export default function DashboardPage() {
         </button>
 
         {isRefreshing && (
-          <div className="flex items-center gap-1 text-xs text-[#fffb85] animate-pulse ml-2">
+          <div className="flex items-center gap-1 text-xs text-[#bdbdbd] animate-pulse ml-2">
             <Loader2 className="h-3 w-3 animate-spin" />
             <span>Syncing...</span>
           </div>
@@ -405,15 +402,15 @@ export default function DashboardPage() {
       {/* RIGHT COLUMN */}
       <div className="flex flex-col gap-4 pl-1">
         <motion.div data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
+          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
           <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
         <motion.div id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
+          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
           <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
         <motion.div data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#d1e2c5] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
+          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
           <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
       </div>
@@ -425,7 +422,7 @@ export default function DashboardPage() {
     <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
       <DashboardHeader />
       {showTrialNote && (
-        <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-[#bdbdbd]">
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#bdbdbd]">
           <span className="font-semibold text-white">Getting started:</span> Data will populate after your first sync.
           Use the Re‑sync button above after connecting your calendar.
         </div>

@@ -177,12 +177,11 @@ export default function WeeklyComparisonReports({
             <div
               key={r.id}
               className="relative rounded-xl p-4 border transition-all duration-300 transform cursor-pointer
-                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-2xl hover:bg-[rgba(255,255,255,0.05)]"
+                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(110,231,183,0.08)] hover:bg-[rgba(110,231,183,0.08)]"
               style={{
-                background: 'var(--card-weekly-bg)',
-                borderColor: 'var(--card-weekly-border)',
-                boxShadow: `0 3px 10px var(--card-weekly-shadow)`,
-                color: 'var(--foreground)',
+                background: 'rgba(110,231,183,0.04)',
+                borderColor: 'rgba(110,231,183,0.1)',
+                color: '#e8f0eb',
               }}
             >
               <div className="flex justify-between items-start gap-2">
@@ -194,10 +193,10 @@ export default function WeeklyComparisonReports({
                   }}
                   className="flex-1 flex flex-col gap-1"
                 >
-                  <div className="flex items-center gap-1 text-sm font-semibold text-[var(--highlight)]">
+                  <div className="flex items-center gap-1 text-sm font-semibold text-[#6ee7b7]">
                     <FileText size={16} /> Weekly Comparison - {r.month} {r.year}
                   </div>
-                  <div className="text-xs text-[var(--text-subtle)] max-h-20 overflow-hidden relative">
+                  <div className="text-xs text-[#555] max-h-20 overflow-hidden relative">
                     <div
                       className="prose prose-sm"
                       dangerouslySetInnerHTML={{
@@ -208,7 +207,7 @@ export default function WeeklyComparisonReports({
                           : '<em>No content available.</em>',
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-[var(--card-weekly-bg)] to-transparent" />
+                    <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-[rgba(110,231,183,0.04)] to-transparent" />
                   </div>
                 </div>
 
@@ -219,7 +218,7 @@ export default function WeeklyComparisonReports({
                         e.stopPropagation();
                         setMenuOpenId(menuOpenId === r.id ? null : r.id);
                       }}
-                      className="p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
+                      className="p-1 rounded-md hover:bg-white/[0.08] transition"
                     >
                       <MoreVertical size={18} />
                     </button>
@@ -229,19 +228,20 @@ export default function WeeklyComparisonReports({
                         ref={menuRef}
                         className="absolute right-0 mt-1 rounded-md shadow-lg z-50 w-28"
                         style={{
-                          background: 'var(--card-weekly-border)',
-                          color: 'var(--text-bright)',
+                          background: '#151c18',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: '#e8f0eb',
                         }}
                       >
                         <button
                           onClick={() => handleEdit(r)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-white/[0.06]"
                         >
                           <Edit size={14} /> Edit
                         </button>
                         <button
                           onClick={() => handleDelete(r.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-300"
+                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#fbbf24] hover:bg-[rgba(251,191,36,0.08)]"
                         >
                           <Trash2 size={14} /> Delete
                         </button>
@@ -253,7 +253,7 @@ export default function WeeklyComparisonReports({
             </div>
           ))
         ) : (
-          <div className="text-[#bdbdbd] text-sm mt-2 col-span-1 text-center">
+          <div className="text-[#555] text-sm mt-2 col-span-1 text-center">
             No weekly comparison reports for this month/year.
           </div>
         )}

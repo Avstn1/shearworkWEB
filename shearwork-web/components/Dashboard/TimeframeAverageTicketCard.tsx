@@ -93,15 +93,14 @@ export default function TimeframeAverageTicketCard({
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col min-h-[140px]"
-      style={{ background: 'var(--card-revenue-bg)' }}
+      className="flex flex-col min-h-[140px]"
     >
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">
+      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">
         💵 Avg Ticket ({titleSuffix})
       </h2>
 
       <div className="flex-1 flex items-center">
-        <p className="text-3xl font-bold text-[#F5E6C5] truncate">
+        <p className="text-3xl font-bold text-white truncate">
           {loading
             ? 'Loading...'
             : avgTicket !== null
