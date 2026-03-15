@@ -9,7 +9,16 @@ interface Props {
 }
 
 const getCurrentISOWeek = (): string => {
-  const now = new Date()
+  const torontoDateStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+
+  const [year, month, day] = torontoDateStr.split('-').map(Number)
+  const now = new Date(year, month - 1, day)
+
   const dayOfWeek = now.getDay() || 7
   const thursday = new Date(now)
   thursday.setDate(now.getDate() - dayOfWeek + 4)

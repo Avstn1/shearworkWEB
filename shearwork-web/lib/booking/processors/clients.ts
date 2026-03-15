@@ -52,8 +52,16 @@ function normalizeEmail(email: string | null | undefined): string | null {
 }
 
 function normalizePhone(phone: string | null | undefined): string | null {
-  const cleaned = phone?.trim()
-  return cleaned || null
+  if (!phone) return null
+  const cleaned = phone.replace(/[^0-9]/g, '')
+  if (!cleaned) return null
+  if (/^1[0-9]{10}$/.test(cleaned)) return '+' + cleaned
+  if (/^[0-9]{10}$/.test(cleaned)) return '+1' + cleaned
+  if (cleaned.length === 11 && cleaned[0] !== '1') {
+    const withoutFirst = cleaned.substring(1)
+    if (/^[0-9]{10}$/.test(withoutFirst)) return '+1' + withoutFirst
+  }
+  return null
 }
 
 function normalizeString(value: string | null | undefined): string | null {
