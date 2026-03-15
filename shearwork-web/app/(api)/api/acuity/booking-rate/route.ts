@@ -5,6 +5,64 @@ import { createClient } from '@supabase/supabase-js'
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1'
 const WORK_START_HOUR = 8
 const WORK_END_HOUR = 20
+const BOOKING_RATE_CACHE_TTL_MS = 5 * 60 * 1000
+const BOOKING_RATE_CACHE_VERSION = 'original-logic-v1'
+
+type BookingRatePayload = {
+  totalBooked: number
+  totalOpen: number
+  weekStart: string
+  weekEnd: string
+}
+
+type BookingRateCacheEntry = {
+  payload: BookingRatePayload
+  cachedAtMs: number
+}
+
+type AcuityAppointmentType = {
+  id: number | string
+  name?: string | null
+  duration?: number | string | null
+}
+
+type AcuityCalendar = {
+  id: number | string
+  name?: string | null
+}
+
+type AcuityAvailabilitySlot = {
+  time?: string
+  duration?: number | string | null
+}
+
+const bookingRateCache = new Map<string, BookingRateCacheEntry>()
+const bookingRateInFlight = new Map<string, Promise<BookingRatePayload>>()
+
+function cleanupBookingRateCache(nowMs: number) {
+  for (const [key, entry] of bookingRateCache.entries()) {
+    if (nowMs - entry.cachedAtMs > BOOKING_RATE_CACHE_TTL_MS * 6) {
+      bookingRateCache.delete(key)
+    }
+  }
+}
+
+function buildBookingRateCacheKey(params: {
+  userId: string
+  weekStart: string
+  weekEnd: string
+  calendarId: number | string
+  role: string | null | undefined
+}) {
+  return [
+    BOOKING_RATE_CACHE_VERSION,
+    params.userId,
+    params.weekStart,
+    params.weekEnd,
+    String(params.calendarId),
+    params.role ?? 'unknown',
+  ].join('|')
+}
 
 // ------------------- Date helpers -------------------
 function getWeekRange() {
@@ -34,7 +92,10 @@ function getWeekDays(start: string, end: string) {
 
 // ------------------- Appointment helpers -------------------
 
-async function getRandomAppointmentTypeFromRecent(accessToken: string, calendarId: number) {
+async function getRandomAppointmentTypeFromRecent(
+  accessToken: string,
+  calendarId: number | string
+): Promise<number | string | null> {
   const url = new URL(`${ACUITY_API_BASE}/appointments`)
   url.searchParams.set('max', '1')
   url.searchParams.set('calendarID', String(calendarId))
@@ -57,21 +118,28 @@ async function getRandomAppointmentTypeFromRecent(accessToken: string, calendarI
   return apptType
 }
 
-async function getAppointmentTypeWithShortestDuration(accessToken: string): Promise<number | null> {
+async function getAppointmentTypeWithShortestDuration(
+  accessToken: string
+): Promise<number | string | null> {
   const res = await fetch(`${ACUITY_API_BASE}/appointment-types`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
 
   if (!res.ok) return null
 
-  const types = await res.json()
+  const types = (await res.json()) as AcuityAppointmentType[]
   if (!Array.isArray(types) || !types.length) return null
 
-  const shortest = types.reduce((s: any, t: any) => (t.duration < s.duration ? t : s))
+  const shortest = types.reduce((currentShortest, typeRow) => (
+    (typeRow.duration ?? Number.POSITIVE_INFINITY) <
+    (currentShortest.duration ?? Number.POSITIVE_INFINITY)
+      ? typeRow
+      : currentShortest
+  ))
 
   console.log('\n=== Appointment Types ===')
-  types.forEach((t: any) => {
-    console.log(`ID: ${t.id} | Name: ${t.name} | Duration: ${t.duration}`)
+  types.forEach((typeRow) => {
+    console.log(`ID: ${typeRow.id} | Name: ${typeRow.name} | Duration: ${typeRow.duration}`)
   })
 
   console.log(`\nUsing shortest appointment type:`)
@@ -136,7 +204,12 @@ function subtractIntervals(
 }
 
 // ------------------- Fetch availability -------------------
-async function fetchDayAvailability(accessToken: string, calendarId: number, appointmentTypeID: number, day: string) {
+async function fetchDayAvailability(
+  accessToken: string,
+  calendarId: number | string,
+  appointmentTypeID: number | string,
+  day: string
+) {
 
   const url = new URL(`${ACUITY_API_BASE}/availability/times`)
   url.searchParams.set('date', day)
@@ -149,7 +222,7 @@ async function fetchDayAvailability(accessToken: string, calendarId: number, app
 
   if (!res.ok) return { raw: [], merged: [], totalMinutes: 0 }
 
-  const slots = await res.json()
+  const slots = (await res.json()) as AcuityAvailabilitySlot[]
   if (!Array.isArray(slots) || !slots.length) return { raw: [], merged: [], totalMinutes: 0 }
 
   const workStart = new Date(`${day}T00:00:00`)
@@ -159,12 +232,17 @@ async function fetchDayAvailability(accessToken: string, calendarId: number, app
   workEnd.setHours(WORK_END_HOUR, 0, 0, 0)
 
   const intervals = slots
-    .map((s: any) => {
-      const start = Math.max(new Date(s.time).getTime(), workStart.getTime())
-      const end = start + (s.duration ?? 30) * 60000
+    .map((slot) => {
+      if (!slot.time) return null
+      const start = Math.max(new Date(slot.time).getTime(), workStart.getTime())
+      const duration = Number(slot.duration ?? 30)
+      if (!Number.isFinite(duration) || duration <= 0) return null
+      const end = start + duration * 60000
       return { start, end }
     })
-    .filter((i: any) => i.start < workEnd.getTime())
+    .filter((interval): interval is { start: number; end: number } =>
+      interval !== null && interval.start < workEnd.getTime()
+    )
 
   const { merged, totalMinutes } = mergeIntervals(intervals)
 
@@ -172,7 +250,11 @@ async function fetchDayAvailability(accessToken: string, calendarId: number, app
 }
 
 // ------------------- Fetch booked minutes -------------------
-async function fetchDayBookedMinutes(accessToken: string, calendarId: number, day: string) {
+async function fetchDayBookedMinutes(
+  accessToken: string,
+  calendarId: number | string,
+  day: string
+) {
 
   const url = new URL(`${ACUITY_API_BASE}/appointments`)
   url.searchParams.set('minDate', day)
@@ -248,66 +330,117 @@ export async function GET(request: Request) {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
 
-    const calendars = await calendarsRes.json()
+    const calendars = (await calendarsRes.json()) as AcuityCalendar[]
 
     const match = calendars.find(
-      (c: any) =>
-        c.name?.trim().toLowerCase() === profile.calendar.trim().toLowerCase()
+      (calendar) =>
+        calendar.name?.trim().toLowerCase() === profile.calendar.trim().toLowerCase()
     )
 
     if (!match)
       return NextResponse.json({ error: 'Calendar not found' }, { status: 400 })
 
     const calendarId = match.id
-
-    let appointmentTypeID: number | null = null
-
-    if (profile.role === 'Owner') {
-      appointmentTypeID = await getRandomAppointmentTypeFromRecent(accessToken, calendarId)
-    }
-
-    if (!appointmentTypeID) {
-      appointmentTypeID = await getAppointmentTypeWithShortestDuration(accessToken)
-    }
-
-    if (!appointmentTypeID)
-      return NextResponse.json({ error: 'No appointment types found' }, { status: 400 })
-
     const { start, end } = getWeekRange()
-    const days = getWeekDays(start, end)
-
-    const results = await Promise.all(
-      days.map(async (day) => {
-
-        const [booked, open] = await Promise.all([
-          fetchDayBookedMinutes(accessToken, calendarId, day),
-          fetchDayAvailability(accessToken, calendarId, appointmentTypeID!, day),
-        ])
-
-        const finalOpenIntervals = subtractIntervals(open.merged, booked.intervals)
-
-        const finalOpenMinutes = finalOpenIntervals.reduce(
-          (sum, i) => sum + (i.end - i.start) / 60000,
-          0
-        )
-
-        return {
-          day,
-          bookedMinutes: booked.totalMinutes,
-          openMinutes: finalOpenMinutes,
-        }
-      })
-    )
-
-    const totalBooked = results.reduce((sum, r) => sum + r.bookedMinutes, 0)
-    const totalOpen = results.reduce((sum, r) => sum + r.openMinutes, 0)
-
-    return NextResponse.json({
-      totalBooked,
-      totalOpen,
+    const cacheKey = buildBookingRateCacheKey({
+      userId: user.id,
       weekStart: start,
       weekEnd: end,
+      calendarId,
+      role: profile.role,
     })
+
+    const nowMs = Date.now()
+    cleanupBookingRateCache(nowMs)
+
+    const cached = bookingRateCache.get(cacheKey)
+    if (cached && nowMs - cached.cachedAtMs <= BOOKING_RATE_CACHE_TTL_MS) {
+      return NextResponse.json(cached.payload)
+    }
+
+    const inFlight = bookingRateInFlight.get(cacheKey)
+    if (inFlight) {
+      const shared = await inFlight
+      return NextResponse.json(shared)
+    }
+
+    const computePromise = (async (): Promise<BookingRatePayload> => {
+      let appointmentTypeID: number | string | null = null
+
+      if (profile.role === 'Owner') {
+        appointmentTypeID = await getRandomAppointmentTypeFromRecent(accessToken, calendarId)
+      }
+
+      if (!appointmentTypeID) {
+        appointmentTypeID = await getAppointmentTypeWithShortestDuration(accessToken)
+      }
+
+      if (!appointmentTypeID) {
+        throw new Error('No appointment types found')
+      }
+
+      const days = getWeekDays(start, end)
+
+      const results = await Promise.all(
+        days.map(async (day) => {
+          const [booked, open] = await Promise.all([
+            fetchDayBookedMinutes(accessToken, calendarId, day),
+            fetchDayAvailability(accessToken, calendarId, appointmentTypeID!, day),
+          ])
+
+          const finalOpenIntervals = subtractIntervals(open.merged, booked.intervals)
+
+          const finalOpenMinutes = finalOpenIntervals.reduce(
+            (sum, i) => sum + (i.end - i.start) / 60000,
+            0
+          )
+
+          return {
+            bookedMinutes: booked.totalMinutes,
+            openMinutes: finalOpenMinutes,
+          }
+        })
+      )
+
+      const totalBooked = results.reduce((sum, r) => sum + r.bookedMinutes, 0)
+      const totalOpen = results.reduce((sum, r) => sum + r.openMinutes, 0)
+
+      const payload: BookingRatePayload = {
+        totalBooked,
+        totalOpen,
+        weekStart: start,
+        weekEnd: end,
+      }
+
+      bookingRateCache.set(cacheKey, {
+        payload,
+        cachedAtMs: Date.now(),
+      })
+
+      return payload
+    })()
+
+    bookingRateInFlight.set(cacheKey, computePromise)
+
+    try {
+      const payload = await computePromise
+      return NextResponse.json(payload)
+    } catch (computeError) {
+      if (cached) {
+        return NextResponse.json(cached.payload)
+      }
+
+      if (
+        computeError instanceof Error &&
+        computeError.message === 'No appointment types found'
+      ) {
+        return NextResponse.json({ error: 'No appointment types found' }, { status: 400 })
+      }
+
+      throw computeError
+    } finally {
+      bookingRateInFlight.delete(cacheKey)
+    }
 
   } catch (err) {
     console.error(err)

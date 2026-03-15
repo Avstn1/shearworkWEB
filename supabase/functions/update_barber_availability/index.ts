@@ -38,16 +38,48 @@ Deno.serve(async (req) => {
 
     // Check for optional user_id (singular) or user_ids (array) parameter
     // Prioritize user_ids if both are present
-    const body = await req.json()
+    let body: Record<string, unknown> = {}
+    try {
+      body = await req.json()
+    } catch {
+      body = {}
+    }
     
-    let targetUserIds = body.user_ids // Array
-    const targetUserId = body.user_id  // Single string
+    let targetUserIds = Array.isArray(body.user_ids)
+      ? body.user_ids.filter((value): value is string => typeof value === 'string' && value.length > 0)
+      : undefined
+
+    const targetUserId = typeof body.user_id === 'string' && body.user_id.length > 0
+      ? body.user_id
+      : null
+
+    const forceRefreshParam = typeof body.force_refresh === 'boolean'
+      ? body.force_refresh
+      : undefined
 
     console.log('Received request to update availability with parameters [user_ids, user_id]:', { targetUserIds, targetUserId })
     
     // If user_ids not provided but user_id is, convert to array
     if ((!targetUserIds || targetUserIds.length === 0) && targetUserId) {
       targetUserIds = [targetUserId]
+    }
+
+    const isTargetedUpdate = Boolean(targetUserIds && targetUserIds.length > 0)
+    const shouldForceRefresh = forceRefreshParam ?? !isTargetedUpdate
+    const hasTargetKeys =
+      Object.prototype.hasOwnProperty.call(body, 'user_id') ||
+      Object.prototype.hasOwnProperty.call(body, 'user_ids')
+
+    if (hasTargetKeys && !isTargetedUpdate) {
+      return new Response(JSON.stringify({
+        error: 'Invalid target user payload',
+      }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      })
     }
 
     // Get all profiles with a calendar set (filtered by user_ids if provided)
@@ -81,14 +113,13 @@ Deno.serve(async (req) => {
       let active = 0
       let index = 0
 
-      const update = (targetUserIds || targetUserIds.length > 0) && targetUserId
       // If targetUserIds/targetUserId is not provided, then this is called from the Monday, 9:30am cron job. We don't want an update here. We want a reset.
       // If targetUserIds/targetUserId is provided, then this is called from an API route. We want an update here.
       
       let url;
 
-      // If not update then it's the monday cron job so reset sms_engaged_current week for everyone
-      if (!update) {
+      // If not targeted update then it's the monday cron job so reset sms_engaged_current week for everyone
+      if (!isTargetedUpdate) {
         console.log('No specific user IDs provided, performing reset for all users with sms_engaged_current_week = true')
         const { error: updateError } = await supabase
           .from('profiles')
@@ -97,16 +128,15 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString()
           })
           .eq('sms_engaged_current_week', true)
-          .in('user_id', targetUserIds || [])
         
         if (updateError) {
           console.error('Failed to update profile engagement:', updateError)
         }
 
-        url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false`
+        url = `${siteUrl}/api/availability/pull?forceRefresh=${String(shouldForceRefresh)}&dryRun=false`
       } else {
         console.log('Specific user IDs provided, performing update for those users')
-        url = `${siteUrl}/api/availability/pull?forceRefresh=true&dryRun=false&mode=update`
+        url = `${siteUrl}/api/availability/pull?forceRefresh=${String(shouldForceRefresh)}&dryRun=false&mode=update`
       }
 
       return new Promise<void>(resolve => {

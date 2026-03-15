@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 
@@ -32,22 +32,72 @@ const getCapacityColor = (pct: number): string => {
 export default function BookingCapacity({ user_id }: Props) {
   const [capacity, setCapacity] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const refreshTimeoutRef = useRef<number | null>(null)
 
-  const fetchCapacity = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const response = await fetch('/api/acuity/booking-rate', {
-      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
-    })
-    if (!response.ok) { toast.error('Failed to load booking data'); setCapacity(null); return }
-    const { totalBooked, totalOpen } = await response.json()
-    const total = totalBooked + totalOpen
-    if (total === 0) { setCapacity(null); return }
-    setCapacity(Math.round((totalBooked / total) * 100))
+  const fetchCapacity = async (showErrorToast: boolean = false) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/acuity/booking-rate', {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+      })
+
+      if (!response.ok) {
+        if (showErrorToast) {
+          toast.error('Failed to load booking data')
+        }
+        setCapacity(null)
+        return
+      }
+
+      const { totalBooked, totalOpen } = await response.json()
+      const total = totalBooked + totalOpen
+      if (total === 0) {
+        setCapacity(null)
+        return
+      }
+
+      setCapacity(Math.round((totalBooked / total) * 100))
+    } catch (error) {
+      console.error('Error loading booking capacity:', error)
+      if (showErrorToast) {
+        toast.error('Failed to load booking data')
+      }
+      setCapacity(null)
+    }
   }
 
   useEffect(() => {
-    const init = async () => { await fetchCapacity(); setLoading(false) }
+    const init = async () => {
+      await fetchCapacity(true)
+      setLoading(false)
+    }
     init()
+  }, [user_id])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('booking-capacity-realtime')
+      .on('postgres_changes', {
+        event: '*', schema: 'public',
+        table: 'availability_daily_summary',
+        filter: `user_id=eq.${user_id}`,
+      }, () => {
+        if (refreshTimeoutRef.current) {
+          window.clearTimeout(refreshTimeoutRef.current)
+        }
+
+        refreshTimeoutRef.current = window.setTimeout(() => {
+          void fetchCapacity()
+        }, 400)
+      })
+      .subscribe()
+
+    return () => {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current)
+      }
+      supabase.removeChannel(channel)
+    }
   }, [user_id])
 
   const color = capacity !== null ? getCapacityColor(capacity) : 'rgba(255,255,255,0.2)'

@@ -8,17 +8,13 @@ import BookingCapacity from '@/components/AutoNudgeDashboard/BookingCapacity'
 import AutoNudgeImpact from '@/components/AutoNudgeDashboard/AutoNudgeImpact'
 import ClientHealth from '@/components/AutoNudgeDashboard/ClientHealth'
 import AutoNudgeHistory from '@/components/AutoNudgeDashboard/AutoNudgeHistory'
-import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
   const [user_id, setUser_id] = useState<string | null>(null)
   const [sms_engaged_current_week, setSms_engaged_current_week] = useState<boolean>(false)
   const [dateAutonudgeEnabled, setDateAutonudgeEnabled] = useState<string | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
-  const [availabilityReady, setAvailabilityReady] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
-
-  const router = useRouter()
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -36,21 +32,21 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
-      console.log('profile result:', profile)
       setSms_engaged_current_week(profile?.sms_engaged_current_week ?? false)
       setDateAutonudgeEnabled(profile?.date_autonudge_enabled ?? null)
       setUser_id(user.id)
       setProfileLoaded(true)
 
-      try {
-        await supabase.functions.invoke('update_barber_availability', {
-          body: { user_id: user.id }
+      void supabase.functions
+        .invoke('update_barber_availability', {
+          body: {
+            user_id: user.id,
+            force_refresh: false,
+          },
         })
-      } catch (err) {
-        console.error('Availability update failed:', err)
-      } finally {
-        setAvailabilityReady(true)
-      }
+        .catch((err) => {
+          console.error('Availability update failed:', err)
+        })
     }
     getUser()
   }, [])
@@ -75,14 +71,14 @@ export default function DashboardPage() {
             <AutoNudgeStatus user_id={user_id!} />
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5">
-            {availabilityReady && <OpenBookings user_id={user_id!} />}
+            <OpenBookings user_id={user_id!} />
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5">
-            {availabilityReady && <BookingCapacity user_id={user_id!} />}
+            <BookingCapacity user_id={user_id!} />
           </div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5" style={{ height: 100 }}>
-          {availabilityReady && <AutoNudgeImpact user_id={user_id!} />}
+          <AutoNudgeImpact user_id={user_id!} />
         </div>
       </div>
 
@@ -93,13 +89,13 @@ export default function DashboardPage() {
         </div>
         <div className="col-span-2 grid grid-cols-3 gap-4">
           <div className="rounded-2xl border border-white/10 bg-white/5">
-            {availabilityReady && <OpenBookings user_id={user_id!} />}
+            <OpenBookings user_id={user_id!} />
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5">
-            {availabilityReady && <BookingCapacity user_id={user_id!} />}
+            <BookingCapacity user_id={user_id!} />
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5">
-            {availabilityReady && <AutoNudgeImpact user_id={user_id!} />}
+            <AutoNudgeImpact user_id={user_id!} />
           </div>
         </div>
       </div>
