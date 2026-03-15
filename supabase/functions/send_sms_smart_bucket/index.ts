@@ -129,49 +129,13 @@ function hasBatchPassedToday(batchLabel: string, dayName: string, hour: number, 
 // ----------------------------------------------------------------
 
 function addTokenToBookingLink(message: string, token: string, username: string): string {
-  const pattern = `${SITE_URL}book?profile=${username}`
-  return message.replace(pattern, `${SITE_URL}book?profile=${username}&t=${token}`)
+  const pattern = `${SITE_URL}/book?profile=${username}`
+  return message.replace(pattern, `${SITE_URL}/book?profile=${username}&t=${token}`)
 }
 
-async function generateSMSMessage(profile: {
-  full_name: string
-  email: string
-  phone: string
-  username: string
-}): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    const bookingLink = `https://www.corva.ca/book?profile=${profile.username}`
-    const response = await fetch(`${SITE_URL}/api/client-messaging/generate-sms-template`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: 'Generate a professional barbershop marketing SMS message',
-        profile: {
-          full_name: profile.full_name ?? '',
-          email: profile.email ?? '',
-          phone: profile.phone ?? '',
-          booking_link: bookingLink,
-        },
-      }),
-    })
-
-    if (!response.ok) {
-      console.error('Failed to generate SMS template:', response.statusText)
-      return { success: false, error: 'Failed to generate message template' }
-    }
-
-    const data = await response.json()
-    const message = data.message || data.template
-
-    if (!message) {
-      return { success: false, error: 'No message template generated' }
-    }
-
-    return { success: true, message }
-  } catch (error: any) {
-    console.error('Error generating SMS message:', error)
-    return { success: false, error: error.message }
-  }
+function buildSMSMessage(barberFirstName: string, clientFirstName: string, username: string): string {
+  const bookingLink = `${SITE_URL}/book?profile=${username}`
+  return `Hey ${clientFirstName}, its ${barberFirstName}. I have a few more slots this week. You can just click the link to book!\n${bookingLink}`
 }
 
 // ----------------------------------------------------------------
@@ -357,6 +321,8 @@ Deno.serve(async (req) => {
 
       console.log(`[Bucket ${bucket_id}] Barber: ${profile.full_name} (@${profile.username})`)
 
+      const barberFirstName = profile.full_name?.split(' ')[0] ?? profile.full_name ?? 'Your barber'
+
       // ----------------------------------------------------------------
       // 4. Upsert barber_nudge_success row (ignore if already exists)
       // ----------------------------------------------------------------
@@ -381,20 +347,7 @@ Deno.serve(async (req) => {
       }
 
       // ----------------------------------------------------------------
-      // 5. Generate SMS message (once per bucket)
-      // ----------------------------------------------------------------
-      const messageResult = await generateSMSMessage(profile)
-
-      if (!messageResult.success || !messageResult.message) {
-        console.error(`[Bucket ${bucket_id}] ERROR generating SMS message:`, messageResult.error)
-        continue
-      }
-
-      const baseMessage = messageResult.message
-      console.log(`[Bucket ${bucket_id}] SMS message generated successfully`)
-
-      // ----------------------------------------------------------------
-      // 6. Send messages to eligible clients
+      // 5. Send messages to eligible clients
       // ----------------------------------------------------------------
       const statusCallbackUrl = `${SITE_URL}/api/barber-nudge/sms-status-client`
       const failedPhones: string[] = []
@@ -406,6 +359,10 @@ Deno.serve(async (req) => {
           console.log(`[Bucket ${bucket_id}] Skipping ${full_name} — no phone`)
           continue
         }
+
+        const clientFirstName = full_name?.split(' ')[0] ?? full_name ?? 'there'
+
+        const baseMessage = buildSMSMessage(barberFirstName, clientFirstName, profile.username)
 
         const messageWithToken = link_token
           ? addTokenToBookingLink(baseMessage, link_token, profile.username)
@@ -458,7 +415,7 @@ Deno.serve(async (req) => {
       }
 
       // ----------------------------------------------------------------
-      // 7. Update messages_failed on the bucket if any failed
+      // 6. Update messages_failed on the bucket if any failed
       // ----------------------------------------------------------------
       if (failedPhones.length > 0) {
         const { data: currentBucketData } = await supabase

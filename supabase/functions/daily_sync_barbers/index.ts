@@ -78,8 +78,8 @@ Deno.serve(async (_req) => {
             active++
 
             // Use new /api/pull endpoint with month granularity
-            const url = `https://shearwork-web.vercel.app/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
-            // const url = `https://coziest-stanton-dilatate.ngrok-free.dev/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
+            // const url = `https://shearwork-web.vercel.app/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
+            const url = `https://coziest-stanton-dilatate.ngrok-free.dev/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
             
             fetch(url, {
               method: 'GET',
