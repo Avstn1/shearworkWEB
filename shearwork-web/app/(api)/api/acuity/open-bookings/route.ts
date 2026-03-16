@@ -39,6 +39,11 @@ type IntervalCandidate = {
 const openBookingsCache = new Map<string, OpenBookingsCacheEntry>()
 const openBookingsInFlight = new Map<string, Promise<OpenBookingsPayload>>()
 
+type OpenBookingsWeekRange = {
+  startDate: string
+  endDate: string
+}
+
 function cleanupOpenBookingsCache(nowMs: number) {
   for (const [key, entry] of openBookingsCache.entries()) {
     if (nowMs - entry.cachedAtMs > OPEN_BOOKINGS_CACHE_TTL_MS * 6) {
@@ -178,6 +183,83 @@ function getTorontoDayOfWeek(): number {
   ).getDay()
 }
 
+function formatTorontoDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+function getWeekRange(weekOffset: number): OpenBookingsWeekRange {
+  const now = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
+  )
+  const dayOfWeek = now.getDay()
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+
+  const start = new Date(now)
+  start.setDate(now.getDate() + diff + weekOffset * 7)
+  start.setHours(0, 0, 0, 0)
+
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  end.setHours(23, 59, 59, 999)
+
+  return {
+    startDate: formatTorontoDate(start),
+    endDate: formatTorontoDate(end),
+  }
+}
+
+async function getLatestCachedSlots(params: {
+  supabase: SupabaseClient
+  userId: string
+  range: OpenBookingsWeekRange
+}): Promise<AvailabilitySlotRecord[] | null> {
+  const { supabase, userId, range } = params
+
+  const { data, error } = await supabase
+    .from('availability_slots')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('source', 'acuity')
+    .gte('slot_date', range.startDate)
+    .lte('slot_date', range.endDate)
+    .order('slot_date', { ascending: true })
+    .order('fetched_at', { ascending: false })
+
+  if (error) {
+    console.error('open-bookings cache lookup failed:', error)
+    return null
+  }
+
+  if (!data || data.length === 0) return null
+
+  const latestByDate = new Map<string, string>()
+  const latestSlots: AvailabilitySlotRecord[] = []
+
+  for (const row of data as AvailabilitySlotRecord[]) {
+    const fetchedAt = row.fetched_at
+    if (!fetchedAt) continue
+
+    const latestForDate = latestByDate.get(row.slot_date)
+
+    if (!latestForDate) {
+      latestByDate.set(row.slot_date, fetchedAt)
+      latestSlots.push(row)
+      continue
+    }
+
+    if (fetchedAt === latestForDate) {
+      latestSlots.push(row)
+    }
+  }
+
+  return latestSlots.length > 0 ? latestSlots : null
+}
+
 async function computeOpenBookingsForWeek(params: {
   userId: string
   weekOffset: number
@@ -203,6 +285,33 @@ async function computeOpenBookingsForWeek(params: {
   }
 
   const computePromise = (async () => {
+    const weekRange = getWeekRange(weekOffset)
+
+    const cachedSlots = await getLatestCachedSlots({
+      supabase,
+      userId,
+      range: weekRange,
+    })
+
+    if (cachedSlots && cachedSlots.length > 0) {
+      const selectedService = resolveSelectedService(cachedSlots)
+      const totalOpenings = countNonOverlappingOpenings(cachedSlots, selectedService)
+      const cachedPayload: OpenBookingsPayload = {
+        totalOpenings,
+        weekStart: weekRange.startDate,
+        weekEnd: weekRange.endDate,
+        weekOffset,
+        selectedService,
+      }
+
+      openBookingsCache.set(cacheKey, {
+        payload: cachedPayload,
+        cachedAtMs: Date.now(),
+      })
+
+      return cachedPayload
+    }
+
     const availability = await pullAvailability(supabase, userId, {
       dryRun: true,
       forceRefresh: true,
