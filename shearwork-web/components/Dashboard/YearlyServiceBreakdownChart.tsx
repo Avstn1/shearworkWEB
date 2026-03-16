@@ -5,11 +5,11 @@ import { supabase } from '@/utils/supabaseClient'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 const COLORS = [
-  '#F6E27F', '#E7B7A3', '#A7C7E7', '#C6D8A8', '#9AD1C9',
-  '#B7A0E3', '#F5D6C6', '#F7C9D2', '#C9E5D3', '#D6D6D6',
-  '#E1D5F3', '#FFE3A3', '#A3D0FF', '#B0E0E6', '#D0C9FF',
-  '#F0E2D6', '#C5F0C5', '#FFB3B3', '#D3F4FF', '#E3C5FF',
-  '#FFE0B2', '#B2FFD9', '#F2B2FF', '#C4C4C4',
+  '#6ee7b7', '#a78bfa', '#67e8f9', '#fbbf24', '#f0abfc',
+  '#86efac', '#c4b5fd', '#a5f3fc', '#fcd34d', '#f5d0fe',
+  '#bbf7d0', '#ddd6fe', '#cffafe', '#fde68a', '#fae8ff',
+  '#d1fae5', '#ede9fe', '#e0f2fe', '#fef3c7', '#fdf4ff',
+  '#ecfdf5', '#f5f3ff', '#f0f9ff', '#fffbeb',
 ]
 
 export interface ServiceBooking {
@@ -126,13 +126,9 @@ export default function YearlyServiceBreakdownChart({
   if (loading) {
     return (
       <div
-        className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[360px]"
-        style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
-        }}
+        className="flex items-center justify-center min-h-[360px]"
       >
-        <p className="text-[#E8EDC7] opacity-70">Loading service breakdown...</p>
+        <p className="text-[#555]">Loading service breakdown...</p>
       </div>
     )
   }
@@ -140,13 +136,9 @@ export default function YearlyServiceBreakdownChart({
   if (!data.length) {
     return (
       <div
-        className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[360px]"
-        style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
-        }}
+        className="flex items-center justify-center min-h-[360px]"
       >
-        <p className="text-[#E8EDC7] opacity-70">
+        <p className="text-[#555]">
           No service data for this timeframe.
         </p>
       </div>
@@ -155,14 +147,12 @@ export default function YearlyServiceBreakdownChart({
 
   return (
     <div
-      className="p-2 rounded-lg shadow-md border flex flex-col flex-1"
+      className="flex flex-col flex-1"
       style={{
-        borderColor: 'var(--card-revenue-border)',
-        background: 'var(--card-revenue-bg)',
         minHeight: '360px',
       }}
     >
-      <h2 className="text-[#E8EDC7] text-xl font-semibold mb-4">
+      <h2 className="text-white text-xl font-semibold mb-4">
         💈 {timeframeLabel(timeframe, year)}
       </h2>
 
@@ -192,14 +182,14 @@ export default function YearlyServiceBreakdownChart({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1E1E1C',
-                  border: '1px solid #C8B653',
+                  backgroundColor: '#0f1210',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
-                  color: '#F5F5DC',
+                  color: '#ffffff',
                   padding: '8px 12px',
                 }}
-                itemStyle={{ color: '#E8EDC7', fontWeight: 500 }}
-                labelStyle={{ color: '#C8B653', fontWeight: 600 }}
+                itemStyle={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}
+                labelStyle={{ color: '#ffffff', fontWeight: 600 }}
                 formatter={(value, name) => [`${value} bookings`, name as string]}
               />
             </PieChart>
@@ -208,7 +198,7 @@ export default function YearlyServiceBreakdownChart({
 
         {/* Legend */}
         <div
-          className="flex flex-wrap md:flex-col gap-3 justify-center md:justify-start md:pl-4 text-[#E8EDC7]"
+          className="flex flex-wrap md:flex-col gap-3 justify-center md:justify-start md:pl-4 text-[#8a9b90]"
           style={{
             fontSize: '0.95rem',
             lineHeight: 1.3,

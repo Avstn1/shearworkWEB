@@ -160,12 +160,11 @@ export default function MonthlyReports({
             <div
               key={r.id}
               className="relative w-full h-full flex-1 rounded-xl p-4 border transition-all duration-300 transform cursor-pointer
-                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-2xl hover:bg-[rgba(255,255,255,0.05)]"
+                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(167,139,250,0.1)] hover:bg-[rgba(167,139,250,0.08)]"
               style={{
-                background: 'var(--card-monthly-bg)',
-                borderColor: 'var(--card-monthly-border)',
-                boxShadow: `0 2px 6px var(--card-monthly-shadow)`,
-                color: 'var(--foreground)',
+                background: 'rgba(167,139,250,0.04)',
+                borderColor: 'rgba(167,139,250,0.1)',
+                color: '#e8f0eb',
               }}
               onClick={() => {
                 setSelectedReport(r)
@@ -175,10 +174,10 @@ export default function MonthlyReports({
             >
               <div className="flex justify-between items-start h-full">
                 <div className="flex-1 flex flex-col justify-center gap-2">
-                  <div className="flex items-center justify-center gap-1 text-sm font-semibold text-[var(--highlight)]">
+                  <div className="flex items-center justify-center gap-1 text-sm font-semibold text-[#a78bfa]">
                     <FileText size={16} /> {r.month} {r.year}
                   </div>
-                  <div className="text-xs text-[var(--text-subtle)] max-h-20 overflow-hidden relative prose prose-sm">
+                  <div className="text-xs text-[#555] max-h-20 overflow-hidden relative prose prose-sm">
                     <div
                       dangerouslySetInnerHTML={{
                         __html: r.content
@@ -188,7 +187,7 @@ export default function MonthlyReports({
                           : '<em>No content available.</em>',
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-[var(--card-monthly-bg)] to-transparent" />
+                    <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-[rgba(167,139,250,0.04)] to-transparent" />
                   </div>
                 </div>
 
@@ -199,7 +198,7 @@ export default function MonthlyReports({
                       e.stopPropagation()
                       setMenuOpenId(menuOpenId === r.id ? null : r.id)
                     }}
-                    className="p-1 rounded-md hover:bg-[var(--card-monthly-border)]/20 transition"
+                    className="p-1 rounded-md hover:bg-white/[0.08] transition"
                   >
                     <MoreVertical size={18} />
                   </button>
@@ -211,20 +210,21 @@ export default function MonthlyReports({
                       }}
                       className="absolute right-0 mt-1 rounded-md shadow-lg z-50 w-28"
                       style={{
-                        background: 'var(--card-monthly-border)',
-                        color: 'var(--text-bright)',
+                        background: '#151c18',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        color: '#e8f0eb',
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
                         onClick={() => handleEdit(r)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-white/[0.06]"
                       >
                         <Edit size={14} /> Edit
                       </button>
                       <button
                         onClick={() => handleDelete(r.id)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-300"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#fbbf24] hover:bg-[rgba(251,191,36,0.08)]"
                       >
                         <Trash2 size={14} /> Delete
                       </button>
@@ -237,7 +237,7 @@ export default function MonthlyReports({
             </div>
           ))
         ) : (
-          <div className="text-[#bdbdbd] text-sm mt-2 text-center w-full">
+          <div className="text-[#555] text-sm mt-2 text-center w-full">
             No monthly reports for this month/year.
           </div>
         )}

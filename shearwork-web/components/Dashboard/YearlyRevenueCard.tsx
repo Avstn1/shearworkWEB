@@ -145,21 +145,17 @@ export default function YearlyRevenueCard({
 
   return (
     <div
-      className="flex flex-col justify-between rounded-lg shadow-md border border-[color:var(--card-revenue-border)]"
+      className="flex flex-col justify-between"
       style={{
-        background: 'var(--card-revenue-bg)',
         height: '100%',
-        minHeight: '150px',
-        maxHeight: '200px',
-        padding: '1rem',
       }}
     >
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">
+      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">
         💰 Total {label} ({titleSuffix})
       </h2>
 
       <div className="flex-1 flex flex-col justify-center">
-        <p className="text-3xl font-bold text-[#F5E6C5] truncate">
+        <p className="text-3xl font-bold text-white truncate">
           {loading
             ? 'Loading...'
             : total !== null
@@ -167,7 +163,7 @@ export default function YearlyRevenueCard({
             : 'N/A'}
         </p>
         {!loading && tips !== null && tips > 0 && (
-          <p className="text-sm text-amber-300 mt-1">
+          <p className="text-sm text-white/30 mt-1">
             (includes {formatCurrency(tips)} in tips)
           </p>
         )}
