@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 
@@ -11,46 +11,51 @@ interface Props {
 export default function OpenBookings({ user_id }: Props) {
   const [totalOpenings, setTotalOpenings] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const refreshTimeoutRef = useRef<number | null>(null)
 
-  const getWeekRange = () => {
-    const now = new Date()
-    const dayOfWeek = now.getDay()
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-    const start = new Date(now)
-    start.setDate(now.getDate() + diff)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(start)
-    end.setDate(start.getDate() + 6)
-    end.setHours(23, 59, 59, 999)
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
-    }
-  }
+  const fetchOpenings = useCallback(async (
+    showErrorToast: boolean = false,
+    forceFresh: boolean = false
+  ) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const endpoint = forceFresh
+        ? '/api/acuity/open-bookings?fresh=true'
+        : '/api/acuity/open-bookings'
 
-  const fetchOpenings = async () => {
-    const { start, end } = getWeekRange()
-    const { data, error } = await supabase
-      .from('availability_daily_summary')
-      .select('slot_count_update')
-      .eq('user_id', user_id)
-      .gte('slot_date', start)
-      .lte('slot_date', end)
+      const response = await fetch(endpoint, {
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {},
+      })
 
-    if (error) {
-      console.error('Error fetching availability:', error)
-      toast.error('Failed to load open bookings')
+      if (!response.ok) {
+        if (showErrorToast) {
+          toast.error('Failed to load open bookings')
+        }
+        setTotalOpenings(0)
+        return
+      }
+
+      const payload = await response.json()
+      setTotalOpenings(Number(payload.totalOpenings ?? 0))
+    } catch (error) {
+      console.error('Error fetching open bookings:', error)
+      if (showErrorToast) {
+        toast.error('Failed to load open bookings')
+      }
       setTotalOpenings(0)
-      return
     }
-    const total = data?.reduce((sum, row) => sum + (row.slot_count_update || 0), 0) ?? 0
-    setTotalOpenings(total)
-  }
+  }, [])
 
   useEffect(() => {
-    const init = async () => { await fetchOpenings(); setLoading(false) }
+    const init = async () => {
+      await fetchOpenings(true)
+      setLoading(false)
+    }
+
     init()
-  }, [user_id])
+  }, [fetchOpenings])
 
   useEffect(() => {
     const channel = supabase
@@ -59,10 +64,24 @@ export default function OpenBookings({ user_id }: Props) {
         event: '*', schema: 'public',
         table: 'availability_daily_summary',
         filter: `user_id=eq.${user_id}`,
-      }, () => { fetchOpenings() })
+      }, () => {
+        if (refreshTimeoutRef.current) {
+          window.clearTimeout(refreshTimeoutRef.current)
+        }
+
+        refreshTimeoutRef.current = window.setTimeout(() => {
+          void fetchOpenings(false, true)
+        }, 400)
+      })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [user_id])
+
+    return () => {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current)
+      }
+      supabase.removeChannel(channel)
+    }
+  }, [fetchOpenings, user_id])
 
   const desktopRing = (
     <div className="relative flex items-center justify-center flex-shrink-0">
