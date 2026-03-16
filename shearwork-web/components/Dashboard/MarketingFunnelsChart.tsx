@@ -17,7 +17,7 @@ import { supabase } from '@/utils/supabaseClient'
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal';
 
-const COLORS = ['#E8EDC7', '#9AC8CD', '#B19470', '#748E63', '#F1EEDC']
+const COLORS = ['#8a9b90', '#6ee7b7', '#a78bfa', '#67e8f9', '#fbbf24']
 
 export interface MarketingFunnel {
   source: string
@@ -178,13 +178,9 @@ export default function MarketingFunnelsChart({
   if (data.length === 0)
     return (
       <div
-        className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[400px]"
-        style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
-        }}
+        className="flex items-center justify-center min-h-[400px]"
       >
-        <p className="text-[#E8EDC7] opacity-70">No data to see here yet!</p>
+        <p className="text-[#555]">No data to see here yet!</p>
       </div>
     )
 
@@ -196,21 +192,19 @@ export default function MarketingFunnelsChart({
   return (
     <>
       <div
-        className="p-4 rounded-lg shadow-md border flex flex-col flex-1"
+        className="flex flex-col flex-1"
         style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
           minHeight: '400px',
           maxHeight: '500px',
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[#E8EDC7] text-xl font-semibold">
+          <h2 className="text-white text-xl font-semibold">
             📣 Marketing Funnels
           </h2>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-[#748E63] hover:bg-[#9AC8CD] text-[#2a3612ff] hover:text-[#E8EDC7] rounded-lg transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+            className="px-4 py-2 bg-[rgba(167,139,250,0.1)] hover:bg-[rgba(167,139,250,0.2)] text-[#a78bfa] rounded-lg transition-all duration-200 font-semibold border border-[rgba(167,139,250,0.15)] flex items-center gap-2"
           >
             <span>Details</span>
           </button>
@@ -224,10 +218,10 @@ export default function MarketingFunnelsChart({
               margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
               barCategoryGap={filteredData.length > 10 ? '30%' : '15%'}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#3A3A3A" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
 
-              <XAxis xAxisId="clients" type="number" stroke="#E8EDC7" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
-              <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#E8EDC7" hide />
+              <XAxis xAxisId="clients" type="number" stroke="#8a9b90" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
+              <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#8a9b90" hide />
               
               <YAxis
                 yAxisId="hidden"
@@ -251,13 +245,13 @@ export default function MarketingFunnelsChart({
                     : [value, name]
                 }
                 contentStyle={{
-                  backgroundColor: '#2b2b2b',
-                  border: '1px solid #E8EDC7',
+                  backgroundColor: '#0f1210',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
-                  color: '#E8EDC7',
+                  color: '#ffffff',
                 }}
-                itemStyle={{ color: '#E8EDC7' }}
-                labelStyle={{ color: '#E8EDC7' }}
+                itemStyle={{ color: 'rgba(255,255,255,0.5)' }}
+                labelStyle={{ color: '#ffffff' }}
               />
 
               <Legend
@@ -265,7 +259,7 @@ export default function MarketingFunnelsChart({
                   value === 'Retention' ? 'Retention (%)' : value
                 }
                 iconType="circle"
-                wrapperStyle={{ color: '#E8EDC7', paddingTop: '10px' }}
+                wrapperStyle={{ color: '#8a9b90', paddingTop: '10px' }}
               />
 
               <YAxis
@@ -300,7 +294,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#2a3612ff"
+                          fill="#0f1210"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -315,7 +309,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 5}
                           y={y + height / 2}
-                          fill="#E8EDC7"
+                          fill="#8a9b90"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -346,7 +340,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 25}
                           y={y + height / 2}
-                          fill="#2a3612ff"
+                          fill="#0f1210"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -361,7 +355,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 25}
                           y={y + height / 2}
-                          fill="#E8EDC7"
+                          fill="#8a9b90"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -404,7 +398,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#2a3612ff"
+                          fill="#0f1210"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -419,7 +413,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 5}
                           y={y + height / 2}
-                          fill="#E8EDC7"
+                          fill="#8a9b90"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -458,7 +452,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#2a3612ff"
+                          fill="#0f1210"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -473,7 +467,7 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 5}
                           y={y + height / 2}
-                          fill="#E8EDC7"
+                          fill="#8a9b90"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"

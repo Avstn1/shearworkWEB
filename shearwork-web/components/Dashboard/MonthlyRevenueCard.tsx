@@ -137,25 +137,24 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
   const change = calculateChange()
 
   return (
-    <div className="p-4 rounded-lg shadow-md relative flex flex-col flex-1 border border-[color:var(--card-revenue-border)]"
-      style={{ background: 'var(--card-revenue-bg)' }}>
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
+    <div className="relative flex flex-col flex-1">
+      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
       <div className="flex-1 flex flex-col justify-center">
-        <p className="text-3xl font-bold text-[#F5E6C5]">
+        <p className="text-3xl font-bold text-white">
           {loading ? 'Loading...' : revenue !== null ? formatCurrency(revenue) : 'N/A'}
         </p>
         {!loading && tips !== null && tips > 0 && (
-          <p className="text-sm text-amber-300 mt-1">
+          <p className="text-sm text-white/30 mt-1">
             (includes {formatCurrency(tips)} in tips)
           </p>
         )}
       </div>
       <div className="mt-auto">
         {change !== null ? (
-          <p className={`text-sm font-semibold ${change > 0 ? 'text-green-400' : change < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-gray-400">(vs. prior month)</span>
+          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#6ee7b7]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#555]'}`}>
+            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#555]">(vs. prior month)</span>
           </p>
-        ) : <p className="text-sm text-gray-500">—</p>}
+        ) : <p className="text-sm text-[#555]">—</p>}
       </div>
     </div>
   )

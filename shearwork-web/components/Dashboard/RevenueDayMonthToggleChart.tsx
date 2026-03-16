@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import RevenueByWeekdayChart from './RevenueByWeekdayChart'
-import QuarterlyRevenueChart from './QuarterlyRevenueChart'  // <- your month chart
+import QuarterlyRevenueChart from './QuarterlyRevenueChart'
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
 
@@ -23,15 +23,14 @@ export default function RevenueDayMonthToggleChart({
 
   return (
     <div className="relative h-[300px] flex flex-col">
-      {/* Toggle buttons */}
       <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
         <button
           type="button"
           onClick={() => setView('weekday')}
-          className={`px-2 py-1 rounded-full text-xs font-semibold border transition-colors ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
             view === 'weekday'
-              ? 'bg-lime-300 text-black border-lime-300 shadow-[0_0_8px_#c4ff85]'
-              : 'bg-black/40 text-[#d1e2c5] border-white/20 hover:bg-white/10'
+              ? 'bg-[rgba(167,139,250,0.18)] text-white border-[rgba(167,139,250,0.35)]'
+              : 'bg-black/40 text-[#555] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
           }`}
         >
           Day
@@ -39,28 +38,27 @@ export default function RevenueDayMonthToggleChart({
         <button
           type="button"
           onClick={() => setView('month')}
-          className={`px-2 py-1 rounded-full text-xs font-semibold border transition-colors ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
             view === 'month'
-              ? 'bg-lime-300 text-black border-lime-300 shadow-[0_0_8px_#c4ff85]'
-              : 'bg-black/40 text-[#d1e2c5] border-white/20 hover:bg-white/10'
+              ? 'bg-[rgba(167,139,250,0.18)] text-white border-[rgba(167,139,250,0.35)]'
+              : 'bg-black/40 text-[#555] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
           }`}
         >
           Month
         </button>
       </div>
 
-      {/* Underlying chart – re-use your existing components */}
       {view === 'weekday' ? (
         <RevenueByWeekdayChart
           userId={userId}
           year={year}
-          timeframe={timeframe} // you already added this prop earlier
+          timeframe={timeframe}
         />
       ) : (
         <QuarterlyRevenueChart
           userId={userId}
           year={year}
-          timeframe={timeframe} // acts as "month" chart based on timeframe
+          timeframe={timeframe}
         />
       )}
     </div>
