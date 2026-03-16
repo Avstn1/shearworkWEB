@@ -175,7 +175,7 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
             </span>
           )}
         </div>
-        <span className="text-xs font-semibold text-sky-300 flex-shrink-0">Score: {client.score}</span>
+        <span className="text-xs font-semibold text-sky-300 flex-shrink-0">Score: {Math.round(client.score)}</span>
       </div>
       <div className="flex items-end justify-between mt-1.5 gap-2">
         <div className="flex gap-2 text-xs text-[#bdbdbd] flex-wrap">
