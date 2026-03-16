@@ -196,7 +196,7 @@ export default function WeeklyComparisonReports({
                   <div className="flex items-center gap-1 text-sm font-semibold text-[#6ee7b7]">
                     <FileText size={16} /> Weekly Comparison - {r.month} {r.year}
                   </div>
-                  <div className="text-xs text-[#555] max-h-20 overflow-hidden relative">
+                  <div className="text-xs text-[#7a9485] max-h-20 overflow-hidden relative">
                     <div
                       className="prose prose-sm"
                       dangerouslySetInnerHTML={{
@@ -253,7 +253,7 @@ export default function WeeklyComparisonReports({
             </div>
           ))
         ) : (
-          <div className="text-[#555] text-sm mt-2 col-span-1 text-center">
+          <div className="text-[#7a9485] text-sm mt-2 col-span-1 text-center">
             No weekly comparison reports for this month/year.
           </div>
         )}
