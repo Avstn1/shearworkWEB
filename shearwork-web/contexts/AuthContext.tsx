@@ -303,7 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id])
 
-  const isAdmin = profile?.role === 'Admin' || profile?.role === 'Owner'
+  const isAdmin = profile?.role === 'Admin' 
 
   const isPremiumUser =
     profile?.stripe_subscription_status === 'active' ||

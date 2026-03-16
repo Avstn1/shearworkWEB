@@ -41,6 +41,21 @@ export default function Navbar() {
   
   // During onboarding, only show the logo - hide all other navbar controls
   const isOnboardingOrPricing = pathname === '/pricing/return' || pathname === '/pricing' || (user && profile?.onboarded === false)
+  const navRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const updateNavbarHeight = () => {
+      if (navRef.current) {
+        document.documentElement.style.setProperty(
+          '--navbar-height',
+          `${navRef.current.offsetHeight}px`
+        )
+      }
+    }
+    updateNavbarHeight()
+    window.addEventListener('resize', updateNavbarHeight)
+    return () => window.removeEventListener('resize', updateNavbarHeight)
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -264,6 +279,23 @@ export default function Navbar() {
           <span>Dashboard</span>
         </Link>
         <Link 
+          href="/analytics" 
+          onClick={() => setOpen(false)} 
+          className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
+          style={{ color: COLORS.text }}
+          onMouseEnter={(e) => { 
+            e.currentTarget.style.color = COLORS.green
+            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+          }}
+          onMouseLeave={(e) => { 
+            e.currentTarget.style.color = COLORS.text
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }}
+        >
+          <ChartBar className="w-5 h-5" /> 
+          <span>Analytics</span>
+        </Link>
+        <Link 
           href="/client-manager" 
           onClick={() => setOpen(false)} 
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
@@ -478,6 +510,7 @@ export default function Navbar() {
   return (
     <>
       <nav 
+        ref={navRef}
         className="fixed top-0 w-full z-50 backdrop-blur-md shadow-sm"
         style={{
           backgroundColor: `${COLORS.navBg}f0`,

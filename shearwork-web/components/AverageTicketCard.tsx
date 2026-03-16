@@ -104,13 +104,12 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
 
   return (
     <div
-      className="p-4 rounded-lg shadow-md border border-[color:var(--card-revenue-border)] flex flex-col min-h-[140px]"
-      style={{ background: 'var(--card-revenue-bg)' }}
+      className="flex flex-col min-h-[140px]"
     >
-      <h2 className="text-[#E8EDC7] text-base font-semibold mb-2">💵 Avg Ticket</h2>
+      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">💵 Avg Ticket</h2>
 
       <div className="flex-1 flex items-center">
-        <p className="text-3xl font-bold text-[#F5E6C5]">
+        <p className="text-3xl font-bold text-white">
           {loading
             ? 'Loading...'
             : avgTicket !== null
@@ -124,16 +123,16 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
           <p
             className={`text-sm font-semibold ${
               change > 0
-                ? 'text-green-400'
+                ? 'text-[#6ee7b7]'
                 : change < 0
-                  ? 'text-red-400'
-                  : 'text-gray-400'
+                  ? 'text-[#fbbf24]'
+                  : 'text-[#555]'
             }`}
           >
-            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-gray-400">(vs. prior month)</span>
+            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-[#555]">(vs. prior month)</span>
           </p>
         ) : (
-          <p className="text-sm text-gray-500">—</p>
+          <p className="text-sm text-[#555]">—</p>
         )}
       </div>
     </div>

@@ -139,12 +139,12 @@ export default function WeeklyReports({
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative rounded-xl p-3 border transition-all duration-300 cursor-pointer hover:shadow-xl"
+              className="relative rounded-xl p-3 border transition-all duration-300 cursor-pointer
+                hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_8px_24px_rgba(110,231,183,0.08)] hover:bg-[rgba(110,231,183,0.08)]"
               style={{
-                background: 'var(--card-weekly-bg)',
-                borderColor: 'var(--card-weekly-border)',
-                boxShadow: `0 3px 10px var(--card-weekly-shadow)`,
-                color: 'var(--foreground)',
+                background: 'rgba(110,231,183,0.04)',
+                borderColor: 'rgba(110,231,183,0.1)',
+                color: '#e8f0eb',
               }}
               onClick={() => {
                 setSelectedReport(r)
@@ -161,20 +161,20 @@ export default function WeeklyReports({
                       setMenuPosition({ top: rect.bottom + window.scrollY, left: rect.right - 120 })
                       setOpenMenu(openMenu === r.id ? null : r.id)
                     }}
-                    className="absolute top-2 right-2 p-1 rounded-md hover:bg-[var(--card-weekly-border)]/20 transition"
+                    className="absolute top-2 right-2 p-1 rounded-md hover:bg-white/[0.08] transition"
                   >
                     <MoreVertical size={16} />
                   </button>
                 </>
               )}
 
-              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--highlight)]">
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#6ee7b7]">
                 <FileText size={16} /> Week {r.week_number} - {r.month} {r.year}
               </div>
             </div>
           ))
         ) : (
-          <div className="text-[#bdbdbd] text-sm mt-2 col-span-full text-center">
+          <div className="text-[#555] text-sm mt-2 col-span-full text-center">
             No weekly reports available for this month/year.
           </div>
         )}
@@ -188,8 +188,9 @@ export default function WeeklyReports({
             style={{
               top: `${menuPosition.top}px`,
               left: `${menuPosition.left}px`,
-              background: 'var(--card-weekly-border)',
-              color: 'var(--text-bright)',
+              background: '#151c18',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#e8f0eb',
             }}
           >
             <button
@@ -197,13 +198,13 @@ export default function WeeklyReports({
                 const report = reports.find((r) => r.id === openMenu)
                 if (report) handleEdit(e, report)
               }}
-              className="block w-full text-left px-3 py-1 text-sm hover:bg-[var(--card-weekly-bg)]/50"
+              className="block w-full text-left px-3 py-1 text-sm hover:bg-white/[0.06]"
             >
               Edit
             </button>
             <button
               onClick={(e) => handleDelete(e, openMenu)}
-              className="block w-full text-left px-3 py-1 text-sm text-red-300 hover:bg-red-900/20"
+              className="block w-full text-left px-3 py-1 text-sm text-[#fbbf24] hover:bg-[rgba(251,191,36,0.08)]"
             >
               Delete
             </button>

@@ -192,7 +192,7 @@ export default function AdminDashboardPage() {
         if (profileError) throw profileError
         setProfile(profileData)
 
-        if (!profileData || (profileData.role !== 'Owner' && profileData.role !== 'Admin')) {
+        if (!profileData || profileData.role !== 'Admin') {
           router.push('/dashboard')
         } else {
           setUserRole(profileData.role)

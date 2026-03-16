@@ -7,8 +7,8 @@ import YearlyExpensesCard from './YearlyExpensesCard'
 import YearlyTopClientsCard from './YearlyTopClientsCard'
 import TimeframeAverageTicketCard from './TimeframeAverageTicketCard'
 import RevenueDayMonthToggleChart from './RevenueDayMonthToggleChart'
-import YearlyServiceBreakdownChart from './YearlyServiceBreakdownChart'      // ✅ NEW
-import TimeframeMarketingFunnelsChart from './TimeframeMarketingFunnelsChart' // ✅ NEW
+import YearlyServiceBreakdownChart from './YearlyServiceBreakdownChart'
+import TimeframeMarketingFunnelsChart from './TimeframeMarketingFunnelsChart'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import toast from 'react-hot-toast'
 
@@ -37,31 +37,10 @@ export default function YearlyDashboard({
   const isMobile = useIsMobile(768)
   const [timeframe, setTimeframe] = useState<Timeframe>('year')
 
-  const cardClass = 'bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 flex flex-col flex-1'
-  
-  // const syncMarketingFunnels = async () => {
-  //   console.log("Sync Marketing funnels")
-  //   if (!userId) return
-  //   //setIsRefreshing(true)
-  //   const toastId = toast.loading(`Syncing data for ${timeframe} of ${selectedYear}...`)
-  //   try {
-  //     console.log("Pulling marketing funnels now at yearly dashboard")
-  //     const res = await fetch(`/api/acuity/pull-marketing-funnels?endpoint=appointments&month=${encodeURIComponent(timeframe)}&year=${selectedYear}`)
-  //     // if (!res.ok) throw new Error('Acuity data fetch failed')
-  //     await res.json()
-  //     //setRefreshKey(prev => prev + 1)
-  //     toast.success(`Data updated for ${timeframe} of ${selectedYear}`, { id: toastId })
-  //   } catch (err) {
-  //     console.error(err)
-  //     toast.error('Error fetching Acuity data.', { id: toastId })
-  //   } finally {
-  //     //setIsRefreshing(false)
-  //   }
-  // }
+  const cardClass = 'bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col flex-1'
 
   useEffect(() => {
     if (!userId) return
-    // syncMarketingFunnels()
   },[selectedYear, timeframe])
 
     return (
@@ -69,12 +48,12 @@ export default function YearlyDashboard({
       <div className="flex flex-col gap-4 pr-1">
         {/* Timeframe selector */}
         <div className="flex justify-end">
-          <label className="text-sm text-[#d1e2c5] flex items-center gap-2">
+          <label className="text-sm text-[#bdbdbd] flex items-center gap-2">
             <span>Timeline:</span>
             <select
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-              className="bg-black/40 border border-white/20 rounded-full px-3 py-1 text-xs text-[#F5E6C5] focus:outline-none focus:ring-2 focus:ring-lime-300/60"
+              className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-white/20"
             >
               <option value="year">Year</option>
               <option value="Q1">Q1 (Jan–Mar)</option>
@@ -123,7 +102,6 @@ export default function YearlyDashboard({
           variants={fadeInUp}
           className="grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
-          {/* Left: Revenue by Day / Month toggle */}
           <motion.div className={cardClass}>
             <RevenueDayMonthToggleChart
               key={`ydaymonth-${globalRefreshKey}-${timeframe}`}
@@ -133,7 +111,6 @@ export default function YearlyDashboard({
             />
           </motion.div>
 
-          {/* Right: Top clients for selected timeframe */}
           <motion.div className={cardClass}>
             <YearlyTopClientsCard
               key={`ytopclients-${globalRefreshKey}-${timeframe}`}
