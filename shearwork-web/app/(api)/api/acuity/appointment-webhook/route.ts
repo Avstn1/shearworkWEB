@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { updateSmsBarberSuccess } from '@/lib/appointment_processors/update_sms_barber_success';
 import { updateBarberClient } from '@/lib/appointment_processors/update_barber_client';
+import { pullAvailability } from '@/lib/booking/availability/orchestrator';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -14,6 +15,29 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1';
+
+async function refreshAvailabilityForOpenBookings(userId: string) {
+  const weekOffsets = [0, 1];
+  const results = await Promise.allSettled(
+    weekOffsets.map((weekOffset) =>
+      pullAvailability(supabase, userId, {
+        dryRun: false,
+        forceRefresh: true,
+        weekOffset,
+      })
+    )
+  );
+
+  results.forEach((result, index) => {
+    const weekOffset = weekOffsets[index];
+    if (result.status === 'fulfilled') {
+      console.log(`✅ availability refreshed for weekOffset=${weekOffset}`);
+      return;
+    }
+
+    console.error(`Failed to refresh availability for weekOffset=${weekOffset}:`, result.reason);
+  });
+}
 
 function normalizePhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -138,6 +162,8 @@ export async function POST(req: NextRequest) {
       } else {
         console.log(`ℹ️  updateBarberClient skipped: ${result.reason}`);
       }
+
+      await refreshAvailabilityForOpenBookings(token.user_id);
     }
         
     console.log('\n=== END WEBHOOK ===\n');

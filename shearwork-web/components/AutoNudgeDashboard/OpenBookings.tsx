@@ -83,6 +83,23 @@ export default function OpenBookings({ user_id }: Props) {
     }
   }, [fetchOpenings, user_id])
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      void fetchOpenings(false, Boolean(totalOpenings && totalOpenings > 0))
+    }, 60 * 1000)
+
+    const handleFocus = () => {
+      void fetchOpenings(false, true)
+    }
+
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [fetchOpenings, totalOpenings])
+
   const desktopRing = (
     <div className="relative flex items-center justify-center flex-shrink-0">
       <svg width="96" height="96" className="-rotate-90">
