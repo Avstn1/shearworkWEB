@@ -149,11 +149,47 @@ async function updateBarbersAvailability(userIds: string[]): Promise<void> {
   }
 }
 
+// Poll availability_daily_summary until all userIds have been updated after the given timestamp.
+// Retries every intervalMs for up to maxWaitMs total.
+async function waitForAvailabilityUpdate(
+  userIds: string[],
+  updatedAfter: Date,
+  maxWaitMs = 60000,
+  intervalMs = 3000
+): Promise<void> {
+  const start = Date.now()
+  console.log(`Polling availability_daily_summary for ${userIds.length} user(s) updated after ${updatedAfter.toISOString()}`)
+
+  while (Date.now() - start < maxWaitMs) {
+    const { data, error } = await supabase
+      .from('availability_daily_summary')
+      .select('user_id, updated_at')
+      .in('user_id', userIds)
+      .gte('updated_at', updatedAfter.toISOString())
+
+    if (error) {
+      console.error('Error polling availability_daily_summary:', error)
+    } else {
+      const updatedUserIds = new Set((data || []).map(r => r.user_id))
+      const allUpdated = userIds.every(id => updatedUserIds.has(id))
+
+      console.log(`Availability poll: ${updatedUserIds.size}/${userIds.length} updated`)
+
+      if (allUpdated) {
+        console.log('All barbers availability confirmed fresh. Proceeding.')
+        return
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, intervalMs))
+  }
+
+  console.warn(`Timed out waiting for availability update after ${maxWaitMs}ms. Proceeding anyway.`)
+}
+
 function getRandomMessage(name: string, empty_slots: number, estimatedReturn: number): string {
-  const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)]
-  return template
-    .replace('{name}', getFirstName(name))
-    .replace('{slots}', empty_slots.toString())
+  // TEMPORARY: using correction template
+  return `Hey ${getFirstName(name)} — quick correction from Corva. The earlier message had an error in your availability count.\n\nYou do still have ${empty_slots} openings this week — want me to help fill a few?`
 }
 
 function getISOWeekDates(date: Date): { start: Date; end: Date } {
@@ -225,24 +261,24 @@ Deno.serve(async (req) => {
       })
     }
     
-    // let query = supabase
-    //   .from('profiles')
-    //   .select('user_id, full_name, phone')
-    //   .or('role.ilike.barber,role.ilike.owner')
-    //   .eq('sms_engaged_current_week', false)
-    //   .not('phone', 'is', null)
-    //   .or('stripe_subscription_status.eq.active,trial_active.eq.true')
-
     let query = supabase
       .from('profiles')
       .select('user_id, full_name, phone')
-      .in('user_id', [
-        '9fc64b42-1199-44b5-b1e0-53297f655a5c', // Lucas
-        'e4120eae-1d2f-4181-8417-168233fc01b7', // Carlos
-        'f4d28cd0-37e9-4117-a67c-0e3c91c1eac7', // AJ
-      ])
+      .or('role.ilike.barber,role.ilike.owner')
       .eq('sms_engaged_current_week', false)
       .not('phone', 'is', null)
+      .or('stripe_subscription_status.eq.active,trial_active.eq.true')
+
+    // let query = supabase
+    //   .from('profiles')
+    //   .select('user_id, full_name, phone')
+    //   .in('user_id', [
+    //     '9fc64b42-1199-44b5-b1e0-53297f655a5c', // Lucas
+    //     // 'e4120eae-1d2f-4181-8417-168233fc01b7', // Carlos
+    //     'f4d28cd0-37e9-4117-a67c-0e3c91c1eac7', // AJ
+    //   ])
+    //   .eq('sms_engaged_current_week', false)
+    //   .not('phone', 'is', null)
 
     if (dayOfWeek === 1) {
       // Monday: Send to barbers who signed up Thursday-Sunday (before today)
@@ -285,6 +321,11 @@ Deno.serve(async (req) => {
         .lte('date_autonudge_enabled', end)
     }
 
+    // } else {
+    //   console.log('Tuesday-Thursday flow: Sending to all eligible barbers (date_autonudge_enabled constraint bypassed)')
+    //   query = query.not('date_autonudge_enabled', 'is', null)
+    // }
+
     const { data: barbers, error: barbersError } = await query
 
     if (barbersError) {
@@ -301,10 +342,6 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Sending messages to ${barbers.length} barber(s). Current time: ${new Date().toISOString()}`)
-
-    // Update availability for all barbers before sending messages
-    const barberUserIds = barbers.map(b => b.user_id)
-    await updateBarbersAvailability(barberUserIds)
 
     const statusCallbackUrl = `${siteUrl}/api/barber-nudge/sms-status`
     const results = []
