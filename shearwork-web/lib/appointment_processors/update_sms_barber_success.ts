@@ -1,4 +1,4 @@
-// lib/acuity_webhooks/update_sms_barber_success.ts
+// lib/appointment_processors/update_sms_barber_success.ts
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -31,11 +31,15 @@ function getISOWeek(date: Date = new Date()): string {
   return `${year}-W${week.toString().padStart(2, '0')}`;
 }
 
-function getPreviousISOWeek(): string {
+function getRecentISOWeeks(count: number): string[] {
+  const weeks: string[] = [];
   const now = new Date();
-  const lastWeek = new Date(now);
-  lastWeek.setDate(now.getDate() - 7);
-  return getISOWeek(lastWeek);
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i * 7);
+    weeks.push(getISOWeek(d));
+  }
+  return weeks;
 }
 
 function parseToUTCTimestamp(datetimeStr: string): string {
@@ -66,71 +70,6 @@ export async function updateSmsBarberSuccess(
       return { success: false, reason: 'No phone number' };
     }
 
-    // Determine target ISO week
-    const currentISOWeek = getISOWeek();
-    const previousISOWeek = getPreviousISOWeek();
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('sms_engaged_current_week')
-      .eq('user_id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      console.log('Profile not found');
-      return { success: false, reason: 'Profile not found' };
-    }
-
-    let targetISOWeek: string;
-
-    if (profile.sms_engaged_current_week) {
-      targetISOWeek = currentISOWeek;
-    } else {
-      const { data: previousRecord } = await supabase
-        .from('barber_nudge_success')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('iso_week_number', previousISOWeek)
-        .single();
-
-      if (!previousRecord) {
-        console.log('No engagement this week and no record for previous week - exiting');
-        return { success: true, reason: 'No relevant SMS campaign' };
-      }
-
-      targetISOWeek = previousISOWeek;
-    }
-
-    console.log(`Target ISO week: ${targetISOWeek}`);
-
-    // Find the smart bucket for this user/week
-    const { data: bucket, error: bucketError } = await supabase
-      .from('sms_smart_buckets')
-      .select('bucket_id, campaign_start, total_clients')
-      .eq('user_id', userId)
-      .eq('iso_week', targetISOWeek)
-      .maybeSingle();
-
-    if (bucketError || !bucket) {
-      console.log(`No smart bucket found for user ${userId} week ${targetISOWeek}`);
-      return { success: false, reason: 'No smart bucket' };
-    }
-
-    // Check if an SMS was sent to this phone for this bucket
-    const { data: sentMessage, error: sentError } = await supabase
-      .from('sms_sent')
-      .select('client_id, created_at, is_sent')
-      .eq('smart_bucket_id', bucket.bucket_id)
-      .eq('phone_normalized', appointmentPhone)
-      .maybeSingle();
-
-    if (sentError || !sentMessage) {
-      console.log(`No SMS sent to phone ${appointmentPhone} for bucket ${bucket.bucket_id}`);
-      return { success: false, reason: 'No SMS sent to this client' };
-    }
-
-    // Check appointment was booked after the SMS was sent (compare in UTC ms)
-    const smsSentAt = new Date(sentMessage.created_at);
     const appointmentCreatedAt = appointmentDetails.datetimeCreated
       ? new Date(appointmentDetails.datetimeCreated)
       : null;
@@ -140,26 +79,69 @@ export async function updateSmsBarberSuccess(
       return { success: false, reason: 'Invalid appointment datetimeCreated' };
     }
 
-    if (appointmentCreatedAt <= smsSentAt) {
-      console.log(`Appointment created before SMS was sent`);
-      console.log(`SMS sent: ${smsSentAt.toISOString()}, Appointment created: ${appointmentCreatedAt.toISOString()}`);
-      return { success: false, reason: 'Appointment created before SMS' };
+    // Look back across the last 2 weeks only
+    const recentWeeks = getRecentISOWeeks(2);
+    console.log(`Checking ISO weeks: ${recentWeeks.join(', ')}`);
+
+    // Fetch all buckets for this user within the lookback window
+    const { data: buckets, error: bucketsError } = await supabase
+      .from('sms_smart_buckets')
+      .select('bucket_id, campaign_start, total_clients, iso_week')
+      .eq('user_id', userId)
+      .in('iso_week', recentWeeks)
+      .order('campaign_start', { ascending: false });
+
+    if (bucketsError || !buckets || buckets.length === 0) {
+      console.log(`No smart buckets found for user ${userId} in recent weeks`);
+      return { success: false, reason: 'No smart bucket' };
     }
 
-    console.log(`✅ Appointment created after SMS was sent`);
+    // Find the most recent bucket where an SMS was sent to this phone
+    // and the appointment was created after the SMS was sent
+    let matchedBucket: typeof buckets[number] | null = null;
+    let matchedSentMessage: { client_id: string; created_at: string } | null = null;
 
-    const clientId = sentMessage.client_id;
+    for (const bucket of buckets) {
+      const { data: sentMessage, error: sentError } = await supabase
+        .from('sms_sent')
+        .select('client_id, created_at, is_sent')
+        .eq('smart_bucket_id', bucket.bucket_id)
+        .eq('phone_normalized', appointmentPhone)
+        .maybeSingle();
+
+      if (sentError || !sentMessage) continue;
+
+      const smsSentAt = new Date(sentMessage.created_at);
+
+      if (appointmentCreatedAt <= smsSentAt) {
+        console.log(`Appointment created before SMS for bucket ${bucket.bucket_id} — skipping`);
+        continue;
+      }
+
+      matchedBucket = bucket;
+      matchedSentMessage = sentMessage;
+      break; // most recent matching bucket wins
+    }
+
+    if (!matchedBucket || !matchedSentMessage) {
+      console.log(`No attributable SMS found for phone ${appointmentPhone}`);
+      return { success: false, reason: 'No SMS sent to this client' };
+    }
+
+    console.log(`✅ Attributed to bucket ${matchedBucket.bucket_id} (${matchedBucket.iso_week})`);
+
+    const clientId = matchedSentMessage.client_id;
     if (!clientId) {
       console.log('No client_id on sms_sent row');
       return { success: false, reason: 'No client_id on sms_sent row' };
     }
 
+    const targetISOWeek = matchedBucket.iso_week;
     const service = appointmentDetails.type || 'Unknown';
     const price = Math.round(Number(appointmentDetails.price)) || 0;
     const appointmentDate = parseToUTCTimestamp(appointmentDetails.datetime);
-    const messagesDelivered = bucket.total_clients;
+    const messagesDelivered = matchedBucket.total_clients;
 
-    // Check if a barber_nudge_success record exists for this week
     const { data: existing } = await supabase
       .from('barber_nudge_success')
       .select('id, client_ids, services, prices, appointment_dates')

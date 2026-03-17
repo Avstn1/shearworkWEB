@@ -11,14 +11,14 @@ const supabase = createClient(
 const baseUrl = 'https://acuityscheduling.com'
 const apiBase = `${baseUrl}/api/v1`
 
-function getISOWeek(): string {
+function getISOWeek(date: Date = new Date()): string {
   const now = new Date(
     new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Toronto',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(new Date())
+    }).format(date)
   )
 
   const day = now.getDay() || 7
@@ -31,6 +31,17 @@ function getISOWeek(): string {
   return `${year}-W${week.toString().padStart(2, '0')}`
 }
 
+function getRecentISOWeeks(count: number): string[] {
+  const weeks: string[] = []
+  const now = new Date()
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now)
+    d.setDate(now.getDate() - i * 7)
+    weeks.push(getISOWeek(d))
+  }
+  return weeks
+}
+
 function toEnCA(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Toronto',
@@ -40,6 +51,12 @@ function toEnCA(date: Date): string {
   }).format(date)
 }
 
+function getSevenDaysAgo(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 7)
+  return toEnCA(d)
+}
+
 function getTwoMonthsFromNow(): string {
   const now = new Date()
   const twoMonths = new Date(now)
@@ -47,28 +64,15 @@ function getTwoMonthsFromNow(): string {
   return toEnCA(twoMonths)
 }
 
-function stripE164(phone: string): string {
-  return phone.replace(/^\+1/, '')
-}
-
-function phoneToSearchParam(phone: string): string {
-  return phone.startsWith('+')
-    ? `%2b${phone.slice(1)}`
-    : phone
-}
-
 function parseToUTCTimestamp(datetimeStr: string): string {
-  // Parse Acuity datetime format (e.g., "2026-02-01T16:30:00-0500") to UTC timestamptz
   try {
     const date = new Date(datetimeStr)
     if (isNaN(date.getTime())) {
       throw new Error('Invalid date')
     }
-    // Format as PostgreSQL timestamptz: "2026-01-31 21:30:00+00"
     return date.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '+00')
   } catch (error) {
     console.error('Error parsing datetime:', datetimeStr, error)
-    // Return current time as fallback
     return new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '+00')
   }
 }
@@ -92,14 +96,17 @@ async function getAllAcuityAppointments(
   accessToken: string,
   calendarId: string
 ): Promise<any[]> {
-  const today = toEnCA(new Date())
+  const minDate = getSevenDaysAgo()
   const maxDate = getTwoMonthsFromNow()
 
   const url = new URL(`${apiBase}/appointments`)
-  url.searchParams.set('minDate', today)
+  url.searchParams.set('minDate', minDate)
   url.searchParams.set('maxDate', maxDate)
   url.searchParams.set('offset', '0')
+  url.searchParams.set('max', '1000')
   url.searchParams.set('calendarID', calendarId)
+
+  console.log(`🔍 Acuity request URL: ${url.toString()}`)
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -111,8 +118,7 @@ async function getAllAcuityAppointments(
   }
 
   const data = await response.json()
-  // console.log("data: " + JSON.stringify(data))
-
+  console.log(`🔍 Acuity returned ${data.length} appointments`)
   return data
 }
 
@@ -122,7 +128,6 @@ async function backfillNextFutureAppointment(
 ): Promise<void> {
   const now = new Date()
 
-  // Only care about future appointments
   const futureAppointments = appointments.filter(appt => {
     if (!appt.datetime) return false
     const dt = new Date(appt.datetime)
@@ -131,7 +136,6 @@ async function backfillNextFutureAppointment(
 
   if (futureAppointments.length === 0) return
 
-  // Normalize phone to E.164 (+1XXXXXXXXXX)
   const normalizeToE164 = (raw: string | null | undefined): string | null => {
     if (!raw) return null
     const digits = raw.replace(/\D/g, '')
@@ -142,7 +146,6 @@ async function backfillNextFutureAppointment(
     return `+${digits}`
   }
 
-  // Group future appointments by normalized phone, keeping only the soonest per client
   const soonestByPhone = new Map<string, Date>()
   for (const appt of futureAppointments) {
     const phone = normalizeToE164(appt.phone)
@@ -164,13 +167,10 @@ async function backfillNextFutureAppointment(
 
     if (error || !client) continue
 
-    // console.log(`Checking client ${client.client_id} with phone ${phone} for next_future_appointment backfill`)
-
     const existing = client.next_future_appointment
       ? new Date(client.next_future_appointment)
       : null
 
-    // Skip if stored value is already sooner or equal
     if (existing && existing <= apptDatetime) continue
 
     const { error: updateError } = await supabase
@@ -181,37 +181,11 @@ async function backfillNextFutureAppointment(
 
     if (updateError) {
       console.error(`[backfill] Failed to set next_future_appointment for client ${client.client_id}:`, updateError)
-    } 
-    // else {
-    //   console.log(`[backfill] ✅ ${client.client_id} → ${apptDatetime.toISOString()}`)
-    // }
+    }
   }
 }
 
-async function processBarber(userId: string, isoWeek: string, calendar: string) {
-  // Get smart bucket for this user/week
-  const { data: bucket, error: bucketError } = await supabase
-    .from('sms_smart_buckets')
-    .select('bucket_id, campaign_start, clients, total_clients')
-    .eq('user_id', userId)
-    .eq('iso_week', isoWeek)
-    .maybeSingle()
-
-  if (bucketError || !bucket) {
-    console.warn(`No smart bucket for ${userId} week ${isoWeek}`)
-    return { userId, success: false, reason: 'No smart bucket' }
-  }
-
-  const bucketClients: Array<{ phone: string; client_id: string; full_name: string }> =
-    typeof bucket.clients === 'string' ? JSON.parse(bucket.clients) : bucket.clients
-
-  if (!bucketClients || bucketClients.length === 0) {
-    console.warn(`Empty clients array for bucket ${bucket.bucket_id}`)
-    return { userId, success: false, reason: 'No clients in bucket' }
-  }
-
-  const messagesDelivered = bucket.total_clients
-
+async function processBarber(userId: string, recentWeeks: string[], calendar: string) {
   // Get access token
   const accessToken = await getAccessToken(userId)
   if (!accessToken) {
@@ -219,66 +193,85 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
     return { userId, success: false, reason: 'No access token' }
   }
 
-  const campaignStart = new Date(bucket.campaign_start)
-    .toLocaleString('en-CA', { timeZone: 'America/Toronto' })
+  // Fetch all buckets for this user across the last 2 weeks
+  const { data: buckets, error: bucketsError } = await supabase
+    .from('sms_smart_buckets')
+    .select('bucket_id, campaign_start, clients, total_clients, iso_week')
+    .eq('user_id', userId)
+    .in('iso_week', recentWeeks)
+    .order('campaign_start', { ascending: false })
 
-  const phoneNumbers = bucketClients.map(client => ({
-    phone: client.phone,
-    createdAt: campaignStart,
-  }))
+  if (bucketsError || !buckets || buckets.length === 0) {
+    console.warn(`No smart buckets for ${userId} in weeks ${recentWeeks.join(', ')}`)
+    return { userId, success: false, reason: 'No smart bucket' }
+  }
 
-  // Fetch all appointments once
+  // Fetch all appointments once — shared across all bucket checks
   const allAppointments = await getAllAcuityAppointments(accessToken, calendar)
   await backfillNextFutureAppointment(userId, allAppointments)
-  // console.log("allAppointments: " + JSON.stringify(allAppointments))
 
-  // Normalize phone number to compare (remove +1 or 1 prefix)
   const normalizePhone = (phoneStr: string) => {
     if (!phoneStr) return ''
     return phoneStr.replace(/^\+?1/, '')
   }
 
-  // Create a map of normalized phone -> appointments
+  const DEBUG_PHONE = '6475752770'
+
   const appointmentsByPhone = new Map<string, any[]>()
   for (const appt of allAppointments) {
     const normalized = normalizePhone(appt.phone)
+    if (normalized === DEBUG_PHONE) {
+      console.log(`🔍 DEBUG: found target phone ${DEBUG_PHONE} in raw appointments`, JSON.stringify(appt, null, 2))
+    }
     if (!appointmentsByPhone.has(normalized)) {
       appointmentsByPhone.set(normalized, [])
     }
     appointmentsByPhone.get(normalized)!.push(appt)
   }
 
-  let appointmentsFound = false
-  const clientIdsToAdd: string[] = []
-  const servicesToAdd: string[] = []
-  const pricesToAdd: number[] = []
-  const appointmentDatesToAdd: string[] = []
+  let overallSuccess = false
 
-  let clickedLinkCount = 0
+  // Process each bucket independently and upsert its own barber_nudge_success row
+  for (const bucket of buckets) {
+    const bucketClients: Array<{ phone: string; client_id: string; full_name: string }> =
+      typeof bucket.clients === 'string' ? JSON.parse(bucket.clients) : bucket.clients
 
-  // Check appointments for each phone number
-  for (const { phone, createdAt } of phoneNumbers) {
-    const normalizedPhone = normalizePhone(phone)
-    const appointments = appointmentsByPhone.get(normalizedPhone) || []
+    if (!bucketClients || bucketClients.length === 0) {
+      console.warn(`Empty clients array for bucket ${bucket.bucket_id}`)
+      continue
+    }
 
-    // Find all appointments created after SMS was sent, sorted by appointment datetime
-    const appointmentsAfterSMS = appointments
-      .filter(appt => appt.datetimeCreated && appt.datetimeCreated > createdAt)
-      .sort((a, b) => {
-        const dateA = new Date(a.datetime || a.datetimeCreated).getTime()
-        const dateB = new Date(b.datetime || b.datetimeCreated).getTime()
-        return dateA - dateB
-      })
+    const messagesDelivered = bucket.total_clients
+    const isoWeek = bucket.iso_week
 
-    // console.log("appointmentsAfterSMS: " + JSON.stringify(appointmentsAfterSMS))
+    const campaignStart = new Date(bucket.campaign_start)
 
-    if (appointmentsAfterSMS.length > 0) {
+    const clientIdsToAdd: string[] = []
+    const servicesToAdd: string[] = []
+    const pricesToAdd: number[] = []
+    const appointmentDatesToAdd: string[] = []
+    let clickedLinkCount = 0
+    let appointmentsFound = false
+
+    for (const { phone } of bucketClients) {
+      const normalizedPhone = normalizePhone(phone)
+      const appointments = appointmentsByPhone.get(normalizedPhone) || []
+
+      const appointmentsAfterSMS = appointments
+        .filter(appt => appt.datetimeCreated && new Date(appt.datetimeCreated) > campaignStart)
+        .sort((a, b) => {
+          const dateA = new Date(a.datetime || a.datetimeCreated).getTime()
+          const dateB = new Date(b.datetime || b.datetimeCreated).getTime()
+          return dateA - dateB
+        })
+
+      if (appointmentsAfterSMS.length === 0) continue
+
       appointmentsFound = true
       const firstAppt = appointmentsAfterSMS[0]
 
-      console.log("Client's phone: " + phone)
+      console.log(`Client phone: ${phone} — attributed to bucket ${bucket.bucket_id} (${isoWeek})`)
 
-      // Get client info
       const { data: client } = await supabase
         .from('acuity_clients')
         .select('client_id, last_date_clicked_link')
@@ -287,108 +280,84 @@ async function processBarber(userId: string, isoWeek: string, calendar: string) 
         .single()
 
       if (client) {
-        console.log(client)
-
         clientIdsToAdd.push(client.client_id)
         servicesToAdd.push(firstAppt.type || 'Unknown')
         pricesToAdd.push(Math.round(Number(firstAppt.price)) || 0)
-        
-        // Parse appointment datetime to UTC timestamptz format
-        const apptDatetime = parseToUTCTimestamp(firstAppt.datetime)
-        appointmentDatesToAdd.push(apptDatetime)
+        appointmentDatesToAdd.push(parseToUTCTimestamp(firstAppt.datetime))
 
-        // Check if they clicked the link
         if (client.last_date_clicked_link) {
           const clickedAt = new Date(client.last_date_clicked_link)
-          if (clickedAt > createdAt) {
+          if (clickedAt > campaignStart) {
             clickedLinkCount++
           }
         }
       }
     }
-  }
 
-  // Only create/update if appointments were found
-  if (!appointmentsFound) {
-    console.log(`No appointments found for user ${userId}`)
-    return { userId, success: true, appointmentsFound: false }
-  }
-
-  // Check if record exists
-  const { data: existing } = await supabase
-    .from('barber_nudge_success')
-    .select('id, client_ids, services, prices, appointment_dates')
-    .eq('user_id', userId)
-    .eq('iso_week_number', isoWeek)
-    .single()
-
-  if (existing) {
-    // Update existing record - merge arrays while maintaining index alignment
-    const existingClientIds = existing.client_ids || []
-    const existingServices = existing.services || []
-    const existingPrices = existing.prices || []
-    const existingAppointmentDates = existing.appointment_dates || []
-    
-    // Add new clients and services, avoiding duplicates
-    const mergedClientIds = [...existingClientIds]
-    const mergedServices = [...existingServices]
-    const mergedPrices = [...existingPrices]
-    const mergedAppointmentDates = [...existingAppointmentDates]
-    
-    for (let i = 0; i < clientIdsToAdd.length; i++) {
-      const clientId = clientIdsToAdd[i]
-      const service = servicesToAdd[i]
-      const price = pricesToAdd[i]
-      const appointmentDate = appointmentDatesToAdd[i]
-      
-      if (!existingClientIds.includes(clientId)) {
-        mergedClientIds.push(clientId)
-        mergedServices.push(service)
-        mergedPrices.push(price)
-        mergedAppointmentDates.push(appointmentDate)
-      }
+    if (!appointmentsFound) {
+      console.log(`No appointments found for user ${userId} bucket ${isoWeek}`)
+      continue
     }
 
-    await supabase
+    // Upsert barber_nudge_success for this specific week's bucket
+    const { data: existing } = await supabase
       .from('barber_nudge_success')
-      .update({
-        messages_delivered: messagesDelivered,
-        clicked_link: clickedLinkCount,
-        client_ids: mergedClientIds,
-        services: mergedServices,
-        prices: mergedPrices,
-        appointment_dates: mergedAppointmentDates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', existing.id)
+      .select('id, client_ids, services, prices, appointment_dates')
+      .eq('user_id', userId)
+      .eq('iso_week_number', isoWeek)
+      .single()
 
-    console.log(`Updated barber_nudge_success for user ${userId}`)
-  } else {
-    // Create new record
-    await supabase
-      .from('barber_nudge_success')
-      .insert({
-        user_id: userId,
-        iso_week_number: isoWeek,
-        messages_delivered: messagesDelivered,
-        clicked_link: clickedLinkCount,
-        client_ids: clientIdsToAdd,
-        services: servicesToAdd,
-        prices: pricesToAdd,
-        appointment_dates: appointmentDatesToAdd
-      })
+    if (existing) {
+      const existingClientIds = existing.client_ids || []
+      const mergedClientIds = [...existingClientIds]
+      const mergedServices = [...(existing.services || [])]
+      const mergedPrices = [...(existing.prices || [])]
+      const mergedAppointmentDates = [...(existing.appointment_dates || [])]
 
-    console.log(`Created barber_nudge_success for user ${userId}`)
+      for (let i = 0; i < clientIdsToAdd.length; i++) {
+        if (!existingClientIds.includes(clientIdsToAdd[i])) {
+          mergedClientIds.push(clientIdsToAdd[i])
+          mergedServices.push(servicesToAdd[i])
+          mergedPrices.push(pricesToAdd[i])
+          mergedAppointmentDates.push(appointmentDatesToAdd[i])
+        }
+      }
+
+      await supabase
+        .from('barber_nudge_success')
+        .update({
+          messages_delivered: messagesDelivered,
+          clicked_link: clickedLinkCount,
+          client_ids: mergedClientIds,
+          services: mergedServices,
+          prices: mergedPrices,
+          appointment_dates: mergedAppointmentDates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+
+      console.log(`Updated barber_nudge_success for user ${userId} week ${isoWeek}`)
+    } else {
+      await supabase
+        .from('barber_nudge_success')
+        .insert({
+          user_id: userId,
+          iso_week_number: isoWeek,
+          messages_delivered: messagesDelivered,
+          clicked_link: clickedLinkCount,
+          client_ids: clientIdsToAdd,
+          services: servicesToAdd,
+          prices: pricesToAdd,
+          appointment_dates: appointmentDatesToAdd
+        })
+
+      console.log(`Created barber_nudge_success for user ${userId} week ${isoWeek}`)
+    }
+
+    overallSuccess = true
   }
 
-  return {
-    userId,
-    success: true,
-    appointmentsFound: true,
-    messagesDelivered,
-    clickedLinkCount,
-    clientCount: clientIdsToAdd.length
-  }
+  return { userId, success: overallSuccess }
 }
 
 Deno.serve(async (req) => {
@@ -406,54 +375,62 @@ Deno.serve(async (req) => {
   try {
     console.log(`STARTING APPOINTMENTS LOOK AHEAD`)
 
-    // Parse optional user_id from query params
-    let targetUserId: string | null = null
-    
-    // Check query params first
     const url = new URL(req.url)
-    targetUserId = url.searchParams.get('user_id')
-    console.log(targetUserId)
-    
-    const isoWeek = getISOWeek()
+    const targetUserId = url.searchParams.get('user_id')
+    console.log(`target user_id: ${targetUserId ?? 'all'}`)
 
-    // Build query based on mode
-    let query = supabase
-      .from('profiles')
-      .select('user_id, calendar, full_name')
-      .eq('sms_engaged_current_week', true)
-      .not('calendar', 'is', null)
-      .neq('calendar', '')
-      // .eq('user_id', 'f4d28cd0-37e9-4117-a67c-0e3c91c1eac7') // TEMP - only AJ for testing
+    const recentWeeks = getRecentISOWeeks(2)
+    console.log(`Checking ISO weeks: ${recentWeeks.join(', ')}`)
 
-    // Mode 2: Add user_id filter if provided
-    if (targetUserId) {
-      query = query.eq('user_id', targetUserId)
-    }
+    // Fetch all barbers who have a bucket in the last 2 weeks — no sms_engaged_current_week filter
+    const { data: bucketUsers, error: bucketUsersError } = await supabase
+      .from('sms_smart_buckets')
+      .select('user_id')
+      .in('iso_week', recentWeeks)
 
-    const { data: profiles, error: profileError } = await query
+    if (bucketUsersError) throw bucketUsersError
 
-    if (profileError) throw profileError
-
-    if (!profiles || profiles.length === 0) {
-      const message = targetUserId 
-        ? `No profile found for user_id: ${targetUserId}`
-        : 'No engaged barbers found'
-      console.log(message)
+    if (!bucketUsers || bucketUsers.length === 0) {
       return new Response(JSON.stringify({
-        message,
-        isoWeek,
+        message: 'No buckets found in the last 2 weeks',
+        recentWeeks,
         totalBarbers: 0,
         results: []
       }), {
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         status: 200,
       })
     }
 
-    console.log(`Processing ${profiles.length} barber(s)`)
+    // Deduplicate user_ids
+    let userIds = [...new Set(bucketUsers.map(r => r.user_id))]
+    if (targetUserId) {
+      userIds = userIds.filter(id => id === targetUserId)
+    }
+
+    if (userIds.length === 0) {
+      return new Response(JSON.stringify({
+        message: `No buckets found for user_id: ${targetUserId}`,
+        recentWeeks,
+        totalBarbers: 0,
+        results: []
+      }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        status: 200,
+      })
+    }
+
+    // Fetch calendar for each user
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_id, calendar, full_name')
+      .in('user_id', userIds)
+      .not('calendar', 'is', null)
+      .neq('calendar', '')
+
+    if (profileError) throw profileError
+
+    console.log(`Processing ${profiles?.length ?? 0} barber(s)`)
 
     const CONCURRENCY_LIMIT = 100
     const results: any[] = []
@@ -468,7 +445,7 @@ Deno.serve(async (req) => {
             const barber = items[index++]
             active++
 
-            processBarber(barber.user_id, isoWeek, barber.calendar)
+            processBarber(barber.user_id, recentWeeks, barber.calendar)
               .then(result => {
                 results.push(result)
                 console.log(`Processed ${barber.full_name}: ${JSON.stringify(result)}`)
@@ -494,38 +471,28 @@ Deno.serve(async (req) => {
 
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    const appointmentsFoundCount = results.filter(r => r.appointmentsFound).length
 
-    console.log(`Appointments look ahead completed. Success: ${successCount}, Failed: ${failCount}, Appointments Found: ${appointmentsFoundCount}`)
+    console.log(`Appointments look ahead completed. Success: ${successCount}, Failed: ${failCount}`)
     console.log(`SYNC ENDED`)
 
     return new Response(JSON.stringify({
       message: 'Appointments look ahead completed',
-      mode: targetUserId ? 'specific_user' : 'all_engaged',
-      isoWeek,
+      mode: targetUserId ? 'specific_user' : 'all_with_recent_buckets',
+      recentWeeks,
       totalBarbers: profiles?.length || 0,
       success: successCount,
       failed: failCount,
-      appointmentsFound: appointmentsFoundCount,
       results
     }), {
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       status: 200,
     })
   } catch (err: unknown) {
     console.error('Edge function error:', err)
     const errorMessage = err instanceof Error ? err.message : String(err)
-    return new Response(JSON.stringify({
-      error: errorMessage
-    }), {
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     })
   }
 })
