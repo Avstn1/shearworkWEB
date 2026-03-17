@@ -19,21 +19,35 @@ const twilio_client = twilio(accountSid, authToken)
 // Toronto timezone
 const TORONTO_TZ = 'America/Toronto'
 
-// Message templates
-const messageTemplates = [
-  "Update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
-  "Progress update: {takenSlots}/{total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
-  "Week update: {takenSlots} of {total} empty slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
-  "Good news! {takenSlots} out of {total} slots filled this week. \n\nCorva directly recovered {filled} booking/s (+${recovery}). \n\nLet's try again next week. Full details are saved in Corva.",
-]
+function getFirstName(fullName: string): string {
+  return fullName.trim().split(' ')[0]
+}
 
-function getRandomMessage(filled: number, total: number, takenSlots: number, recovery: number): string {
-  const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)]
-  return template
-    .replace('{filled}', filled.toString())
-    .replace('{total}', total.toString())
-    .replace('{recovery}', recovery.toString())
-    .replace('{takenSlots}', takenSlots.toString())
+/**
+ * Builds the Wednesday update message based on 3 cases:
+ *
+ * Case 1 — No replies, no bookings
+ * Case 2 — Replies but no bookings
+ * Case 3 — Replies + bookings
+ */
+function buildUpdateMessage(
+  firstName: string,
+  replyCount: number,
+  bookingCount: number,
+  totalRevenue: number
+): string {
+  if (replyCount === 0 && bookingCount === 0) {
+    // Case 1
+    return `Hey ${firstName} — Corva results.\n\nNo replies or bookings yet. Results may still come in.`
+  }
+
+  if (replyCount > 0 && bookingCount === 0) {
+    // Case 2
+    return `Hey ${firstName} — Corva results.\n\nSo far:\n• ${replyCount} client${replyCount === 1 ? '' : 's'} replied\n\nYou can view their messages in Corva.`
+  }
+
+  // Case 3 — replies + bookings
+  return `Hey ${firstName} — Corva results.\n\nSo far:\n• ${replyCount} client${replyCount === 1 ? '' : 's'} replied\n• ${bookingCount} booking${bookingCount === 1 ? '' : 's'}\n• $${totalRevenue} booked\n\nYou can view their messages in Corva.`
 }
 
 function getTorontoDateComponents(date: Date = new Date()): { year: number; month: number; day: number; hours: number; minutes: number; seconds: number } {
@@ -50,7 +64,7 @@ function getTorontoDateComponents(date: Date = new Date()): { year: number; mont
 
   return {
     year: parseInt(parts.find(p => p.type === 'year')!.value),
-    month: parseInt(parts.find(p => p.type === 'month')!.value) - 1, // 0-indexed
+    month: parseInt(parts.find(p => p.type === 'month')!.value) - 1,
     day: parseInt(parts.find(p => p.type === 'day')!.value),
     hours: parseInt(parts.find(p => p.type === 'hour')!.value),
     minutes: parseInt(parts.find(p => p.type === 'minute')!.value),
@@ -64,7 +78,6 @@ function getTorontoDate(date: Date = new Date()): Date {
 }
 
 function getCurrentDayOfWeek(): number {
-  // Returns 0 (Sunday) to 6 (Saturday) in Toronto time
   const c = getTorontoDateComponents()
   return new Date(c.year, c.month, c.day).getDay()
 }
@@ -87,7 +100,6 @@ function getISOWeekDates(date: Date): { start: Date; end: Date } {
   const currentDate = new Date(date)
   const dayOfWeek = currentDate.getDay()
   
-  // Calculate days to Monday (1 = Monday, 0 = Sunday)
   const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
   
   const monday = new Date(currentDate)
@@ -106,7 +118,6 @@ function getCurrentWeekMondayAt10AM(): Date {
   const torontoDate = getTorontoDate(now)
   const { start } = getISOWeekDates(torontoDate)
   
-  // Set to Monday 10:00 AM Toronto time
   const monday10am = new Date(start)
   monday10am.setHours(10, 0, 0, 0)
   
@@ -118,7 +129,6 @@ function getCurrentWeekWednesdayEnd(): Date {
   const torontoDate = getTorontoDate(now)
   const { start } = getISOWeekDates(torontoDate)
   
-  // Wednesday is 2 days after Monday
   const wednesday = new Date(start)
   wednesday.setDate(start.getDate() + 2)
   wednesday.setHours(23, 59, 59, 999)
@@ -139,7 +149,6 @@ function getCurrentWeekThursdayEnd(): Date {
   const torontoDate = getTorontoDate(now)
   const { start } = getISOWeekDates(torontoDate)
   
-  // Thursday is 3 days after Monday
   const thursday = new Date(start)
   thursday.setDate(start.getDate() + 3)
   thursday.setHours(23, 59, 59, 999)
@@ -161,31 +170,7 @@ function isDateInBarelyLateWindow(date: Date): boolean {
   const monday10am = getCurrentWeekMondayAt10AM()
   const wednesdayEnd = getCurrentWeekWednesdayEnd()
   
-  // Check if date is strictly after Monday 10am and before Wednesday end
   return date > monday10am && date <= wednesdayEnd
-}
-
-async function updateBarbersAvailability(userIds: string[]): Promise<void> {
-  if (!userIds || userIds.length === 0) {
-    console.log('No user IDs to update availability for')
-    return
-  }
-
-  console.log(`Updating availability for ${userIds.length} barber(s)`)
-
-  try {
-    const { data, error } = await supabase.functions.invoke('update_barber_availability', {
-      body: { user_ids: userIds }
-    })
-
-    if (error) {
-      console.error('Failed to update barber availability:', error)
-    } else {
-      console.log(`Availability update completed. Success: ${data?.success}, Failed: ${data?.failed}`)
-    }
-  } catch (error) {
-    console.error('Error calling update_barber_availability:', error)
-  }
 }
 
 async function getBarberAvailability(userId: string): Promise<{ slots: number; taken_slots: number; revenue: number }> {
@@ -225,21 +210,26 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; t
   }
 }
 
-async function getBarberNudgeSuccess(userId: string, isoWeek: string): Promise<{ clientIds: string[]; prices: number[] } | null> {
-  const { data, error } = await supabase
-    .from('barber_nudge_success')
-    .select('client_ids, prices')
-    .eq('user_id', userId)
-    .eq('iso_week_number', isoWeek)
-    .single()
-
-  if (error || !data) {
-    return null
+async function updateBarbersAvailability(userIds: string[]): Promise<void> {
+  if (!userIds || userIds.length === 0) {
+    console.log('No user IDs to update availability for')
+    return
   }
 
-  return {
-    clientIds: data.client_ids || [],
-    prices: data.prices || []
+  console.log(`Updating availability for ${userIds.length} barber(s)`)
+
+  try {
+    const { data, error } = await supabase.functions.invoke('update_barber_availability', {
+      body: { user_ids: userIds }
+    })
+
+    if (error) {
+      console.error('Failed to update barber availability:', error)
+    } else {
+      console.log(`Availability update completed. Success: ${data?.success}, Failed: ${data?.failed}`)
+    }
+  } catch (error) {
+    console.error('Error calling update_barber_availability:', error)
   }
 }
 
@@ -262,50 +252,91 @@ async function getLatestYesReply(userId: string): Promise<{ received_at: string 
   }
 }
 
-async function sendUpdateMessage(barber: any, isoWeek: string): Promise<any> {
-  // Get barber nudge success data
-  const nudgeSuccess = await getBarberNudgeSuccess(barber.user_id, isoWeek)
-  
-  if (!nudgeSuccess) {
-    console.log(`No barber_nudge_success record for ${barber.full_name} - skipping`)
-    return {
-      user_id: barber.user_id,
-      phone: barber.phone,
-      status: 'skipped',
-      reason: 'No nudge success record'
-    }
+/**
+ * Returns the count of clients from the current bucket who replied this week.
+ * Only counts replies where client_id IS NOT NULL (i.e. resolved to a known client).
+ */
+async function getClientReplyCount(userId: string, isoWeek: string): Promise<number> {
+  // Get the current week's bucket to find the recipient phone numbers
+  const { data: bucket, error: bucketError } = await supabase
+    .from('sms_smart_buckets')
+    .select('clients')
+    .eq('user_id', userId)
+    .eq('iso_week', isoWeek)
+    .single()
+
+  if (bucketError || !bucket?.clients?.length) {
+    return 0
   }
 
-  // Get actual availability data for this barber
-  const availability = await getBarberAvailability(barber.user_id)
-  
-  if (availability.slots === 0) {
-    console.log(`No availability data for ${barber.full_name} - skipping`)
-    return {
-      user_id: barber.user_id,
-      phone: barber.phone,
-      status: 'skipped',
-      reason: 'No availability data'
-    }
-  }
-
-  const filledSlots = nudgeSuccess.clientIds.length
-  const totalSlots = availability.slots
-  const takenSlots = availability.taken_slots
-  const estimatedRecovery = nudgeSuccess.prices.reduce(
-    (sum, price) => sum + Number(price),
-    0
+  // Build a set of phone numbers that were in this bucket
+  const bucketPhones = new Set<string>(
+    bucket.clients
+      .map((c: { phone: string }) => c.phone)
+      .filter(Boolean)
   )
-  
-  let message
-  if (filledSlots > 0) {
-    message = getRandomMessage(filledSlots, totalSlots, takenSlots, estimatedRecovery)
-  } else {
-    message = `Hey ${barber.full_name}, Corva has contacted your highest-probability clients. Results may still come in.`
+
+  if (bucketPhones.size === 0) return 0
+
+  // Compute Monday–Sunday bounds
+  const now = new Date()
+  const torontoDate = getTorontoDate(now)
+  const { start: weekMonday, end: weekSunday } = getISOWeekDates(torontoDate)
+
+  const { data: replies, error: repliesError } = await supabase
+    .from('sms_replies')
+    .select('phone_number')
+    .eq('user_id', userId)
+    .not('client_id', 'is', null)
+    .gte('received_at', weekMonday.toISOString())
+    .lte('received_at', weekSunday.toISOString())
+
+  if (repliesError || !replies) return 0
+
+  // Only count replies from phones that were in the bucket
+  const uniqueRepliers = new Set(
+    replies
+      .filter(r => bucketPhones.has(r.phone_number))
+      .map(r => r.phone_number)
+  )
+
+  return uniqueRepliers.size
+}
+
+async function getBarberNudgeSuccess(userId: string, isoWeek: string): Promise<{ clientIds: string[]; prices: number[] } | null> {
+  const { data, error } = await supabase
+    .from('barber_nudge_success')
+    .select('client_ids, prices')
+    .eq('user_id', userId)
+    .eq('iso_week_number', isoWeek)
+    .single()
+
+  if (error || !data) {
+    return null
   }
+
+  return {
+    clientIds: data.client_ids || [],
+    prices: data.prices || []
+  }
+}
+
+async function sendUpdateMessage(barber: any, isoWeek: string): Promise<any> {
+  const firstName = getFirstName(barber.full_name)
+
+  // Get reply count (only from bucket recipients this week)
+  const replyCount = await getClientReplyCount(barber.user_id, isoWeek)
+
+  // Get booking + revenue data
+  const nudgeSuccess = await getBarberNudgeSuccess(barber.user_id, isoWeek)
+  const bookingCount = nudgeSuccess?.clientIds?.length ?? 0
+  const totalRevenue = Math.round(
+    (nudgeSuccess?.prices ?? []).reduce((sum, price) => sum + Number(price), 0)
+  )
+
+  const message = buildUpdateMessage(firstName, replyCount, bookingCount, totalRevenue)
 
   const statusCallbackUrl = `${siteUrl}/api/barber-nudge/sms-status`
-
   const callbackUrl = new URL(statusCallbackUrl)
   callbackUrl.searchParams.set('user_id', barber.user_id)
   callbackUrl.searchParams.set('message', message)
@@ -319,7 +350,7 @@ async function sendUpdateMessage(barber: any, isoWeek: string): Promise<any> {
   })
 
   console.log(`Update sent to ${barber.full_name} (${barber.phone}): ${twilioMessage.sid}`)
-  console.log(`Stats: ${filledSlots}/${totalSlots} slots, $${estimatedRecovery} recovery`)
+  console.log(`Stats: replies=${replyCount}, bookings=${bookingCount}, revenue=$${totalRevenue}`)
 
   const { error: notificationError } = await supabase
     .from('notifications')
@@ -339,9 +370,9 @@ async function sendUpdateMessage(barber: any, isoWeek: string): Promise<any> {
     user_id: barber.user_id,
     phone: barber.phone,
     message_sid: twilioMessage.sid,
-    filled_slots: filledSlots,
-    total_slots: totalSlots,
-    estimated_recovery: estimatedRecovery,
+    reply_count: replyCount,
+    booking_count: bookingCount,
+    total_revenue: totalRevenue,
     status: 'sent'
   }
 }
@@ -364,7 +395,6 @@ Deno.serve(async (req) => {
       
       console.log(`Excluding barbers with date_autonudge_enabled after ${monday10am.toISOString()}`)
       
-      // Get barbers who enabled auto-nudge BEFORE Monday 10am of current week
       const { data: barbers, error: barbersError } = await supabase
         .from('profiles')
         .select('user_id, full_name, phone, date_autonudge_enabled')
@@ -384,7 +414,6 @@ Deno.serve(async (req) => {
       } else {
         console.log(`Sending update messages to ${barbers.length} on-time barber(s)`)
         
-        // Update availability for all barbers before sending messages
         const barberUserIds = barbers.map(b => b.user_id)
         await updateBarbersAvailability(barberUserIds)
         
@@ -416,7 +445,6 @@ Deno.serve(async (req) => {
       const mondayStart = getCurrentWeekMondayStart()
       const thursdayEnd = getCurrentWeekThursdayEnd()
       
-      // Get all barbers with active subscription/trial
       const { data: allBarbers, error: allBarbersError } = await supabase
         .from('profiles')
         .select('user_id, full_name, phone')
@@ -432,12 +460,10 @@ Deno.serve(async (req) => {
       if (allBarbers && allBarbers.length > 0) {
         console.log(`Checking ${allBarbers.length} barbers for barely late updates`)
         
-        // First pass: identify barbers who need updates
         const barbersToUpdate = []
         
         for (const barber of allBarbers) {
           try {
-            // Get latest yes reply
             const latestReply = await getLatestYesReply(barber.user_id)
             
             if (!latestReply) {
@@ -447,7 +473,6 @@ Deno.serve(async (req) => {
             const replyDate = new Date(latestReply.received_at)
             const replyDateToronto = getTorontoDate(replyDate)
             
-            // Check if reply was between Monday and Thursday of current week
             if (replyDateToronto >= mondayStart && replyDateToronto <= thursdayEnd) {
               barbersToUpdate.push(barber)
             }
@@ -459,11 +484,9 @@ Deno.serve(async (req) => {
         if (barbersToUpdate.length > 0) {
           console.log(`Found ${barbersToUpdate.length} barbers for barely late updates`)
           
-          // Update availability for all barbers before sending messages
           const barberUserIds = barbersToUpdate.map(b => b.user_id)
           await updateBarbersAvailability(barberUserIds)
           
-          // Second pass: send updates
           for (const barber of barbersToUpdate) {
             try {
               console.log(`Sending barely late update to ${barber.full_name}`)

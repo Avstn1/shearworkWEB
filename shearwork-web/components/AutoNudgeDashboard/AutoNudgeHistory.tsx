@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Users, Clock } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
+import ClientMessageHistory from '@/components/AutoNudgeDashboard/ClientMessageHistory'
 
 interface Props {
   user_id: string
@@ -13,6 +14,7 @@ interface SMSRecipient {
   full_name: string | null
   phone: string | null
   status: 'booked' | 'messaged' | 'pending' | 'failed'
+  has_replied: boolean
   failure_reason?: string
   service?: string
   price?: string
@@ -28,18 +30,11 @@ const STATUS_BADGE: Record<SMSRecipient['status'], { label: string; classes: str
   failed:   { label: '✗ Failed',  classes: 'bg-red-400/10 text-red-400 border-red-400/20' },
 }
 
-// Day offset from Monday (0=Mon, 1=Tue, … 6=Sun)
 const DAY_OFFSET: Record<string, number> = {
   Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3,
   Friday: 4, Saturday: 5, Sunday: 6,
 }
 
-// Updated send times to match new bucket logic:
-// Morning (5am–12pm)  → 6:00 PM (18:00)
-// Midday  (12pm–4pm)  → 6:30 PM (18:30)
-// Afternoon (4pm–8pm) → 4:00 PM (16:00)
-// Night  (8pm–12am)   → 8:00 PM (20:00)
-// Any-time            → 6:30 PM (18:30) next available fire
 const TIME_SEND: Record<string, { hour: number; minute: number }> = {
   Morning:   { hour: 18, minute: 0  },
   Midday:    { hour: 18, minute: 30 },
@@ -97,6 +92,7 @@ export default function AutoNudgeHistory({ user_id }: Props) {
   const [totalClients, setTotalClients] = useState(0)
   const [clientsBooked, setClientsBooked] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [activeThread, setActiveThread] = useState<{ phone: string; name: string } | null>(null)
 
   useEffect(() => {
     const fetchCurrentWeek = async () => {
@@ -117,8 +113,6 @@ export default function AutoNudgeHistory({ user_id }: Props) {
 
         setTotalClients(bucket.total_clients ?? 0)
 
-        // Fetch sms_sent rows for this bucket scoped to this user
-        // Keyed by phone_normalized → latest sent row
         const { data: smsSentRows } = await supabase
           .from('sms_sent')
           .select('phone_normalized, is_sent, reason, created_at')
@@ -126,7 +120,6 @@ export default function AutoNudgeHistory({ user_id }: Props) {
           .eq('user_id', user_id)
           .order('created_at', { ascending: false })
 
-        // Build map: phone → latest row (already sorted desc so first hit wins)
         const smsSentMap = new Map<string, { is_sent: boolean; reason: string | null; created_at: string | null }>()
         for (const row of smsSentRows || []) {
           if (row.phone_normalized && !smsSentMap.has(row.phone_normalized)) {
@@ -152,6 +145,23 @@ export default function AutoNudgeHistory({ user_id }: Props) {
 
         setClientsBooked(bookedClientIds.length)
 
+        // Compute Monday–Sunday bounds for the current ISO week
+        const weekMonday = new Date(bucket.campaign_start)
+        weekMonday.setHours(0, 0, 0, 0)
+        const weekSunday = new Date(weekMonday)
+        weekSunday.setDate(weekMonday.getDate() + 6)
+        weekSunday.setHours(23, 59, 59, 999)
+
+        const { data: replyRows } = await supabase
+          .from('sms_replies')
+          .select('phone_number')
+          .eq('user_id', user_id)
+          .not('client_id', 'is', null)
+          .gte('received_at', weekMonday.toISOString())
+          .lte('received_at', weekSunday.toISOString())
+
+        const repliedPhones = new Set((replyRows || []).map(r => r.phone_number))
+
         const recipientsList: SMSRecipient[] = (bucket.clients || []).map((client: {
           client_id: string
           phone: string
@@ -174,6 +184,7 @@ export default function AutoNudgeHistory({ user_id }: Props) {
             full_name: client.full_name || null,
             phone: client.phone || null,
             status,
+            has_replied: client.phone ? repliedPhones.has(client.phone) : false,
             failure_reason: isFailed ? (sentRow?.reason || 'Unknown error') : undefined,
             service: isBooked ? services[bookedIndex] : undefined,
             price: isBooked ? prices[bookedIndex] : undefined,
@@ -200,111 +211,142 @@ export default function AutoNudgeHistory({ user_id }: Props) {
   }, [user_id])
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-1 flex-shrink-0">
-        <h2 className="text-[#d1e2c5] font-semibold text-sm sm:text-base">AutoNudge History</h2>
-        {!loading && recipients.length > 0 && (
-          <div className="flex items-center gap-2 text-xs text-[#bdbdbd]">
-            <span className="text-lime-300 font-semibold">{clientsBooked} booked</span>
-            <span>·</span>
-            <span>{totalClients} sent</span>
+    <>
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between mb-1 flex-shrink-0">
+          <h2 className="text-[#d1e2c5] font-semibold text-sm sm:text-base">AutoNudge History</h2>
+          {!loading && recipients.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-[#bdbdbd]">
+              <span className="text-lime-300 font-semibold">{clientsBooked} booked</span>
+              <span>·</span>
+              <span>{totalClients} sent</span>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-[#bdbdbd] mb-3 flex-shrink-0">This week's campaign</p>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 text-[#bdbdbd] animate-spin" />
           </div>
-        )}
-      </div>
-      <p className="text-xs text-[#bdbdbd] mb-3 flex-shrink-0">This week's campaign</p>
+        ) : recipients.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+            <Users className="w-12 h-12 text-white/20" />
+            <p className="text-xl font-semibold text-white/70 leading-relaxed">No campaign this week yet.</p>
+            <p className="text-sm text-white/40 leading-relaxed">Activate your auto-nudge by replying to our SMS or clicking the <span className="text-white/60 font-semibold">Nudge Clients</span> button.</p>
+          </div>
+        ) : (
+          <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 overflow-y-auto auto-rows-fr">
+            {recipients.map((recipient, index) => {
+              const badge = STATUS_BADGE[recipient.status]
+              const isBooked = recipient.status === 'booked'
 
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-5 h-5 text-[#bdbdbd] animate-spin" />
-        </div>
-      ) : recipients.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-          <Users className="w-12 h-12 text-white/20" />
-          <p className="text-xl font-semibold text-white/70 leading-relaxed">No campaign this week yet.</p>
-          <p className="text-sm text-white/40 leading-relaxed">Activate your auto-nudge by replying to our SMS or clicking the <span className="text-white/60 font-semibold">Nudge Clients</span> button.</p>
-        </div>
-      ) : (
-        <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 overflow-y-auto auto-rows-fr">
-          {recipients.map((recipient, index) => {
-            const badge = STATUS_BADGE[recipient.status]
-            const isBooked = recipient.status === 'booked'
-
-            return (
-              <div
-                key={`${recipient.client_id ?? recipient.phone}-${index}`}
-                className={`rounded-xl border p-3 flex flex-col justify-between ${
-                  isBooked
-                    ? 'bg-lime-300/5 border-lime-300/15'
-                    : recipient.status === 'messaged'
-                    ? 'bg-sky-300/5 border-sky-300/15'
-                    : recipient.status === 'failed'
-                    ? 'bg-red-400/5 border-red-400/15'
-                    : 'bg-white/[0.03] border-white/8'
-                }`}
-              >
-                {/* Top: name + badge + phone */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-white leading-snug">
-                      {recipient.full_name ? capitalizeName(recipient.full_name) : <span className="text-white/30 font-normal">Unknown</span>}
-                    </p>
-                    <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.classes}`}>
-                      {badge.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/35">{formatPhoneNumber(recipient.phone)}</p>
-
-                  {/* Booking details */}
-                  {isBooked && (recipient.service || recipient.appointment_date) && (
-                    <div className="pt-2 border-t border-white/8 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        {recipient.service && <p className="text-xs text-lime-300 font-semibold truncate">{recipient.service}</p>}
-                        {recipient.appointment_date && (
-                          <p className="text-xs text-white/35 mt-0.5">{new Date(recipient.appointment_date).toLocaleDateString('en-US', {
-                            month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                          })}</p>
+              return (
+                <div
+                  key={`${recipient.client_id ?? recipient.phone}-${index}`}
+                  className={`rounded-xl border p-3 flex flex-col justify-between ${
+                    isBooked
+                      ? 'bg-lime-300/5 border-lime-300/15'
+                      : recipient.status === 'messaged'
+                      ? 'bg-sky-300/5 border-sky-300/15'
+                      : recipient.status === 'failed'
+                      ? 'bg-red-400/5 border-red-400/15'
+                      : 'bg-white/[0.03] border-white/8'
+                  }`}
+                >
+                  {/* Top: name + badges */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 flex-wrap">
+                      <p className="text-sm font-semibold text-white leading-snug">
+                        {recipient.full_name ? capitalizeName(recipient.full_name) : <span className="text-white/30 font-normal">Unknown</span>}
+                      </p>
+                      <div className="flex items-center flex-wrap gap-1 flex-shrink-0 min-w-0">
+                        <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.classes}`}>
+                          {badge.label}
+                        </span>
+                        {recipient.has_replied && (
+                          <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#73aa57]/10 text-[#73aa57] border-[#73aa57]/20">
+                            Replied
+                          </span>
+                        )}
+                        {recipient.phone && (
+                          <button
+                            onClick={() => setActiveThread({
+                              phone: recipient.phone!,
+                              name: recipient.full_name ? capitalizeName(recipient.full_name) : recipient.phone!,
+                            })}
+                            className="px-2 py-0.5 rounded-full text-[10px] font-semibold border border-violet-400/40 text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 hover:border-violet-400/70 transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            <span className="hidden sm:inline">Click to view message history</span>
+                            <span className="sm:hidden">Message History</span>
+                          </button>
                         )}
                       </div>
-                      {recipient.price && <p className="text-sm font-bold text-lime-300 flex-shrink-0">${recipient.price}</p>}
+                    </div>
+                    <p className="text-xs text-white/35">{formatPhoneNumber(recipient.phone)}</p>
+
+                    {/* Booking details */}
+                    {isBooked && (recipient.service || recipient.appointment_date) && (
+                      <div className="pt-2 border-t border-white/8 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          {recipient.service && <p className="text-xs text-lime-300 font-semibold truncate">{recipient.service}</p>}
+                          {recipient.appointment_date && (
+                            <p className="text-xs text-white/35 mt-0.5">{new Date(recipient.appointment_date).toLocaleDateString('en-US', {
+                              month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                            })}</p>
+                          )}
+                        </div>
+                        {recipient.price && <p className="text-sm font-bold text-lime-300 flex-shrink-0">${recipient.price}</p>}
+                      </div>
+                    )}
+
+                    {/* Failure reason */}
+                    {recipient.status === 'failed' && recipient.failure_reason && (
+                      <p className="text-xs text-red-400/70">{recipient.failure_reason}</p>
+                    )}
+                  </div>
+
+                  {/* Bottom: timestamp */}
+                  {recipient.status === 'messaged' && recipient.messaged_at && (
+                    <div className="flex items-center gap-1.5 text-xs text-white/35 mt-2">
+                      <Clock className="w-3 h-3 flex-shrink-0" />
+                      <span>Messaged {new Date(recipient.messaged_at).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                      })}</span>
                     </div>
                   )}
-
-                  {/* Failure reason */}
-                  {recipient.status === 'failed' && recipient.failure_reason && (
-                    <p className="text-xs text-red-400/70">{recipient.failure_reason}</p>
+                  {recipient.status === 'pending' && recipient.scheduled_send && (
+                    <div className="flex items-center gap-1.5 text-xs text-white/35 mt-2">
+                      <Clock className="w-3 h-3 flex-shrink-0" />
+                      <span>Will be messaged {recipient.scheduled_send.toLocaleDateString('en-US', {
+                        weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                      })}</span>
+                    </div>
                   )}
                 </div>
+              )
+            })}
+          </div>
+        )}
 
-                {/* Bottom: timestamp */}
-                {recipient.status === 'messaged' && recipient.messaged_at && (
-                  <div className="flex items-center gap-1.5 text-xs text-white/35 mt-2">
-                    <Clock className="w-3 h-3 flex-shrink-0" />
-                    <span>Messaged {new Date(recipient.messaged_at).toLocaleDateString('en-US', {
-                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                    })}</span>
-                  </div>
-                )}
-                {recipient.status === 'pending' && recipient.scheduled_send && (
-                  <div className="flex items-center gap-1.5 text-xs text-white/35 mt-2">
-                    <Clock className="w-3 h-3 flex-shrink-0" />
-                    <span>Will be messaged {recipient.scheduled_send.toLocaleDateString('en-US', {
-                      weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                    })}</span>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        {/* See all weeks */}
+        <a
+          href="/client-manager?view=sms"
+          className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold text-center text-white border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 transition-colors flex-shrink-0"
+        >
+          See all weeks
+        </a>
+      </div>
+
+      {/* Message thread modal */}
+      {activeThread && (
+        <ClientMessageHistory
+          user_id={user_id}
+          client_phone={activeThread.phone}
+          client_name={activeThread.name}
+          onClose={() => setActiveThread(null)}
+        />
       )}
-
-      {/* See all weeks */}
-      <a
-        href="/client-manager?view=sms"
-        className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold text-center text-white border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 transition-colors flex-shrink-0"
-      >
-        See all weeks
-      </a>
-    </div>
+    </>
   )
 }
