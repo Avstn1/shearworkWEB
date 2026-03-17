@@ -15,6 +15,7 @@ interface SMSRecipient {
   phone: string | null
   status: 'booked' | 'messaged' | 'pending' | 'failed'
   has_replied: boolean
+  has_unread: boolean
   failure_reason?: string
   service?: string
   price?: string
@@ -94,6 +95,23 @@ export default function AutoNudgeHistory({ user_id }: Props) {
   const [loading, setLoading] = useState(true)
   const [activeThread, setActiveThread] = useState<{ phone: string; name: string } | null>(null)
 
+  const openThread = async (phone: string, name: string) => {
+    // Mark all unread replies from this client as read
+    await supabase
+      .from('sms_replies')
+      .update({ ui_read: true })
+      .eq('user_id', user_id)
+      .eq('phone_number', phone)
+      .eq('ui_read', false)
+
+    // Optimistically clear unread state in local recipients
+    setRecipients(prev =>
+      prev.map(r => r.phone === phone ? { ...r, has_unread: false } : r)
+    )
+
+    setActiveThread({ phone, name })
+  }
+
   useEffect(() => {
     const fetchCurrentWeek = async () => {
       try {
@@ -162,6 +180,18 @@ export default function AutoNudgeHistory({ user_id }: Props) {
 
         const repliedPhones = new Set((replyRows || []).map(r => r.phone_number))
 
+        // Phones that have at least one unread reply this week
+        const { data: unreadRows } = await supabase
+          .from('sms_replies')
+          .select('phone_number')
+          .eq('user_id', user_id)
+          .not('client_id', 'is', null)
+          .eq('ui_read', false)
+          .gte('received_at', weekMonday.toISOString())
+          .lte('received_at', weekSunday.toISOString())
+
+        const unreadPhones = new Set((unreadRows || []).map(r => r.phone_number))
+
         const recipientsList: SMSRecipient[] = (bucket.clients || []).map((client: {
           client_id: string
           phone: string
@@ -185,6 +215,7 @@ export default function AutoNudgeHistory({ user_id }: Props) {
             phone: client.phone || null,
             status,
             has_replied: client.phone ? repliedPhones.has(client.phone) : false,
+            has_unread: client.phone ? unreadPhones.has(client.phone) : false,
             failure_reason: isFailed ? (sentRow?.reason || 'Unknown error') : undefined,
             service: isBooked ? services[bookedIndex] : undefined,
             price: isBooked ? prices[bookedIndex] : undefined,
@@ -271,12 +302,15 @@ export default function AutoNudgeHistory({ user_id }: Props) {
                         )}
                         {recipient.phone && (
                           <button
-                            onClick={() => setActiveThread({
-                              phone: recipient.phone!,
-                              name: recipient.full_name ? capitalizeName(recipient.full_name) : recipient.phone!,
-                            })}
-                            className="px-2 py-0.5 rounded-full text-[10px] font-semibold border border-violet-400/40 text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 hover:border-violet-400/70 transition-colors cursor-pointer whitespace-nowrap"
+                            onClick={() => openThread(
+                              recipient.phone!,
+                              recipient.full_name ? capitalizeName(recipient.full_name) : recipient.phone!,
+                            )}
+                            className="relative px-2 py-0.5 rounded-full text-[10px] font-semibold border border-violet-400/40 text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 hover:border-violet-400/70 transition-colors cursor-pointer whitespace-nowrap"
                           >
+                            {recipient.has_unread && (
+                              <span className="absolute -top-1 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+                            )}
                             <span className="hidden sm:inline">Click to view message history</span>
                             <span className="sm:hidden">Message History</span>
                           </button>

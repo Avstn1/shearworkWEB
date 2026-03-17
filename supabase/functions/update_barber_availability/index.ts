@@ -22,7 +22,6 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -36,8 +35,6 @@ Deno.serve(async (req) => {
     
     const CONCURRENCY_LIMIT = 100
 
-    // Check for optional user_id (singular) or user_ids (array) parameter
-    // Prioritize user_ids if both are present
     let body: Record<string, unknown> = {}
     try {
       body = await req.json()
@@ -59,7 +56,6 @@ Deno.serve(async (req) => {
 
     console.log('Received request to update availability with parameters [user_ids, user_id]:', { targetUserIds, targetUserId })
     
-    // If user_ids not provided but user_id is, convert to array
     if ((!targetUserIds || targetUserIds.length === 0) && targetUserId) {
       targetUserIds = [targetUserId]
     }
@@ -82,7 +78,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Get all profiles with a calendar set (filtered by user_ids if provided)
     let profileQuery = supabase
       .from('profiles')
       .select('user_id, calendar, full_name')
@@ -97,7 +92,8 @@ Deno.serve(async (req) => {
     
     if (profileError) throw profileError
 
-    // Build all requests to be made (one per user)
+    console.log(`Profiles fetched: ${profiles?.length ?? 0}`)
+
     const allRequests: { userId: string; fullName: string }[] = []
     
     for (const profile of profiles || []) {
@@ -107,37 +103,39 @@ Deno.serve(async (req) => {
       })
     }
 
+    console.log(`allRequests built: ${allRequests.length} items`)
+
+    // Reset sms_engaged_current_week before firing requests (cron job only)
+    if (!isTargetedUpdate) {
+      console.log('No specific user IDs provided, performing reset for all users with sms_engaged_current_week = true')
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          sms_engaged_current_week: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('sms_engaged_current_week', true)
+      
+      if (updateError) {
+        console.error('Failed to update profile engagement:', updateError)
+      }
+    }
+
     const results: { userId: string; fullName: string; success: boolean; error?: string; data?: unknown }[] = []
 
-    async function fireWithConcurrency(items: typeof allRequests, limit: number) {
+    function fireWithConcurrency(items: { userId: string; fullName: string }[], limit: number) {
       let active = 0
       let index = 0
 
-      // If targetUserIds/targetUserId is not provided, then this is called from the Monday, 9:30am cron job. We don't want an update here. We want a reset.
-      // If targetUserIds/targetUserId is provided, then this is called from an API route. We want an update here.
-      
-      let url;
+      const url = isTargetedUpdate
+        ? `${siteUrl}/api/availability/pull?forceRefresh=${String(shouldForceRefresh)}&dryRun=false&mode=update`
+        : `${siteUrl}/api/availability/pull?forceRefresh=${String(shouldForceRefresh)}&dryRun=false`
 
-      // If not targeted update then it's the monday cron job so reset sms_engaged_current week for everyone
-      if (!isTargetedUpdate) {
-        console.log('No specific user IDs provided, performing reset for all users with sms_engaged_current_week = true')
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            sms_engaged_current_week: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('sms_engaged_current_week', true)
-        
-        if (updateError) {
-          console.error('Failed to update profile engagement:', updateError)
-        }
-
-        url = `${siteUrl}/api/availability/pull?forceRefresh=${String(shouldForceRefresh)}&dryRun=false`
-      } else {
+      if (isTargetedUpdate) {
         console.log('Specific user IDs provided, performing update for those users')
-        url = `${siteUrl}/api/availability/pull?forceRefresh=${String(shouldForceRefresh)}&dryRun=false&mode=update`
       }
+
+      console.log(`Firing ${items.length} requests to: ${url}`)
 
       return new Promise<void>(resolve => {
         function next() {

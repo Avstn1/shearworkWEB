@@ -225,17 +225,25 @@ Deno.serve(async (req) => {
       })
     }
     
+    // let query = supabase
+    //   .from('profiles')
+    //   .select('user_id, full_name, phone')
+    //   .or('role.ilike.barber,role.ilike.owner')
+    //   .eq('sms_engaged_current_week', false)
+    //   .not('phone', 'is', null)
+    //   .or('stripe_subscription_status.eq.active,trial_active.eq.true')
+
     let query = supabase
       .from('profiles')
       .select('user_id, full_name, phone')
-      .ilike('role', 'barber')
+      .in('user_id', [
+        '9fc64b42-1199-44b5-b1e0-53297f655a5c', // Lucas
+        'e4120eae-1d2f-4181-8417-168233fc01b7', // Carlos
+        'f4d28cd0-37e9-4117-a67c-0e3c91c1eac7', // AJ
+      ])
       .eq('sms_engaged_current_week', false)
       .not('phone', 'is', null)
-      .or('stripe_subscription_status.eq.active,trial_active.eq.true')
-    
-    // Add subscription filter (active OR trial)
-    // query = query.or('stripe_subscription_status.eq.active,trial_active.eq.true')
-    
+
     if (dayOfWeek === 1) {
       // Monday: Send to barbers who signed up Thursday-Sunday (before today)
       // i.e., date_autonudge_enabled < start of today (Monday)
