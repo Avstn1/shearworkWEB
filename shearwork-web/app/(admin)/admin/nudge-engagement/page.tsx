@@ -111,7 +111,7 @@ function WeekNav({
   showDatePicker: boolean
   setShowDatePicker: (v: boolean) => void
   currentWeek: Date
-  pickerRef: React.RefObject<HTMLDivElement>
+  pickerRef: React.RefObject<HTMLDivElement | null>
   onPrev: () => void
   onNext: () => void
   onDateSelect: (d: Date | undefined) => void
@@ -441,7 +441,8 @@ export default function NudgeEngagementPage() {
       const { data: sent, error: sentError } = await supabase
         .from('sms_sent').select('id, user_id, phone_normalized, message, is_sent, reason, created_at')
         .eq('purpose', purpose)
-        .gte('created_at', mondayStart.toISOString()).lte('created_at', sundayEnd.toISOString())
+        .gte('created_at', mondayStart.toISOString())
+        .lte('created_at', sundayEnd.toISOString())
         .order('created_at', { ascending: true })
       if (sentError) throw sentError
       if (!sent || sent.length === 0) { setter([]); return }
