@@ -398,11 +398,12 @@ Deno.serve(async (req) => {
       const { data: barbers, error: barbersError } = await supabase
         .from('profiles')
         .select('user_id, full_name, phone, date_autonudge_enabled')
-        .ilike('role', 'barber')
+        .or('role.ilike.barber,role.ilike.owner')
         .eq('sms_engaged_current_week', true)
         .not('phone', 'is', null)
         .or('stripe_subscription_status.eq.active,trial_active.eq.true')
         .lt('date_autonudge_enabled', monday10am.toISOString())
+        // .eq('user_id', 'e4120eae-1d2f-4181-8417-168233fc01b7') // TEMP - debug only
 
       if (barbersError) {
         console.error('Error fetching barbers:', barbersError)
@@ -448,9 +449,10 @@ Deno.serve(async (req) => {
       const { data: allBarbers, error: allBarbersError } = await supabase
         .from('profiles')
         .select('user_id, full_name, phone')
-        .ilike('role', 'barber')
+        .or('role.ilike.barber,role.ilike.owner')
         .not('phone', 'is', null)
         .or('stripe_subscription_status.eq.active,trial_active.eq.true')
+        // .eq('user_id', 'e4120eae-1d2f-4181-8417-168233fc01b7') // TEMP - debug only
 
       if (allBarbersError) {
         console.error('Error fetching all barbers:', allBarbersError)
