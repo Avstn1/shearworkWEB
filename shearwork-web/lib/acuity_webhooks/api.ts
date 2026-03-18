@@ -31,13 +31,14 @@ export async function createWebhooksForUser(
   userId: string,
   accessToken: string,
   webhookUrl?: string
-): Promise<{ success: boolean; webhooks?: WebhookResponse[]; error?: any }> {
+): Promise<{ success: boolean; webhooks?: WebhookResponse[]; error?: unknown }> {
   const targetUrl = webhookUrl || process.env.NEXT_PUBLIC_SITE_URL + 'api/acuity/appointment-webhook';
   
   const events: WebhookSubscription['event'][] = [
     'appointment.scheduled',
     'appointment.rescheduled',
-    'appointment.canceled'
+    'appointment.canceled',
+    'appointment.changed'
   ];
   
   const createdWebhooks: WebhookResponse[] = [];
@@ -101,7 +102,7 @@ export async function createWebhooksForUser(
 export async function deleteAllWebhooksForUser(
   userId: string,
   accessToken: string
-): Promise<{ success: boolean; deletedCount?: number; error?: any }> {
+): Promise<{ success: boolean; deletedCount?: number; error?: unknown }> {
   try {
     const webhooks = await listWebhooksForUser(accessToken);
     
@@ -182,7 +183,7 @@ export async function deleteWebhook(
 export async function syncWebhooksToDatabase(
   userId: string,
   accessToken: string
-): Promise<{ success: boolean; webhooks?: WebhookResponse[]; error?: any }> {
+): Promise<{ success: boolean; webhooks?: WebhookResponse[]; error?: unknown }> {
   try {
     const webhooks = await listWebhooksForUser(accessToken);
     

@@ -36,17 +36,6 @@ export default function DashboardPage() {
       setDateAutonudgeEnabled(profile?.date_autonudge_enabled ?? null)
       setUser_id(user.id)
       setProfileLoaded(true)
-
-      void supabase.functions
-        .invoke('update_barber_availability', {
-          body: {
-            user_id: user.id,
-            force_refresh: false,
-          },
-        })
-        .catch((err) => {
-          console.error('Availability update failed:', err)
-        })
     }
     getUser()
   }, [])

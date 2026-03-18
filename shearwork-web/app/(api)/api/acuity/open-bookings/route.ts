@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getAuthenticatedUser } from '@/utils/api-auth'
-import { pullAvailability } from '@/lib/booking/availability/orchestrator'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 import {
   DEFAULT_PRIMARY_SERVICE,
   isDefaultServiceName,
@@ -9,7 +8,6 @@ import {
 } from '@/lib/booking/serviceNormalization'
 import type { AvailabilitySlotRecord } from '@/lib/booking/availability/types'
 
-const OPEN_BOOKINGS_CACHE_TTL_MS = 5 * 60 * 1000
 const OPEN_BOOKINGS_DAY_END_MINUTES = 20 * 60
 const OPEN_BOOKINGS_SLOT_STALE_MS = 15 * 60 * 1000
 
@@ -19,11 +17,10 @@ type OpenBookingsPayload = {
   weekEnd: string
   weekOffset: number
   selectedService: string
-}
-
-type OpenBookingsCacheEntry = {
-  payload: OpenBookingsPayload
-  cachedAtMs: number
+  fetchedAt: string | null
+  stale: boolean
+  hasSnapshot: boolean
+  dataSource: 'slots' | 'summary' | 'none'
 }
 
 type ServiceUsage = {
@@ -37,9 +34,6 @@ type IntervalCandidate = {
   endMinutes: number
 }
 
-const openBookingsCache = new Map<string, OpenBookingsCacheEntry>()
-const openBookingsInFlight = new Map<string, Promise<OpenBookingsPayload>>()
-
 type OpenBookingsWeekRange = {
   startDate: string
   endDate: string
@@ -50,25 +44,23 @@ type TorontoNowContext = {
   currentMinutes: number
 }
 
-type CachedSlotsResult = {
+type CachedSnapshotResult = {
   slots: AvailabilitySlotRecord[]
-  oldestFetchedAt: string
+  fetchedAt: string | null
+  hasSnapshot: boolean
+  stale: boolean
 }
 
-function cleanupOpenBookingsCache(nowMs: number) {
-  for (const [key, entry] of openBookingsCache.entries()) {
-    if (nowMs - entry.cachedAtMs > OPEN_BOOKINGS_CACHE_TTL_MS * 6) {
-      openBookingsCache.delete(key)
-    }
-  }
-}
-
-function getCacheKey(userId: string, weekOffset: number, weekStart: string): string {
-  return [userId, String(weekOffset), weekStart].join('|')
+type SummaryFallbackResult = {
+  totalOpenings: number
+  fetchedAt: string | null
+  stale: boolean
+  hasSummary: boolean
 }
 
 function parseStartMinutes(value?: string | null): number | null {
   if (!value) return null
+
   const match = value.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/)
   if (!match) return null
 
@@ -186,6 +178,15 @@ function countNonOverlappingOpenings(
   return total
 }
 
+function formatTorontoDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
 function getTorontoNow(): TorontoNowContext {
   const now = new Date(
     new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
@@ -195,15 +196,6 @@ function getTorontoNow(): TorontoNowContext {
     currentDate: formatTorontoDate(now),
     currentMinutes: now.getHours() * 60 + now.getMinutes(),
   }
-}
-
-function formatTorontoDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Toronto',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date)
 }
 
 function getWeekRange(weekOffset: number): OpenBookingsWeekRange {
@@ -227,70 +219,165 @@ function getWeekRange(weekOffset: number): OpenBookingsWeekRange {
   }
 }
 
-async function getLatestCachedSlots(params: {
+function isFetchedAtStale(fetchedAt: string): boolean {
+  const fetchedMs = new Date(fetchedAt).getTime()
+  if (Number.isNaN(fetchedMs)) return true
+  return Date.now() - fetchedMs > OPEN_BOOKINGS_SLOT_STALE_MS
+}
+
+async function getSelectedCalendarId(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('acuity_tokens')
+    .select('calendar_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Failed to read selected Acuity calendar_id:', error)
+    return null
+  }
+
+  if (data?.calendar_id === null || data?.calendar_id === undefined) {
+    return null
+  }
+
+  return String(data.calendar_id)
+}
+
+async function getLatestCachedSnapshot(params: {
   supabase: SupabaseClient
   userId: string
   range: OpenBookingsWeekRange
-}): Promise<CachedSlotsResult | null> {
+}): Promise<CachedSnapshotResult> {
   const { supabase, userId, range } = params
+  const calendarId = await getSelectedCalendarId(supabase, userId)
 
-  const { data, error } = await supabase
+  let latestSnapshotQuery = supabase
     .from('availability_slots')
-    .select('*')
+    .select('fetched_at, calendar_id')
     .eq('user_id', userId)
     .eq('source', 'acuity')
     .gte('slot_date', range.startDate)
     .lte('slot_date', range.endDate)
-    .order('slot_date', { ascending: true })
     .order('fetched_at', { ascending: false })
+    .limit(1)
 
-  if (error) {
-    console.error('open-bookings cache lookup failed:', error)
-    return null
+  if (calendarId) {
+    latestSnapshotQuery = latestSnapshotQuery.eq('calendar_id', calendarId)
   }
 
-  if (!data || data.length === 0) return null
+  const { data: latestRows, error: latestError } = await latestSnapshotQuery
 
-  const latestByDate = new Map<string, string>()
-  const latestSlots: AvailabilitySlotRecord[] = []
-
-  for (const row of data as AvailabilitySlotRecord[]) {
-    const fetchedAt = row.fetched_at
-    if (!fetchedAt) continue
-
-    const latestForDate = latestByDate.get(row.slot_date)
-
-    if (!latestForDate) {
-      latestByDate.set(row.slot_date, fetchedAt)
-      latestSlots.push(row)
-      continue
-    }
-
-    if (fetchedAt === latestForDate) {
-      latestSlots.push(row)
+  if (latestError) {
+    console.error('open-bookings snapshot lookup failed:', latestError)
+    return {
+      slots: [],
+      fetchedAt: null,
+      hasSnapshot: false,
+      stale: true,
     }
   }
 
-  if (latestSlots.length === 0) return null
+  const latestSnapshot = latestRows?.[0]
+  if (!latestSnapshot?.fetched_at) {
+    return {
+      slots: [],
+      fetchedAt: null,
+      hasSnapshot: false,
+      stale: true,
+    }
+  }
 
-  const oldestFetchedAt = latestSlots.reduce((oldest, slot) => {
-    if (!slot.fetched_at) return oldest
-    if (!oldest) return slot.fetched_at
-    return slot.fetched_at < oldest ? slot.fetched_at : oldest
-  }, '')
+  const snapshotCalendarId = calendarId ?? String(latestSnapshot.calendar_id ?? '')
 
-  if (!oldestFetchedAt) return null
+  let slotsQuery = supabase
+    .from('availability_slots')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('source', 'acuity')
+    .eq('fetched_at', latestSnapshot.fetched_at)
+    .gte('slot_date', range.startDate)
+    .lte('slot_date', range.endDate)
+    .order('slot_date', { ascending: true })
+    .order('start_time', { ascending: true })
+
+  if (snapshotCalendarId) {
+    slotsQuery = slotsQuery.eq('calendar_id', snapshotCalendarId)
+  }
+
+  const { data: slots, error: slotsError } = await slotsQuery
+
+  if (slotsError) {
+    console.error('open-bookings slot snapshot read failed:', slotsError)
+    return {
+      slots: [],
+      fetchedAt: latestSnapshot.fetched_at,
+      hasSnapshot: false,
+      stale: true,
+    }
+  }
 
   return {
-    slots: latestSlots,
-    oldestFetchedAt,
+    slots: (slots ?? []) as AvailabilitySlotRecord[],
+    fetchedAt: latestSnapshot.fetched_at,
+    hasSnapshot: true,
+    stale: isFetchedAtStale(latestSnapshot.fetched_at),
   }
 }
 
-function isFetchedAtStale(fetchedAt: string, maxAgeMs: number): boolean {
-  const fetchedMs = new Date(fetchedAt).getTime()
-  if (Number.isNaN(fetchedMs)) return true
-  return Date.now() - fetchedMs > maxAgeMs
+async function getSummaryFallback(params: {
+  supabase: SupabaseClient
+  userId: string
+  range: OpenBookingsWeekRange
+}): Promise<SummaryFallbackResult> {
+  const { supabase, userId, range } = params
+
+  const { data, error } = await supabase
+    .from('availability_daily_summary')
+    .select('slot_count, slot_count_update, fetched_at, updated_at')
+    .eq('user_id', userId)
+    .eq('source', 'acuity')
+    .gte('slot_date', range.startDate)
+    .lte('slot_date', range.endDate)
+
+  if (error) {
+    console.error('open-bookings summary fallback failed:', error)
+    return {
+      totalOpenings: 0,
+      fetchedAt: null,
+      stale: true,
+      hasSummary: false,
+    }
+  }
+
+  if (!data || data.length === 0) {
+    return {
+      totalOpenings: 0,
+      fetchedAt: null,
+      stale: true,
+      hasSummary: false,
+    }
+  }
+
+  let freshestTimestamp: string | null = null
+  const totalOpenings = data.reduce((sum, row) => {
+    const referenceTimestamp = row.updated_at ?? row.fetched_at ?? null
+    if (referenceTimestamp && (!freshestTimestamp || referenceTimestamp > freshestTimestamp)) {
+      freshestTimestamp = referenceTimestamp
+    }
+
+    return sum + Number(row.slot_count_update ?? row.slot_count ?? 0)
+  }, 0)
+
+  return {
+    totalOpenings,
+    fetchedAt: freshestTimestamp,
+    stale: freshestTimestamp ? isFetchedAtStale(freshestTimestamp) : true,
+    hasSummary: true,
+  }
 }
 
 function filterRemainingWeekSlots(params: {
@@ -337,127 +424,48 @@ function filterRemainingWeekSlots(params: {
 }
 
 function buildOpenBookingsPayload(params: {
-  slots: AvailabilitySlotRecord[]
+  snapshot: CachedSnapshotResult
+  summaryFallback: SummaryFallbackResult
   range: OpenBookingsWeekRange
   weekOffset: number
   now: TorontoNowContext
 }): OpenBookingsPayload {
+  if (!params.snapshot.hasSnapshot) {
+    return {
+      totalOpenings: params.summaryFallback.totalOpenings,
+      weekStart: params.range.startDate,
+      weekEnd: params.range.endDate,
+      weekOffset: params.weekOffset,
+      selectedService: DEFAULT_PRIMARY_SERVICE,
+      fetchedAt: params.summaryFallback.fetchedAt,
+      stale: params.summaryFallback.stale,
+      hasSnapshot: false,
+      dataSource: params.summaryFallback.hasSummary ? 'summary' : 'none',
+    }
+  }
+
+  const selectedService = params.snapshot.hasSnapshot
+    ? resolveSelectedService(params.snapshot.slots)
+    : DEFAULT_PRIMARY_SERVICE
+
   const remainingSlots = filterRemainingWeekSlots({
-    slots: params.slots,
+    slots: params.snapshot.slots,
     range: params.range,
     now: params.now,
   })
 
-  const selectedService = resolveSelectedService(params.slots)
-  const totalOpenings = countNonOverlappingOpenings(remainingSlots, selectedService)
-
   return {
-    totalOpenings,
+    totalOpenings: params.snapshot.hasSnapshot
+      ? countNonOverlappingOpenings(remainingSlots, selectedService)
+      : 0,
     weekStart: params.range.startDate,
     weekEnd: params.range.endDate,
     weekOffset: params.weekOffset,
     selectedService,
-  }
-}
-
-async function computeOpenBookingsForWeek(params: {
-  userId: string
-  weekOffset: number
-  supabase: SupabaseClient
-  bypassCache?: boolean
-}) {
-  const { userId, weekOffset, supabase, bypassCache } = params
-  const weekRange = getWeekRange(weekOffset)
-  const cacheKey = getCacheKey(userId, weekOffset, weekRange.startDate)
-  const nowMs = Date.now()
-
-  cleanupOpenBookingsCache(nowMs)
-
-  if (!bypassCache) {
-    const cached = openBookingsCache.get(cacheKey)
-    if (cached && nowMs - cached.cachedAtMs <= OPEN_BOOKINGS_CACHE_TTL_MS) {
-      return cached.payload
-    }
-
-    const inFlight = openBookingsInFlight.get(cacheKey)
-    if (inFlight) {
-      return inFlight
-    }
-  }
-
-  const computePromise = (async () => {
-    const now = getTorontoNow()
-
-    const cachedSlots = await getLatestCachedSlots({
-      supabase,
-      userId,
-      range: weekRange,
-    })
-
-    if (cachedSlots && !isFetchedAtStale(cachedSlots.oldestFetchedAt, OPEN_BOOKINGS_SLOT_STALE_MS)) {
-      const cachedPayload = buildOpenBookingsPayload({
-        slots: cachedSlots.slots,
-        range: weekRange,
-        weekOffset,
-        now,
-      })
-
-      openBookingsCache.set(cacheKey, {
-        payload: cachedPayload,
-        cachedAtMs: Date.now(),
-      })
-
-      return cachedPayload
-    }
-
-    let payload: OpenBookingsPayload
-
-    try {
-      const availability = await pullAvailability(supabase, userId, {
-        dryRun: false,
-        forceRefresh: true,
-        weekOffset,
-      })
-
-      const acuitySlots = availability.slots.filter((slot) => slot.source === 'acuity')
-      payload = buildOpenBookingsPayload({
-        slots: acuitySlots,
-        range: {
-          startDate: availability.range.startDate,
-          endDate: availability.range.endDate,
-        },
-        weekOffset,
-        now,
-      })
-    } catch (error) {
-      if (!cachedSlots || cachedSlots.slots.length === 0) {
-        throw error
-      }
-
-      console.error('open-bookings live refresh failed, falling back to stale cache:', error)
-
-      payload = buildOpenBookingsPayload({
-        slots: cachedSlots.slots,
-        range: weekRange,
-        weekOffset,
-        now,
-      })
-    }
-
-    openBookingsCache.set(cacheKey, {
-      payload,
-      cachedAtMs: Date.now(),
-    })
-
-    return payload
-  })()
-
-  openBookingsInFlight.set(cacheKey, computePromise)
-
-  try {
-    return await computePromise
-  } finally {
-    openBookingsInFlight.delete(cacheKey)
+    fetchedAt: params.snapshot.fetchedAt,
+    stale: params.snapshot.stale,
+    hasSnapshot: params.snapshot.hasSnapshot,
+    dataSource: 'slots',
   }
 }
 
@@ -469,17 +477,28 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { searchParams } = new URL(request.url)
-    const bypassCache = searchParams.get('fresh') === 'true'
-
-    const currentWeek = await computeOpenBookingsForWeek({
-      userId: user.id,
-      weekOffset: 0,
+    const weekOffset = 0
+    const weekRange = getWeekRange(weekOffset)
+    const snapshot = await getLatestCachedSnapshot({
       supabase,
-      bypassCache,
+      userId: user.id,
+      range: weekRange,
+    })
+    const summaryFallback = await getSummaryFallback({
+      supabase,
+      userId: user.id,
+      range: weekRange,
     })
 
-    return NextResponse.json(currentWeek)
+    const payload = buildOpenBookingsPayload({
+      snapshot,
+      summaryFallback,
+      range: weekRange,
+      weekOffset,
+      now: getTorontoNow(),
+    })
+
+    return NextResponse.json(payload)
   } catch (error) {
     console.error('open-bookings error:', error)
     return NextResponse.json(
