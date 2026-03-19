@@ -13,17 +13,10 @@ export default function OpenBookings({ user_id }: Props) {
   const [loading, setLoading] = useState(true)
   const refreshTimeoutRef = useRef<number | null>(null)
 
-  const fetchOpenings = useCallback(async (
-    showErrorToast: boolean = false,
-    forceFresh: boolean = false
-  ) => {
+  const fetchOpenings = useCallback(async (showErrorToast: boolean = false) => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const endpoint = forceFresh
-        ? '/api/acuity/open-bookings?fresh=true'
-        : '/api/acuity/open-bookings'
-
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/acuity/open-bookings', {
         headers: session?.access_token
           ? { Authorization: `Bearer ${session.access_token}` }
           : {},
@@ -70,7 +63,7 @@ export default function OpenBookings({ user_id }: Props) {
         }
 
         refreshTimeoutRef.current = window.setTimeout(() => {
-          void fetchOpenings(false, true)
+          void fetchOpenings()
         }, 400)
       })
       .subscribe()
@@ -82,23 +75,6 @@ export default function OpenBookings({ user_id }: Props) {
       supabase.removeChannel(channel)
     }
   }, [fetchOpenings, user_id])
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      void fetchOpenings(false, Boolean(totalOpenings && totalOpenings > 0))
-    }, 60 * 1000)
-
-    const handleFocus = () => {
-      void fetchOpenings(false, true)
-    }
-
-    window.addEventListener('focus', handleFocus)
-
-    return () => {
-      window.clearInterval(intervalId)
-      window.removeEventListener('focus', handleFocus)
-    }
-  }, [fetchOpenings, totalOpenings])
 
   const desktopRing = (
     <div className="relative flex items-center justify-center flex-shrink-0">

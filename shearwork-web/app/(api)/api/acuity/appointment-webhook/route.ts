@@ -16,8 +16,60 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1';
 
-async function refreshAvailabilityForOpenBookings(userId: string) {
-  const weekOffsets = [0, 1];
+function formatTorontoDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function getTorontoWeekRange(weekOffset: number): { startDate: string; endDate: string } {
+  const now = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
+  );
+  const dayOfWeek = now.getDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  const start = new Date(now);
+  start.setDate(now.getDate() + diff + weekOffset * 7);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+
+  return {
+    startDate: formatTorontoDate(start),
+    endDate: formatTorontoDate(end),
+  };
+}
+
+function getRelevantAvailabilityWeekOffsets(action: string, datetime?: string): number[] {
+  if (action === 'appointment.rescheduled' || action === 'appointment.changed') {
+    return [0, 1];
+  }
+
+  if (!datetime) {
+    return [0];
+  }
+
+  const appointmentDate = new Date(datetime);
+  if (Number.isNaN(appointmentDate.getTime())) {
+    return [0];
+  }
+
+  const appointmentTorontoDate = formatTorontoDate(appointmentDate);
+  const candidateOffsets = [0, 1].filter((weekOffset) => {
+    const range = getTorontoWeekRange(weekOffset);
+    return appointmentTorontoDate >= range.startDate && appointmentTorontoDate <= range.endDate;
+  });
+
+  return candidateOffsets.length > 0 ? candidateOffsets : [0];
+}
+
+async function refreshAvailabilityForOpenBookings(userId: string, weekOffsets: number[]) {
   const results = await Promise.allSettled(
     weekOffsets.map((weekOffset) =>
       pullAvailability(supabase, userId, {
@@ -155,6 +207,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const shouldRefreshAvailability = [
+      'appointment.scheduled',
+      'appointment.rescheduled',
+      'appointment.canceled',
+      'appointment.changed',
+    ].includes(action);
+
     if (['appointment.scheduled', 'appointment.rescheduled', 'appointment.canceled'].includes(action)) {
       const result = await updateBarberClient(supabase, token.user_id, action, appointmentDetails);
       if (result.success) {
@@ -162,8 +221,15 @@ export async function POST(req: NextRequest) {
       } else {
         console.log(`ℹ️  updateBarberClient skipped: ${result.reason}`);
       }
+    }
 
-      await refreshAvailabilityForOpenBookings(token.user_id);
+    if (shouldRefreshAvailability) {
+      const weekOffsets = getRelevantAvailabilityWeekOffsets(
+        action,
+        typeof appointmentDetails.datetime === 'string' ? appointmentDetails.datetime : undefined
+      );
+
+      await refreshAvailabilityForOpenBookings(token.user_id, weekOffsets);
     }
         
     console.log('\n=== END WEBHOOK ===\n');
