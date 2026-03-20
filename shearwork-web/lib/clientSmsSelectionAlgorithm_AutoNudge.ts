@@ -70,6 +70,9 @@ export async function selectClientsForSMS_AutoNudge(
 ): Promise<ScoredClient[]> {
   const today = new Date();
 
+  const twoWeeksAgo = new Date(today);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
   // --- Shared base query builder ---
   const buildBaseQuery = (supabase: SupabaseClient) => {
     let query = supabase
@@ -82,7 +85,7 @@ export async function selectClientsForSMS_AutoNudge(
       .gt('total_appointments', 1)
       .gte('avg_weekly_visits', 0.01)
       .lte('avg_weekly_visits', 2.5)
-      .or(`next_future_appointment.is.null,next_future_appointment.lte.${new Date().toISOString()}`)
+      .or(`next_future_appointment.is.null,next_future_appointment.lte.${twoWeeksAgo.toISOString()}`)
       .order('last_appt', { ascending: false });
 
     if (visitingType) {
@@ -110,9 +113,6 @@ export async function selectClientsForSMS_AutoNudge(
   }
 
   // --- PHASE 1: Strict clients ---
-  const twoWeeksAgo = new Date(today);
-  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-
   const { data: strictRaw, error: strictError } = await buildBaseQuery(supabase)
     .lt('last_appt', twoWeeksAgo.toISOString());
 
