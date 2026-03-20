@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Calendar, Megaphone, MessageCircleReply } from 'lucide-react'
+import { Menu, X, Grid, UserCog, CreditCard, FileText, ChartBar, Coins, Calendar, Megaphone, MessageCircleReply, BookText } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import UserProfile from '@/components/UserProfile'
 import TipsDropdown from '@/components/ManageTipsButton'
@@ -236,6 +236,7 @@ export default function Navbar() {
             <ChartBar className="w-5 h-5" />
             <span>Barber Nudge Engagement</span>
           </Link>
+          
 
           <Link 
             href="/dashboard" 
@@ -417,6 +418,17 @@ export default function Navbar() {
     rightSideContent = (
       <>
         {/* --- ADMIN CONTENT --- */}
+        <Link href="/admin/documentation" className="relative flex flex-col items-center group hidden md:flex">
+          <div 
+            className="p-2 rounded-full transition-colors"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          >
+            <BookText className="w-6 h-6" style={{ color: COLORS.text }} />
+          </div>
+        </Link>
+
         <Link href="/admin/nudge-engagement" className="relative flex flex-col items-center group hidden md:flex">
           <div 
             className="p-2 rounded-full transition-colors"
