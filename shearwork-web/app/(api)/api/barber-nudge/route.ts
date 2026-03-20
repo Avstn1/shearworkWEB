@@ -1,3 +1,5 @@
+// /api/barber-nudge/route.ts
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createSmartBuckets } from '@/lib/client_sms_from_barber_nudge/create_smart_buckets'

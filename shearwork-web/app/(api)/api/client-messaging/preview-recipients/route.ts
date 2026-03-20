@@ -1,4 +1,4 @@
-// app/api/client-messaging/preview-recipients/route.ts
+// /app/(api)/api/client-messaging/preview-recipients/route.ts
 'use server'
 
 import { NextResponse } from 'next/server'

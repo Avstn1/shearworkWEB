@@ -1,3 +1,5 @@
+// /api/barber-nudge/manual-smart-bucket/route.ts
+
 import { NextResponse } from 'next/server'
 import { createSmartBuckets } from '@/lib/client_sms_from_barber_nudge/create_smart_buckets'
 import { getAuthenticatedUser } from '@/utils/api-auth'

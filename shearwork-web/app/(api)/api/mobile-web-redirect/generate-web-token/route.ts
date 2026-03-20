@@ -1,4 +1,4 @@
-// app/api/auth/generate-web-token/route.ts
+// /app/(api)/api/mobile-web-redirect/generate-web-token/route.ts
 import { NextResponse } from 'next/server'
 import { authCodeCache } from '@/lib/redis'
 import { getAuthenticatedUser } from '@/utils/api-auth'
