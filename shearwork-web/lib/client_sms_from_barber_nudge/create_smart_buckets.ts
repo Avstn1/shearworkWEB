@@ -1,3 +1,5 @@
+// /lib/client_sms_from_barber_nudge/create_smart_buckets.ts
+
 import { createClient } from '@supabase/supabase-js'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!

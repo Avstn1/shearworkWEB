@@ -1,3 +1,5 @@
+// /app/(api)/api/client-messaging/check-sms-progress/route.ts
+
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';

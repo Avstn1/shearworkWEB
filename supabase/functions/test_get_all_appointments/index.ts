@@ -1,4 +1,4 @@
-// supabase/functions/debug_february_appointments/index.ts
+// supabase/functions/test_get_all_appointments/index.ts
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'

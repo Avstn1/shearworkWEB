@@ -1,4 +1,4 @@
-// app/api/auth/verify-web-token/route.ts
+// /app/(api)/api/mobile-web-redirect/verify-web-token/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authCodeCache } from '@/lib/redis'

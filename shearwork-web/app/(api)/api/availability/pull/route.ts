@@ -1,3 +1,5 @@
+// /app/(api)/api/availability/pull/route.ts
+
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { pullAvailability } from '@/lib/booking/availability/orchestrator'

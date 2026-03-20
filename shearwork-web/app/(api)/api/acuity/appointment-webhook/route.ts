@@ -1,3 +1,5 @@
+// app/api/acuity/appointment-webhook/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { updateSmsBarberSuccess } from '@/lib/appointment_processors/update_sms_barber_success';

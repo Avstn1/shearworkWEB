@@ -1,3 +1,5 @@
+// /lib/appointment_processors/update_barber_client.ts
+
 import { SupabaseClient } from '@supabase/supabase-js';
 
 function normalizePhone(raw: string | null | undefined): string | null {

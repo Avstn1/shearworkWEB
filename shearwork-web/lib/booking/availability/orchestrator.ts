@@ -1,3 +1,5 @@
+// lib/booking/availability/orchestrator.ts
+
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { startOfWeek, endOfWeek, eachDayOfInterval, format } from 'date-fns'
 import { AcuityAvailabilityAdapter } from '@/lib/booking/availability/adapters/acuity'
