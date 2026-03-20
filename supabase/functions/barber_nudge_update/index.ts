@@ -124,6 +124,18 @@ function getCurrentWeekMondayAt10AM(): Date {
   return monday10am
 }
 
+function getCurrentWeekTuesdayStart(): Date {
+  const now = new Date()
+  const torontoDate = getTorontoDate(now)
+  const { start } = getISOWeekDates(torontoDate)
+
+  const tuesday = new Date(start)
+  tuesday.setDate(start.getDate() + 1)
+  tuesday.setHours(0, 0, 0, 0)
+
+  return tuesday
+}
+
 function getCurrentWeekWednesdayEnd(): Date {
   const now = new Date()
   const torontoDate = getTorontoDate(now)
@@ -144,6 +156,18 @@ function getCurrentWeekMondayStart(): Date {
   return start
 }
 
+function getCurrentWeekFridayEnd(): Date {
+  const now = new Date()
+  const torontoDate = getTorontoDate(now)
+  const { start } = getISOWeekDates(torontoDate)
+
+  const friday = new Date(start)
+  friday.setDate(start.getDate() + 4)
+  friday.setHours(23, 59, 59, 999)
+
+  return friday
+}
+
 function getCurrentWeekThursdayEnd(): Date {
   const now = new Date()
   const torontoDate = getTorontoDate(now)
@@ -156,21 +180,21 @@ function getCurrentWeekThursdayEnd(): Date {
   return thursday
 }
 
-function getThreeDaysAgo(): Date {
+function getTwoDaysAgo(): Date {
   const now = new Date()
   const torontoDate = getTorontoDate(now)
   
-  const threeDaysAgo = new Date(torontoDate)
-  threeDaysAgo.setDate(torontoDate.getDate() - 3)
+  const twoDaysAgo = new Date(torontoDate)
+  twoDaysAgo.setDate(torontoDate.getDate() - 2)
   
-  return threeDaysAgo
+  return twoDaysAgo
 }
 
 function isDateInBarelyLateWindow(date: Date): boolean {
-  const monday10am = getCurrentWeekMondayAt10AM()
-  const wednesdayEnd = getCurrentWeekWednesdayEnd()
+  const tuesdayStart = getCurrentWeekTuesdayStart()
+  const thursdayEnd = getCurrentWeekThursdayEnd()
   
-  return date > monday10am && date <= wednesdayEnd
+  return date >= tuesdayStart && date <= thursdayEnd
 }
 
 async function getBarberAvailability(userId: string): Promise<{ slots: number; taken_slots: number; revenue: number }> {
@@ -386,6 +410,9 @@ Deno.serve(async (req) => {
     console.log(`ISO Week: ${isoWeek}`)
     
     const results = []
+
+    // Tuesday start — used to identify "barely late" repliers in Flow 1
+    const tuesdayStart = getCurrentWeekTuesdayStart()
     
     // FLOW 1: Normal Wednesday updates (on-time barbers only)
     if (dayOfWeek === 3) {
@@ -413,38 +440,60 @@ Deno.serve(async (req) => {
       if (!barbers || barbers.length === 0) {
         console.log('No on-time barbers found for Wednesday update')
       } else {
-        console.log(`Sending update messages to ${barbers.length} on-time barber(s)`)
-        
-        const barberUserIds = barbers.map(b => b.user_id)
-        await updateBarbersAvailability(barberUserIds)
-        
+        console.log(`Checking ${barbers.length} barber(s) for on-time eligibility`)
+
+        // Filter out barbers who replied Tuesday or later — they are "barely late"
+        // and will receive their update via Flow 2 instead
+        const eligibleBarbers = []
         for (const barber of barbers) {
-          try {
-            const result = await sendUpdateMessage(barber, isoWeek)
-            results.push(result)
-          } catch (error) {
-            console.error(`Failed to send update to ${barber.full_name} (${barber.phone}):`, error)
-            results.push({
-              user_id: barber.user_id,
-              phone: barber.phone,
-              error: error.message,
-              status: 'failed'
-            })
+          const latestReply = await getLatestYesReply(barber.user_id)
+          if (latestReply) {
+            const replyDate = getTorontoDate(new Date(latestReply.received_at))
+            if (replyDate >= tuesdayStart) {
+              console.log(`Skipping ${barber.full_name} — replied on Tue/Wed (${replyDate.toISOString()}), will get delayed update`)
+              continue
+            }
+          }
+          eligibleBarbers.push(barber)
+        }
+
+        if (eligibleBarbers.length === 0) {
+          console.log('No eligible on-time barbers after reply-date filtering')
+        } else {
+          console.log(`Sending update messages to ${eligibleBarbers.length} on-time barber(s)`)
+          
+          const barberUserIds = eligibleBarbers.map(b => b.user_id)
+          await updateBarbersAvailability(barberUserIds)
+          
+          for (const barber of eligibleBarbers) {
+            try {
+              const result = await sendUpdateMessage(barber, isoWeek)
+              results.push(result)
+            } catch (error) {
+              console.error(`Failed to send update to ${barber.full_name} (${barber.phone}):`, error)
+              results.push({
+                user_id: barber.user_id,
+                phone: barber.phone,
+                error: error.message,
+                status: 'failed'
+              })
+            }
           }
         }
       }
     }
     
-    // FLOW 2: Special updates for "barely late" barbers (3 days after onboarding)
-    const threeDaysAgo = getThreeDaysAgo()
+    // FLOW 2: Special updates for "barely late" barbers (3 days after onboarding OR late reply)
+    const twoDaysAgo = getTwoDaysAgo()
     
-    console.log(`Checking if 3 days ago (${threeDaysAgo.toISOString()}) is in barely late window`)
+    console.log(`Checking if 2 days ago (${twoDaysAgo.toISOString()}) is in barely late window`)
     
-    if (isDateInBarelyLateWindow(threeDaysAgo)) {
+    if (isDateInBarelyLateWindow(twoDaysAgo)) {
       console.log('3 days ago is in barely late window - checking for special updates')
       
       const mondayStart = getCurrentWeekMondayStart()
       const thursdayEnd = getCurrentWeekThursdayEnd()
+      const fridayEnd = getCurrentWeekFridayEnd()
       
       const { data: allBarbers, error: allBarbersError } = await supabase
         .from('profiles')
@@ -475,7 +524,9 @@ Deno.serve(async (req) => {
             const replyDate = new Date(latestReply.received_at)
             const replyDateToronto = getTorontoDate(replyDate)
             
-            if (replyDateToronto >= mondayStart && replyDateToronto <= thursdayEnd) {
+            // Only send delayed update if they replied Tuesday or later this week
+            // (replies on Monday are on-time and already handled by Flow 1)
+            if (replyDateToronto >= tuesdayStart && replyDateToronto <= fridayEnd) {
               barbersToUpdate.push(barber)
             }
           } catch (error) {
