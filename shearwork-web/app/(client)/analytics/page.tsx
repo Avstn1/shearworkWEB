@@ -21,6 +21,7 @@ import MonthlyReports from '@/components/Dashboard/MonthlyReports'
 import WeeklyComparisonReports from '@/components/Dashboard/WeeklyComparisonReports'
 import MonthlyRevenueCard from '@/components/Dashboard/MonthlyRevenueCard'
 import DailyRevenueCard from '@/components/Dashboard/DailyRevenueCard'
+import WeeklyRevenueCard from '@/components/Dashboard/WeeklyRevenueCard'
 import MonthlyExpensesCard from '@/components/Dashboard/MonthlyExpensesCard'
 import TopClientsCard from '@/components/Dashboard/TopClientsCard'
 import YearlyRevenueCard from '@/components/Dashboard/YearlyRevenueCard'
@@ -364,6 +365,9 @@ export default function DashboardPage() {
     </motion.div>
   )
 
+  // -------------------- Shared selected-date string --------------------
+  const selectedDateStr = `${selectedYear}-${String(MONTHS.indexOf(selectedMonth) + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
+
   // -------------------- MAIN DASHBOARD --------------------
   const MainDashboard = () => (
     <motion.div
@@ -380,13 +384,21 @@ export default function DashboardPage() {
             <DailyRevenueCard
               key={`daily-${refreshKey}`}
               userId={user.id}
-              selectedDate={`${selectedYear}-${String(MONTHS.indexOf(selectedMonth)+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`}
+              selectedDate={selectedDateStr}
             />
           </motion.div>
           <motion.div className={cardClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
           <motion.div className={cardClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
         </motion.div>
-        <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <motion.div className={cardClass}>
+            <WeeklyRevenueCard
+              key={`weekly-${refreshKey}`}
+              userId={user.id}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+            />
+          </motion.div>
           <motion.div className={cardClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} timeframe={'YTD'} /></motion.div>
           <motion.div className={cardClass}><AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
         </motion.div>
