@@ -395,7 +395,8 @@ export default function DashboardPage() {
             <WeeklyRevenueCard
               key={`weekly-${refreshKey}`}
               userId={user.id}
-              selectedDate={selectedDateStr}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
             />
           </motion.div>
           <motion.div className={cardClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} timeframe={'YTD'} /></motion.div>
