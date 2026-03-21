@@ -55,16 +55,102 @@ function parseToUTCTimestamp(datetimeStr: string): string {
   }
 }
 
+function normalizePhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (raw.trimStart().startsWith('+') && digits.length >= 11) return `+${digits}`;
+  return `+${digits}`;
+}
+
+function normalizeNamePart(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeFullName(firstName: string | null | undefined, lastName: string | null | undefined): string | null {
+  const first = normalizeNamePart(firstName);
+  const last = normalizeNamePart(lastName);
+  if (!first || !last) return null;
+  return `${first} ${last}`;
+}
+
+type SentMessageCandidate = {
+  client_id: string | null;
+  created_at: string;
+  is_sent: boolean | null;
+};
+
+type AppointmentDetails = {
+  id?: string | number | null;
+  phone?: string | null;
+  datetimeCreated?: string | null;
+  datetime?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  type?: string | null;
+  price?: string | number | null;
+};
+
+async function resolveClientIdForSentMessages(
+  userId: string,
+  sentMessages: SentMessageCandidate[],
+  appointmentDetails: AppointmentDetails
+): Promise<{ clientId: string | null; reason?: string }> {
+  const uniqueClientIds = Array.from(
+    new Set(sentMessages.map((row) => row.client_id).filter((value): value is string => Boolean(value)))
+  );
+
+  if (uniqueClientIds.length === 0) {
+    return { clientId: null, reason: 'No client_id on delivered sms row' };
+  }
+
+  if (uniqueClientIds.length === 1) {
+    return { clientId: uniqueClientIds[0] };
+  }
+
+  const appointmentName = normalizeFullName(appointmentDetails.firstName, appointmentDetails.lastName);
+  if (!appointmentName) {
+    return { clientId: null, reason: 'ambiguous_shared_phone' };
+  }
+
+  const { data: candidateClients, error } = await supabase
+    .from('acuity_clients')
+    .select('client_id, first_name, last_name')
+    .eq('user_id', userId)
+    .in('client_id', uniqueClientIds);
+
+  if (error) {
+    console.error('Error resolving shared-phone clients:', error);
+    return { clientId: null, reason: 'Failed to resolve shared-phone clients' };
+  }
+
+  const exactNameMatches = (candidateClients || []).filter((client) =>
+    normalizeFullName(client.first_name, client.last_name) === appointmentName
+  );
+
+  if (exactNameMatches.length === 1) {
+    return { clientId: exactNameMatches[0].client_id };
+  }
+
+  return {
+    clientId: null,
+    reason: exactNameMatches.length > 1 ? 'ambiguous_shared_phone' : 'name_mismatch',
+  };
+}
+
 export async function updateSmsBarberSuccess(
   userId: string,
-  appointmentDetails: any
+  appointmentDetails: AppointmentDetails
 ): Promise<{ success: boolean; reason?: string }> {
   try {
     console.log(`\n=== UPDATE SMS BARBER SUCCESS ===`);
     console.log(`User ID: ${userId}`);
     console.log(`Appointment ID: ${appointmentDetails.id}`);
 
-    const appointmentPhone: string | undefined = appointmentDetails.phone;
+    const appointmentPhone = normalizePhone(appointmentDetails.phone);
     if (!appointmentPhone) {
       console.log('No phone number in appointment');
       return { success: false, reason: 'No phone number' };
@@ -77,6 +163,12 @@ export async function updateSmsBarberSuccess(
     if (!appointmentCreatedAt || isNaN(appointmentCreatedAt.getTime())) {
       console.log('Invalid or missing appointment datetimeCreated');
       return { success: false, reason: 'Invalid appointment datetimeCreated' };
+    }
+
+    const appointmentDatetime = appointmentDetails.datetime;
+    if (!appointmentDatetime) {
+      console.log('Invalid or missing appointment datetime');
+      return { success: false, reason: 'Invalid appointment datetime' };
     }
 
     // Look back across the last 2 weeks only
@@ -99,47 +191,57 @@ export async function updateSmsBarberSuccess(
     // Find the most recent bucket where an SMS was sent to this phone
     // and the appointment was created after the SMS was sent
     let matchedBucket: typeof buckets[number] | null = null;
-    let matchedSentMessage: { client_id: string; created_at: string } | null = null;
+    let matchedSentMessages: SentMessageCandidate[] | null = null;
 
     for (const bucket of buckets) {
-      const { data: sentMessage, error: sentError } = await supabase
+      const { data: sentMessages, error: sentError } = await supabase
         .from('sms_sent')
         .select('client_id, created_at, is_sent')
         .eq('smart_bucket_id', bucket.bucket_id)
         .eq('phone_normalized', appointmentPhone)
-        .maybeSingle();
+        .eq('is_sent', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      if (sentError || !sentMessage) continue;
+      if (sentError || !sentMessages || sentMessages.length === 0) continue;
 
-      const smsSentAt = new Date(sentMessage.created_at);
+      const validSentMessage = sentMessages.find((row) => {
+        const smsSentAt = new Date(row.created_at);
+        return appointmentCreatedAt > smsSentAt;
+      });
 
-      if (appointmentCreatedAt <= smsSentAt) {
+      if (!validSentMessage) {
         console.log(`Appointment created before SMS for bucket ${bucket.bucket_id} — skipping`);
         continue;
       }
 
       matchedBucket = bucket;
-      matchedSentMessage = sentMessage;
+      matchedSentMessages = sentMessages;
       break; // most recent matching bucket wins
     }
 
-    if (!matchedBucket || !matchedSentMessage) {
+    if (!matchedBucket || !matchedSentMessages) {
       console.log(`No attributable SMS found for phone ${appointmentPhone}`);
       return { success: false, reason: 'No SMS sent to this client' };
     }
 
     console.log(`✅ Attributed to bucket ${matchedBucket.bucket_id} (${matchedBucket.iso_week})`);
 
-    const clientId = matchedSentMessage.client_id;
+    const { clientId, reason: clientResolutionReason } = await resolveClientIdForSentMessages(
+      userId,
+      matchedSentMessages,
+      appointmentDetails
+    );
+
     if (!clientId) {
-      console.log('No client_id on sms_sent row');
-      return { success: false, reason: 'No client_id on sms_sent row' };
+      console.log(`Unable to resolve client for SMS attribution: ${clientResolutionReason}`);
+      return { success: false, reason: clientResolutionReason || 'No client_id on sms_sent row' };
     }
 
     const targetISOWeek = matchedBucket.iso_week;
     const service = appointmentDetails.type || 'Unknown';
     const price = Math.round(Number(appointmentDetails.price)) || 0;
-    const appointmentDate = parseToUTCTimestamp(appointmentDetails.datetime);
+    const appointmentDate = parseToUTCTimestamp(appointmentDatetime);
     const messagesDelivered = matchedBucket.total_clients;
 
     const { data: existing } = await supabase
@@ -149,7 +251,7 @@ export async function updateSmsBarberSuccess(
       .eq('iso_week_number', targetISOWeek)
       .single();
 
-    const readableDatetime = new Date(appointmentDetails.datetime).toLocaleString('en-CA', {
+    const readableDatetime = new Date(appointmentDatetime).toLocaleString('en-CA', {
       timeZone: 'America/Toronto',
       weekday: 'long',
       month: 'short',

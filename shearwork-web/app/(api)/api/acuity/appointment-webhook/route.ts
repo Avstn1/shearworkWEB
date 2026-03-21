@@ -164,7 +164,13 @@ export async function POST(req: NextRequest) {
     console.log('\n--- Appointment Details ---');
     console.log(JSON.stringify(appointmentDetails, null, 2));
     
-    if (action === 'appointment.scheduled') {
+    const shouldCheckSmsAttribution = [
+      'appointment.scheduled',
+      'appointment.rescheduled',
+      'appointment.changed',
+    ].includes(action);
+
+    if (shouldCheckSmsAttribution) {
       console.log('\n--- Checking SMS Campaign Attribution ---');
       const result = await updateSmsBarberSuccess(token.user_id, appointmentDetails);
       
@@ -216,7 +222,7 @@ export async function POST(req: NextRequest) {
       'appointment.changed',
     ].includes(action);
 
-    if (['appointment.scheduled', 'appointment.rescheduled', 'appointment.canceled'].includes(action)) {
+    if (['appointment.scheduled', 'appointment.rescheduled', 'appointment.canceled', 'appointment.changed'].includes(action)) {
       const result = await updateBarberClient(supabase, token.user_id, action, appointmentDetails);
       if (result.success) {
         console.log('✅ next_future_appointment updated');

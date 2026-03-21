@@ -16,8 +16,29 @@ interface AcuityAppointment {
   id: number;
   phone?: string;
   datetime?: string;
+  firstName?: string;
+  lastName?: string;
   canceled?: boolean;
   [key: string]: unknown;
+}
+
+type MatchedClientRow = {
+  client_id: string;
+  next_future_appointment: string | null;
+  first_name: string | null;
+  last_name: string | null;
+};
+
+function normalizeNamePart(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeFullName(firstName: string | null | undefined, lastName: string | null | undefined): string | null {
+  const first = normalizeNamePart(firstName);
+  const last = normalizeNamePart(lastName);
+  if (!first || !last) return null;
+  return `${first} ${last}`;
 }
 
 interface UpdateBarberClientResult {
@@ -29,11 +50,11 @@ async function findClients(
   supabase: SupabaseClient,
   userId: string,
   normalizedPhone: string
-): Promise<{ client_id: string; next_future_appointment: string | null }[]> {
+): Promise<MatchedClientRow[]> {
   // Try primary phone first
   const { data: primary, error: primaryError } = await supabase
     .from('acuity_clients')
-    .select('client_id, next_future_appointment')
+    .select('client_id, next_future_appointment, first_name, last_name')
     .eq('user_id', userId)
     .eq('phone_normalized', normalizedPhone);
 
@@ -43,7 +64,7 @@ async function findClients(
   // Fall back to secondary_phone_number
   const { data: secondary, error: secondaryError } = await supabase
     .from('acuity_clients')
-    .select('client_id, next_future_appointment')
+    .select('client_id, next_future_appointment, first_name, last_name')
     .eq('user_id', userId)
     .eq('secondary_phone_number', normalizedPhone);
 
@@ -64,7 +85,7 @@ export async function updateBarberClient(
     return { success: false, reason: 'No phone number on appointment' };
   }
 
-  let clients: { client_id: string; next_future_appointment: string | null }[];
+  let clients: MatchedClientRow[];
   try {
     clients = await findClients(supabase, userId, normalizedPhone);
   } catch (err: unknown) {
@@ -77,6 +98,26 @@ export async function updateBarberClient(
     return { success: false, reason: `No client found for phone ${normalizedPhone}` };
   }
 
+  if (clients.length > 1) {
+    const appointmentName = normalizeFullName(appointmentDetails.firstName, appointmentDetails.lastName);
+
+    if (!appointmentName) {
+      return { success: false, reason: `ambiguous_shared_phone:${normalizedPhone}` };
+    }
+
+    const exactNameMatches = clients.filter((client) =>
+      normalizeFullName(client.first_name, client.last_name) === appointmentName
+    );
+
+    if (exactNameMatches.length === 1) {
+      clients = exactNameMatches;
+    } else if (exactNameMatches.length === 0) {
+      return { success: false, reason: `name_mismatch_for_shared_phone:${normalizedPhone}` };
+    } else {
+      return { success: false, reason: `ambiguous_shared_phone:${normalizedPhone}` };
+    }
+  }
+
   const apptDatetime = appointmentDetails.datetime
     ? new Date(appointmentDetails.datetime)
     : null;
@@ -87,7 +128,7 @@ export async function updateBarberClient(
 
   const now = new Date();
 
-  if (action === 'appointment.scheduled' || action === 'appointment.rescheduled') {
+  if (action === 'appointment.scheduled' || action === 'appointment.rescheduled' || action === 'appointment.changed') {
     if (apptDatetime <= now) {
       return { success: false, reason: 'Appointment is in the past — skipping' };
     }
