@@ -187,9 +187,16 @@ async function waitForAvailabilityUpdate(
   console.warn(`Timed out waiting for availability update after ${maxWaitMs}ms. Proceeding anyway.`)
 }
 
+// function getRandomMessage(name: string, empty_slots: number, estimatedReturn: number): string {
+//   // TEMPORARY: using correction template
+//   return `Hey ${getFirstName(name)} — quick correction from Corva. The earlier message had an error in your availability count.\n\nYou do still have ${empty_slots} openings this week — want me to help fill a few?`
+// }
+
 function getRandomMessage(name: string, empty_slots: number, estimatedReturn: number): string {
-  // TEMPORARY: using correction template
-  return `Hey ${getFirstName(name)} — quick correction from Corva. The earlier message had an error in your availability count.\n\nYou do still have ${empty_slots} openings this week — want me to help fill a few?`
+  const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)]
+  return template
+    .replace('{name}', getFirstName(name))
+    .replace('{slots}', empty_slots.toString())
 }
 
 function getISOWeekDates(date: Date): { start: Date; end: Date } {
@@ -267,6 +274,7 @@ Deno.serve(async (req) => {
       .or('role.ilike.barber,role.ilike.owner')
       .eq('sms_engaged_current_week', false)
       .not('phone', 'is', null)
+      .not('calendar', 'is', null)
       .or('stripe_subscription_status.eq.active,trial_active.eq.true')
 
     // let query = supabase

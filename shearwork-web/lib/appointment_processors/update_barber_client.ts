@@ -1,4 +1,17 @@
 // /lib/appointment_processors/update_barber_client.ts
+//
+// Handles Acuity webhook events for a single barber and updates next_future_appointment
+// across ALL acuity_clients records that share the same phone number — not just the
+// booking barber's record. This ensures that if a client is shared across multiple
+// barbers, every barber's copy of that client stays in sync.
+//
+// Supported actions:
+//   appointment.scheduled / appointment.rescheduled
+//     - Sets next_future_appointment to the new date if it is sooner than what's stored
+//       ("sooner wins"). Skips past-dated appointments.
+//   appointment.canceled
+//     - Clears next_future_appointment only on records where the stored date matches
+//       the canceled appointment within 1 minute (avoids clearing unrelated bookings).
 
 import { SupabaseClient } from '@supabase/supabase-js';
 
@@ -27,14 +40,12 @@ interface UpdateBarberClientResult {
 
 async function findClients(
   supabase: SupabaseClient,
-  userId: string,
   normalizedPhone: string
-): Promise<{ client_id: string; next_future_appointment: string | null }[]> {
+): Promise<{ client_id: string; user_id: string; next_future_appointment: string | null }[]> {
   // Try primary phone first
   const { data: primary, error: primaryError } = await supabase
     .from('acuity_clients')
-    .select('client_id, next_future_appointment')
-    .eq('user_id', userId)
+    .select('client_id, user_id, next_future_appointment')
     .eq('phone_normalized', normalizedPhone);
 
   if (primaryError) throw new Error(`DB error: ${primaryError.message}`);
@@ -43,8 +54,7 @@ async function findClients(
   // Fall back to secondary_phone_number
   const { data: secondary, error: secondaryError } = await supabase
     .from('acuity_clients')
-    .select('client_id, next_future_appointment')
-    .eq('user_id', userId)
+    .select('client_id, user_id, next_future_appointment')
     .eq('secondary_phone_number', normalizedPhone);
 
   if (secondaryError) throw new Error(`DB error: ${secondaryError.message}`);
@@ -64,9 +74,9 @@ export async function updateBarberClient(
     return { success: false, reason: 'No phone number on appointment' };
   }
 
-  let clients: { client_id: string; next_future_appointment: string | null }[];
+  let clients: { client_id: string; user_id: string; next_future_appointment: string | null }[];
   try {
-    clients = await findClients(supabase, userId, normalizedPhone);
+    clients = await findClients(supabase, normalizedPhone);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[updateBarberClient] DB error looking up clients:', message);
@@ -92,7 +102,7 @@ export async function updateBarberClient(
       return { success: false, reason: 'Appointment is in the past — skipping' };
     }
 
-    // Update all matching clients
+    // Update all matching clients across all barbers
     for (const client of clients) {
       const existing = client.next_future_appointment
         ? new Date(client.next_future_appointment)
@@ -108,7 +118,7 @@ export async function updateBarberClient(
       const { error: updateError } = await supabase
         .from('acuity_clients')
         .update({ next_future_appointment: apptDatetime.toISOString() })
-        .eq('user_id', userId)
+        .eq('user_id', client.user_id)
         .eq('client_id', client.client_id);
 
       if (updateError) {
@@ -125,7 +135,7 @@ export async function updateBarberClient(
   }
 
   if (action === 'appointment.canceled') {
-    // Update all matching clients
+    // Update all matching clients across all barbers
     for (const client of clients) {
       const existing = client.next_future_appointment
         ? new Date(client.next_future_appointment)
@@ -151,7 +161,7 @@ export async function updateBarberClient(
       const { error: clearError } = await supabase
         .from('acuity_clients')
         .update({ next_future_appointment: null })
-        .eq('user_id', userId)
+        .eq('user_id', client.user_id)
         .eq('client_id', client.client_id);
 
       if (clearError) {
