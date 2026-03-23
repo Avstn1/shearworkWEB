@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { pull } from '@/lib/booking/orchestrator'
 import { Month } from '@/lib/booking/types'
+import { after } from 'next/server'
 
 const serviceSupabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,18 +69,24 @@ export async function POST(request: Request) {
     })
   }
 
-  // Fire next link — no await
+  // Use after() so Vercel keeps the function alive until the next fetch completes
+  // Without this, Vercel kills the process as soon as the response is sent
   const chainUrl = new URL(request.url)
   chainUrl.search = ''
-  fetch(chainUrl.toString(), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-      'x-vercel-protection-bypass': process.env.BYPASS_TOKEN ?? '',
-    },
-    body: JSON.stringify({ userId }),
-  }).catch((err) => console.error('[pull-chain] Failed to fire next link:', err))
+  const nextHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+    'x-vercel-protection-bypass': process.env.BYPASS_TOKEN ?? '',
+  }
+  const nextBody = JSON.stringify({ userId })
+
+  after(async () => {
+    await fetch(chainUrl.toString(), {
+      method: 'POST',
+      headers: nextHeaders,
+      body: nextBody,
+    }).catch((err) => console.error('[pull-chain] Failed to fire next link:', err))
+  })
 
   return NextResponse.json({ message: 'ok', processed: `${next.month} ${next.year}` })
 }
