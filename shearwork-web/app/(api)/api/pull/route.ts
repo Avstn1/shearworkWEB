@@ -102,6 +102,7 @@ export async function GET(request: Request) {
     })
 
     // START: THIS SECTION IS ENTIRELY FOR SETTING OFF A CHAIN REACTION OF PULLING MONTHS WE HAVEN'T PULLED FROM ONBOARDING. ---------------------------
+
     // Upsert completed month and kick off the chain for remaining pending months
     if (granularity === 'month' && month && !dryRun) {
       await serviceSupabase
@@ -154,7 +155,6 @@ export async function GET(request: Request) {
         }).catch((err) => console.error('[pull] Failed to kick off pull-chain:', err))
       }
     }
-    // END: THIS SECTION IS ENTIRELY FOR SETTING OFF A CHAIN REACTION OF PULLING MONTHS WE HAVEN'T PULLED FROM ONBOARDING. ---------------------------
 
     return NextResponse.json({
       endpoint: 'pull',
@@ -165,6 +165,33 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('Pull error:', err)
+
+    // Still kick off the chain even on failure so pending rows don't get stranded
+    if (granularity === 'month' && month && !dryRun) {
+      const { count: processingCount } = await serviceSupabase
+        .from('sync_status')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'processing')
+
+      if (processingCount === 0) {
+        const chainUrl = new URL(request.url)
+        chainUrl.pathname = '/api/pull-chain'
+        chainUrl.search = ''
+        fetch(chainUrl.toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+            'x-vercel-protection-bypass': process.env.BYPASS_TOKEN ?? '',
+          },
+          body: JSON.stringify({ userId: user.id }),
+        }).catch((err) => console.error('[pull] Failed to kick off pull-chain:', err))
+      }
+    }
+
+    // END: THIS SECTION IS ENTIRELY FOR SETTING OFF A CHAIN REACTION OF PULLING MONTHS WE HAVEN'T PULLED FROM ONBOARDING. ---------------------------
+
     return NextResponse.json({
       error: 'Pull failed',
       details: String(err),
