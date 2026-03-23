@@ -101,9 +101,6 @@ export async function GET(request: Request) {
       skipAggregations,
     })
 
-    // START: THIS SECTION IS ENTIRELY FOR SETTING OFF A CHAIN REACTION OF PULLING MONTHS WE HAVEN'T PULLED FROM ONBOARDING. ---------------------------
-
-    // Upsert completed month and kick off the chain for remaining pending months
     if (granularity === 'month' && month && !dryRun) {
       await serviceSupabase
         .from('sync_status')
@@ -111,49 +108,6 @@ export async function GET(request: Request) {
           { user_id: user.id, month, year, status: 'completed', sync_phase: 'background', error_message: null, updated_at: new Date().toISOString() },
           { onConflict: 'user_id,month,year' },
         )
-
-      // If user has no rows at all, seed the last 24 months as pending
-      const { count: totalCount } = await serviceSupabase
-        .from('sync_status')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-
-      if (totalCount === 0) {
-        const MONTHS_LIST = ['January','February','March','April','May','June','July','August','September','October','November','December']
-        const now = new Date()
-        const rows = []
-        for (let i = 1; i <= 24; i++) {
-          const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-          const m = MONTHS_LIST[d.getMonth()]
-          const y = d.getFullYear()
-          // Skip the month we just completed
-          if (m === month && y === year) continue
-          rows.push({ user_id: user.id, month: m, year: y, status: 'pending', sync_phase: 'background' })
-        }
-        await serviceSupabase.from('sync_status').upsert(rows, { onConflict: 'user_id,month,year' })
-      }
-
-      // Only kick off a chain if none is already running for this user
-      const { count: processingCount } = await serviceSupabase
-        .from('sync_status')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'processing')
-
-      if (processingCount === 0) {
-        const chainUrl = new URL(request.url)
-        chainUrl.pathname = '/api/pull-chain'
-        chainUrl.search = ''
-        fetch(chainUrl.toString(), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-            'x-vercel-protection-bypass': process.env.BYPASS_TOKEN ?? '',
-          },
-          body: JSON.stringify({ userId: user.id }),
-        }).catch((err) => console.error('[pull] Failed to kick off pull-chain:', err))
-      }
     }
 
     return NextResponse.json({
@@ -165,33 +119,6 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('Pull error:', err)
-
-    // Still kick off the chain even on failure so pending rows don't get stranded
-    if (granularity === 'month' && month && !dryRun) {
-      const { count: processingCount } = await serviceSupabase
-        .from('sync_status')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'processing')
-
-      if (processingCount === 0) {
-        const chainUrl = new URL(request.url)
-        chainUrl.pathname = '/api/pull-chain'
-        chainUrl.search = ''
-        fetch(chainUrl.toString(), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-            'x-vercel-protection-bypass': process.env.BYPASS_TOKEN ?? '',
-          },
-          body: JSON.stringify({ userId: user.id }),
-        }).catch((err) => console.error('[pull] Failed to kick off pull-chain:', err))
-      }
-    }
-
-    // END: THIS SECTION IS ENTIRELY FOR SETTING OFF A CHAIN REACTION OF PULLING MONTHS WE HAVEN'T PULLED FROM ONBOARDING. ---------------------------
-
     return NextResponse.json({
       error: 'Pull failed',
       details: String(err),

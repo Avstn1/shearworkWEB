@@ -71,8 +71,6 @@ export async function POST(request: Request) {
 
   // Use after() so Vercel keeps the function alive until the next fetch completes
   // Without this, Vercel kills the process as soon as the response is sent
-  const chainUrl = new URL(request.url)
-  chainUrl.search = ''
   const nextHeaders = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
@@ -81,7 +79,7 @@ export async function POST(request: Request) {
   const nextBody = JSON.stringify({ userId })
 
   after(async () => {
-    await fetch(chainUrl.toString(), {
+    await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/pull-chain`, {
       method: 'POST',
       headers: nextHeaders,
       body: nextBody,
