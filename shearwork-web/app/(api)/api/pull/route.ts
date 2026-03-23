@@ -1,9 +1,34 @@
 // app/api/pull/route.ts
 
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { pull } from '@/lib/booking/orchestrator'
 import { PullOptions, Month, MONTHS } from '@/lib/booking/types'
+
+const serviceSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SERVICE_ROLE_KEY!,
+)
+
+async function updateSyncStatus(
+  syncStatusId: string,
+  outcome: 'completed' | 'retrying' | 'failed',
+  errorMessage?: string,
+) {
+  if (outcome === 'completed') {
+    await serviceSupabase
+      .from('sync_status')
+      .update({ status: 'completed', error_message: null, updated_at: new Date().toISOString() })
+      .eq('id', syncStatusId)
+  } else {
+    // Atomically increment retry_count and set status/error
+    await serviceSupabase.rpc('increment_sync_retry_and_fail', {
+      row_id: syncStatusId,
+      error_msg: errorMessage ?? 'Unknown error',
+    })
+  }
+}
 
 /**
  * New modular pull endpoint.
@@ -17,6 +42,7 @@ import { PullOptions, Month, MONTHS } from '@/lib/booking/types'
  * - day: number (for day granularity)
  * - dryRun: boolean (if true, don't write to database)
  * - skipAggregations: boolean (if true, skip aggregation processors)
+ * - sync_status_id: uuid (if present, update sync_status row when done)
  * 
  * Examples:
  * - /api/pull?month=January&year=2025
@@ -42,6 +68,7 @@ export async function GET(request: Request) {
   const dayStr = searchParams.get('day')
   const dryRun = searchParams.get('dryRun') === 'true'
   const skipAggregations = searchParams.get('skipAggregations') === 'true'
+  const syncStatusId = searchParams.get('sync_status_id')
 
   // Validate year
   if (!yearStr) {
@@ -89,11 +116,20 @@ export async function GET(request: Request) {
 
   // Run the pull
   try {
+    if (syncStatusId) {
+      await serviceSupabase
+        .from('sync_status')
+        .update({ status: 'processing', updated_at: new Date().toISOString() })
+        .eq('id', syncStatusId)
+    }
+
     const result = await pull(supabase, user.id, options, {
       tablePrefix: dryRun ? 'test_' : '',
       dryRun,
       skipAggregations,
     })
+
+    if (syncStatusId) await updateSyncStatus(syncStatusId, 'completed')
 
     return NextResponse.json({
       endpoint: 'pull',
@@ -104,6 +140,9 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('Pull error:', err)
+
+    if (syncStatusId) await updateSyncStatus(syncStatusId, 'retrying', String(err))
+
     return NextResponse.json({
       error: 'Pull failed',
       details: String(err),

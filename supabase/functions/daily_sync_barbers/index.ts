@@ -26,6 +26,7 @@ Deno.serve(async (_req) => {
   try {
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
     const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
+    const siteUrl = Deno.env.get("NEXT_PUBLIC_SITE_URL")
 
     // Get current date
     const now = new Date()
@@ -78,8 +79,7 @@ Deno.serve(async (_req) => {
             active++
 
             // Use new /api/pull endpoint with month granularity
-            // const url = `https://shearwork-web.vercel.app/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
-            const url = `https://coziest-stanton-dilatate.ngrok-free.dev/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
+            const url = `${siteUrl}/api/pull?granularity=month&month=${encodeURIComponent(request.month)}&year=${request.year}`
             
             fetch(url, {
               method: 'GET',
