@@ -8,7 +8,7 @@ import { PullOptions, Month, MONTHS } from '@/lib/booking/types'
 
 const serviceSupabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SERVICE_ROLE_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
 async function updateSyncStatus(
