@@ -66,7 +66,7 @@ Deno.serve(async (_req) => {
       url.searchParams.set("year", String(row.year))
       url.searchParams.set("sync_status_id", row.id) // so /api/pull can mark it done
 
-      // Intentionally not awaited — fire and forget
+      // Intentionally not awaited. Fire and forget
       fetch(url.toString(), {
         method: "GET",
         headers: {
