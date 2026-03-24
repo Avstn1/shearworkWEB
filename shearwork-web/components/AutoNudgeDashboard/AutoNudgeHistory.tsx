@@ -267,7 +267,7 @@ export default function AutoNudgeHistory({ user_id }: Props) {
             <p className="text-sm text-white/40 leading-relaxed">Activate your auto-nudge by replying to our SMS or clicking the <span className="text-white/60 font-semibold">Nudge Clients</span> button.</p>
           </div>
         ) : (
-          <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 overflow-y-auto auto-rows-fr">
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 min-h-0 overflow-y-auto auto-rows-min">
             {recipients.map((recipient, index) => {
               const badge = STATUS_BADGE[recipient.status]
               const isBooked = recipient.status === 'booked'
@@ -363,10 +363,10 @@ export default function AutoNudgeHistory({ user_id }: Props) {
           </div>
         )}
 
-        {/* See all weeks */}
+        {/* See all weeks — always visible regardless of campaign state */}
         <a
           href="/client-manager?view=sms"
-          className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold text-center text-white border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 transition-colors flex-shrink-0"
+          className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold text-center text-white border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 transition-colors flex-shrink-0 block"
         >
           See all weeks
         </a>
