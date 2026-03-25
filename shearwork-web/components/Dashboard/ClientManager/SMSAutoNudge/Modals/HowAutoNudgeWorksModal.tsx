@@ -84,15 +84,27 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 pb-5">
                       <TimelineDot color="bg-lime-400 ring-lime-400/20" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-lime-300 uppercase tracking-wide">Wednesday · 10 AM</span>
+                          <span className="text-xs font-bold text-lime-300 uppercase tracking-wide">Monday – Saturday</span>
                           <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-lime-400/10 text-lime-300 border border-lime-400/20">Client SMS Sends</span>
                         </div>
                         <p className="text-sm text-white/60 leading-relaxed">
-                          If you said YES on Monday, your clients automatically receive a booking reminder SMS. If you didn't approve, nothing is sent. No action needed.
+                          If you said YES, your clients automatically receive booking reminder SMS throughout the week based on their optimal timing. If you didn't approve, nothing is sent. No action needed.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-4">
+                      <TimelineDot color="bg-amber-400 ring-amber-400/20" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">Sunday · 10 PM</span>
+                          <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/20">Weekly Results</span>
+                        </div>
+                        <p className="text-sm text-white/60 leading-relaxed">
+                          You receive a summary text with how many bookings Corva brought back and the total revenue recovered for the week.
                         </p>
                       </div>
                     </div>
@@ -148,7 +160,9 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                     { icon: <ChevronRight className="w-3 h-3 text-white/20" /> },
                     { label: 'You reply YES', color: 'bg-white/8 text-white/70 border-white/10' },
                     { icon: <ChevronRight className="w-3 h-3 text-white/20" /> },
-                    { label: 'Clients get SMS Wednesday', color: 'bg-lime-500/10 text-lime-300 border-lime-500/20' },
+                    { label: 'Clients get SMS all week', color: 'bg-lime-500/10 text-lime-300 border-lime-500/20' },
+                    { icon: <ChevronRight className="w-3 h-3 text-white/20" /> },
+                    { label: 'Results Sunday 10 PM', color: 'bg-amber-500/10 text-amber-300 border-amber-500/20' },
                   ].map((item, i) =>
                     'icon' in item ? (
                       <span key={i}>{item.icon}</span>

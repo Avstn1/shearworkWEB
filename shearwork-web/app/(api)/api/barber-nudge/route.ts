@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       .insert({
         user_id: profile.user_id,
         header: "Weekly auto-nudge authorized",
-        message: "Your weekly nudge has been authorized through SMS. We'll update you on Wednesday, 10am.",
+        message: "Your weekly nudge has been authorized through SMS. We'll update you on Sunday, 10pm.",
         reference: bucketResult.bucket_id,
         reference_type: 'sms_auto_nudge',
       })
