@@ -106,46 +106,23 @@ function getTorontoDateComponents(date: Date = new Date()) {
   }
 }
 
-function getReportDateLabel(dateAutonudgeEnabled: string | null): string {
+function getReportDateLabel(): string {
   const now = new Date()
   const { year, month, day } = getTorontoDateComponents(now)
   const todayToronto = new Date(year, month, day)
 
-  // Get this week's Monday
-  const dayOfWeek = todayToronto.getDay()
-  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const monday = new Date(todayToronto)
-  monday.setDate(todayToronto.getDate() + daysToMonday)
+  // Find this week's Sunday
+  const dayOfWeek = todayToronto.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek
+  const sunday = new Date(todayToronto)
+  sunday.setDate(todayToronto.getDate() + daysUntilSunday)
 
-  // Monday 10am cutoff
-  const mondayAt10am = new Date(monday)
-  mondayAt10am.setHours(10, 0, 0, 0)
-
-  const isOnTime =
-    dateAutonudgeEnabled !== null &&
-    new Date(dateAutonudgeEnabled) < mondayAt10am
-
-  if (isOnTime) {
-    // Wednesday of this week
-    const wednesday = new Date(monday)
-    wednesday.setDate(monday.getDate() + 2)
-    return wednesday.toLocaleDateString('en-CA', {
-      timeZone: TORONTO_TZ,
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    }) + ' at 10am'
-  } else {
-    // 3 days from now at 10am
-    const reportDay = new Date(todayToronto)
-    reportDay.setDate(todayToronto.getDate() + 3)
-    return reportDay.toLocaleDateString('en-CA', {
-      timeZone: TORONTO_TZ,
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    }) + ' at 10am'
-  }
+  return sunday.toLocaleDateString('en-CA', {
+    timeZone: TORONTO_TZ,
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }) + ' at 10pm'
 }
 
 function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: boolean }) {
@@ -207,7 +184,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
   const [search, setSearch] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
 
-  const reportDateLabel = getReportDateLabel(date_autonudge_enabled)
+  const reportDateLabel = getReportDateLabel()
 
   const isNudgeButtonDisabled = (): boolean => {
     if (engaged) return true
@@ -504,8 +481,8 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
                 <p className="text-white/50 text-sm mt-2 leading-relaxed">
                   We'll reach out to your top{' '}
                   <span className="text-white font-semibold">{clientCount} clients</span> who are
-                  overdue for a visit — prioritizing your most consistent ones first. You'll get a
-                  report on{' '}
+                  overdue for a visit — prioritizing your most consistent ones first. You'll get your
+                  results on{' '}
                   <span className="text-white font-semibold">{reportDateLabel}</span>.
                 </p>
               </div>

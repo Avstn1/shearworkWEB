@@ -33,11 +33,11 @@ function getMondaysInMonth(year: number, month: number): number {
 }
 
 function getCampaignEnd(from: Date): Date {
-  // Always the coming Wednesday (or same day if today is Wednesday) at 23:59:59
-  const day = from.getDay() // 0=Sun, 1=Mon, ..., 3=Wed
-  const daysUntilWednesday = (3 - day + 7) % 7 || 7
+  // Always the coming Sunday (or same day if today is Sunday) at 23:59:59
+  const day = from.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysUntilSunday = day === 0 ? 0 : 7 - day
   const end = new Date(from)
-  end.setDate(from.getDate() + daysUntilWednesday)
+  end.setDate(from.getDate() + daysUntilSunday)
   end.setHours(23, 59, 59, 0)
   return end
 }

@@ -245,19 +245,19 @@ export default function AutoNudgeActivationStep({
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-blue-400 mt-0.5">2.</span>
-                  <span>Once you do, just sit back and wait for an update. All updates are sent every Wednesday. You can also view this under the Auto Nudge page's history</span>
+                  <span>Once you do, just sit back and wait for your results. You'll get a summary text every Sunday at 10 PM with your bookings and revenue recovered. You can also view this under the Auto Nudge page's history</span>
                 </li>
                 {isBarelyLate && (
                   <li className="flex items-start gap-2">
                     <span className="text-blue-400 mt-0.5">3.</span>
-                    <span>Since your nudges will be sent out tomorrow and not on a Monday (our normal schedule), you will receive your update 2 days after you authorize your nudge</span>
+                    <span>Since your nudges will be sent out tomorrow and not on a Monday (our normal schedule), your results will still arrive on Sunday at 10 PM</span>
                   </li>
                 )}
               </ul>
               {isBarelyLate && (
                 <div className="mt-3 pt-3 border-t border-blue-400/20">
                   <p className="text-xs text-blue-200 italic">
-                    💡 Normally, nudges are sent on Mondays and updates on Wednesdays. We're making a one-time exception to get you started right away. Next week, your nudges will be back to the normal Monday schedule.
+                    💡 Normally, nudges are sent on Mondays and results arrive on Sunday nights. We're making a one-time exception to get you started right away. Next week, your nudges will be back to the normal Monday schedule.
                   </p>
                 </div>
               )}

@@ -23,13 +23,12 @@ const EDGE_ENTRIES: DocEntry[] = [
     id: "edge-barber-nudge-update",
     name: "barber_nudge_update",
     path: "/supabase/functions/barber_nudge_update/index.ts",
-    summary: "Sends the Wednesday results update SMS to barbers who authorized their nudge.",
-    description: "Two-flow edge function. Flow 1 (Wednesday only): queries profiles with sms_engaged_current_week=true and date_autonudge_enabled before Monday 10am. Filters out 'barely late' barbers (latest 'yes' reply was Tue or later) — handled by Flow 2. Calls updateBarbersAvailability then sends each eligible barber a message with reply count, booking count, and revenue from sms_replies and barber_nudge_success. Flow 2 (Tue–Thu): fires on days where 'two days ago' falls in the Tue–Thu window, finds barbers who replied 'yes' on Tue–Fri this week and sends them a delayed update. Both flows use sms-status callback (purpose=barber_sms_update) and insert a notification on success.",
+    summary: "Sends the Sunday night weekly results SMS to barbers who authorized their nudge.",
+    description: "Scheduled Deno edge function (runs Sunday 10 PM Toronto time). Queries all profiles with sms_engaged_current_week=true, active subscription/trial, and non-null phone. For each barber, fetches the client reply count from the current week's sms_smart_buckets and booking count + revenue from barber_nudge_success. Builds a results message with 3 cases: no activity, replies only, or replies + bookings with revenue. Sends via Twilio with a status callback to /api/barber-nudge/sms-status (purpose=barber_sms_weekly_results) and inserts a notification on success.",
     tags: ["nudge"],
     related: [
       { label: "sms-status", type: "api", targetId: "api-barber-nudge-sms-status" },
       { label: "barber_nudge_sms", type: "edge", targetId: "edge-barber-nudge-sms" },
-      { label: "update_barber_availability", type: "edge", targetId: "edge-update-barber-availability" },
     ],
   },
   {
@@ -80,12 +79,11 @@ const EDGE_ENTRIES: DocEntry[] = [
     name: "update_barber_availability",
     path: "/supabase/functions/update_barber_availability/index.ts",
     summary: "Triggers availability pulls for all (or specific) barbers via /api/availability/pull.",
-    description: "Orchestrator that fans out availability refresh requests. Accepts user_ids (array) or user_id (single) in the POST body for targeted updates, or runs all barbers with a calendar if no target is specified. When running as a full cron sweep (no target), also resets sms_engaged_current_week=false on all engaged profiles before firing. Calls /api/availability/pull per barber using SERVICE_ROLE_KEY as Bearer token and BYPASS_TOKEN for Vercel protection bypass. Concurrency capped at 100. Called by barber_nudge_sms and barber_nudge_update before sending messages to ensure slot counts are fresh.",
+    description: "Orchestrator that fans out availability refresh requests. Accepts user_ids (array) or user_id (single) in the POST body for targeted updates, or runs all barbers with a calendar if no target is specified. When running as a full cron sweep (no target), also resets sms_engaged_current_week=false on all engaged profiles before firing. Calls /api/availability/pull per barber using SERVICE_ROLE_KEY as Bearer token and BYPASS_TOKEN for Vercel protection bypass. Concurrency capped at 100. Called by barber_nudge_sms before sending messages to ensure slot counts are fresh.",
     tags: ["availability"],
     related: [
       { label: "availability/pull", type: "api", targetId: "api-availability-pull" },
       { label: "barber_nudge_sms", type: "edge", targetId: "edge-barber-nudge-sms" },
-      { label: "barber_nudge_update", type: "edge", targetId: "edge-barber-nudge-update" },
     ],
   },
 
