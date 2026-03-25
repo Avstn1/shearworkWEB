@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
             : `${appointmentDetails.firstName ?? ''} ${appointmentDetails.lastName ?? ''}`.trim();
           const clientNumber = clientData?.phone_normalized ?? normalizedPhone ?? clientPhone;
 
-          await supabase
+          const { error: logError } = await supabase
             .from('system_logs')
             .insert({
               source: 'SYSTEM',
@@ -203,6 +203,10 @@ export async function POST(req: NextRequest) {
               status: 'success',
               details: `${barberName}: ${clientName} (${clientNumber}) booked`
             });
+
+          if (logError) {
+            console.error('Failed to write system log:', logError);
+          }
         }
       } else {
         console.log(`ℹ️  Not attributed to SMS campaign: ${result.reason}`);
