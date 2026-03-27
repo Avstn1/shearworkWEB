@@ -262,7 +262,7 @@ export default function ProfileStep({
 
           <div className="space-y-4">
             <div>
-              <label className="block mb-2 text-sm font-semibold text-white">Full Name</label>
+              <label className="block mb-2 text-sm font-semibold text-white">Barber Name</label>
               <input
                 type="text"
                 value={fullName}
@@ -271,7 +271,7 @@ export default function ProfileStep({
                 required
               />
               {showValidationErrors && !fullName.trim() && (
-                <p className="mt-1 text-xs text-rose-300">Enter your full name</p>
+                <p className="mt-1 text-xs text-rose-300">Enter your barber name</p>
               )}
             </div>
 
