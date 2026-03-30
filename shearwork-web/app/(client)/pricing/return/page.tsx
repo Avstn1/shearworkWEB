@@ -197,6 +197,62 @@ function PricingReturnContent() {
     fetchProfile()
   }, [])
 
+  // ─── RACE CONDITION FIX ───────────────────────────────────────────────
+  // After checkout completes, the Stripe webhook may not have fired yet,
+  // so stripe_subscription_status is still stale. Poll the profile every
+  // 2s until the webhook lands and the status flips to active/trialing.
+  // Once it does, if the user already completed onboarding, skip straight
+  // to the dashboard instead of showing the onboarding wizard again.
+  useEffect(() => {
+    // Only poll after a completed checkout session
+    if (sessionStatus !== 'complete') return
+    if (!profile) return
+
+    const hasPaidStatus =
+      profile.stripe_subscription_status === 'active' ||
+      profile.stripe_subscription_status === 'trialing'
+
+    // Webhook has landed — if already onboarded, go to dashboard
+    if (hasPaidStatus && profile.onboarded === true) {
+      refreshProfile()
+      router.replace('/dashboard')
+      return
+    }
+
+    // If status is already paid but not onboarded, no need to poll —
+    // let them proceed through onboarding normally
+    if (hasPaidStatus) return
+
+    // Webhook hasn't fired yet — poll every 2s
+    const interval = setInterval(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data } = await supabase
+          .from('profiles')
+          .select('stripe_subscription_status, onboarded')
+          .eq('user_id', user.id)
+          .single()
+
+        if (data) {
+          setProfile(prev => prev ? { ...prev, ...data } : prev)
+        }
+      } catch (err) {
+        console.error('Polling profile failed:', err)
+      }
+    }, 2000)
+
+    // Stop polling after 30s — webhook should have arrived by then
+    const timeout = setTimeout(() => clearInterval(interval), 30000)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [sessionStatus, profile?.stripe_subscription_status, profile?.onboarded, router, refreshProfile])
+  // ─────────────────────────────────────────────────────────────────────
+
   // Load calendar status
   const fetchCalendarStatus = async () => {
     try {
@@ -472,6 +528,18 @@ function PricingReturnContent() {
     hasCheckoutComplete ||
     authHasPaidAccess ||
     localHasPaidAccess
+
+  // True while waiting for Stripe webhook to update the profile after checkout,
+  // OR while redirect to dashboard is in flight for already-onboarded users.
+  // Prevents the onboarding wizard from flashing during the race condition window.
+  const waitingForWebhook = sessionStatus === 'complete' && (
+    // Webhook hasn't landed yet — status is still stale
+    (profile?.stripe_subscription_status !== 'active' &&
+     profile?.stripe_subscription_status !== 'trialing') ||
+    // Webhook landed but user is already onboarded — redirect to dashboard is in flight
+    profile?.onboarded === true
+  )
+
   const calendarConnected = calendarStatus.acuity || calendarStatus.square
   const interval = summary?.price?.interval
   const amountText = summary?.price && formatAmount(summary.price.amount, summary.price.currency)
@@ -738,6 +806,13 @@ function PricingReturnContent() {
                     >
                       Return to pricing
                     </button>
+                  </div>
+                </div>
+              ) : waitingForWebhook ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-xl h-full">
+                  <div className="flex items-center gap-3 text-sm text-gray-300">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing your subscription…
                   </div>
                 </div>
               ) : (

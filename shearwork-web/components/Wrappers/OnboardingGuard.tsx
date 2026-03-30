@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { isTrialActive } from '@/utils/trial'
 
 export default function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, profile, isLoading, profileStatus } = useAuth()
 
   useEffect(() => {
@@ -18,6 +19,10 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
 
     // Wait for profile fetch to complete (not idle or loading)
     if (profileStatus === 'idle' || profileStatus === 'loading') return
+
+    // If user is on a pricing flow (checkout or return), don't interfere —
+    // the return page handles its own polling and redirect logic
+    if (pathname?.startsWith('/pricing')) return
     
     // Redirect to pricing if profile exists but trial is not active
     // Use isTrialActive() to properly check trial status (handles undefined/null correctly)
@@ -32,7 +37,7 @@ export default function OnboardingGuard({ children }: { children: React.ReactNod
       console.log('🟢 Redirecting to pricing/return - onboarded:', profile.onboarded)
       router.replace('/pricing/return')
     }
-  }, [isLoading, user, profile, profileStatus, router])
+  }, [isLoading, user, profile, profileStatus, router, pathname])
 
   if (isLoading) {
     return (
