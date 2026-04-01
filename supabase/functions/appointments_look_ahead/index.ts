@@ -77,6 +77,16 @@ function parseToUTCTimestamp(datetimeStr: string): string {
   }
 }
 
+const normalizeToE164 = (raw: string | null | undefined): string | null => {
+  if (!raw) return null
+  const digits = raw.replace(/\D/g, '')
+  if (!digits) return null
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+  if (digits.length === 10) return `+1${digits}`
+  if (raw.trimStart().startsWith('+') && digits.length >= 11) return `+${digits}`
+  return `+${digits}`
+}
+
 async function getAccessToken(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('acuity_tokens')
@@ -136,16 +146,6 @@ async function backfillNextFutureAppointment(
 
   if (futureAppointments.length === 0) return
 
-  const normalizeToE164 = (raw: string | null | undefined): string | null => {
-    if (!raw) return null
-    const digits = raw.replace(/\D/g, '')
-    if (!digits) return null
-    if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-    if (digits.length === 10) return `+1${digits}`
-    if (raw.trimStart().startsWith('+') && digits.length >= 11) return `+${digits}`
-    return `+${digits}`
-  }
-
   const soonestByPhone = new Map<string, Date>()
   for (const appt of futureAppointments) {
     const phone = normalizeToE164(appt.phone)
@@ -185,6 +185,79 @@ async function backfillNextFutureAppointment(
   }
 }
 
+// ---------------------------------------------------------------------------
+// backfillLastAppt — updates last_appt on acuity_clients from Acuity data.
+//
+// This catches cases where the webhook failed to fire or was not recognized,
+// so that the nudge selection algorithm sees an accurate last_appt and does
+// not treat a recently-seen client as "at risk".
+//
+// Uses the appointment DATE (YYYY-MM-DD in Toronto tz) to match the existing
+// last_appt column format.
+// ---------------------------------------------------------------------------
+
+async function backfillLastAppt(
+  userId: string,
+  appointments: any[]
+): Promise<void> {
+  const now = new Date()
+
+  // Only consider past appointments (already happened)
+  const pastAppointments = appointments.filter(appt => {
+    if (!appt.datetime) return false
+    const dt = new Date(appt.datetime)
+    return !isNaN(dt.getTime()) && dt <= now
+  })
+
+  if (pastAppointments.length === 0) return
+
+  // Find the most recent past appointment date per phone
+  const latestByPhone = new Map<string, string>() // phone → YYYY-MM-DD
+  for (const appt of pastAppointments) {
+    const phone = normalizeToE164(appt.phone)
+    if (!phone) continue
+
+    const apptDate = toEnCA(new Date(appt.datetime)) // YYYY-MM-DD Toronto tz
+    const existing = latestByPhone.get(phone)
+
+    if (!existing || apptDate > existing) {
+      latestByPhone.set(phone, apptDate)
+    }
+  }
+
+  let updated = 0
+
+  for (const [phone, latestDate] of latestByPhone) {
+    const { data: client, error } = await supabase
+      .from('acuity_clients')
+      .select('client_id, last_appt')
+      .eq('user_id', userId)
+      .eq('phone_normalized', phone)
+      .maybeSingle()
+
+    if (error || !client) continue
+
+    // Only update if Acuity shows a more recent appointment than what's stored
+    if (client.last_appt && client.last_appt >= latestDate) continue
+
+    const { error: updateError } = await supabase
+      .from('acuity_clients')
+      .update({ last_appt: latestDate })
+      .eq('user_id', userId)
+      .eq('client_id', client.client_id)
+
+    if (updateError) {
+      console.error(`[backfillLastAppt] Failed to update last_appt for client ${client.client_id}:`, updateError)
+    } else {
+      updated++
+    }
+  }
+
+  if (updated > 0) {
+    console.log(`[backfillLastAppt] Updated last_appt for ${updated} client(s) of user ${userId}`)
+  }
+}
+
 async function processBarber(userId: string, recentWeeks: string[], calendar: string) {
   // Get access token
   const accessToken = await getAccessToken(userId)
@@ -208,7 +281,14 @@ async function processBarber(userId: string, recentWeeks: string[], calendar: st
 
   // Fetch all appointments once — shared across all bucket checks
   const allAppointments = await getAllAcuityAppointments(accessToken, calendar)
+
+  // Backfill both future and past appointment data on acuity_clients.
+  // This eliminates the webhook as a single point of failure:
+  //   - backfillNextFutureAppointment: sets next_future_appointment for upcoming bookings
+  //   - backfillLastAppt: updates last_appt for recent past bookings
+  // Both run ~30 min before the Monday nudge, so the selection algorithm has accurate data.
   await backfillNextFutureAppointment(userId, allAppointments)
+  await backfillLastAppt(userId, allAppointments)
 
   const normalizePhone = (phoneStr: string) => {
     if (!phoneStr) return ''
