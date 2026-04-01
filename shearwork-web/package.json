@@ -23,6 +23,7 @@
     "@vercel/functions": "^3.4.2",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
+    "dotenv": "^17.3.1",
     "easymde": "^2.20.0",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.548.0",
