@@ -6,6 +6,7 @@ import {
   isDefaultServiceName,
   normalizeServiceName,
 } from '@/lib/booking/serviceNormalization'
+import { pullAvailability } from '@/lib/booking/availability/orchestrator'
 import type { AvailabilitySlotRecord } from '@/lib/booking/availability/types'
 
 const OPEN_BOOKINGS_DAY_END_MINUTES = 20 * 60
@@ -479,6 +480,19 @@ export async function GET(request: Request) {
   try {
     const weekOffset = 0
     const weekRange = getWeekRange(weekOffset)
+
+    // Ensure fresh availability data exists before reading snapshots.
+    // pullAvailability uses a 5-min cache internally, so repeated
+    // dashboard loads won't spam the Acuity API.
+    try {
+      await pullAvailability(supabase, user.id, { weekOffset })
+    } catch (refreshError) {
+      // If the refresh fails (e.g. Acuity API down, token expired),
+      // fall through to the existing snapshot/summary fallback logic
+      // so the widget shows slightly stale data instead of 0.
+      console.error('open-bookings availability refresh failed:', refreshError)
+    }
+
     const snapshot = await getLatestCachedSnapshot({
       supabase,
       userId: user.id,
