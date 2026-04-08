@@ -7,12 +7,13 @@ import { supabase } from '@/utils/supabaseClient';
 import HowAutoNudgeWorksModal from './Modals/HowAutoNudgeWorksModal';
 
 interface BarberNudgeCampaign {
-  message_id: string;
+  bucket_id: string;
   iso_week_number: string;
   week_start: string;
   week_end: string;
   clients_booked: number;
-  date_sent: string;
+  total_clients: number;
+  campaign_start: string;
 }
 
 interface SMSRecipient {
@@ -26,11 +27,6 @@ interface SMSRecipient {
   price?: string;
   appointment_date?: string;
 }
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
 
 const getISOWeekDates = (isoWeek: string): { start: string; end: string } => {
   const [yearStr, weekStr] = isoWeek.split('-W');
@@ -85,54 +81,41 @@ export default function SMSAutoNudge() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: scheduledMessages, error } = await supabase
-        .from('sms_scheduled_messages')
-        .select('id, title, created_at')
+      const { data: buckets, error } = await supabase
+        .from('sms_smart_buckets')
+        .select('bucket_id, iso_week, campaign_start, total_clients')
         .eq('user_id', user.id)
-        .eq('purpose', 'auto-nudge')
-        .like('title', `${user.id}_%`)
-        .order('created_at', { ascending: false });
+        .eq('status', 'active')
+        .order('campaign_start', { ascending: false });
 
-      if (error || !scheduledMessages?.length) {
+      if (error || !buckets?.length) {
         setCampaigns([]);
         return;
       }
 
-      const campaignList: BarberNudgeCampaign[] = [];
-      const seenWeeks = new Set<string>();
+      const isoWeeks = buckets.map(b => b.iso_week);
+      const { data: successRows } = await supabase
+        .from('barber_nudge_success')
+        .select('iso_week_number, client_ids')
+        .eq('user_id', user.id)
+        .in('iso_week_number', isoWeeks);
 
-      for (const message of scheduledMessages) {
-        const parts = message.title.split('_');
-        if (parts.length !== 2) continue;
-        const isoWeek = parts[1];
-        if (seenWeeks.has(isoWeek)) continue;
-        seenWeeks.add(isoWeek);
+      const successMap = new Map(
+        (successRows || []).map(row => [row.iso_week_number, row.client_ids?.length || 0])
+      );
 
-        const { data: successData } = await supabase
-          .from('barber_nudge_success')
-          .select('client_ids')
-          .eq('user_id', user.id)
-          .eq('iso_week_number', isoWeek)
-          .single();
-
-        const { data: sentData } = await supabase
-          .from('sms_sent')
-          .select('created_at')
-          .eq('message_id', message.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        const { start, end } = getISOWeekDates(isoWeek);
-        campaignList.push({
-          message_id: message.id,
-          iso_week_number: isoWeek,
+      const campaignList: BarberNudgeCampaign[] = buckets.map(bucket => {
+        const { start, end } = getISOWeekDates(bucket.iso_week);
+        return {
+          bucket_id: bucket.bucket_id,
+          iso_week_number: bucket.iso_week,
           week_start: start,
           week_end: end,
-          clients_booked: successData?.client_ids?.length || 0,
-          date_sent: sentData?.created_at || message.created_at,
-        });
-      }
+          clients_booked: successMap.get(bucket.iso_week) || 0,
+          total_clients: bucket.total_clients || 0,
+          campaign_start: bucket.campaign_start,
+        };
+      });
 
       setCampaigns(campaignList);
     } catch (error) {
@@ -151,7 +134,7 @@ export default function SMSAutoNudge() {
       const { data: smsSent, error: smsError } = await supabase
         .from('sms_sent')
         .select('client_id, phone_normalized')
-        .eq('message_id', campaign.message_id)
+        .eq('smart_bucket_id', campaign.bucket_id)
         .eq('is_sent', true)
         .order('created_at', { ascending: true });
 
@@ -315,7 +298,7 @@ export default function SMSAutoNudge() {
                 <div className="divide-y divide-white/5">
                   {campaigns.map((campaign) => (
                     <button
-                      key={campaign.message_id}
+                      key={campaign.bucket_id}
                       onClick={() => handleCampaignClick(campaign)}
                       className="w-full flex items-center gap-4 px-4 sm:px-6 py-4 hover:bg-white/5 transition-colors text-left group"
                     >
@@ -333,7 +316,9 @@ export default function SMSAutoNudge() {
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <Calendar className="w-3 h-3 text-white/30 flex-shrink-0" />
-                          <p className="text-xs text-white/40 truncate">Sent {formatDate(campaign.date_sent)}</p>
+                          <p className="text-xs text-white/40 truncate">
+                            Started {formatDate(campaign.campaign_start)} · {campaign.total_clients} clients nudged
+                          </p>
                         </div>
                       </div>
 
@@ -373,13 +358,17 @@ export default function SMSAutoNudge() {
                   </p>
                   <div className="flex items-center gap-2 flex-wrap mt-0.5">
                     <p className="text-xs text-white/40">
-                      Sent {selectedCampaign && formatDate(selectedCampaign.date_sent)}
+                      Started {selectedCampaign && formatDate(selectedCampaign.campaign_start)}
                     </p>
                     {selectedCampaign && (
                       <>
                         <span className="text-white/20 text-xs">·</span>
                         <span className="text-xs text-lime-300 font-semibold">
                           {selectedCampaign.clients_booked} booked
+                        </span>
+                        <span className="text-white/20 text-xs">·</span>
+                        <span className="text-xs text-white/40">
+                          {selectedCampaign.total_clients} nudged
                         </span>
                       </>
                     )}

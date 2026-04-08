@@ -9,12 +9,13 @@ interface BarberNudgeHistoryModalProps {
 }
 
 interface BarberNudgeCampaign {
-  message_id: string;
+  bucket_id: string;
   iso_week_number: string;
   week_start: string;
   week_end: string;
   clients_booked: number;
-  date_sent: string;
+  total_clients: number;
+  campaign_start: string;
 }
 
 interface SMSRecipient {
@@ -36,16 +37,13 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
   const [recipients, setRecipients] = useState<SMSRecipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // Fetch campaigns on modal open
   useEffect(() => {
     if (isOpen) {
       fetchCampaigns();
     }
   }, [isOpen]);
 
-  // Reset view when modal closes
   useEffect(() => {
     if (!isOpen) {
       setView('list');
@@ -55,22 +53,18 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
   }, [isOpen]);
 
   const getISOWeekDates = (isoWeek: string): { start: string; end: string } => {
-    // Parse "2026-W05" format
     const [yearStr, weekStr] = isoWeek.split('-W');
     const year = parseInt(yearStr);
     const week = parseInt(weekStr);
 
-    // Calculate the date of the Monday of the ISO week
-    const jan4 = new Date(year, 0, 4); // January 4th is always in week 1
-    const jan4Day = jan4.getDay() || 7; // Convert Sunday (0) to 7
+    const jan4 = new Date(year, 0, 4);
+    const jan4Day = jan4.getDay() || 7;
     const firstMonday = new Date(jan4);
     firstMonday.setDate(jan4.getDate() - jan4Day + 1);
 
-    // Calculate the Monday of the target week
     const monday = new Date(firstMonday);
     monday.setDate(firstMonday.getDate() + (week - 1) * 7);
 
-    // Calculate Sunday
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
 
@@ -92,79 +86,45 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No user found');
-        return;
-      }
+      if (!user) return;
 
-      // Get all sms_scheduled_messages that match the pattern {user_id}_{iso_week}
-      const { data: scheduledMessages, error: schedError } = await supabase
-        .from('sms_scheduled_messages')
-        .select('id, title, created_at')
+      // Query sms_smart_buckets directly — this is the source of truth for campaigns
+      const { data: buckets, error: bucketsError } = await supabase
+        .from('sms_smart_buckets')
+        .select('bucket_id, iso_week, campaign_start, total_clients')
         .eq('user_id', user.id)
-        .eq('purpose', 'auto-nudge')
-        .like('title', `${user.id}_%`)
-        .order('created_at', { ascending: false });
+        .eq('status', 'active')
+        .order('campaign_start', { ascending: false });
 
-      if (schedError) {
-        console.error('Error fetching scheduled messages:', schedError);
-        return;
-      }
-
-      console.log(JSON.stringify(scheduledMessages));
-
-      if (!scheduledMessages || scheduledMessages.length === 0) {
+      if (bucketsError || !buckets || buckets.length === 0) {
         setCampaigns([]);
         return;
       }
 
-      const campaignList: BarberNudgeCampaign[] = [];
-      const seenWeeks = new Set<string>(); // Track unique weeks to avoid duplicates
+      // Fetch barber_nudge_success for all weeks at once
+      const isoWeeks = buckets.map(b => b.iso_week);
+      const { data: successRows } = await supabase
+        .from('barber_nudge_success')
+        .select('iso_week_number, client_ids')
+        .eq('user_id', user.id)
+        .in('iso_week_number', isoWeeks);
 
-      for (const message of scheduledMessages) {
-        // Parse title to get user_id and iso_week
-        const parts = message.title.split('_');
-        if (parts.length !== 2) continue;
+      const successMap = new Map(
+        (successRows || []).map(row => [row.iso_week_number, row.client_ids?.length || 0])
+      );
 
-        const isoWeek = parts[1];
-
-        // Skip if we've already processed this week (handles duplicates)
-        if (seenWeeks.has(isoWeek)) continue;
-        seenWeeks.add(isoWeek);
-
-        // Get barber_nudge_success data
-        const { data: successData, error: successError } = await supabase
-          .from('barber_nudge_success')
-          .select('client_ids')
-          .eq('user_id', user.id)
-          .eq('iso_week_number', isoWeek)
-          .single();
-
-        // Count booked clients (0 if no success data)
-        const clientsBooked = successData?.client_ids?.length || 0;
-
-        // Get latest sms_sent created_at for this message
-        const { data: sentData, error: sentError } = await supabase
-          .from('sms_sent')
-          .select('created_at')
-          .eq('message_id', message.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        const dateSent = sentData?.created_at || message.created_at;
-
-        const { start, end } = getISOWeekDates(isoWeek);
-
-        campaignList.push({
-          message_id: message.id,
-          iso_week_number: isoWeek,
+      const campaignList: BarberNudgeCampaign[] = buckets.map(bucket => {
+        const { start, end } = getISOWeekDates(bucket.iso_week);
+        return {
+          bucket_id: bucket.bucket_id,
+          iso_week_number: bucket.iso_week,
           week_start: start,
           week_end: end,
-          clients_booked: clientsBooked,
-          date_sent: dateSent
-        });
-      }
+          clients_booked: successMap.get(bucket.iso_week) || 0,
+          total_clients: bucket.total_clients || 0,
+          campaign_start: bucket.campaign_start,
+        };
+      });
 
       setCampaigns(campaignList);
     } catch (error) {
@@ -178,32 +138,24 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
     setLoadingRecipients(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('No user found');
-        return;
-      }
+      if (!user) return;
 
-      // Get all SMS sent for this message
+      // Get all SMS sent for this bucket
       const { data: smsSent, error: smsError } = await supabase
         .from('sms_sent')
         .select('client_id, phone_normalized')
-        .eq('message_id', campaign.message_id)
+        .eq('smart_bucket_id', campaign.bucket_id)
         .eq('is_sent', true)
         .order('created_at', { ascending: true });
 
-      if (smsError) {
-        console.error('Error fetching SMS sent:', smsError);
+      if (smsError || !smsSent || smsSent.length === 0) {
         setRecipients([]);
-        return;
-      }
-
-      if (!smsSent || smsSent.length === 0) {
-        setRecipients([]);
+        if (!smsError) setView('details');
         return;
       }
 
       // Get barber_nudge_success data
-      const { data: successData, error: successError } = await supabase
+      const { data: successData } = await supabase
         .from('barber_nudge_success')
         .select('client_ids, services, prices, appointment_dates')
         .eq('user_id', user.id)
@@ -212,28 +164,23 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
 
       const bookedClientIds = successData?.client_ids || [];
       const services = successData?.services || [];
-      const prices = successData?.prices || []
+      const prices = successData?.prices || [];
       const appointmentDates = successData?.appointment_dates || [];
 
-      // Get all unique client IDs and phone numbers from SMS sent
       const allClientIds = smsSent
         .map(sms => sms.client_id)
         .filter((id): id is string => id !== null);
-      
+
       const allPhoneNumbers = smsSent
         .map(sms => sms.phone_normalized)
         .filter((phone): phone is string => phone !== null);
 
       // Fetch client details
-      const { data: clientsData, error: clientsError } = await supabase
+      const { data: clientsData } = await supabase
         .from('acuity_clients')
         .select('client_id, first_name, last_name, phone, phone_normalized')
         .eq('user_id', user.id)
         .or(`client_id.in.(${allClientIds.join(',')}),phone_normalized.in.(${allPhoneNumbers.map(p => `"${p}"`).join(',')})`);
-
-      if (clientsError) {
-        console.error('Error fetching clients:', clientsError);
-      }
 
       const clientsMap = new Map(
         (clientsData || []).map(client => [
@@ -242,11 +189,10 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
         ])
       );
 
-      // Build recipients list
       const recipientsList: SMSRecipient[] = smsSent.map(sms => {
         const clientKey = sms.client_id || sms.phone_normalized;
         const client = clientKey ? clientsMap.get(clientKey) : null;
-        
+
         const bookedIndex = sms.client_id ? bookedClientIds.indexOf(sms.client_id) : -1;
         const isBooked = bookedIndex !== -1;
 
@@ -258,12 +204,11 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
           phone_normalized: sms.phone_normalized,
           status: isBooked ? 'booked' : 'pending',
           service: isBooked ? services[bookedIndex] : undefined,
-          price: isBooked ? prices [bookedIndex] : undefined, 
+          price: isBooked ? prices[bookedIndex] : undefined,
           appointment_date: isBooked ? appointmentDates[bookedIndex] : undefined,
         };
       });
 
-      // Sort: booked first (by appointment date), then pending (by send order)
       const sortedRecipients = recipientsList.sort((a, b) => {
         if (a.status === 'booked' && b.status === 'booked') {
           const dateA = new Date(a.appointment_date!).getTime();
@@ -272,7 +217,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
         }
         if (a.status === 'booked') return -1;
         if (b.status === 'booked') return 1;
-        return 0; // Maintain send order for pending
+        return 0;
       });
 
       setRecipients(sortedRecipients);
@@ -375,9 +320,6 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                       <p className="text-sm text-[#bdbdbd] mt-2">
                         Track your weekly barber nudge campaign success
                       </p>
-                      <p className="text-xs text-[#9e9e9e] mt-2 -mb-3">
-                        Reopen to refresh bookings
-                      </p>
                     </div>
                     <button
                       onClick={onClose}
@@ -406,7 +348,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                       <div className="space-y-3">
                         {campaigns.map((campaign) => (
                           <button
-                            key={campaign.message_id}
+                            key={campaign.bucket_id}
                             onClick={() => handleCampaignClick(campaign)}
                             className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-lime-300/30 transition-all duration-300 text-left group"
                           >
@@ -421,10 +363,12 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                             <div className="flex items-center gap-4 text-xs text-[#bdbdbd] flex-wrap">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3 flex-shrink-0" />
-                                Sent {formatDate(campaign.date_sent)}
+                                Started {formatDate(campaign.campaign_start)}
                               </span>
                               <span className="hidden sm:inline">•</span>
                               <span className="text-lime-300">Week {campaign.iso_week_number.split('-W')[1]}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span>{campaign.total_clients} clients nudged</span>
                             </div>
                           </button>
                         ))}
@@ -467,7 +411,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                           {selectedCampaign.week_start} - {selectedCampaign.week_end}
                         </h3>
                         <p className="text-xs text-[#bdbdbd] mt-0.5 truncate">
-                          Sent {formatDate(selectedCampaign.date_sent)}
+                          Started {formatDate(selectedCampaign.campaign_start)}
                         </p>
                       </div>
                     </div>
@@ -485,6 +429,10 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                       <div>
                         <p className="text-[#bdbdbd] mb-0.5">Clients Booked</p>
                         <p className="text-base font-bold text-lime-300">{selectedCampaign.clients_booked}</p>
+                      </div>
+                      <div>
+                        <p className="text-[#bdbdbd] mb-0.5">Clients Nudged</p>
+                        <p className="text-base font-bold text-white">{selectedCampaign.total_clients}</p>
                       </div>
                       <div>
                         <p className="text-[#bdbdbd] mb-0.5">Week</p>
@@ -539,7 +487,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                                 {recipient.status === 'booked' ? '✓ Booked' : '○ Pending'}
                               </span>
                             </div>
-                            
+
                             {recipient.status === 'booked' && recipient.service && recipient.appointment_date && (
                               <div className="pt-3 border-t border-white/10">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
