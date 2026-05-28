@@ -13,6 +13,9 @@ export type TrialProfile = {
 }
 
 export const isTrialActive = (profile?: TrialProfile | null): boolean => {
+  // Canceled subscription always loses access, regardless of trial flags
+  if (profile?.stripe_subscription_status === 'canceled') return false
+
   if (profile?.stripe_subscription_status === 'trialing' || profile?.trial_active === true) return true
   if (!profile?.trial_active || !profile.trial_start || !profile.trial_end) return false
 
