@@ -160,6 +160,7 @@ export async function POST(req: NextRequest) {
           .update({
             subscription_id: null,
             stripe_subscription_status: 'canceled',
+            trial_active: false,
           })
           .eq('stripe_id', sub.customer as string)
         break
