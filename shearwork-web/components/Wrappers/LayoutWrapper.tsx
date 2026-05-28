@@ -22,6 +22,11 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     trialDaysRemaining,
   } = useAuth()
 
+  // Destructure primitives to avoid effect re-firing on new object references
+  const subStatus = profile?.stripe_subscription_status
+  const onboarded = profile?.onboarded
+  const role = profile?.role?.toLowerCase()
+
   // Public routes that don't need authentication
   const publicRoutes = ['/', '/login', '/signup', '/pricing', '/book', '/privacy-policy', '/support']
   const isPublicRoute = publicRoutes.includes(pathname)
@@ -40,15 +45,13 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     if (isLoading) return
     if (user && profileStatus !== 'ready') return
 
-    const role = profile?.role?.toLowerCase()
-    const subStatus = profile?.stripe_subscription_status
     const hasTrialAccess = isTrialActive(profile)
     const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
 
     if (
       user &&
       profile &&
-      !profile.onboarded &&
+      !onboarded &&
       role !== 'admin'
     ) {
       if (pathname === '/pricing' && hasPremiumAccess) {
@@ -69,13 +72,13 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     }
     
     // Redirect active/trial users away from /pricing once onboarding is done
-    if (profile?.onboarded && hasPremiumAccess && pathname === '/pricing') {
+    if (onboarded && hasPremiumAccess && pathname === '/pricing') {
       router.push('/dashboard')
       return
     }
 
     // Premium access check for protected routes
-    const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses']
+    const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses', '/settings']
     
     if (
       user &&
@@ -96,17 +99,17 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     }
 
     // Redirect non-admin authenticated users from home to dashboard (only if onboarded)
-    if (user && profile?.onboarded && role !== 'admin' && pathname === '/') {
+    if (user && onboarded && role !== 'admin' && pathname === '/') {
       router.push('/dashboard')
       return
     }
 
     // Redirect authenticated users away from login/signup (only if onboarded)
-    if (user && profile?.onboarded && (pathname === '/login' || pathname === '/signup')) {
+    if (user && onboarded && (pathname === '/login' || pathname === '/signup')) {
       router.push('/dashboard')
       return
     }
-  }, [isLoading, user, profile, profileStatus, pathname, router])
+  }, [isLoading, user, subStatus, onboarded, role, profileStatus, pathname, router, profile])
 
   // Show loading only for protected routes
   if ((isLoading || (user && profileStatus === 'loading')) && !isPublicRoute) {

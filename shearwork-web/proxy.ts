@@ -9,7 +9,7 @@ export default async function middleware(request: NextRequest) {
   // -----------------------------
   // MOBILE AUTH PASSTHROUGH
   // -----------------------------
-  const codePassthroughRoutes = ['/pricing', '/pricing/return', '/settings']
+  const codePassthroughRoutes = ['/pricing/return']
   if (codePassthroughRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next()
   }
@@ -73,13 +73,10 @@ export default async function middleware(request: NextRequest) {
   // ACTIVE/TRIAL REDIRECTS
   // -----------------------------
 
-
   // -----------------------------
   // PREMIUM ACCESS
   // -----------------------------
-
   const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
-  // console.log(`User ${user.id} - Subscription status: ${subStatus}, Trial active: ${hasTrialAccess}, Premium access: ${hasPremiumAccess}`)
 
   if (subStatus === 'active' || hasTrialAccess) {
     if (pathname === '/pricing') {
@@ -96,7 +93,8 @@ export default async function middleware(request: NextRequest) {
     '/account',
     '/premium',
     '/user-editor',
-    '/expenses'
+    '/expenses',
+    '/settings',
   ]
 
   if (
