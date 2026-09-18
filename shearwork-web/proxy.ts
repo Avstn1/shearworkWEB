@@ -58,6 +58,7 @@ export default async function middleware(request: NextRequest) {
   if (profile && !profile.onboarded && role !== 'admin') {
     const allowedDuringOnboarding = [
       '/onboarding',
+      '/pricing',
       '/pricing/return',
       '/api/onboarding',
       '/api/acuity',
