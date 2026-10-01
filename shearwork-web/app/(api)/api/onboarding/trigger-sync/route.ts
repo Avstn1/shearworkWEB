@@ -42,13 +42,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Build full list of months, most recent first
-    const allMonths: { month: string; year: number }[] = []
+    const allMonths: { month: number; year: number }[] = []
     let iterDate = new Date(startDate)
     while (
       iterDate.getFullYear() < currentYear ||
       (iterDate.getFullYear() === currentYear && iterDate.getMonth() <= currentMonth)
     ) {
-      allMonths.push({ month: MONTHS[iterDate.getMonth()], year: iterDate.getFullYear() })
+      allMonths.push({ month: iterDate.getMonth(), year: iterDate.getFullYear() })
       iterDate.setMonth(iterDate.getMonth() + 1)
     }
     allMonths.reverse() // most recent first
@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Priority = current month only, background = everything else
-    const priorityMonths = allMonths.filter(m => m.year === currentYear && MONTHS.indexOf(m.month) === currentMonth)
-    const backgroundMonths = allMonths.filter(m => !(m.year === currentYear && MONTHS.indexOf(m.month) === currentMonth))
+    const priorityMonths = allMonths.filter(m => m.year === currentYear && m.month === currentMonth)
+    console.log("These are the priority months: ", priorityMonths)
+    const backgroundMonths = allMonths.filter(m => !(m.year === currentYear && m.month === currentMonth))
     const orderedMonths = [...priorityMonths, ...backgroundMonths]
 
     console.log(`[trigger-sync] ${priorityMonths.length} priority, ${backgroundMonths.length} background`)
@@ -71,10 +72,10 @@ export async function POST(request: NextRequest) {
       .upsert(
         [
           ...priorityMonths.map(({ month, year }) => ({
-            user_id: userId, month, year, status: 'pending', sync_phase: 'priority', retry_count: 0, error_message: null,
+            user_id: userId, month: MONTHS[month], year, status: 'pending', sync_phase: 'priority', retry_count: 0, error_message: null,
           })),
           ...backgroundMonths.map(({ month, year }) => ({
-            user_id: userId, month, year, status: 'pending', sync_phase: 'background', retry_count: 0, error_message: null,
+            user_id: userId, month: MONTHS[month], year, status: 'pending', sync_phase: 'background', retry_count: 0, error_message: null,
           })),
         ],
         { onConflict: 'user_id,month,year', ignoreDuplicates: false }
@@ -89,9 +90,8 @@ export async function POST(request: NextRequest) {
       const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
       for (const { month, year } of orderedMonths) {
-        const phase = year === currentYear ? 'priority' : 'background'
+        const phase = year === currentYear && month === currentMonth ? 'priority' : 'background'
         let attempt = 0
-
         while (true) {
           attempt++
           console.log(`[${phase}][${month} ${year}] attempt ${attempt}`)
@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
               .update({ status: 'processing', retry_count: attempt - 1, updated_at: new Date().toISOString() })
               .eq('user_id', userId).eq('month', month).eq('year', year)
 
-            const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${year}`
-            console.log(`[${phase}][${month} ${year}] fetching...`)
+            const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(MONTHS[month])}&year=${year}`
+            console.log(`[${phase}][${MONTHS[month]} ${year}] fetching...`)
 
             const res = await fetch(url, {
               method: 'GET',
@@ -129,9 +129,9 @@ export async function POST(request: NextRequest) {
             await adminSupabase
               .from('sync_status')
               .update({ status: 'completed', retry_count: attempt - 1, error_message: null, updated_at: new Date().toISOString() })
-              .eq('user_id', userId).eq('month', month).eq('year', year)
+              .eq('user_id', userId).eq('month', MONTHS[month]).eq('year', year)
 
-            console.log(`[${phase}][${month} ${year}] done on attempt ${attempt}`)
+            console.log(`[${phase}][${MONTHS[month]} ${year}] done on attempt ${attempt}`)
             break // move to next month
 
           } catch (err) {

@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       await serviceSupabase
         .from('sync_status')
         .upsert(
-          { user_id: user.id, month, year, status: 'completed', sync_phase: 'background', error_message: null, updated_at: new Date().toISOString() },
+          { user_id: user.id, month, year, status: 'completed', error_message: null, updated_at: new Date().toISOString() },
           { onConflict: 'user_id,month,year' },
         )
     }
