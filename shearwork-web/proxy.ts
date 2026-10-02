@@ -96,6 +96,9 @@ export default async function middleware(request: NextRequest) {
     '/user-editor',
     '/expenses',
     '/settings',
+    '/client-manager',
+    '/appointment-manager',
+
   ]
 
   if (
