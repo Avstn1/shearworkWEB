@@ -5,6 +5,10 @@ import type {
   AvailabilityDateRange,
   AvailabilitySlotRecord,
 } from '@/lib/booking/availability/types'
+import { mapWithConcurrency } from '@/lib/booking/concurrency'
+import { fetchJsonWithRetry } from '@/lib/booking/adapters/acuityRangeFetch'
+
+const AVAILABILITY_CONCURRENCY = 4
 
 type AcuityTokenRow = {
   user_id: string
@@ -51,46 +55,34 @@ export class AcuityAvailabilityAdapter implements AvailabilityAdapter {
     const monthKeys = getMonthKeys(dateRange.dates)
     const slots: AvailabilitySlotRecord[] = []
 
-    for (const appointmentType of appointmentTypes) {
-      let availableDates: string[] = []
-
-      for (const monthKey of monthKeys) {
-        const monthDates = await this.fetchAvailabilityDatesForMonth(
-          accessToken,
-          appointmentType.id,
-          calendarId,
-          monthKey
-        )
-        availableDates = availableDates.concat(monthDates)
-      }
-
-      const uniqueDates = dedupeStrings(availableDates)
+    // Which dates have openings, per appointment type and month (requests in parallel)
+    const datesPerType = await mapWithConcurrency(appointmentTypes, AVAILABILITY_CONCURRENCY, async (appointmentType) => {
+      const monthDates = await mapWithConcurrency(monthKeys, AVAILABILITY_CONCURRENCY, monthKey =>
+        this.fetchAvailabilityDatesForMonth(accessToken, appointmentType.id, calendarId, monthKey)
+      )
+      const uniqueDates = dedupeStrings(monthDates.flat())
       const filteredDates = uniqueDates.filter((date) => dateRange.dates.includes(date))
-      const datesToCheck = filteredDates.length > 0 ? filteredDates : dateRange.dates
+      return { appointmentType, dates: filteredDates.length > 0 ? filteredDates : dateRange.dates }
+    })
 
-      for (const slotDate of datesToCheck) {
-        const timeEntries = await this.fetchAvailabilityTimes(
-          accessToken,
-          appointmentType.id,
-          calendarId,
-          slotDate
-        )
-
-        if (timeEntries.length === 0) continue
-
-        const records = buildSlotRecords({
-          userId,
-          source: this.name,
-          calendarId,
-          appointmentType,
-          slotDate,
-          timeEntries,
-          fetchedAt,
-        })
-
-        slots.push(...records)
-      }
-    }
+    // Time slots for every (type, date) pair, again in parallel
+    const pairs = datesPerType.flatMap(({ appointmentType, dates }) =>
+      dates.map(slotDate => ({ appointmentType, slotDate }))
+    )
+    const recordsPerPair = await mapWithConcurrency(pairs, AVAILABILITY_CONCURRENCY, async ({ appointmentType, slotDate }) => {
+      const timeEntries = await this.fetchAvailabilityTimes(accessToken, appointmentType.id, calendarId, slotDate)
+      if (timeEntries.length === 0) return []
+      return buildSlotRecords({
+        userId,
+        source: this.name,
+        calendarId,
+        appointmentType,
+        slotDate,
+        timeEntries,
+        fetchedAt,
+      })
+    })
+    slots.push(...recordsPerPair.flat())
 
     return slots
   }
@@ -258,16 +250,16 @@ export class AcuityAvailabilityAdapter implements AvailabilityAdapter {
       url.searchParams.set('calendarID', calendarId)
       url.searchParams.set('month', month)
 
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-
-      if (!response.ok) {
-        console.error(`Acuity availability/dates failed (${month}):`, response.status)
+      let data: unknown
+      try {
+        data = await fetchJsonWithRetry(url.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+      } catch (err) {
+        console.error(`Acuity availability/dates failed (${month}):`, err instanceof Error ? err.message : err)
         continue
       }
 
-      const data = await response.json()
       const dates = extractDateStrings(data)
       if (dates.length > 0) return dates
     }
@@ -286,16 +278,15 @@ export class AcuityAvailabilityAdapter implements AvailabilityAdapter {
     url.searchParams.set('calendarID', calendarId)
     url.searchParams.set('date', slotDate)
 
-    const response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-
-    if (!response.ok) {
-      console.error(`Acuity availability/times failed (${slotDate}):`, response.status)
+    let data: unknown
+    try {
+      data = await fetchJsonWithRetry(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+    } catch (err) {
+      console.error(`Acuity availability/times failed (${slotDate}):`, err instanceof Error ? err.message : err)
       return []
     }
-
-    const data = await response.json()
 
     if (Array.isArray(data)) return data as TimeEntry[]
     if (data && typeof data === 'object') {

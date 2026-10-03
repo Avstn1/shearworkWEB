@@ -17,6 +17,7 @@ import { AppointmentProcessor } from './processors/appointments'
 import { SquareClientProcessor } from './processors/squareClients'
 import { SquareAppointmentProcessor } from './processors/squareAppointments'
 import { runAggregations } from './processors/aggregations'
+import { fetchAllRows } from './db'
 import { SquareOrderRecord, SquarePaymentRecord } from '@/lib/square/normalize'
 import { DEFAULT_PRIMARY_SERVICE, normalizeServiceName } from '@/lib/booking/serviceNormalization'
 
@@ -280,38 +281,14 @@ export async function pull(
       const locationId = await squareAdapter.getCalendarId(squareAccessToken, supabase, userId)
       const locations = await squareAdapter.fetchLocations(squareAccessToken)
 
-      const squareAppointments = await squareAdapter.fetchAppointmentsForLocations(
-        squareAccessToken,
-        locationId,
-        dateRange,
-        locations
-      )
-
-      const squareOrders = await squareAdapter.fetchOrders(
-        squareAccessToken,
-        locationId,
-        dateRange,
-        locations
-      )
-
-      const squarePayments = await squareAdapter.fetchPayments(
-        squareAccessToken,
-        locationId,
-        dateRange,
-        locations
-      )
-
-      const storedOrders = await loadStoredSquareOrders(
-        supabase,
-        userId,
-        dateRange
-      )
-
-      const storedPayments = await loadStoredSquarePayments(
-        supabase,
-        userId,
-        dateRange
-      )
+      // Independent reads: Square appointments, orders, payments and what we already stored
+      const [squareAppointments, squareOrders, squarePayments, storedOrders, storedPayments] = await Promise.all([
+        squareAdapter.fetchAppointmentsForLocations(squareAccessToken, locationId, dateRange, locations),
+        squareAdapter.fetchOrders(squareAccessToken, locationId, dateRange, locations),
+        squareAdapter.fetchPayments(squareAccessToken, locationId, dateRange, locations),
+        loadStoredSquareOrders(supabase, userId, dateRange),
+        loadStoredSquarePayments(supabase, userId, dateRange),
+      ])
 
       const ordersForMatching = mergeSquareOrders(
         squareOrders,
@@ -463,14 +440,19 @@ async function updatePrimaryServiceForAcuityClients(
   for (let i = 0; i < clientIds.length; i += PRIMARY_SERVICE_QUERY_BATCH_SIZE) {
     const batch = clientIds.slice(i, i + PRIMARY_SERVICE_QUERY_BATCH_SIZE)
 
-    const { data, error } = await supabase
-      .from(`${tablePrefix}acuity_appointments`)
-      .select('client_id, service_type, appointment_date')
-      .eq('user_id', userId)
-      .gte('appointment_date', startDate)
-      .in('client_id', batch)
-
-    if (error) {
+    let data: Array<{ client_id: string; service_type: string | null; appointment_date: string | null }>
+    try {
+      data = await fetchAllRows((from, to) =>
+        supabase
+          .from(`${tablePrefix}acuity_appointments`)
+          .select('client_id, service_type, appointment_date, id')
+          .eq('user_id', userId)
+          .gte('appointment_date', startDate)
+          .in('client_id', batch)
+          .order('id')
+          .range(from, to)
+      )
+    } catch (error) {
       console.error('Failed to load acuity service history:', error)
       return
     }
@@ -516,14 +498,19 @@ async function updatePrimaryServiceForSquareClients(
   for (let i = 0; i < customerIds.length; i += PRIMARY_SERVICE_QUERY_BATCH_SIZE) {
     const batch = customerIds.slice(i, i + PRIMARY_SERVICE_QUERY_BATCH_SIZE)
 
-    const { data, error } = await supabase
-      .from(`${tablePrefix}square_appointments`)
-      .select('customer_id, service_type, appointment_date, status')
-      .eq('user_id', userId)
-      .gte('appointment_date', startDate)
-      .in('customer_id', batch)
-
-    if (error) {
+    let data: Array<{ customer_id: string; service_type: string | null; appointment_date: string | null; status: string | null }>
+    try {
+      data = await fetchAllRows((from, to) =>
+        supabase
+          .from(`${tablePrefix}square_appointments`)
+          .select('customer_id, service_type, appointment_date, status, id')
+          .eq('user_id', userId)
+          .gte('appointment_date', startDate)
+          .in('customer_id', batch)
+          .order('id')
+          .range(from, to)
+      )
+    } catch (error) {
       console.error('Failed to load square service history:', error)
       return
     }
@@ -692,16 +679,30 @@ async function loadStoredSquareOrders(
 ): Promise<SquareOrderRecord[]> {
   const rangeFilter = `and(created_at.gte.${dateRange.startISO},created_at.lte.${dateRange.endISO}),and(closed_at.gte.${dateRange.startISO},closed_at.lte.${dateRange.endISO})`
 
-  const { data, error } = await supabase
-    .from('square_orders')
-    .select('order_id, location_id, customer_id, created_at, closed_at, total_amount, currency, line_items, status, source')
-    .eq('user_id', userId)
-    .or(rangeFilter)
-
-  if (error || !data) {
-    if (error) {
-      console.error('Failed to load stored Square orders:', error)
-    }
+  let data: Array<{
+    order_id: string
+    location_id: string | null
+    customer_id: string | null
+    created_at: string | null
+    closed_at: string | null
+    total_amount: number | null
+    currency: string | null
+    line_items: unknown
+    status: string | null
+    source: string | null
+  }>
+  try {
+    data = await fetchAllRows((from, to) =>
+      supabase
+        .from('square_orders')
+        .select('order_id, location_id, customer_id, created_at, closed_at, total_amount, currency, line_items, status, source')
+        .eq('user_id', userId)
+        .or(rangeFilter)
+        .order('order_id')
+        .range(from, to)
+    )
+  } catch (error) {
+    console.error('Failed to load stored Square orders:', error)
     return []
   }
 
@@ -733,20 +734,24 @@ async function loadStoredSquarePayments(
   userId: string,
   dateRange: DateRange
 ): Promise<SquarePaymentRecord[]> {
-  const { data, error } = await supabase
-    .from('square_payments')
-    .select(
-      'payment_id, location_id, order_id, customer_id, appointment_date, currency, amount_total, tip_amount, processing_fee, net_amount, status, source_type, receipt_number, receipt_url, card_brand, card_last4, created_at, updated_at'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wide row, mapped field by field below
+  let data: any[]
+  try {
+    data = await fetchAllRows((from, to) =>
+      supabase
+        .from('square_payments')
+        .select(
+          'payment_id, location_id, order_id, customer_id, appointment_date, currency, amount_total, tip_amount, processing_fee, net_amount, status, source_type, receipt_number, receipt_url, card_brand, card_last4, created_at, updated_at'
+        )
+        .eq('user_id', userId)
+        .eq('status', 'COMPLETED')
+        .gte('appointment_date', dateRange.startISO)
+        .lte('appointment_date', dateRange.endISO)
+        .order('payment_id')
+        .range(from, to)
     )
-    .eq('user_id', userId)
-    .eq('status', 'COMPLETED')
-    .gte('appointment_date', dateRange.startISO)
-    .lte('appointment_date', dateRange.endISO)
-
-  if (error || !data) {
-    if (error) {
-      console.error('Failed to load stored Square payments:', error)
-    }
+  } catch (error) {
+    console.error('Failed to load stored Square payments:', error)
     return []
   }
 

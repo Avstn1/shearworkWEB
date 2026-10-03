@@ -3,9 +3,9 @@
 //
 // Cron job: runs every hour.
 // Finds all pending rows in sync_status and enqueues one /api/pull
-// job per row to a per-user QStash queue. QStash guarantees sequential
-// delivery within a queue, so months for the same user never overlap.
-// When each pull finishes, /api/pull upserts the result to sync_status.
+// job per row to a per-user QStash queue (parallelism 1), so months for the
+// same user never overlap. /api/pull records processing / completed /
+// retrying / failed in sync_status.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -46,31 +46,63 @@ Deno.serve(async (_req) => {
 
     console.log(`[queue_pending_syncs] Enqueueing ${rows.length} rows...`)
 
-    // Fire and forget — enqueue each month into a per-user named queue.
-    // QStash processes each queue sequentially, so months never overlap per user.
-    for (const row of rows) {
-      const pullUrl = `${siteUrl}/api/pull?granularity=month&month=${encodeURIComponent(row.month)}&year=${row.year}`
+    // One queue per barber (same name as lib/booking/syncQueue.ts) so a barber's months
+    // never run in parallel. Rows are marked 'queued' first so the next hourly run
+    // doesn't enqueue them again; failed enqueues go back to 'pending'.
+    const setStatus = (row: { user_id: string; month: string; year: number }, status: string) =>
+      supabase
+        .from('sync_status')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('user_id', row.user_id)
+        .eq('month', row.month)
+        .eq('year', row.year)
 
-      qstash
-        .queue({ queueName: row.user_id })
-        .enqueue({
-          url: pullUrl,
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-            'X-User-Id': row.user_id,
-            'x-vercel-protection-bypass': BYPASS_TOKEN,
-          },
-        })
-        .then(() => {
-          console.log(`[queue_pending_syncs] ✓ Enqueued ${row.month} ${row.year} for ${row.user_id}`)
-        })
-        .catch((err) => {
-          console.error(`[queue_pending_syncs] ✗ Failed ${row.month} ${row.year} for ${row.user_id}:`, err)
-        })
+    // Newest months first: that's the data barbers look at
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    const rank = (r: { month: string; year: number }) => r.year * 12 + MONTHS.indexOf(r.month)
+    const byUser = new Map<string, typeof rows>()
+    for (const row of [...rows].sort((a, b) => rank(b) - rank(a))) {
+      byUser.set(row.user_id, [...(byUser.get(row.user_id) ?? []), row])
     }
 
-    return new Response(JSON.stringify({ message: 'Enqueued', count: rows.length }), {
+    let enqueued = 0
+    const failures: string[] = []
+
+    // Users in parallel; each user's months in order so their queue keeps that order
+    await Promise.all(Array.from(byUser.entries()).map(async ([userId, userRows]) => {
+      const queue = qstash.queue({ queueName: `sync-${userId}` })
+      try {
+        await queue.upsert({ parallelism: 1 })
+      } catch (err) {
+        console.error(`[queue_pending_syncs] ✗ Could not create queue for ${userId}:`, err)
+        failures.push(userId)
+        return
+      }
+
+      for (const row of userRows) {
+        await setStatus(row, 'queued')
+        try {
+          await queue.enqueue({
+            url: `${siteUrl}/api/pull?granularity=month&month=${encodeURIComponent(row.month)}&year=${row.year}`,
+            method: 'GET',
+            retries: 3,
+            headers: {
+              'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+              'X-User-Id': row.user_id,
+              'x-vercel-protection-bypass': BYPASS_TOKEN,
+            },
+          })
+          enqueued++
+          console.log(`[queue_pending_syncs] ✓ Enqueued ${row.month} ${row.year} for ${row.user_id}`)
+        } catch (err) {
+          await setStatus(row, 'pending')
+          failures.push(`${row.user_id}:${row.month}-${row.year}`)
+          console.error(`[queue_pending_syncs] ✗ Failed ${row.month} ${row.year} for ${row.user_id}:`, err)
+        }
+      }
+    }))
+
+    return new Response(JSON.stringify({ message: 'Enqueued', count: enqueued, failed: failures.length }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })

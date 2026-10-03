@@ -1,6 +1,7 @@
 // lib/booking/processors/aggregations/daily.ts
 
 import { PullContext, AggregationResult } from '../../types'
+import { selectAll, selectAllIn } from '../../db'
 import { OrchestratorOptions, pullOptionsToDateRange } from '../../orchestrator'
 import { validateDateRange } from './shared/utils'
 
@@ -20,22 +21,22 @@ export async function runDailyAggregation(
   try {
     const includeSquare = tablePrefix === ''
 
-    const { data: acuityAppointments, error: acuityError } = await supabase
-      .from(`${tablePrefix}acuity_appointments`)
+    const { data: acuityAppointments, error: acuityError } = await selectAll(() =>
+      supabase.from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, tip')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
-      .lte('appointment_date', dateRange.endISO)
+      .lte('appointment_date', dateRange.endISO), 'id')
 
     if (acuityError) throw acuityError
 
     const { data: squareAppointments, error: squareError } = includeSquare
-      ? await supabase
-        .from('square_appointments')
+      ? await selectAll(() =>
+        supabase.from('square_appointments')
         .select('appointment_date, revenue, tip, order_id, payment_id')
         .eq('user_id', userId)
         .gte('appointment_date', dateRange.startISO)
-        .lte('appointment_date', dateRange.endISO)
+        .lte('appointment_date', dateRange.endISO), 'id')
       : { data: [], error: null }
 
     if (squareError) throw squareError
@@ -68,13 +69,13 @@ export async function runDailyAggregation(
     )
 
     const { data: squarePayments, error: paymentError } = includeSquare
-      ? await supabase
-        .from('square_payments')
+      ? await selectAll(() =>
+        supabase.from('square_payments')
         .select('payment_id, appointment_date, amount_total, tip_amount, order_id, status')
         .eq('user_id', userId)
         .eq('status', 'COMPLETED')
         .gte('appointment_date', dateRange.startISO)
-        .lte('appointment_date', dateRange.endISO)
+        .lte('appointment_date', dateRange.endISO), 'payment_id')
       : { data: [], error: null }
 
     if (paymentError) throw paymentError

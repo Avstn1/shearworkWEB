@@ -1,8 +1,13 @@
 -- Review-only helper (NOT a migration). Run by hand, after taking a backup.
 --
--- None of these tables/views are referenced anywhere in shearwork-web or
--- supabase/functions (checked 2026-10-02). They are test copies and one-off backups
--- from past data migrations. Check pg_cron jobs, database functions and views for
+-- None of these tables are referenced anywhere in shearwork-web or
+-- supabase/functions (checked 2026-10-02). They are one-off backups from past data
+-- migrations.
+--
+-- NOT listed here on purpose: the test_* tables. /api/pull?dryRun=true writes to them
+-- through a table-name prefix (lib/booking/orchestrator.ts, tablePrefix 'test_').
+--
+-- Check pg_cron jobs, database functions and views for
 -- references before dropping (the queries in step 1 help with that).
 
 -- 1. Look for references inside the database
@@ -17,16 +22,6 @@ where command ilike '%test_%' or command ilike '%backup%';
 
 -- 2. Drop (uncomment after a backup and after step 1 comes back clean)
 -- begin;
--- drop table if exists public.test_acuity_appointments;
--- drop table if exists public.test_acuity_clients;
--- drop table if exists public.test_daily_data;
--- drop table if exists public.test_marketing_funnels;
--- drop table if exists public.test_monthly_data;
--- drop table if exists public.test_report_top_clients;
--- drop table if exists public.test_service_bookings;
--- drop table if exists public.test_weekly_data;
--- drop table if exists public.test_weekly_marketing_funnels_base;
--- drop table if exists public.test_weekly_top_clients;
 -- drop table if exists public.migration_backup_acuity_appointments;
 -- drop table if exists public.migration_backup_daily_data;
 -- drop table if exists public.migration_backup_marketing_funnels;

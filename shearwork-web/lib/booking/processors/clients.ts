@@ -2,6 +2,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { fetchAllRows } from '../db'
 import {
   NormalizedAppointment,
   NormalizedClient,
@@ -10,6 +11,18 @@ import {
 } from '../types'
 
 // ======================== TYPES ========================
+
+interface ExistingClientRow {
+  client_id: string
+  email: string | null
+  phone_normalized: string | null
+  first_name: string | null
+  last_name: string | null
+  first_appt: string
+  second_appt: string | null
+  last_appt: string
+  first_source: string | null
+}
 
 interface ClientCache {
   byPhone: Map<string, string>
@@ -131,6 +144,8 @@ export class ClientProcessor {
   private newClientIds: Set<string> = new Set()
   private mergeCount: number = 0
   private tableName: string
+  /** True once every existing client is in the cache (no per-appointment DB lookups needed) */
+  private cacheComplete = false
 
   constructor(
     private supabase: SupabaseClient,
@@ -189,13 +204,20 @@ export class ClientProcessor {
     for (let i = 0; i < clientIds.length; i += batchSize) {
       const batch = clientIds.slice(i, i + batchSize)
       
-      const { data, error } = await this.supabase
-        .from(appointmentsTableName)
-        .select('client_id')
-        .eq('user_id', this.userId)
-        .in('client_id', batch)
-
-      if (error) {
+      // Paged: 100 loyal clients easily have more than 1000 appointments between them,
+      // and a single select would silently undercount.
+      let data: Array<{ client_id: string }>
+      try {
+        data = await fetchAllRows<{ client_id: string }>((from, to) =>
+          this.supabase
+            .from(appointmentsTableName)
+            .select('client_id, id')
+            .eq('user_id', this.userId)
+            .in('client_id', batch)
+            .order('id')
+            .range(from, to)
+        )
+      } catch (error) {
         console.error('Error fetching appointment counts:', error)
         throw error
       }
@@ -282,17 +304,22 @@ export class ClientProcessor {
    * rather than overwriting it with only the current batch's appointments.
    */
   private async loadExistingClients(): Promise<void> {
-    const { data: existingClients, error } = await this.supabase
-      .from(this.tableName)
-      .select('client_id, email, phone_normalized, first_name, last_name, first_appt, second_appt, last_appt, first_source')
-      .eq('user_id', this.userId)
-
-    if (error) {
+    // Read every client in pages: a single select stops at PostgREST's 1000-row cap,
+    // which used to leave large client lists half-cached.
+    let existingClients: ExistingClientRow[]
+    try {
+      existingClients = await fetchAllRows<ExistingClientRow>((from, to) =>
+        this.supabase
+          .from(this.tableName)
+          .select('client_id, email, phone_normalized, first_name, last_name, first_appt, second_appt, last_appt, first_source')
+          .eq('user_id', this.userId)
+          .order('client_id')
+          .range(from, to)
+      )
+    } catch (error) {
       console.error('Error loading existing clients:', error)
       throw error
     }
-
-    if (!existingClients) return
 
     for (const client of existingClients) {
       const clientId = client.client_id
@@ -325,6 +352,8 @@ export class ClientProcessor {
         firstSource: client.first_source,
       })
     }
+
+    this.cacheComplete = true
   }
 
   private async resolveClient(appt: NormalizedAppointment): Promise<string | null> {
@@ -476,6 +505,13 @@ export class ClientProcessor {
 
     let existingClientId: string | null = null
 
+    // With every existing client cached, the cache already answered phone/email/name
+    // (same normalization as the queries below), so a cache miss means a new client.
+    // The DB lookups only remain as a fallback if the full load was skipped.
+    if (this.cacheComplete) {
+      return this.createClient(appt)
+    }
+
     // Try to find existing client by phone (strongest identifier)
     if (phone) {
       const { data } = await this.supabase
@@ -550,7 +586,15 @@ export class ClientProcessor {
       return existingClientId
     }
 
-    // Create new client
+    return this.createClient(appt)
+  }
+
+  private createClient(appt: NormalizedAppointment): string {
+    const email = normalizeEmail(appt.email)
+    const phone = normalizePhone(appt.phoneNormalized)
+    const firstName = normalizeString(appt.firstName)
+    const lastName = normalizeString(appt.lastName)
+
     const newClientId = crypto.randomUUID()
     this.newClientIds.add(newClientId)
 

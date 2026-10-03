@@ -1,6 +1,7 @@
 // lib/booking/processors/aggregations/weekly.ts
 
 import { PullContext, AggregationResult } from '../../types'
+import { selectAll, selectAllIn } from '../../db'
 import { OrchestratorOptions, pullOptionsToDateRange } from '../../orchestrator'
 import { validateDateRange, getMondayOfWeek, getSundayOfWeek, formatISODate } from './shared/utils'
 
@@ -46,23 +47,23 @@ async function aggregateWeeklyData(
   const useSquare = booking_software === 'square'
   
   try {
-    const { data: acuityAppointments, error: acuityError } = useAcuity ? await supabase
-      .from(`${tablePrefix}acuity_appointments`)
+    const { data: acuityAppointments, error: acuityError } = useAcuity ? await selectAll(() =>
+      supabase.from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, tip, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
-      .lte('appointment_date', dateRange.endISO)
+      .lte('appointment_date', dateRange.endISO), 'id')
       : { data: [], error: null }
 
     if (acuityError) throw acuityError
 
     const { data: squareAppointments, error: squareError } = useSquare
-      ? await supabase
-        .from('square_appointments')
+      ? await selectAll(() =>
+        supabase.from('square_appointments')
         .select('appointment_date, revenue, tip, customer_id, order_id, payment_id')
         .eq('user_id', userId)
         .gte('appointment_date', dateRange.startISO)
-        .lte('appointment_date', dateRange.endISO)
+        .lte('appointment_date', dateRange.endISO), 'id')
       : { data: [], error: null }
 
     if (squareError) throw squareError
@@ -98,13 +99,13 @@ async function aggregateWeeklyData(
     )
 
     const { data: squarePayments, error: paymentError } = useSquare
-      ? await supabase
-        .from('square_payments')
+      ? await selectAll(() =>
+        supabase.from('square_payments')
         .select('payment_id, appointment_date, amount_total, tip_amount, order_id, status')
         .eq('user_id', userId)
         .eq('status', 'COMPLETED')
         .gte('appointment_date', dateRange.startISO)
-        .lte('appointment_date', dateRange.endISO)
+        .lte('appointment_date', dateRange.endISO), 'payment_id')
       : { data: [], error: null }
 
     if (paymentError) throw paymentError
@@ -117,22 +118,22 @@ async function aggregateWeeklyData(
     const squareClientIds = [...new Set((squareAppointments || []).map((a) => a.customer_id))]
 
     const { data: acuityClients, error: acuityClientError } = acuityClientIds.length > 0
-      ? await supabase
-        .from(`${tablePrefix}acuity_clients`)
+      ? await selectAllIn(acuityClientIds, idChunk =>
+        supabase.from(`${tablePrefix}acuity_clients`)
         .select('client_id, first_appt')
         .eq('user_id', userId)
-        .in('client_id', acuityClientIds)
+        .in('client_id', idChunk), 'client_id')
       : { data: [], error: null }
 
     if (acuityClientError) throw acuityClientError
 
     const { data: squareClients, error: squareClientError } =
       useSquare && squareClientIds.length > 0
-        ? await supabase
-          .from('square_clients')
+        ? await selectAllIn(squareClientIds, idChunk =>
+          supabase.from('square_clients')
           .select('customer_id, first_appt')
           .eq('user_id', userId)
-          .in('customer_id', squareClientIds)
+          .in('customer_id', idChunk), 'customer_id')
         : { data: [], error: null }
 
     if (squareClientError) throw squareClientError
@@ -300,23 +301,23 @@ async function aggregateWeeklyTopClients(
   validateDateRange(dateRange.startISO, dateRange.endISO)
   
   try {
-    const { data: acuityAppointments, error: acuityError } =  useAcuity ? await supabase
-      .from(`${tablePrefix}acuity_appointments`)
+    const { data: acuityAppointments, error: acuityError } =  useAcuity ? await selectAll(() =>
+      supabase.from(`${tablePrefix}acuity_appointments`)
       .select('appointment_date, revenue, client_id')
       .eq('user_id', userId)
       .gte('appointment_date', dateRange.startISO)
-      .lte('appointment_date', dateRange.endISO)
+      .lte('appointment_date', dateRange.endISO), 'id')
       : { data: [], error: null }
 
     if (acuityError) throw acuityError
 
     const { data: squareAppointments, error: squareError } = useSquare
-      ? await supabase
-        .from('square_appointments')
+      ? await selectAll(() =>
+        supabase.from('square_appointments')
         .select('appointment_date, revenue, customer_id')
         .eq('user_id', userId)
         .gte('appointment_date', dateRange.startISO)
-        .lte('appointment_date', dateRange.endISO)
+        .lte('appointment_date', dateRange.endISO), 'id')
       : { data: [], error: null }
 
     if (squareError) throw squareError
@@ -344,22 +345,22 @@ async function aggregateWeeklyTopClients(
     const squareClientIds = [...new Set((squareAppointments || []).map((a) => a.customer_id))]
 
     const { data: acuityClients, error: acuityClientError } = acuityClientIds.length > 0
-      ? await supabase
-        .from(`${tablePrefix}acuity_clients`)
+      ? await selectAllIn(acuityClientIds, idChunk =>
+        supabase.from(`${tablePrefix}acuity_clients`)
         .select('client_id, first_name, last_name, email, phone_normalized')
         .eq('user_id', userId)
-        .in('client_id', acuityClientIds)
+        .in('client_id', idChunk), 'client_id')
       : { data: [], error: null }
 
     if (acuityClientError) throw acuityClientError
 
     const { data: squareClients, error: squareClientError } =
       useSquare && squareClientIds.length > 0
-        ? await supabase
-          .from('square_clients')
+        ? await selectAllIn(squareClientIds, idChunk =>
+          supabase.from('square_clients')
           .select('customer_id, first_name, last_name, email, phone_normalized')
           .eq('user_id', userId)
-          .in('customer_id', squareClientIds)
+          .in('customer_id', idChunk), 'customer_id')
         : { data: [], error: null }
 
     if (squareClientError) throw squareClientError
@@ -502,12 +503,12 @@ async function aggregateWeeklyMarketingFunnels(
   
   try {
     // Fetch clients whose FIRST appointment is in the date range
-    const { data: clients, error: clientError } = useAcuity ? await supabase
-      .from(`${tablePrefix}acuity_clients`)
+    const { data: clients, error: clientError } = useAcuity ? await selectAll(() =>
+      supabase.from(`${tablePrefix}acuity_clients`)
       .select('client_id, first_appt, first_source, first_name, last_name')
       .eq('user_id', userId)
       .gte('first_appt', dateRange.startISO)
-      .lte('first_appt', dateRange.endISO)
+      .lte('first_appt', dateRange.endISO), 'client_id')
       : { data: [], error: null }
 
     if (clientError) throw clientError
@@ -531,11 +532,11 @@ async function aggregateWeeklyMarketingFunnels(
     const clientIds = validClients.map(c => c.client_id)
     
     // Fetch ONLY the first appointment for each client (to get revenue)
-    const { data: firstAppointments, error: apptError } = await supabase
-      .from(`${tablePrefix}acuity_appointments`)
+    const { data: firstAppointments, error: apptError } = await selectAllIn(clientIds, idChunk =>
+      supabase.from(`${tablePrefix}acuity_appointments`)
       .select('client_id, appointment_date, revenue')
       .eq('user_id', userId)
-      .in('client_id', clientIds)
+      .in('client_id', idChunk), 'id')
 
     if (apptError) throw apptError
 

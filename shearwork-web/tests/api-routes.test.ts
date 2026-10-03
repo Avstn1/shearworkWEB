@@ -23,14 +23,23 @@ const newDb = () => {
   return state.db
 }
 
+// Routes may create their client once at import time, so hand out a stable object that
+// always delegates to the current test's fake database
+const currentDb = {
+  from: (table: string) => state.db.from(table),
+  rpc: (name: string, args: unknown) => state.db.rpc(name, args),
+  auth: { getUser: () => state.db.auth.getUser() },
+  functions: { invoke: (...args: unknown[]) => (state.db.functions.invoke as (...a: unknown[]) => unknown)(...args) },
+}
+
 vi.mock('@/lib/supabaseServer', () => ({
-  createSupabaseAdminClient: () => state.db,
-  createSupabaseServerClient: async () => state.db,
-  createSupabaseTokenClient: () => state.db,
+  createSupabaseAdminClient: () => currentDb,
+  createSupabaseServerClient: async () => currentDb,
+  createSupabaseTokenClient: () => currentDb,
 }))
 
 vi.mock('@/utils/api-auth', () => ({
-  getAuthenticatedUser: async () => ({ user: state.user, supabase: state.db, isService: state.isService }),
+  getAuthenticatedUser: async () => ({ user: state.user, supabase: currentDb, isService: state.isService }),
 }))
 
 vi.mock('@/lib/qstashClient', () => ({
