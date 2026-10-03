@@ -2,9 +2,8 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use server'
-
 import { NextResponse } from 'next/server'
+import { isInternalRequest } from '@/lib/api/guards'
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { openai } from '@/lib/openaiClient'
 import { prompts } from '../prompts'
@@ -68,13 +67,8 @@ function monthYearFallback(params: {
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseAdminClient()
-    const authHeader = req.headers.get('authorization')
-
-    if (
-      !authHeader ||
-      authHeader !== `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`
-    ) {
+    const supabase = createSupabaseAdminClient()
+    if (!isInternalRequest(req)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 },

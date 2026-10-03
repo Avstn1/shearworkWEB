@@ -3,8 +3,6 @@
 import React, { useState, useRef, useEffect, Suspense } from 'react'
 import { AnimatePresence, motion, Variants, easeInOut } from 'framer-motion'
 import { useSearchParams, useRouter } from 'next/navigation'
-import toast from 'react-hot-toast'
-import { supabase } from '@/utils/supabaseClient'
 
 import Navbar from '@/components/Navbar'
 import SidebarTabs from '@/components/Settings/SidebarTabs'
@@ -51,10 +49,8 @@ function SettingsPageContent() {
   const [activeTab, setActiveTab] = useState('profile')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showCreditsModal, setShowCreditsModal] = useState(false)
-  const [authenticating, setAuthenticating] = useState(false)
   const navbarRef = useRef<HTMLDivElement>(null)
   const [navbarHeight, setNavbarHeight] = useState(0)
-  const hasProcessedCode = useRef(false)
 
   useEffect(() => {
     const shouldOpenCredits = searchParams.get('openCredits')
@@ -66,53 +62,7 @@ function SettingsPageContent() {
     }
   }, [searchParams, router])
 
-  useEffect(() => {
-    const authenticateUser = async () => {
-      const code = searchParams.get('code')
-      if (!code) return
-
-      try {
-        console.log('Starting auth with code:', code)
-
-        const response = await fetch('/api/mobile-web-redirect/verify-web-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code })
-        })
-
-        console.log('Response status:', response.status)
-        const data = await response.json()
-        console.log('Response data:', data)
-
-        if (!response.ok || !data.access_token) {
-          console.log('Auth failed - invalid response')
-          toast.error(data.error || 'Invalid or expired code. Please try again from the app.')
-          setAuthenticating(false)
-          router.push('/login')
-          return
-        }
-
-        supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token
-        })
-
-        toast.success('Successfully authenticated!')
-
-        setTimeout(() => {
-          globalThis.location.href = '/settings?openCredits=true'
-        }, 500)
-
-      } catch (err: any) {
-        console.error('Auth error:', err)
-        toast.error('Authentication failed')
-        setAuthenticating(false)
-        router.push('/login')
-      }
-    }
-
-    authenticateUser()
-  }, [searchParams, router])
+  // ?code= (mobile app -> web login) is handled once, globally, by MobileAuthHandler
 
   useEffect(() => {
     if (navbarRef.current) {
@@ -189,15 +139,6 @@ function SettingsPageContent() {
         className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] text-white"
         style={{ paddingTop: 'calc(80px + 1.5rem)' }}
       >
-        {authenticating && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-300 mx-auto mb-4"></div>
-              <p className="text-gray-300">Authenticating...</p>
-            </div>
-          </div>
-        )}
-
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <div className="flex items-center gap-2">

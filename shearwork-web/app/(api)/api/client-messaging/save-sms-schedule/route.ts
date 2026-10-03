@@ -2,11 +2,82 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use server'
-
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { qstashClient } from '@/lib/qstashClient'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { adjustCredits, InsufficientCreditsError } from '@/lib/credits'
+
+const MAX_CAMPAIGN_RECIPIENTS = 10000
+
+/** A client-supplied reservation amount must be a positive integer within the client limit. */
+function parseReservationAmount(previewCount: unknown, clientLimit: unknown): number | null {
+  const amount = Number(previewCount)
+  if (!Number.isInteger(amount) || amount <= 0 || amount > MAX_CAMPAIGN_RECIPIENTS) return null
+  const limit = Number(clientLimit)
+  if (Number.isFinite(limit) && limit > 0 && amount > limit) return null
+  return amount
+}
+
+/**
+ * Returns credits held by an unfinished campaign to the barber's available balance.
+ * Claims the reservation first (credits_reserved -> 0) so concurrent calls release once.
+ * Legacy rows (reserved before credits_reserved existed) release message_limit, capped
+ * by the barber's current reserved balance.
+ */
+async function releaseReservation(messageId: string, userId: string, reason: string) {
+  const admin = createSupabaseAdminClient()
+  const { data: row } = await admin
+    .from('sms_scheduled_messages')
+    .select('*')
+    .eq('id', messageId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (!row || row.is_finished || row.purpose === 'auto-nudge') return 0
+
+  let amount = Number(row.credits_reserved ?? 0)
+  if (amount > 0) {
+    const { data: claimed } = await admin
+      .from('sms_scheduled_messages')
+      .update({ credits_reserved: 0 })
+      .eq('id', messageId)
+      .eq('credits_reserved', amount)
+      .select('id')
+    if (!claimed || claimed.length === 0) return 0
+  } else {
+    // Activated before credits_reserved was tracked
+    if (row.status !== 'ACCEPTED') return 0
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('reserved_credits')
+      .eq('user_id', userId)
+      .single()
+    amount = Math.min(Number(row.message_limit ?? 0), Number(profile?.reserved_credits ?? 0))
+    if (amount <= 0) return 0
+  }
+
+  await adjustCredits({
+    userId,
+    availableDelta: amount,
+    reservedDelta: -amount,
+    action: `${reason} - ${row.title || 'Untitled'}`,
+    referenceId: messageId,
+  }, admin)
+  return amount
+}
+
+/** Records how many credits this campaign holds (no-op before the migration). */
+async function setReservation(messageId: string, amount: number) {
+  const admin = createSupabaseAdminClient()
+  const { error } = await admin
+    .from('sms_scheduled_messages')
+    .update({ credits_reserved: amount })
+    .eq('id', messageId)
+  if (error && error.code !== '42703' && error.code !== 'PGRST204') {
+    console.error('Failed to record credits_reserved:', error)
+  }
+}
 
 
 // Helper function to generate multiple cron expressions for days 29-31
@@ -199,6 +270,9 @@ export async function DELETE(request: Request) {
 
     }
 
+    // Return any credits this unfinished campaign was holding
+    await releaseReservation(id, user.id, 'Campaign deleted')
+
     // Determine whether to soft delete or hard delete
     const shouldSoftDelete = softDelete || message.is_finished;
 
@@ -253,48 +327,40 @@ export async function POST(request: Request) {
 
     console.log("User id: " + user.id)
 
-    // Note: Trial users can now activate Auto-Nudge (removed blocking logic per Task 7)
-
-    // Validate messages based on their status
+    // Validate reservation amounts up front; credits are reserved per message below
     for (const msg of messages) {
-      if (msg.validationStatus === 'ACCEPTED' && msg.previewCount) {
-        // 1. Get current credits
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('available_credits, reserved_credits')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!profile) {
-          throw new Error('Profile not found');
+      if (msg.validationStatus === 'ACCEPTED' && msg.previewCount !== undefined && msg.previewCount !== null) {
+        if (parseReservationAmount(msg.previewCount, msg.clientLimit) === null) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid recipient count' },
+            { status: 400 }
+          )
         }
-
-        // 2. Verify sufficient credits
-        if (profile.available_credits < msg.previewCount) {
-          throw new Error('Insufficient credits');
-        }
-
-        // 3. Update credits: reserve from available
-        const { error: creditError } = await supabase
-          .from('profiles')
-          .update({
-            available_credits: profile.available_credits - msg.previewCount,
-            reserved_credits: (profile.reserved_credits || 0) + msg.previewCount,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
-
-        if (creditError) {
-          throw new Error('Failed to reserve credits');
-        }
-
-        console.log(`✅ Reserved ${msg.previewCount} credits for message ${msg.id}`);
       }
     }
 
     // Process each message (upsert by id)
     const upsertPromises = messages.map(async (msg: any) => {
+      let reservedAmount = 0
       try {
+        // Any credits this message already holds go back first (re-activation or draft)
+        await releaseReservation(msg.id, user.id, 'Campaign reservation released')
+
+        const amount = msg.validationStatus === 'ACCEPTED'
+          ? parseReservationAmount(msg.previewCount, msg.clientLimit)
+          : null
+        if (amount) {
+          await adjustCredits({
+            userId: user.id,
+            availableDelta: -amount,
+            reservedDelta: amount,
+            action: `Campaign activated - ${msg.title || 'Untitled Message'}`,
+            referenceId: msg.id,
+          })
+          reservedAmount = amount
+          console.log(`✅ Reserved ${amount} credits for message ${msg.id}`)
+        }
+
         let cronValue: string
         let cronText: string
         let qstashScheduleIds: string[] = []
@@ -463,6 +529,7 @@ export async function POST(request: Request) {
             .single()
 
           if (error) throw error
+          if (reservedAmount) await setReservation(msg.id, reservedAmount)
           return { success: true, data }
           
         } else {
@@ -490,11 +557,24 @@ export async function POST(request: Request) {
             .single()
 
           if (error) throw error
+          if (reservedAmount) await setReservation(msg.id, reservedAmount)
           return { success: true, data }
         }
         
       } catch (error: any) {
         console.error('Failed to save message:', error)
+        if (reservedAmount) {
+          await adjustCredits({
+            userId: user.id,
+            availableDelta: reservedAmount,
+            reservedDelta: -reservedAmount,
+            action: `Campaign activation failed - ${msg.title || 'Untitled Message'}`,
+            referenceId: msg.id,
+          }).catch(refundError => console.error('Failed to undo reservation:', refundError))
+        }
+        if (error instanceof InsufficientCreditsError) {
+          return { success: false, error: 'Insufficient credits' }
+        }
         return { success: false, error: error.message }
       }
     })

@@ -16,14 +16,17 @@ export const isTrialActive = (profile?: TrialProfile | null): boolean => {
   // Canceled subscription always loses access, regardless of trial flags
   if (profile?.stripe_subscription_status === 'canceled') return false
 
-  if (profile?.stripe_subscription_status === 'trialing' || profile?.trial_active === true) return true
-  if (!profile?.trial_active || !profile.trial_start || !profile.trial_end) return false
+  // Stripe trials: Stripe owns the end date and flips the status when it ends
+  if (profile?.stripe_subscription_status === 'trialing') return true
 
-  const start = new Date(profile.trial_start)
+  // Card-less trials: the flag alone is not enough, trial_end must not have passed.
+  // (Nothing clears trial_active when a card-less trial ends.)
+  if (profile?.trial_active !== true) return false
+  if (!profile.trial_end) return true
+
   const end = new Date(profile.trial_end)
-  const now = new Date()
-
-  return now >= start && now <= end
+  if (Number.isNaN(end.getTime())) return true
+  return new Date() <= end
 }
 
 /**

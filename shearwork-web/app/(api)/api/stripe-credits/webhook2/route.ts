@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { adjustCredits } from '@/lib/credits'
+import { isValidUUID } from '@/utils/validation'
 
 // Stripe client
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -28,10 +30,7 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_CREDITS_WEBHOOK2_SECRET! 
     )
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabase = createSupabaseAdminClient()
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
@@ -39,7 +38,7 @@ export async function POST(req: NextRequest) {
       const supabaseUserId = paymentIntent.metadata?.supabase_user_id
       const creditPackage = paymentIntent.metadata?.credit_package
 
-      if (!supabaseUserId || !creditPackage) {
+      if (!supabaseUserId || !creditPackage || !isValidUUID(supabaseUserId)) {
         console.error('Missing required metadata:', { supabaseUserId, creditPackage })
         return NextResponse.json({ received: true })
       }
@@ -50,48 +49,26 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true })
       }
 
-      // Get current credit balance
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('available_credits, reserved_credits')
-        .eq('user_id', supabaseUserId)
-        .single()
-
-      if (profileError || !profile) {
-        console.error('Failed to fetch profile:', profileError)
-        return NextResponse.json({ received: true })
-      }
-
-      const oldAvailable = profile.available_credits || 0
-      const oldReserved = profile.reserved_credits || 0
-      const newAvailable = oldAvailable + creditsToAdd
-      const newReserved = oldReserved
-
-      // Update available credits
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ available_credits: newAvailable })
-        .eq('user_id', supabaseUserId)
-
-      if (updateError) {
-        console.error('Failed to update credits:', updateError)
-        return NextResponse.json({ received: true })
-      }
-
-      // Log transaction
-      const { error: transactionError } = await supabase
-        .from('credit_transactions')
-        .insert({
-          barber_id: supabaseUserId,
+      // Atomic + idempotent: Stripe retries of the same payment intent add credits once
+      let applied = false
+      try {
+        const result = await adjustCredits({
+          userId: supabaseUserId,
+          availableDelta: creditsToAdd,
           action: `Credits purchased - ${creditPackage} pack`,
-          old_available: oldAvailable,
-          new_available: newAvailable,
-          old_reserved: oldReserved,
-          new_reserved: newReserved,
+          referenceId: paymentIntent.id,
+          idempotencyKey: `stripe_pi:${paymentIntent.id}`,
         })
+        applied = result.applied
+      } catch (creditError) {
+        console.error('Failed to add purchased credits:', creditError)
+        // Let Stripe retry later
+        return NextResponse.json({ error: 'Failed to add credits' }, { status: 500 })
+      }
 
-      if (transactionError) {
-        console.error('Failed to log transaction:', transactionError)
+      if (!applied) {
+        console.log(`ℹ️ Payment intent ${paymentIntent.id} already credited - skipping`)
+        return NextResponse.json({ received: true })
       }
 
       // Create notification

@@ -1,7 +1,7 @@
 // /lib/client_sms_from_barber_nudge/index.ts
 
 import twilio from 'twilio'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -162,7 +162,8 @@ export async function ClientSMSFromBarberNudge(
     username: string
   }
 ) {
-  const supabase = await createSupabaseServerClient()
+  // Runs from webhooks / background jobs (no user session)
+  const supabase = createSupabaseAdminClient()
 
   await supabase
       .from('barber_nudge_success')

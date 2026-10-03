@@ -1,18 +1,11 @@
 // /app/(api)/api/client-messaging/sms-status/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { verifyTwilioRequest } from '@/lib/api/guards'
+import { adjustCredits } from '@/lib/credits'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+const supabase = createSupabaseAdminClient()
 
 // Twilio error code dictionary
 const TWILIO_ERROR_CODES: Record<number, string> = {
@@ -39,7 +32,10 @@ const TWILIO_ERROR_CODES: Record<number, string> = {
 }
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData()
+  // Only accept requests signed by Twilio
+  const params = await verifyTwilioRequest(req)
+  if (!params) return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 })
+  const formData = new URLSearchParams(params)
 
   const messageStatus = formData.get('MessageStatus') as string
   const to = formData.get('To') as string
@@ -64,7 +60,7 @@ export async function POST(req: NextRequest) {
   let client_id: string | null = null;
 
   if (purpose !== 'test_message') {
-    client_id = await getClientId(phoneNormalized);
+    client_id = await getClientId(phoneNormalized, user_id);
   }
 
   // 🔴 STOP / Unsubscribed
@@ -115,6 +111,7 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString()
         })
         .eq('phone_normalized', phoneNormalized)
+        .eq('user_id', user_id)
     }
 
     // Insert successful delivery record
@@ -155,7 +152,7 @@ export async function POST(req: NextRequest) {
 
     // Handle credit refund based on message purpose
     if (purpose === 'test_message' && user_id) {
-      await handleTestMessageCredit(user_id, 'failed')
+      await refundFailedTestMessage(user_id, formData.get('MessageSid') ?? messageId ?? phoneNormalized)
     } 
     // else if (phoneNormalized) {
     //   await handleCreditDeduction(phoneNormalized, 'failed')
@@ -168,14 +165,16 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-async function getClientId(phoneNormalized: string): Promise<string | null> {
+async function getClientId(phoneNormalized: string, userId: string | null): Promise<string | null> {
+  if (!userId) return null
   try {
     const { data } = await supabase
-      // acuity_clients change for testing
       .from('acuity_clients')
       .select('client_id')
       .eq('phone_normalized', phoneNormalized)
-      .single()
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle()
     
     return data?.client_id || null
   } catch (error) {
@@ -184,61 +183,21 @@ async function getClientId(phoneNormalized: string): Promise<string | null> {
   }
 }
 
-async function handleTestMessageCredit(
-  userId: string,
-  status: 'success' | 'failed'
-) {
+/**
+ * Test messages are charged 1 credit when sent (qstash-sms-send). If Twilio reports
+ * the send failed, refund it - once per Twilio message, since status callbacks repeat.
+ */
+async function refundFailedTestMessage(userId: string, twilioMessageKey: string) {
   try {
-    // Check if this is over the 10th test message today
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const { data: testMessages } = await supabase
-      .from('sms_sent')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('purpose', 'test_message')
-      .eq('is_sent', true)
-      .gte('created_at', today.toISOString())
-
-    const testCount = testMessages?.length || 0
-
-    // If this is the 11th+ test message, handle credit deduction
-    if (testCount > 10) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('available_credits')
-        .eq('user_id', userId)
-        .single()
-
-      if (!profile) {
-        console.log(`⚠️ No profile found for user ${userId}`)
-        return
-      }
-
-      if (status === 'success') {
-        // Deduct 1 from available credits (not reserved)
-        await supabase
-          .from('profiles')
-          .update({
-            available_credits: Math.max(0, (profile.available_credits || 0) - 1),
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', userId)
-
-      } else {
-        // Refund: add back to available credits
-        await supabase
-          .from('profiles')
-          .update({
-            available_credits: (profile.available_credits || 0) + 1,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', userId)
-      }
-    }
+    await adjustCredits({
+      userId,
+      availableDelta: 1,
+      action: 'Test message refund - delivery failed',
+      referenceId: twilioMessageKey,
+      idempotencyKey: `test_refund:${twilioMessageKey}`,
+    })
   } catch (error) {
-    console.error('❌ Test message credit handling error:', error)
+    console.error('❌ Test message refund error:', error)
   }
 }
 

@@ -29,6 +29,26 @@ const COLORS = {
   greenGlow: 'rgba(115, 170, 87, 0.4)',
 }
 
+type HoverEvent = React.MouseEvent<HTMLElement>
+
+/** Menu links: green text + tint on hover */
+const hoverHighlight = {
+  onMouseEnter: (e: HoverEvent) => {
+    e.currentTarget.style.color = COLORS.green
+    e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
+  },
+  onMouseLeave: (e: HoverEvent) => {
+    e.currentTarget.style.color = COLORS.text
+    e.currentTarget.style.backgroundColor = 'transparent'
+  },
+}
+
+/** Icon buttons: surface background on hover */
+const hoverSurface = {
+  onMouseEnter: (e: HoverEvent) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid },
+  onMouseLeave: (e: HoverEvent) => { e.currentTarget.style.backgroundColor = 'transparent' },
+}
+
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const [showCreditsModal, setShowCreditsModal] = useState(false)
@@ -119,14 +139,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = COLORS.green
-              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = COLORS.text
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
+            {...hoverHighlight}
           >
             Contact Us
           </a>
@@ -136,14 +149,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)} 
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = COLORS.green
-              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = COLORS.text
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
+            {...hoverHighlight}
           >
             Sign In
           </Link>
@@ -170,14 +176,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = COLORS.green
-              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = COLORS.text
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
+            {...hoverHighlight}
           >
             <Megaphone className="w-5 h-5" />
             <span>Feature Maker</span>
@@ -188,14 +187,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = COLORS.green
-              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = COLORS.text
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
+            {...hoverHighlight}
           >
             <FileText className="w-5 h-5" />
             <span>System Logs</span>
@@ -206,14 +198,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = COLORS.green
-              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = COLORS.text
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
+            {...hoverHighlight}
           >
             <ChartBar className="w-5 h-5" />
             <span>Analytics</span>
@@ -224,14 +209,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = COLORS.green
-              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = COLORS.text
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
+            {...hoverHighlight}
           >
             <ChartBar className="w-5 h-5" />
             <span>Barber Nudge Engagement</span>
@@ -243,14 +221,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
             style={{ color: COLORS.text }}
-            onMouseEnter={(e) => { 
-              e.currentTarget.style.color = COLORS.green
-              e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-            }}
-            onMouseLeave={(e) => { 
-              e.currentTarget.style.color = COLORS.text
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
+            {...hoverHighlight}
           >
             <Grid className="w-5 h-5" />
             <span>Dashboard</span>
@@ -267,14 +238,7 @@ export default function Navbar() {
           onClick={() => setOpen(false)} 
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { 
-            e.currentTarget.style.color = COLORS.green
-            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-          }}
-          onMouseLeave={(e) => { 
-            e.currentTarget.style.color = COLORS.text
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
+          {...hoverHighlight}
         >
           <Grid className="w-5 h-5" /> 
           <span>Dashboard</span>
@@ -284,14 +248,7 @@ export default function Navbar() {
           onClick={() => setOpen(false)} 
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { 
-            e.currentTarget.style.color = COLORS.green
-            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-          }}
-          onMouseLeave={(e) => { 
-            e.currentTarget.style.color = COLORS.text
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
+          {...hoverHighlight}
         >
           <ChartBar className="w-5 h-5" /> 
           <span>Analytics</span>
@@ -301,14 +258,7 @@ export default function Navbar() {
           onClick={() => setOpen(false)} 
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { 
-            e.currentTarget.style.color = COLORS.green
-            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-          }}
-          onMouseLeave={(e) => { 
-            e.currentTarget.style.color = COLORS.text
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
+          {...hoverHighlight}
         >
           <UserCog className="w-5 h-5" /> 
           <span>Client Manager</span>
@@ -318,14 +268,7 @@ export default function Navbar() {
           onClick={() => setOpen(false)} 
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { 
-            e.currentTarget.style.color = COLORS.green
-            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-          }}
-          onMouseLeave={(e) => { 
-            e.currentTarget.style.color = COLORS.text
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
+          {...hoverHighlight}
         >
           <Calendar className="w-5 h-5" /> 
           <span>Appointment Manager</span>
@@ -335,14 +278,7 @@ export default function Navbar() {
           onClick={() => setOpen(false)} 
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { 
-            e.currentTarget.style.color = COLORS.green
-            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-          }}
-          onMouseLeave={(e) => { 
-            e.currentTarget.style.color = COLORS.text
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
+          {...hoverHighlight}
         >
           <CreditCard className="w-5 h-5" /> 
           <span>Expenses</span>
@@ -354,14 +290,7 @@ export default function Navbar() {
           }}
           className="flex items-center gap-3 px-4 py-3 rounded-lg transition w-full text-left"
           style={{ color: COLORS.text }}
-          onMouseEnter={(e) => { 
-            e.currentTarget.style.color = COLORS.green
-            e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-          }}
-          onMouseLeave={(e) => { 
-            e.currentTarget.style.color = COLORS.text
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
+          {...hoverHighlight}
         >
           <Coins className="w-5 h-5" /> 
           <span>Credits</span>
@@ -382,14 +311,7 @@ export default function Navbar() {
         href="/support"
         className="transition font-medium px-4 py-2 rounded-md border border-white"
         style={{ color: COLORS.text }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color = COLORS.green
-          e.currentTarget.style.backgroundColor = 'rgba(115, 170, 87, 0.1)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color = COLORS.text
-          e.currentTarget.style.backgroundColor = 'transparent'
-        }}
+        {...hoverHighlight}
       >
         Contact Us
       </Link>
@@ -422,8 +344,7 @@ export default function Navbar() {
           <div 
             className="p-2 rounded-full transition-colors"
             style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            {...hoverSurface}
           >
             <BookText className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
@@ -433,8 +354,7 @@ export default function Navbar() {
           <div 
             className="p-2 rounded-full transition-colors"
             style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            {...hoverSurface}
           >
             <MessageCircleReply className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
@@ -444,8 +364,7 @@ export default function Navbar() {
           <div 
             className="p-2 rounded-full transition-colors"
             style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            {...hoverSurface}
           >
             <Megaphone className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
@@ -455,8 +374,7 @@ export default function Navbar() {
           <div 
             className="p-2 rounded-full transition-colors"
             style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            {...hoverSurface}
           >
             <FileText className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
@@ -466,8 +384,7 @@ export default function Navbar() {
           <div 
             className="p-2 rounded-full transition-colors"
             style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            {...hoverSurface}
           >
             <ChartBar className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>
@@ -477,8 +394,7 @@ export default function Navbar() {
           <div 
             className="p-2 rounded-full transition-colors"
             style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = COLORS.surfaceSolid }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+            {...hoverSurface}
           >
             <Grid className="w-6 h-6" style={{ color: COLORS.text }} />
           </div>

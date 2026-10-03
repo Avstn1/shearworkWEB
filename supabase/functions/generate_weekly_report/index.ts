@@ -57,7 +57,8 @@ Deno.serve(async (req) => {
     console.log(`Generating report for ${monthNames[selectedMonth]} ${selectedYear} at week number ${week_number_to_generate_report}`);
     
     const url = `https://shearwork-web.vercel.app/api/openai/generate`
-    const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
+    // /api/openai/generate only accepts internal callers (service role key)
+    const token = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
 
     console.log(`STARTING TO GENERATE FOR ${barberData.length} BARBERS. CURRENT TIME: ${new Date()}`);
     const CONCURRENCY_LIMIT = 100;

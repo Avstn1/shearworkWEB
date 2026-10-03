@@ -1,30 +1,30 @@
 // /app/(api)/api/client-messaging/preview-recipients/route.ts
-'use server'
-
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
 
 import { selectClientsForSMS_AutoNudge } from '@/lib/clientSmsSelectionAlgorithm_AutoNudge' 
 import { selectClientsForSMS_Campaign } from '@/lib/clientSmsSelectionAlgorithm_Campaign'
 import { selectClientsForSMS_Mass } from '@/lib/clientSmsSelectionAlgorithm_Mass'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+const supabase = createSupabaseAdminClient()
 
 export async function GET(request: Request) {
   try {
     // Get limit from query params
     const { searchParams } = new URL(request.url)
     
-    const userId = searchParams.get('userId')
+    // Barbers may only preview their own clients; internal callers (qstash-sms-send)
+    // authenticate with the service role key and pass the userId explicitly.
+    const { user, isService } = await getAuthenticatedUser(request)
+    const requestedUserId = searchParams.get('userId')
+    if (!user && !isService) {
+      return NextResponse.json({ success: false, error: 'Not logged in' }, { status: 401 })
+    }
+    if (!isService && requestedUserId && requestedUserId !== user!.id) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+    }
+    const userId = isService ? requestedUserId : user!.id
     if (!userId) throw new Error('userId is required');
 
     const visitingType = searchParams.get('visitingType')

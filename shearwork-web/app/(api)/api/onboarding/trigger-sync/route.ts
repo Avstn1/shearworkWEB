@@ -1,5 +1,5 @@
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { waitUntil } from '@vercel/functions'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
@@ -83,11 +83,9 @@ export async function POST(request: NextRequest) {
 
     const BYPASS_TOKEN = process.env.BYPASS_TOKEN!
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-
     const runSync = async () => {
       // Fresh admin client — request-scoped client dies after response is returned on Vercel
-      const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      const adminSupabase = createSupabaseAdminClient()
 
       for (const { month, year } of orderedMonths) {
         const phase = year === currentYear && month === currentMonth ? 'priority' : 'background'

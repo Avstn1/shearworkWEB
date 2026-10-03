@@ -1,22 +1,24 @@
-// /app/(api)/api/client-messaging/get-campaign-progress/route.ts
+// /app/(api)/api/client-messaging/get-campaign-recipients/route.ts
 
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseAdminClient } from '@/lib/supabaseServer';
+import { getAuthenticatedUser } from '@/utils/api-auth';
 import { NextRequest, NextResponse } from 'next/server';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Only the logged-in barber's own campaigns (a userId query param is ignored)
+    const { user } = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Not logged in' }, { status: 401 });
+    }
+    const userId = user.id;
+    const supabase = createSupabaseAdminClient();
     
     const { searchParams } = new URL(request.url);
     const messageId = searchParams.get('messageId');
-    const userId = searchParams.get('userId');
-
-    if (!messageId || !userId) {
+    if (!messageId) {
       return NextResponse.json(
-        { error: 'messageId and userId are required' },
+        { error: 'messageId is required' },
         { status: 400 }
       );
     }

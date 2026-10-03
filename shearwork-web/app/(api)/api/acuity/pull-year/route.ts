@@ -1,8 +1,8 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use server'
-
 import { NextResponse } from 'next/server'
+import { isServiceRequest } from '@/lib/api/guards'
+import { requireAdmin } from '@/lib/api/requireAdmin'
 import crypto from 'crypto'
 import {
   extractSourceFromForms,
@@ -726,10 +726,18 @@ async function handleSync(request: Request) {
   })
 }
 
-export async function GET(request: Request) {
+// Legacy sync for an arbitrary user_id: service role or admin only
+async function guardedSync(request: Request) {
+  if (!isServiceRequest(request) && !(await requireAdmin(request))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   return handleSync(request)
 }
 
+export async function GET(request: Request) {
+  return guardedSync(request)
+}
+
 export async function POST(request: Request) {
-  return handleSync(request)
+  return guardedSync(request)
 }

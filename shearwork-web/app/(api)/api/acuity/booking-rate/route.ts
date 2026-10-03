@@ -1,6 +1,6 @@
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
-import { createClient } from '@supabase/supabase-js'
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1'
 const WORK_START_HOUR = 8
@@ -299,10 +299,7 @@ export async function GET(request: Request) {
   if (!user || !supabase)
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
-  const serviceClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const serviceClient = createSupabaseAdminClient()
 
   try {
 

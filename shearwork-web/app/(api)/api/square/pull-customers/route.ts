@@ -1,5 +1,4 @@
 // app/api/square/pull-customer/route.ts
-'use server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 function squareBaseUrl() {

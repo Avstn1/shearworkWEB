@@ -1,15 +1,12 @@
 // app/api/pull/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { pull } from '@/lib/booking/orchestrator'
 import { PullOptions, Month, MONTHS } from '@/lib/booking/types'
 
-const serviceSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const serviceSupabase = createSupabaseAdminClient()
 
 /**
  * New modular pull endpoint.

@@ -1,6 +1,4 @@
 // app/api/stripe/resume-subscription/route.ts
-'use server'
-
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'

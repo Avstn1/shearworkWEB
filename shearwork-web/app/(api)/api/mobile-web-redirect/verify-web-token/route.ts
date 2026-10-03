@@ -1,13 +1,10 @@
 // /app/(api)/api/mobile-web-redirect/verify-web-token/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { authCodeCache } from '@/lib/redis'
 import { isValidUUID } from '@/utils/validation'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = createSupabaseAdminClient()
 
 export async function POST(req: NextRequest) {
   try {

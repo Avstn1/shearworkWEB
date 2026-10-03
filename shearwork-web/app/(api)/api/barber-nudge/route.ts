@@ -1,19 +1,19 @@
 // /api/barber-nudge/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { verifyTwilioRequest } from '@/lib/api/guards'
 import { createSmartBuckets } from '@/lib/client_sms_from_barber_nudge/create_smart_buckets'
 // import { ClientSMSFromBarberNudge } from '@/lib/client_sms_from_barber_nudge/index'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabase = createSupabaseAdminClient()
 
 // Callback function that gets activated when a barber replies
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData()
+    // Only accept requests signed by Twilio
+    const params = await verifyTwilioRequest(request)
+    if (!params) return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 })
+    const formData = new URLSearchParams(params)
 
     // Extract Twilio webhook data
     const from = formData.get('From') as string 

@@ -1,8 +1,14 @@
 // /app/(api)/api/client-messaging/qstash_schedule_check/route.ts
 
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/api/requireAdmin'
 
 export async function GET(request: Request) {
+  // Admin QStash inspector only
+  if (!(await requireAdmin(request))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const { searchParams } = new URL(request.url);
   const scheduleId = searchParams.get('scheduleId');
   const messageId = searchParams.get('messageId');

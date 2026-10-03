@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/api/requireAdmin'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,6 +67,11 @@ async function getFebruaryAppointments(
 }
 
 export async function GET(req: NextRequest) {
+  // Debug/admin tool: admins only
+  if (!(await requireAdmin(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const userId = req.nextUrl.searchParams.get('user_id')
 

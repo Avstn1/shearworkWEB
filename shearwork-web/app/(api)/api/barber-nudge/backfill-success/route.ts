@@ -1,4 +1,5 @@
 // app/(api)/api/barber-nudge/backfill-success/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 //
 // Backfill barber_nudge_success for past campaign weeks.
 // For each recent smart bucket, checks if any SMS recipients booked
@@ -19,13 +20,10 @@
 //   ?dryRun=true — find matches but DON'T write to DB. Returns full detail per match.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { isServiceRequest } from '@/lib/api/guards'
+import { requireAdmin } from '@/lib/api/requireAdmin'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+const supabase = createSupabaseAdminClient();
 
 // ----------------------------------------------------------------
 // Helpers (same ISO-week logic as update_sms_barber_success.ts)
@@ -74,6 +72,11 @@ function parseToUTCTimestamp(datetimeStr: string): string {
 // ----------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
+  // Internal tool: service role or an admin user only
+  if (!isServiceRequest(req) && !(await requireAdmin(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const weeksBack = Math.min(Number(searchParams.get('weeks')) || 1, 8);

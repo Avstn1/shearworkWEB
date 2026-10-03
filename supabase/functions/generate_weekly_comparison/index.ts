@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
     const BYPASS_TOKEN = Deno.env.get('BYPASS_TOKEN') ?? ''
 
     const url = `https://shearwork-web.vercel.app/api/openai/generate`
-    const token = Deno.env.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") ?? ''
+    // /api/openai/generate only accepts internal callers (service role key)
+    const token = Deno.env.get("SERVICE_ROLE_KEY") ?? ''
     // Create an array to hold all responses
 
     console.log(`STARTING TO GENERATE FOR ${barberData.length} BARBERS. CURRENT TIME: ${now}`);
