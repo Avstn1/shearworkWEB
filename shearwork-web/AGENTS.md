@@ -16,14 +16,13 @@
 - `npm run start` — run production server.
 - `npm run lint` — ESLint (Next core-web-vitals + TS rules).
 - `npm run type-check` — TypeScript `tsc --noEmit`.
+- `npm test` — Vitest unit/route tests (`tests/**/*.test.ts`).
 
 ## Single-File / Targeted Checks
-- No unit-test framework is configured in this repo.
-- Use per-file linting as the closest “single test”:
-- `npm run lint -- path/to/file.ts`.
-- `npx eslint path/to/file.ts` also works.
+- Single test file: `npx vitest run tests/routing.test.ts`.
+- Single test by name: `npx vitest run -t "settles once"`.
+- Per-file lint: `npx eslint path/to/file.ts`.
 - TypeScript only runs project-wide: `npm run type-check`.
-- If you add a test runner, document single-test commands here.
 
 ## Repo Layout
 - `app/` — Next.js App Router pages, layouts, and API routes.
@@ -40,8 +39,16 @@
 - `orchestrator.ts` coordinates fetch → normalize → process → aggregate.
 - `processors/clients.ts` resolves client identity and upserts.
 - `processors/appointments.ts` upserts appointments with revenue preservation.
-- `processors/aggregations/` handles daily/weekly/monthly rollups.
+- `processors/aggregations/` handles daily/weekly/monthly rollups (run in parallel).
 - When adding Square sync, prefer adapter + orchestrator path.
+- Acuity appointments are fetched with `adapters/acuityRangeFetch.ts`: week-sized
+  ranges, split only when a response is full (`max` reached), 4 requests in flight,
+  retries on 429/5xx. Failures throw so a month is never marked complete with gaps.
+- Background month syncs go through one QStash queue per barber (`lib/booking/syncQueue.ts`,
+  parallelism 1 so a barber's months never run concurrently and duplicate clients).
+  `/api/pull` records `sync_status`: queued → processing → completed | retrying → failed.
+- Page every Supabase read that can exceed 1000 rows (`fetchAllRows` / `selectAll` /
+  `selectAllIn` in `lib/booking/db.ts`): PostgREST silently truncates at 1000.
 
 ## Imports
 - Prefer absolute imports using the `@/` alias (`tsconfig.json`).
@@ -73,7 +80,7 @@
 
 ## React / Next.js Conventions
 - Server Components are default; use `'use client'` only when needed.
-- Some server routes include `'use server'`; keep it if present.
+- Do not add `'use server'` to route handlers (`route.ts`); it is for Server Actions.
 - Keep providers in `app/layout.tsx` or `contexts/`.
 - Use `NextResponse.json()` or `Response.json()` in API routes.
 - Prefer colocating route logic in `lib/` to keep handlers thin.
@@ -85,12 +92,17 @@
 
 ## Error Handling
 - Validate auth via `getAuthenticatedUser` and return 401 on failure.
+- Non-user callers: Twilio webhooks use `verifyTwilioRequest`, QStash routes use
+  `verifySignatureAppRouter`, internal/cron routes use `isInternalRequest` /
+  `isCronOrServiceRequest` (`lib/api/guards.ts`). Never trust a `userId` query param.
+- Change credits only via `adjustCredits` (`lib/credits.ts`), never from the browser.
 - Check Supabase errors and return 400/500 with JSON body.
 - Log errors with context (`console.error('context', err)`).
 - Do not expose secrets or raw tokens in logs or responses.
 
 ## Supabase Usage
-- Use `createSupabaseServerClient` in server contexts.
+- Use `createSupabaseServerClient` for user-scoped server work (anon key + session, RLS).
+- Use `createSupabaseAdminClient` only for system work (webhooks, cron, background jobs).
 - Token rows live in `acuity_tokens` and `square_tokens`.
 - Always scope DB queries by `user_id`.
 - Upsert with `onConflict` to avoid duplicates.
@@ -127,9 +139,11 @@
 - Fix lint warnings in touched files only.
 
 ## Testing
-- No unit/integration test framework is configured.
-- Use `npm run lint` + `npm run type-check` as validation.
-- If tests are added, document how to run a single test.
+- Vitest (`npm test`). Tests live in `tests/`; `tests/helpers/` has a recording fake
+  Supabase client and an in-memory one that enforces the 1000-row cap.
+- Validate changes with `npm test`, `npm run type-check` and `npm run lint`.
+- `scripts/compare-acuity-fetch.ts` compares old vs new Acuity fetching on real data
+  (read-only; see the file header).
 
 ## Documentation
 - Do not add new docs unless requested.

@@ -1,12 +1,9 @@
 // /lib/client_sms_from_barber_nudge/create_smart_buckets.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
-import { createClient } from '@supabase/supabase-js'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL!
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = createSupabaseAdminClient()
 
 // ----------------------------------------------------------------
 // Helpers

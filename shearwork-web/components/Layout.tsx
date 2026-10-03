@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import SignOutButton from '@/components/SignOutButton'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
@@ -22,10 +22,9 @@ const navItemVariants = {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const { user, profile, isLoading, isAdmin } = useAuth()
+  const { isLoading, isAdmin } = useAuth()
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768)
@@ -34,15 +33,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  useEffect(() => {
-    if (isLoading) return
-    if (!user?.id) return
-
-    const publicPages = ['/login', '/signup', '/pricing', '/pricing/return']
-    if (profile?.onboarded === false && !publicPages.includes(pathname)) {
-      router.push('/pricing/return')
-    }
-  }, [isLoading, pathname, profile?.onboarded, router, user?.id])
+  // Page access (including onboarding) is enforced by proxy.ts + LayoutWrapper
 
   const navLinks = isAdmin
     ? navLinksBase.filter(link => link.href !== '/dashboard').concat({

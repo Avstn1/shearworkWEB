@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
+import { sanitizeNextPath } from '@/lib/auth/routing';
 import { Eye, EyeOff, Mail, Lock, LogIn, TrendingUp, Users, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
@@ -79,7 +80,7 @@ export default function LoginPage() {
         device_type: 'web',
         device_id: deviceId,
         device_name: `${browser} on ${os}`,
-        session_id: sessionId || userProfile.session?.access_token, // Use session UUID from RPC
+        session_id: sessionId || null, // Session UUID from RPC (never store the access token)
         last_login: new Date().toISOString(),
         last_active: new Date().toISOString(),
         user_agent: navigator.userAgent,
@@ -87,8 +88,10 @@ export default function LoginPage() {
         onConflict: 'user_id,device_id'
       });
 
+      // Return to the page that sent them to login (proxy adds ?next=)
+      const next = sanitizeNextPath(new URLSearchParams(window.location.search).get('next'));
       router.refresh();
-      router.push('/dashboard');
+      router.push(next ?? '/dashboard');
       
       const { data: userData } = await supabase.from('profiles').select('role, full_name').eq('user_id', userProfile.user?.id).single();
       if (userData?.role != 'Admin') {

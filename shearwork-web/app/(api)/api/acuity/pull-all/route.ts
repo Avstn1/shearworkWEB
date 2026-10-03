@@ -1,7 +1,7 @@
-'use server'
 
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { isCronOrServiceRequest, unauthorized } from '@/lib/api/guards'
 import crypto from 'crypto'
 import {
   MONTHS,
@@ -34,8 +34,14 @@ function getAllDatesInMonth(monthName: string, year: number): string[] {
   return dates
 }
 
+// Vercel cron sends GET with `Authorization: Bearer $CRON_SECRET`
+export async function GET(req: Request) {
+  return POST(req)
+}
+
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient()
+  if (!isCronOrServiceRequest(req)) return unauthorized()
+  const supabase = createSupabaseAdminClient()
 
   // 🔽 NEW: allow explicit year (query or JSON body), fallback to current year
   let requestedYear: number

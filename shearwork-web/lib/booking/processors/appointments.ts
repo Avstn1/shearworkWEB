@@ -1,10 +1,13 @@
 // lib/booking/processors/appointments.ts
 
 import { SupabaseClient } from '@supabase/supabase-js'
+import { chunk, fetchAllRows, fetchByIdChunks, IN_CHUNK_SIZE } from '../db'
 import {
   NormalizedAppointment,
   ClientResolutionResult,
 } from '../types'
+
+const UPSERT_CHUNK_SIZE = 500
 
 // ======================== TYPES ========================
 
@@ -195,15 +198,20 @@ export class AppointmentProcessor {
       updated_at: a.row.updated_at,
     }))
 
-    // Upsert appointments (without revenue/tip to preserve manual edits)
-    const { data: upsertedAppts, error: upsertError } = await this.supabase
-      .from(this.tableName)
-      .upsert(rowsToUpsert, { onConflict: 'user_id,acuity_appointment_id' })
-      .select('id, acuity_appointment_id, tip, revenue')
+    // Upsert appointments (without revenue/tip to preserve manual edits), in chunks so a
+    // year of appointments doesn't become one oversized request
+    const upsertedAppts: Array<{ id: string; acuity_appointment_id: string; tip: number | null; revenue: number | null }> = []
+    for (const rows of chunk(rowsToUpsert, UPSERT_CHUNK_SIZE)) {
+      const { data, error: upsertError } = await this.supabase
+        .from(this.tableName)
+        .upsert(rows, { onConflict: 'user_id,acuity_appointment_id' })
+        .select('id, acuity_appointment_id, tip, revenue')
 
-    if (upsertError) {
-      console.error('Appointment upsert error:', upsertError)
-      throw upsertError
+      if (upsertError) {
+        console.error('Appointment upsert error:', upsertError)
+        throw upsertError
+      }
+      upsertedAppts.push(...(data ?? []))
     }
 
     // Delete canceled appointments from the database
@@ -226,119 +234,9 @@ export class AppointmentProcessor {
     // }
 
     if (this.appointmentIDsToDelete.length > 0) {
-      // Extract just the appointment IDs for the query
-      const appointmentIds = this.appointmentIDsToDelete.map(([apptId]) => apptId)
-      
-      // First, check what actually exists in the database
-      const { data: existingRows, error: checkError } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .eq('user_id', this.userId)
-        .in('acuity_appointment_id', appointmentIds)
-
-      if (checkError) {
-        // console.log('Error checking existing appointments for deletion:', checkError)
-      }
-
-      if (existingRows && existingRows.length > 0) {
-        const { data: deletedRows, error: deleteError } = await this.supabase
-          .from(this.tableName)
-          .delete()
-          .eq('user_id', this.userId)
-          .in('acuity_appointment_id', appointmentIds)
-          .select()
-
-        if (deleteError) {
-          throw deleteError
-        }
-
-        // console.log('Deleted rows:', deletedRows)
-        // console.log('Number of rows deleted:', deletedRows?.length || 0)
-
-        // Now handle client updates/deletions
-        const clientIds = new Set(deletedRows.map(row => row.client_id).filter(Boolean))
-        
-        for (const clientId of clientIds) {
-          // Count remaining appointments for this client
-          const { count, error: countError } = await this.supabase
-            .from(this.tableName)
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', this.userId)
-            .eq('client_id', clientId)
-
-          if (countError) {
-            console.error('Error counting appointments for client:', clientId, countError)
-            continue
-          }
-
-          if (count === 0) {
-            // Delete the client entirely
-            const { error: deleteClientError } = await this.supabase
-              .from('acuity_clients')
-              .delete()
-              .eq('client_id', clientId)
-              .eq('user_id', this.userId)
-
-            if (deleteClientError) {
-              console.error('Error deleting client:', clientId, deleteClientError)
-            } else {
-              // console.log('Deleted client:', clientId)
-            }
-          } else {
-            // Update total_appointments and potentially last_appt
-            const { data: clientData, error: clientFetchError } = await this.supabase
-              .from('acuity_clients')
-              .select('last_appt')
-              .eq('client_id', clientId)
-              .eq('user_id', this.userId)
-              .single()
-
-            if (clientFetchError) {
-              console.error('Error fetching client data:', clientId, clientFetchError)
-              continue
-            }
-
-            // Get the most recent appointment for this client
-            const { data: latestAppt, error: latestApptError } = await this.supabase
-              .from(this.tableName)
-              .select('appointment_date')
-              .eq('user_id', this.userId)
-              .eq('client_id', clientId)
-              .order('appointment_date', { ascending: false })
-              .limit(1)
-              .single()
-
-            if (latestApptError) {
-              console.error('Error fetching latest appointment:', clientId, latestApptError)
-              continue
-            }
-
-            const updateData: any = {
-              total_appointments: count,
-              updated_at: new Date().toISOString(),
-            }
-
-            // Update last_appt if it changed
-            if (latestAppt && latestAppt.appointment_date !== clientData.last_appt) {
-              updateData.last_appt = latestAppt.appointment_date
-            }
-
-            const { error: updateClientError } = await this.supabase
-              .from('acuity_clients')
-              .update(updateData)
-              .eq('client_id', clientId)
-              .eq('user_id', this.userId)
-
-            if (updateClientError) {
-              console.error('Error updating client:', clientId, updateClientError)
-            } else {
-              // console.log('Updated client:', clientId, updateData)
-            }
-          }
-        }
-      } else {
-        // console.log('No matching rows found to delete')
-      }
+      await this.removeCanceledAppointments(
+        this.appointmentIDsToDelete.map(([apptId]) => apptId)
+      )
     }
 
     let inserted = 0
@@ -358,29 +256,28 @@ export class AppointmentProcessor {
       revenuePreserved = upsertedAppts.length - needsValues.length
       updated = revenuePreserved
 
-      // Set revenue/tip only for new appointments
-      for (const appt of needsValues) {
+      // Fill revenue/tip only where they are still empty (manual edits are kept), as one
+      // bulk upsert instead of an UPDATE per appointment
+      const rowByAppointmentId = new Map(rowsToUpsert.map(row => [row.acuity_appointment_id, row]))
+      const fills = needsValues.flatMap(appt => {
         const values = acuityValues[appt.acuity_appointment_id]
-        if (!values) continue
+        const row = rowByAppointmentId.get(appt.acuity_appointment_id)
+        if (!values || !row) return []
+        return [{
+          ...row,
+          revenue: appt.revenue ?? values.revenue,
+          tip: appt.tip ?? values.tip,
+        }]
+      })
 
-        const updates: { tip?: number; revenue?: number } = {}
+      for (const rows of chunk(fills, UPSERT_CHUNK_SIZE)) {
+        const { error: updateError } = await this.supabase
+          .from(this.tableName)
+          .upsert(rows, { onConflict: 'user_id,acuity_appointment_id' })
 
-        if (appt.tip === null) {
-          updates.tip = values.tip
-        }
-        if (appt.revenue === null) {
-          updates.revenue = values.revenue
-        }
-
-        if (Object.keys(updates).length > 0) {
-          const { error: updateError } = await this.supabase
-            .from(this.tableName)
-            .update(updates)
-            .eq('id', appt.id)
-
-          if (updateError) {
-            console.error(`Failed to update appointment ${appt.id}:`, updateError)
-          }
+        if (updateError) {
+          console.error('Failed to set revenue/tip on new appointments:', updateError)
+          throw updateError
         }
       }
     }
@@ -393,4 +290,76 @@ export class AppointmentProcessor {
       revenuePreserved,
     }
   }
+
+  /**
+   * Deletes canceled/no-show appointments, then fixes up their clients in bulk:
+   * clients with no appointments left are removed, the rest get a fresh
+   * total_appointments and last_appt.
+   */
+  private async removeCanceledAppointments(appointmentIds: string[]): Promise<void> {
+    const clientsTable = this.tableName.replace('acuity_appointments', 'acuity_clients')
+
+    const affectedClientIds = new Set<string>()
+    for (const ids of chunk(appointmentIds, IN_CHUNK_SIZE)) {
+      const { data: deletedRows, error: deleteError } = await this.supabase
+        .from(this.tableName)
+        .delete()
+        .eq('user_id', this.userId)
+        .in('acuity_appointment_id', ids)
+        .select('client_id')
+
+      if (deleteError) throw deleteError
+      for (const row of deletedRows ?? []) {
+        if (row.client_id) affectedClientIds.add(row.client_id)
+      }
+    }
+
+    if (affectedClientIds.size === 0) return
+
+    // Remaining appointments for every affected client, in one paged read per chunk
+    const remaining = await fetchByIdChunks(Array.from(affectedClientIds), idChunk =>
+      fetchAllRows<{ client_id: string; appointment_date: string }>((from, to) =>
+        this.supabase
+          .from(this.tableName)
+          .select('client_id, appointment_date, id')
+          .eq('user_id', this.userId)
+          .in('client_id', idChunk)
+          .order('id')
+          .range(from, to)
+      )
+    )
+
+    const stats = new Map<string, { count: number; lastAppt: string | null }>()
+    for (const row of remaining) {
+      const current = stats.get(row.client_id) ?? { count: 0, lastAppt: null }
+      current.count += 1
+      if (row.appointment_date && (!current.lastAppt || row.appointment_date > current.lastAppt)) {
+        current.lastAppt = row.appointment_date
+      }
+      stats.set(row.client_id, current)
+    }
+
+    const emptyClients = Array.from(affectedClientIds).filter(id => !stats.has(id))
+    for (const ids of chunk(emptyClients, IN_CHUNK_SIZE)) {
+      const { error } = await this.supabase
+        .from(clientsTable)
+        .delete()
+        .eq('user_id', this.userId)
+        .in('client_id', ids)
+      if (error) console.error('Error deleting clients without appointments:', error)
+    }
+
+    const now = new Date().toISOString()
+    await Promise.all(
+      Array.from(stats.entries()).map(async ([clientId, { count, lastAppt }]) => {
+        const { error } = await this.supabase
+          .from(clientsTable)
+          .update({ total_appointments: count, last_appt: lastAppt, updated_at: now })
+          .eq('client_id', clientId)
+          .eq('user_id', this.userId)
+        if (error) console.error('Error updating client:', clientId, error)
+      })
+    )
+  }
+
 }

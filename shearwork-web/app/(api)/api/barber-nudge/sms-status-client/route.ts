@@ -1,17 +1,9 @@
 // /api/barber-nudge/sms-status-client/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-})
+import { verifyTwilioRequest } from '@/lib/api/guards'
+const supabase = createSupabaseAdminClient()
 
 // Twilio error code dictionary
 const TWILIO_ERROR_CODES: Record<number, string> = {
@@ -39,7 +31,10 @@ const TWILIO_ERROR_CODES: Record<number, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData()
+    // Only accept requests signed by Twilio
+    const params = await verifyTwilioRequest(req)
+    if (!params) return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 })
+    const formData = new URLSearchParams(params)
 
     const messageStatus = formData.get('MessageStatus') as string
     const to = formData.get('To') as string

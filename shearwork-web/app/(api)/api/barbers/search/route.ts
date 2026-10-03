@@ -1,20 +1,26 @@
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Public barber lookup for the /book page. Only returns the public booking fields
+// of onboarded, non-admin profiles.
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const search = searchParams.get('q')
+  const search = request.nextUrl.searchParams.get('q')?.trim()
 
-  if (!search || search.length < 2) {
+  if (!search || search.length < 2 || search.length > 60) {
     return NextResponse.json([])
   }
 
-  const supabase = await createSupabaseServerClient() 
+  // Treat the query literally: escape LIKE wildcards
+  const pattern = `%${search.replace(/[\\%_]/g, char => `\\${char}`)}%`
+
+  const supabase = createSupabaseAdminClient()
 
   const { data, error } = await supabase
     .from('profiles')
     .select('full_name, booking_link, phone')
-    .ilike('full_name', `%${search}%`)
+    .ilike('full_name', pattern)
+    .eq('onboarded', true)
+    .neq('role', 'Admin')
     .limit(10)
 
   if (error) {

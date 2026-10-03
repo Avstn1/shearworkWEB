@@ -1,10 +1,11 @@
 // /app/(api)/api/client-messaging/qstash-sms-send/route.ts
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use server'
-
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { getAuthenticatedUser } from '@/utils/api-auth'
+import { unauthorized } from '@/lib/api/guards'
+import { adjustCredits, InsufficientCreditsError } from '@/lib/credits'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 import { qstashClient } from '@/lib/qstashClient'
 import pMap from "p-map"
@@ -34,16 +35,7 @@ type AvailabilityLookup = {
 
 const SLOT_SUGGESTION_LIMIT = 3
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+const supabase = createSupabaseAdminClient()
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -175,44 +167,25 @@ async function handler(request: Request) {
         )
       }
 
-      if ((profile.available_credits ?? 0) < 1) {
-        return NextResponse.json(
-          { success: false, error: 'Insufficient credits' },
-          { status: 402 }
-        )
-      }
-
-      const oldAvailable = profile.available_credits || 0
-      const newAvailable = oldAvailable - 1
-
-      const { error: creditUpdateError } = await supabase
-        .from('profiles')
-        .update({ available_credits: newAvailable })
-        .eq('user_id', scheduledMessage.user_id)
-
-      if (creditUpdateError) {
-        console.error('❌ Failed to update credits:', creditUpdateError)
+      try {
+        await adjustCredits({
+          userId: scheduledMessage.user_id,
+          availableDelta: -1,
+          action: `Test message - ${scheduledMessage.title || 'Message'}`,
+          referenceId: scheduledMessage.id,
+        })
+      } catch (creditError) {
+        if (creditError instanceof InsufficientCreditsError) {
+          return NextResponse.json(
+            { success: false, error: 'Insufficient credits' },
+            { status: 402 }
+          )
+        }
+        console.error('❌ Failed to update credits:', creditError)
         return NextResponse.json(
           { success: false, error: 'Failed to update credits' },
           { status: 500 }
         )
-      }
-
-      const { error: transactionError } = await supabase
-        .from('credit_transactions')
-        .insert({
-          user_id: scheduledMessage.user_id,
-          action: `Test message - ${scheduledMessage.title || 'Message'}`,
-          old_available: oldAvailable,
-          new_available: newAvailable,
-          old_reserved: 0,
-          new_reserved: 0,
-          reference_id: scheduledMessage.id,
-          created_at: new Date().toISOString(),
-        })
-
-      if (transactionError) {
-        console.error('❌ Failed to log test message transaction:', transactionError)
       }
 
       recipients = [{
@@ -236,7 +209,9 @@ async function handler(request: Request) {
         ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&visitingType=${scheduledMessage.visiting_type}&algorithm=${algorithm}`
         : `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/preview-recipients?limit=${limit}&userId=${scheduledMessage.user_id}&algorithm=${algorithm}&messageId=${messageId}`;
       
-      const response = await fetch(apiUrl);
+      const response = await fetch(apiUrl, {
+        headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
+      });
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -527,14 +502,29 @@ function getSlotSortValue(slot: AvailabilitySlotRow): number {
   return Number.isNaN(fallbackValue) ? Number.MAX_SAFE_INTEGER : fallbackValue
 }
 
-// Export POST with conditional signature verification
+// Test sends come from the logged-in barber (must own the message); everything
+// else must be a signed QStash delivery.
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
   const action = searchParams.get('action')
-  
-  if (action === 'test' || action === 'mass_test') {
+
+  if (action === 'test') {
+    const { user } = await getAuthenticatedUser(request)
+    if (!user) return unauthorized('Not logged in')
+
+    const messageId = searchParams.get('messageId')
+    const { data: owned } = await supabase
+      .from('sms_scheduled_messages')
+      .select('id')
+      .eq('id', messageId ?? '')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!owned) {
+      return NextResponse.json({ success: false, error: 'Message not found' }, { status: 404 })
+    }
+
     return handler(request)
   }
-  
+
   return verifySignatureAppRouter(handler)(request)
 }

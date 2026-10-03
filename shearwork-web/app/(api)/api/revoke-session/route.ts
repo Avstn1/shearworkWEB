@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/api/requireAdmin'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
@@ -13,6 +14,11 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: Request) {
+  // Debug/admin tool: admins only
+  if (!(await requireAdmin(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const { session_id } = await req.json()
 

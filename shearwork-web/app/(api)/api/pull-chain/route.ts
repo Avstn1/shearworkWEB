@@ -1,4 +1,6 @@
 // app/api/pull-chain/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { isServiceRequest } from '@/lib/api/guards'
 //
 // Internal-only endpoint. Never called by the frontend.
 // Authenticated exclusively by service role key in Authorization header.
@@ -8,18 +10,14 @@
 // FOR UPDATE SKIP LOCKED ensures two simultaneous triggers never process the same row.
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { pull } from '@/lib/booking/orchestrator'
 import { Month } from '@/lib/booking/types'
 import { after } from 'next/server'
 
-const serviceSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const serviceSupabase = createSupabaseAdminClient()
 
 export async function POST(request: Request) {
-  if (request.headers.get('Authorization') !== `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`) {
+  if (!isServiceRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

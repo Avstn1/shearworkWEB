@@ -1,6 +1,4 @@
 // app/api/stripe/billing-summary/route.ts
-'use server'
-
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'

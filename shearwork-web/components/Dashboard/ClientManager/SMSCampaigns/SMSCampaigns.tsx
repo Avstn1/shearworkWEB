@@ -470,6 +470,8 @@ export default function SMSCampaigns() {
 
         if (!response.ok) throw new Error('Failed to delete message');
         
+        // Deleting an unfinished campaign returns its reserved credits
+        await fetchCredits();
         toast.success('Message deleted successfully');
       } catch (error) {
         console.error('Delete error:', error);
@@ -508,70 +510,11 @@ export default function SMSCampaigns() {
       );
   };
 
+  // Credits held by an active campaign are released/re-reserved by the server when
+  // the edit is saved (draft or re-activate), so entering edit mode changes nothing.
   const enableEditMode = async (id: string) => {
     const msg = messages.find((m) => m.id === id);
     if (msg) {
-      if (msg.validationStatus === 'ACCEPTED' && previewCounts[id]) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-
-          // Get current credits
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('available_credits, reserved_credits')
-            .eq('user_id', user.id)
-            .single();
-
-          if (!profile) return;
-
-          // Refund: move from reserved back to available
-          const refundAmount = Math.min(previewCounts[id], profile.reserved_credits || 0);
-
-          const oldAvailable = profile.available_credits || 0;
-          const newAvailable = oldAvailable + refundAmount;
-          const oldReserved = profile.reserved_credits || 0;
-          const newReserved = Math.max(0, oldReserved - refundAmount);
-          
-          const { error } = await supabase
-            .from('profiles')
-            .update({
-              available_credits: (profile.available_credits || 0) + refundAmount,
-              reserved_credits: Math.max(0, (profile.reserved_credits || 0) - refundAmount),
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id);
-
-          if (error) {
-            console.error('Failed to refund credits:', error);
-            toast.error('Failed to refund credits');
-            return;
-          }
-
-          // Update local state
-          setAvailableCredits(prev => prev + refundAmount);
-          toast.success(`${refundAmount} credits refunded - message set to draft`);
-
-          await supabase
-          .from('credit_transactions')
-          .insert({
-            user_id: user.id,
-            action: `Campaign deactivated - ${msg.title}`,
-            old_available: oldAvailable,
-            new_available: newAvailable,
-            old_reserved: oldReserved,
-            new_reserved: newReserved,
-            reference_id: msg.id, 
-            created_at: new Date().toISOString()
-          });
-
-        } catch (error) {
-          console.error('Failed to refund credits:', error);
-          toast.error('Failed to refund credits');
-          return;
-        }
-      }
-
       // Store original for cancel
       setOriginalMessages({
         ...originalMessages,
@@ -622,59 +565,12 @@ export default function SMSCampaigns() {
         return;
       }
       
-      if (availableCredits < requiredCredits) {
+      // A campaign that was already active gets its own reservation back on re-activation,
+      // so only new activations can be checked against the visible balance here.
+      const wasActive = originalMessages[msgId]?.validationStatus === 'ACCEPTED';
+      if (!wasActive && availableCredits < requiredCredits) {
         toast.error(`Insufficient credits. You need ${requiredCredits} but only have ${availableCredits} available.`);
         return;
-      }
-    }
-
-    // REFUND SECTION: If saving as draft and message was previously activated, refund credits
-    if (mode === 'draft' && msg.validationStatus === 'ACCEPTED' && previewCounts[msgId]) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('available_credits, reserved_credits')
-            .eq('user_id', user.id)
-            .single();
-
-          if (profile) {
-            const refundAmount = Math.min(previewCounts[msgId], profile.reserved_credits || 0);
-            
-            const oldAvailable = profile.available_credits || 0;
-            const newAvailable = oldAvailable + refundAmount;
-            const oldReserved = profile.reserved_credits || 0;
-            const newReserved = Math.max(0, oldReserved - refundAmount);
-            
-            await supabase
-              .from('profiles')
-              .update({
-                available_credits: newAvailable,
-                reserved_credits: newReserved,
-                updated_at: new Date().toISOString()
-              })
-              .eq('user_id', user.id);
-
-            setAvailableCredits(newAvailable);
-            
-            // Log credit transaction
-            await supabase
-              .from('credit_transactions')
-              .insert({
-                user_id: user.id,
-                action: `Campaign saved as draft - ${msg.title}`,
-                old_available: oldAvailable,
-                new_available: newAvailable,
-                old_reserved: oldReserved,
-                new_reserved: newReserved,
-                reference_id: msg.id, 
-                created_at: new Date().toISOString()
-              });
-          }
-        }
-      } catch (error) {
-        console.error('Failed to refund credits:', error);
       }
     }
 
@@ -746,39 +642,9 @@ export default function SMSCampaigns() {
       }
 
       if (data.success) {
-        // Only deduct credits on activation (not when saving as draft)
-        if (mode === 'activate' && previewCounts[msgId]) {
-          const oldAvailable = availableCredits;
-          const newAvailable = availableCredits - previewCounts[msgId];
-          setAvailableCredits(newAvailable);
-          
-          // Log credit transaction
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('reserved_credits')
-              .eq('user_id', user.id)
-              .single();
-            
-            const newReserved = profile?.reserved_credits || 0;
-            const oldReserved = newReserved - previewCounts[msgId];
+        // The server reserved/released credits; show the real balance
+        await fetchCredits();
 
-            await supabase
-              .from('credit_transactions')
-              .insert({
-                user_id: user.id,
-                action: `Campaign activated - ${msg.title}`,
-                old_available: oldAvailable,
-                new_available: newAvailable,
-                old_reserved: oldReserved,
-                new_reserved: newReserved,
-                reference_id: msg.id, 
-                created_at: new Date().toISOString()
-              });
-          }
-        }
-        
         setMessages(messages.map(m =>
           m.id === msgId
             ? { 

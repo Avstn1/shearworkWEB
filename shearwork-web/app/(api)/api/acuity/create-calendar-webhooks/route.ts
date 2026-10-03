@@ -1,17 +1,10 @@
 // app/api/acuity/create-calendar-webhooks/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { isServiceRequest } from '@/lib/api/guards'
+import { requireAdmin } from '@/lib/api/requireAdmin'
 import { createWebhooksForUser } from '@/lib/acuity_webhooks/api'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-})
+const supabase = createSupabaseAdminClient()
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1'
 
@@ -48,6 +41,11 @@ async function fetchCalendarIdByName(accessToken: string, calendarName: string):
 }
 
 export async function POST(request: Request) {
+  // Internal tool: service role or an admin user only
+  if (!isServiceRequest(request) && !(await requireAdmin(request))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const { user_id, calendar_name } = await request.json()
 

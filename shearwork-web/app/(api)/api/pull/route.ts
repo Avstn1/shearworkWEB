@@ -1,15 +1,13 @@
 // app/api/pull/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { pull } from '@/lib/booking/orchestrator'
 import { PullOptions, Month, MONTHS } from '@/lib/booking/types'
+import { isFinalAttempt, isQStashDelivery } from '@/lib/booking/syncQueue'
 
-const serviceSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
+const serviceSupabase = createSupabaseAdminClient()
 
 /**
  * New modular pull endpoint.
@@ -93,6 +91,11 @@ export async function GET(request: Request) {
   if (weekNumberStr) options.weekNumber = parseInt(weekNumberStr, 10)
   if (dayStr) options.day = parseInt(dayStr, 10)
 
+  // sync_status bookkeeping applies to real (non dry-run) single-month pulls
+  const trackStatus = granularity === 'month' && Boolean(month) && !dryRun
+  const statusKey = { user_id: user.id, month: month as string, year }
+  const previousStatus = trackStatus ? await markProcessing(statusKey) : null
+
   // Run the pull
   try {
     const result = await pull(supabase, user.id, options, {
@@ -101,13 +104,20 @@ export async function GET(request: Request) {
       skipAggregations,
     })
 
-    if (granularity === 'month' && month && !dryRun) {
-      await serviceSupabase
-        .from('sync_status')
-        .upsert(
-          { user_id: user.id, month, year, status: 'completed', error_message: null, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id,month,year' },
-        )
+    // A source failed (Acuity/Square error after retries). Report a non-2xx so a
+    // queued sync is retried by QStash instead of being marked complete with gaps.
+    const sourceErrors = (result.errors ?? []).filter(e => e !== 'No booking sources connected')
+    if (sourceErrors.length > 0) {
+      if (trackStatus) {
+        const final = !isQStashDelivery(request) || isFinalAttempt(request)
+        await setStatus(statusKey, final ? 'failed' : 'retrying', sourceErrors.join('; '))
+      }
+      return NextResponse.json({ endpoint: 'pull', options, error: 'Pull failed', result }, { status: 502 })
+    }
+
+    if (trackStatus) {
+      await setStatus(statusKey, 'completed', null)
+      if (previousStatus !== 'completed') await notifyIfHistoryComplete(user.id)
     }
 
     return NextResponse.json({
@@ -119,9 +129,64 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('Pull error:', err)
+    if (trackStatus) {
+      const final = !isQStashDelivery(request) || isFinalAttempt(request)
+      await setStatus(statusKey, final ? 'failed' : 'retrying', String(err))
+    }
     return NextResponse.json({
       error: 'Pull failed',
       details: String(err),
     }, { status: 500 })
   }
+}
+type StatusKey = { user_id: string; month: string; year: number }
+
+/** Marks the month as processing and returns the status it had before. */
+async function markProcessing(key: StatusKey): Promise<string | null> {
+  const { data } = await serviceSupabase
+    .from('sync_status')
+    .select('status')
+    .eq('user_id', key.user_id)
+    .eq('month', key.month)
+    .eq('year', key.year)
+    .maybeSingle()
+
+  if (data && data.status !== 'completed') {
+    await serviceSupabase
+      .from('sync_status')
+      .update({ status: 'processing', updated_at: new Date().toISOString() })
+      .eq('user_id', key.user_id)
+      .eq('month', key.month)
+      .eq('year', key.year)
+  }
+  return data?.status ?? null
+}
+
+async function setStatus(key: StatusKey, status: 'completed' | 'retrying' | 'failed', errorMessage: string | null) {
+  const { error } = await serviceSupabase
+    .from('sync_status')
+    .upsert(
+      { ...key, status, error_message: errorMessage?.slice(0, 1000) ?? null, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,month,year' },
+    )
+  if (error) console.error('[pull] failed to update sync_status:', error)
+}
+
+/** After a backlog month finishes: tell the barber once every queued month is done. */
+async function notifyIfHistoryComplete(userId: string) {
+  const { count } = await serviceSupabase
+    .from('sync_status')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .neq('status', 'completed')
+
+  if (count !== 0) return
+
+  const { error } = await serviceSupabase.from('notifications').insert({
+    user_id: userId,
+    header: 'Acuity data fully synced',
+    message: 'Your data from Acuity has been completely synced. Please refresh to see the latest data.',
+    reference_type: 'sync_completed',
+  })
+  if (error) console.error('[pull] failed to send sync notification:', error)
 }

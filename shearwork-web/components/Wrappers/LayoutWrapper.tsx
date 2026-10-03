@@ -6,7 +6,7 @@ import Sidebar from '@/components/Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
 import MobileAuthHandler from './MobileAuthHandler'
 import TrialPromptModal from '@/components/Dashboard/TrialPromptModal'
-import { isTrialActive } from '@/utils/trial'
+import { isPublicPath, resolveRedirect } from '@/lib/auth/routing'
 
 function LayoutWrapperContent({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -22,16 +22,11 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     trialDaysRemaining,
   } = useAuth()
 
-  // Destructure primitives to avoid effect re-firing on new object references
-  const subStatus = profile?.stripe_subscription_status
-  const onboarded = profile?.onboarded
-  const role = profile?.role?.toLowerCase()
+  // Pages that render without waiting for the profile (public pages + the pricing flow)
+  const isPublicRoute = isPublicPath(pathname) || pathname.startsWith('/pricing')
 
-  // Public routes that don't need authentication
-  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/book', '/privacy-policy', '/support']
-  const isPublicRoute = publicRoutes.includes(pathname)
-
-  // Show strong prompt modal when trial has ended (Day 21+)
+  // Show strong prompt modal when trial has ended (Day 21+). Not on the pricing flow,
+  // which is where the modal sends them to add a card.
   const showStrongPrompt = useMemo(() => {
     return trialPromptMode === 'strong' && !isPublicRoute && !isAdmin
   }, [trialPromptMode, isPublicRoute, isAdmin])
@@ -41,75 +36,22 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
     router.push('/pricing')
   }
 
+  // Same rules as proxy.ts, re-applied on client-side navigations and after the
+  // profile changes (e.g. onboarding finished, trial started).
   useEffect(() => {
     if (isLoading) return
     if (user && profileStatus !== 'ready') return
 
-    const hasTrialAccess = isTrialActive(profile)
-    const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
-
-    if (
-      user &&
-      profile &&
-      !onboarded &&
-      role !== 'admin'
-    ) {
-      if (pathname === '/pricing' && hasPremiumAccess) {
-        router.push('/pricing/return')
-        return
-      }
-
-      if (pathname === '/pricing/return' && !hasPremiumAccess) {
-        router.push('/pricing')
-        return
-      }
-
-      const allowedOnboardingRoutes = ['/pricing', '/pricing/return']
-      if (!allowedOnboardingRoutes.some(path => pathname.startsWith(path))) {
-        router.push(hasPremiumAccess ? '/pricing/return' : '/pricing')
-        return
-      }
+    const redirectTo = resolveRedirect({
+      pathname,
+      search: globalThis.location?.search ?? '',
+      isLoggedIn: Boolean(user),
+      profile,
+    })
+    if (redirectTo && redirectTo !== pathname) {
+      router.replace(redirectTo)
     }
-    
-    // Redirect active/trial users away from /pricing once onboarding is done
-    if (onboarded && hasPremiumAccess && pathname === '/pricing') {
-      router.push('/dashboard')
-      return
-    }
-
-    // Premium access check for protected routes
-    const premiumRoutes = ['/dashboard', '/account', '/premium', '/user-editor', '/expenses', '/settings']
-    
-    if (
-      user &&
-      role !== 'admin' &&
-      premiumRoutes.some(path => pathname.startsWith(path))
-    ) {
-      if (!hasPremiumAccess) {
-        console.log('User does not have premium access, redirecting to /pricing')
-        router.push('/pricing')
-        return
-      }
-    }
-
-    // Role-based redirects for admins only
-    if (role === 'admin' && (pathname === '/' || pathname === '/dashboard')) {
-      router.push('/admin/dashboard')
-      return
-    }
-
-    // Redirect non-admin authenticated users from home to dashboard (only if onboarded)
-    if (user && onboarded && role !== 'admin' && pathname === '/') {
-      router.push('/dashboard')
-      return
-    }
-
-    // Redirect authenticated users away from login/signup (only if onboarded)
-    if (user && onboarded && (pathname === '/login' || pathname === '/signup')) {
-      router.push('/dashboard')
-      return
-    }
-  }, [isLoading, user, subStatus, onboarded, role, profileStatus, pathname, router, profile])
+  }, [isLoading, user, profile, profileStatus, pathname, router])
 
   // Show loading only for protected routes
   if ((isLoading || (user && profileStatus === 'loading')) && !isPublicRoute) {
@@ -163,11 +105,6 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
         </div>
       </div>
     )
-  }
-
-  // Don't render protected content on public routes if not logged in
-  if (!user && !isPublicRoute) {
-    return null
   }
 
   const showSidebar = user && !isAdmin && isPremiumUser && pathname !== '/pricing/return'

@@ -2,6 +2,20 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { BookingAdapter } from './BookingAdapter'
 import { NormalizedAppointment, DateRange } from '../types'
 import { extractSourceFromForms } from '@/lib/marketingFunnels'
+import {
+  fetchAppointmentRange,
+  fetchJsonWithRetry,
+  type AcuityRawAppointment,
+  type FetchPage,
+} from './acuityRangeFetch'
+
+/**
+ * Results per Acuity /appointments request. 100 is Acuity's documented default and is
+ * known to be honored. Raise via ACUITY_PAGE_LIMIT only after confirming Acuity returns
+ * that many (scripts/compare-acuity-fetch.ts --probe-max): a silently lower cap would
+ * make full pages look complete.
+ */
+const ACUITY_PAGE_LIMIT = Math.max(10, Number(process.env.ACUITY_PAGE_LIMIT) || 100)
 
 export class AcuityAdapter implements BookingAdapter {
   readonly name = 'acuity'
@@ -25,7 +39,8 @@ export class AcuityAdapter implements BookingAdapter {
 
     const nowSec = Math.floor(Date.now() / 1000)
 
-    if (!tokenRow.expires_at || tokenRow.expires_at >= nowSec) {
+    // Refresh a minute early so the token can't expire part-way through a sync
+    if (!tokenRow.expires_at || tokenRow.expires_at - 60 >= nowSec) {
       return tokenRow.access_token
     }
 
@@ -111,87 +126,58 @@ export class AcuityAdapter implements BookingAdapter {
 
   // ======================== FETCH APPOINTMENTS ========================
 
-async fetchAppointments(
-  accessToken: string,
-  calendarId: string,
-  dateRange: DateRange
-): Promise<NormalizedAppointment[]> {
-  const seen = new Set<string>()
-  const appointments: NormalizedAppointment[] = []
-  const today = new Date()
-
-  const start = new Date(dateRange.startISO)
-  const end = new Date(dateRange.endISO)
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    if (d > today) break
-
-    const dayStr = d.toISOString().split('T')[0]
-    const dayAppointments = await this.fetchDay(accessToken, calendarId, dayStr)
-    
-    // Dedupe: only add appointments we haven't seen yet
-    for (const appt of dayAppointments) {
-      // console.log(JSON.stringify(appt))
-      if (!seen.has(appt.externalId)) {
-        seen.add(appt.externalId)
-        appointments.push(appt)
-      }
-    }
-  }
-
-  return appointments
-}
-
-  private async fetchDay(
+  /**
+   * Fetches all appointments in the range with adaptive chunking (see acuityRangeFetch.ts):
+   * week-sized requests, split only when Acuity returns a full page, several in flight
+   * at once, with retries. Throws if any range ultimately fails, so a sync is never
+   * marked complete with missing days.
+   */
+  async fetchAppointments(
     accessToken: string,
     calendarId: string,
-    dayStr: string
+    dateRange: DateRange
   ): Promise<NormalizedAppointment[]> {
-    const pageSize = 100
-    let offset = 0
-    const results: NormalizedAppointment[] = []
+    // Appointments are only synced up to today; future ones are skipped below too
+    const todayISO = new Date().toISOString().slice(0, 10)
+    const endISO = dateRange.endISO < todayISO ? dateRange.endISO : todayISO
 
-    while (true) {
-      const url = new URL(`${this.apiBase}/appointments?showall=true`)
-      url.searchParams.set('minDate', dayStr)
-      url.searchParams.set('maxDate', dayStr)
-      url.searchParams.set('max', String(pageSize))
-      url.searchParams.set('offset', String(offset))
+    const fetchPage: FetchPage = (startISO, rangeEndISO, direction) => {
+      const url = new URL(`${this.apiBase}/appointments`)
+      url.searchParams.set('showall', 'true')
+      url.searchParams.set('minDate', startISO)
+      url.searchParams.set('maxDate', rangeEndISO)
+      url.searchParams.set('max', String(ACUITY_PAGE_LIMIT))
+      url.searchParams.set('direction', direction)
       url.searchParams.set('calendarID', String(calendarId))
-
-      const response = await fetch(url.toString(), {
+      return fetchJsonWithRetry<AcuityRawAppointment[]>(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
-      })
-
-      if (!response.ok) {
-        console.error(`Acuity fetch failed for ${dayStr}: ${response.status}`)
-        break
-      }
-
-      const data = await response.json()
-
-      if (!Array.isArray(data) || data.length === 0) break
-
-      for (const raw of data) {
-        const normalized = this.normalize(raw)
-        if (!normalized) continue
-        
-        // Skip future appointments
-        const parseWithOffset = (dt: string) =>
-          new Date(dt.replace(/([+-]\d{2})(\d{2})$/, '$1:$2'))
-        
-        if (parseWithOffset(raw.datetime) > new Date()) {
-          continue
-        }
-        
-        results.push(normalized)
-      }
-
-      if (data.length < pageSize) break
-      offset += pageSize
+      }).then(data => (Array.isArray(data) ? data : []))
     }
 
-    return results
+    const result = await fetchAppointmentRange(fetchPage, dateRange.startISO, endISO, {
+      pageLimit: ACUITY_PAGE_LIMIT,
+    })
+
+    if (result.saturatedDays.length > 0) {
+      console.warn(
+        `[acuity] ${result.saturatedDays.length} day(s) exceeded ${ACUITY_PAGE_LIMIT * 2} appointments and may be incomplete:`,
+        result.saturatedDays.join(', ')
+      )
+    }
+
+    const now = Date.now()
+    const appointments: NormalizedAppointment[] = []
+    for (const raw of result.appointments) {
+      const normalized = this.normalize(raw)
+      if (!normalized) continue
+      // Skip future appointments
+      const datetime = typeof raw.datetime === 'string' ? raw.datetime : ''
+      const startsAt = Date.parse(datetime.replace(/([+-]\d{2})(\d{2})$/, '$1:$2'))
+      if (!Number.isNaN(startsAt) && startsAt > now) continue
+      appointments.push(normalized)
+    }
+
+    return appointments
   }
 
   // ======================== NORMALIZATION ========================

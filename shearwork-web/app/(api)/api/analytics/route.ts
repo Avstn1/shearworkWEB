@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
+import { createSupabaseAdminClient } from '@/lib/supabaseServer';
+import { isInternalRequest, unauthorized } from '@/lib/api/guards';
 
 // ============================================================================
 // TYPES
@@ -213,11 +214,8 @@ async function processDayAggregates(
 export async function POST(req: Request) {
   try {
     // Authentication
-    const supabase = await createSupabaseServerClient();
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || authHeader !== `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!isInternalRequest(req)) return unauthorized();
+    const supabase = createSupabaseAdminClient();
 
     // Validate request body
     const body: RequestBody = await req.json();

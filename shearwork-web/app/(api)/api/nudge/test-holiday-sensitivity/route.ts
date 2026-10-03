@@ -1,9 +1,8 @@
 // app/(api)/api/nudge/test-holiday-sensitivity/route.ts
 // Test endpoint for holiday sensitivity calculation
 // Usage: GET /api/nudge/test-holiday-sensitivity?userId=XXX
-'use server'
-
 import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/api/requireAdmin'
 import { createClient } from '@supabase/supabase-js'
 import {
   HOLIDAYS,
@@ -23,6 +22,11 @@ const supabase = createClient(
 )
 
 export async function GET(request: Request) {
+  // Debug/admin tool: admins only
+  if (!(await requireAdmin(request))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')

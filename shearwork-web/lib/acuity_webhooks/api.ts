@@ -1,10 +1,10 @@
 // lib/acuity_webhooks/api.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 /**
  * Acuity Webhooks API
  * Import these functions in your routes to manage webhooks programmatically
  */
 
-import { createClient } from '@supabase/supabase-js';
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1';
 
@@ -75,10 +75,7 @@ export async function createWebhooksForUser(
   try {
     const allWebhooks = await listWebhooksForUser(accessToken);
     
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createSupabaseAdminClient();
     
     await supabase
       .from('acuity_tokens')
@@ -120,10 +117,7 @@ export async function deleteAllWebhooksForUser(
     }
     
     // Update database to clear webhooks_data
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createSupabaseAdminClient();
     
     await supabase
       .from('acuity_tokens')
@@ -187,10 +181,7 @@ export async function syncWebhooksToDatabase(
   try {
     const webhooks = await listWebhooksForUser(accessToken);
     
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createSupabaseAdminClient();
     
     await supabase
       .from('acuity_tokens')

@@ -1,8 +1,6 @@
-'use server'
-
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabaseServer'
 import { TRIAL_DAYS } from '@/lib/constants/trial'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -174,7 +172,8 @@ export async function POST(req: NextRequest) {
       })
       customerId = customer.id
 
-      const { error: saveCustomerError } = await supabase
+      // stripe_id is a protected billing field: write it as the service role
+      const { error: saveCustomerError } = await createSupabaseAdminClient()
         .from('profiles')
         .update({ stripe_id: customerId })
         .eq('user_id', user.id)

@@ -1,9 +1,8 @@
 // app/(api)/api/nudge/compare-scoring/route.ts
 // Compare pre-holiday scoring vs holiday-boosted scoring
 // Usage: GET /api/nudge/compare-scoring?userId=XXX&limit=20
-'use server'
-
 import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/api/requireAdmin'
 import { createClient } from '@supabase/supabase-js'
 import {
   getActiveHolidayForBoosting,
@@ -84,6 +83,11 @@ function calculateBaseScore(client: {
 }
 
 export async function GET(request: Request) {
+  // Debug/admin tool: admins only
+  if (!(await requireAdmin(request))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')

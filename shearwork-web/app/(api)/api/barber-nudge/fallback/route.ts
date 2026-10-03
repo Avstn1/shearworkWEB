@@ -1,16 +1,16 @@
 // /api/barber-nudge/fallback/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+import { verifyTwilioRequest } from '@/lib/api/guards'
+const supabase = createSupabaseAdminClient()
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData()
+    // Only accept requests signed by Twilio
+    const params = await verifyTwilioRequest(request)
+    if (!params) return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 })
+    const formData = new URLSearchParams(params)
     const body = Object.fromEntries(formData.entries())
     
     // Log the failed webhook attempt

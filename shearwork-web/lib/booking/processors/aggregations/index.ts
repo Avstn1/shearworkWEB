@@ -25,59 +25,28 @@ export async function runAggregations(
   context: PullContext,
   orchestratorOptions: OrchestratorOptions = {}
 ): Promise<AggregationResult[]> {
-  const results: AggregationResult[] = []
   const { granularity } = context.options
-  
-  // ======================== DAILY AGGREGATION ========================
-  // Always run daily aggregation (most granular level)
-  
-  try {
-    const dailyResult = await runDailyAggregation(context, orchestratorOptions)
-    results.push(dailyResult)
-  } catch (err) {
-    console.error('Daily aggregation failed:', err)
-    results.push({
-      table: 'daily_data',
-      rowsUpserted: 0,
-      error: err instanceof Error ? err.message : String(err)
-    })
+
+  const failed = (table: string, err: unknown): AggregationResult[] => {
+    console.error(`${table} aggregation failed:`, err)
+    return [{ table, rowsUpserted: 0, error: err instanceof Error ? err.message : String(err) }]
   }
-  
-  // ======================== WEEKLY AGGREGATION ========================
-  // Run weekly for: week, month, quarter, year
-  
+
+  // Daily always runs; weekly for week+ pulls; monthly for month+ pulls. They write
+  // separate tables and only read appointments/clients, so they run in parallel.
+  const runs: Array<Promise<AggregationResult[]>> = [
+    runDailyAggregation(context, orchestratorOptions).then(r => [r], err => failed('daily_data', err)),
+  ]
+
   if (['week', 'month', 'quarter', 'year'].includes(granularity)) {
-    try {
-      const weeklyResults = await runWeeklyAggregation(context, orchestratorOptions)
-      results.push(...weeklyResults)
-    } catch (err) {
-      console.error('Weekly aggregation failed:', err)
-      results.push({
-        table: 'weekly_data',
-        rowsUpserted: 0,
-        error: err instanceof Error ? err.message : String(err)
-      })
-    }
+    runs.push(runWeeklyAggregation(context, orchestratorOptions).catch(err => failed('weekly_data', err)))
   }
-  
-  // ======================== MONTHLY AGGREGATION ========================
-  // Run monthly for: month, quarter, year
-  
+
   if (['month', 'quarter', 'year'].includes(granularity)) {
-    try {
-      const monthlyResults = await runMonthlyAggregation(context, orchestratorOptions)
-      results.push(...monthlyResults)
-    } catch (err) {
-      console.error('Monthly aggregation failed:', err)
-      results.push({
-        table: 'monthly_data',
-        rowsUpserted: 0,
-        error: err instanceof Error ? err.message : String(err)
-      })
-    }
+    runs.push(runMonthlyAggregation(context, orchestratorOptions).catch(err => failed('monthly_data', err)))
   }
-  
-  return results
+
+  return (await Promise.all(runs)).flat()
 }
 
 // Export individual aggregation functions for direct use if needed

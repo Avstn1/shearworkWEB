@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { redirect } from 'next/navigation'
 import { BarberSearch } from './BarberSearch'
 
@@ -31,13 +31,12 @@ export default async function BookingRedirectPage({ searchParams }: PageProps) {
   const profileUsername = params.profile?.toLowerCase()
   const linkToken = params.t
 
-  console.log(linkToken)
-
   if (!profileUsername) {
     return <BarberSearch />
   }
 
-  const supabase = await createSupabaseServerClient()
+  // Public page (visitors are not logged in): read only the public booking fields
+  const supabase = createSupabaseAdminClient()
 
   // Get barber profile (case-insensitive)
   const { data: profile } = await supabase

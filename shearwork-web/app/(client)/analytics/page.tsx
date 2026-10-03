@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-import OnboardingGuard from '@/components/Wrappers/OnboardingGuard'
 import SignOutButton from '@/components/SignOutButton'
 
 import YearDropdown from '@/components/YearDropdown'
@@ -480,7 +479,7 @@ export default function DashboardPage() {
 
   // -------------------- RENDER --------------------
   return (
-    <OnboardingGuard>
+    <>
       {/* Soft/Urgent trial prompt modal */}
       {(trialPromptMode === 'soft' || trialPromptMode === 'urgent') && (
         <TrialPromptModal
@@ -508,6 +507,6 @@ export default function DashboardPage() {
         </div>
       )}
       {content}
-    </OnboardingGuard>
+    </>
   )
 }

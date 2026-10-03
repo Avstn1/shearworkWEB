@@ -1,25 +1,31 @@
 // /app/(api)/api/client-messaging/check-sms-progress/route.ts
+//
+// QStash-driven progress loop for a running campaign. When every recipient has a
+// result, the campaign is settled exactly once: the reserved credits are released
+// and everything that was not a successful send is refunded.
 
-import { createClient } from '@supabase/supabase-js';
-import { NextRequest, NextResponse } from 'next/server';
-import { Client } from '@upstash/qstash';
+import { NextResponse } from 'next/server';
+import { verifySignatureAppRouter } from '@upstash/qstash/nextjs';
+import { createSupabaseAdminClient } from '@/lib/supabaseServer';
+import { qstashClient } from '@/lib/qstashClient';
+import { adjustCredits, computeSettlement } from '@/lib/credits';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const qstashClient = new Client({ token: process.env.QSTASH_TOKEN! });
+type ScheduledMessage = {
+  title: string | null;
+  purpose: string | null;
+  message_limit: number | null;
+  final_clients_to_message: number | null;
+  is_finished: boolean | null;
+  credits_reserved?: number | null;
+};
 
-export async function POST(request: NextRequest) {
+async function handler(request: Request) {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const body = await request.json();
-    const { message_id } = body;
+    const supabase = createSupabaseAdminClient();
+    const { message_id } = await request.json();
 
     if (!message_id) {
-      return NextResponse.json(
-        { error: 'message_id is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'message_id is required' }, { status: 400 });
     }
 
     // Step 1: Count successful and failed SMS sends
@@ -31,203 +37,140 @@ export async function POST(request: NextRequest) {
 
     if (fetchError) {
       console.error('Error fetching sms_sent records:', fetchError);
-      return NextResponse.json(
-        { error: 'Failed to fetch SMS records' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch SMS records' }, { status: 500 });
     }
 
     if (!sentMessages || sentMessages.length === 0) {
-      return NextResponse.json(
-        { error: 'No SMS records found for this message_id' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'No SMS records found for this message_id' }, { status: 404 });
     }
 
-    const successCount = sentMessages.filter(msg => msg.is_sent === true).length; 
-    const failCount = sentMessages.filter(msg => msg.is_sent === false).length; 
-    const totalCount = successCount + failCount; 
+    const successCount = sentMessages.filter(msg => msg.is_sent === true).length;
+    const failCount = sentMessages.filter(msg => msg.is_sent === false).length;
+    const totalCount = successCount + failCount;
     const userId = sentMessages[0].user_id;
 
-    // Step 2: Get the scheduled message to check final_clients_to_message and purpose
+    // Step 2: Get the scheduled message (select * so this works before and after the
+    // credits_reserved migration)
     const { data: scheduledMessage, error: scheduledMessageError } = await supabase
       .from('sms_scheduled_messages')
-      .select('final_clients_to_message, purpose, message_limit')
+      .select('*')
       .eq('id', message_id)
-      .single();
+      .single<ScheduledMessage>();
 
     if (scheduledMessageError || !scheduledMessage) {
       console.error('Error fetching scheduled message:', scheduledMessageError);
-      return NextResponse.json(
-        { error: 'Failed to fetch scheduled message' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch scheduled message' }, { status: 500 });
     }
 
-    // Check if all messages have been sent
-    const allSent = totalCount >= scheduledMessage.final_clients_to_message; 
+    const expected = scheduledMessage.final_clients_to_message ?? 0;
+    const allSent = totalCount >= expected;
 
-    // Step 3: Update sms_scheduled_messages with success and fail counts
-    const updateData: any = {
-      success: successCount, 
-      fail: failCount, 
-    };
-
-    // Mark as finished if all messages sent
-    if (allSent) {
-      updateData.is_finished = true;
-      updateData.is_running = false;
-    }
-
+    // Step 3: Always refresh the live counters
     const { error: updateMessageError } = await supabase
       .from('sms_scheduled_messages')
-      .update(updateData) 
+      .update({ success: successCount, fail: failCount })
       .eq('id', message_id);
 
     if (updateMessageError) {
       console.error('Error updating sms_scheduled_messages:', updateMessageError);
-      return NextResponse.json(
-        { error: 'Failed to update message stats' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to update message stats' }, { status: 500 });
     }
 
-    let newReservedCredits = 0;
-    let newAvailableCredits = 0;
-
-    if (allSent) {
-      // Only charge credits for campaign and mass messages, not auto-nudge
-      if (scheduledMessage.purpose !== 'auto-nudge') {
-        // Step 4: Get current user credits
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('reserved_credits, available_credits')
-          .eq('user_id', userId)
-          .single();
-
-        if (profileError || !profile) {
-          console.error('Error fetching user profile:', profileError);
-          return NextResponse.json(
-            { error: 'Failed to fetch user profile' },
-            { status: 500 }
-          );
-        }
-
-        // Step 5: Calculate new credit values
-        // Remove all attempts (success + fail) from reserved_credits
-        newReservedCredits = Math.max(0, profile.reserved_credits - scheduledMessage.message_limit); 
-        
-        // Refund underflow (final_clients_to_message didnt go up to message_limit) and failed attempts to available_credits
-        // If message_limit = 50 but the algorithim only ended up messaging 45 people (final_clients_to_message), then 5 credits should be refunded too
-        const underflow = scheduledMessage.message_limit - scheduledMessage.final_clients_to_message 
-
-        // In the example, this will be available_credits + 5 + 1 (assuming 1 msg failed) = 6 refunded
-        newAvailableCredits = profile.available_credits + underflow + failCount; 
-
-        // Step 6: Update user credits
-        const { error: updateCreditsError } = await supabase
-          .from('profiles')
-          .update({
-            reserved_credits: newReservedCredits,
-            available_credits: newAvailableCredits,
-          })
-          .eq('user_id', userId);
-
-        if (updateCreditsError) {
-          console.error('Error updating user credits:', updateCreditsError);
-          return NextResponse.json(
-            { error: 'Failed to update user credits' },
-            { status: 500 }
-          );
-        }
-
-        // Log credit transaction for campaign completion
-        const { data: campaignTitle } = await supabase
-          .from('sms_scheduled_messages')
-          .select('title')
-          .eq('id', message_id)
-          .single();
-
-        const oldReserved = profile.reserved_credits; // This is fine because the profile object isnt updated when the table is.
-
-        const { error: transactionError } = await supabase
-          .from('credit_transactions')
-          .insert({
-            user_id: userId,
-            action: `Campaign finished - ${campaignTitle?.title || 'Untitled'}`,
-            old_available: profile.available_credits,
-            new_available: newAvailableCredits,
-            old_reserved: oldReserved,
-            new_reserved: newReservedCredits,
-            reference_id: message_id,
-            created_at: new Date().toISOString()
-          });
-
-        if (transactionError) {
-          console.error('Error creating credit transaction:', transactionError);
-        }
-      }
-      // Step 7: Handle completion or reschedule
-      // All messages sent - create notification
-      console.log('✅ All messages sent, creating completion notification');
-      
-      const notificationMessage = scheduledMessage.purpose === 'auto-nudge'
-        ? `Your auto-nudge campaign has finished sending. ${successCount} successful, ${failCount} failed out of ${totalCount} total messages.`
-        : `Your SMS campaign has finished sending. ${successCount} successful, ${failCount} failed out of ${totalCount} total messages.`;
-
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          header: scheduledMessage.purpose === 'auto-nudge' ? 'Auto-Nudge Completed' : 'SMS Campaign Completed',
-          message: notificationMessage,
-          reference: message_id,
-          reference_type: 'sms_campaign',
-        });
-
-      if (notificationError) {
-        console.error('Error creating notification:', notificationError);
-        // Don't fail the entire request if notification fails
-      }
-    } else {
-      // Not all messages sent yet - reschedule another check in 3 seconds
-      console.log(`📊 Progress: ${totalCount}/${scheduledMessage.final_clients_to_message} - Rescheduling check in 3 seconds`);
-      
+    if (!allSent) {
+      // Not all messages sent yet - check again in 3 seconds
+      console.log(`📊 Progress: ${totalCount}/${expected} - Rescheduling check in 3 seconds`);
       try {
         await qstashClient.publishJSON({
           url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/client-messaging/check-sms-progress`,
           body: { message_id },
-          delay: 3, // Check again in 3 seconds
+          delay: 3,
         });
       } catch (rescheduleError) {
         console.error('Failed to reschedule progress check:', rescheduleError);
-        // Don't fail the entire request if rescheduling fails
       }
+      return NextResponse.json({
+        success: true,
+        message_id,
+        all_sent: false,
+        stats: { success: successCount, fail: failCount, total: totalCount, expected },
+      });
+    }
+
+    // Step 4: Claim the settlement. Only the request that flips is_finished
+    // false -> true settles credits, so QStash retries and replays are no-ops.
+    const finishUpdate: Record<string, unknown> = { is_finished: true, is_running: false };
+    if ('credits_reserved' in scheduledMessage) finishUpdate.credits_reserved = 0;
+
+    const { data: claimed, error: claimError } = await supabase
+      .from('sms_scheduled_messages')
+      .update(finishUpdate)
+      .eq('id', message_id)
+      .eq('is_finished', false)
+      .select('id');
+
+    if (claimError) {
+      console.error('Error marking campaign finished:', claimError);
+      return NextResponse.json({ error: 'Failed to finish campaign' }, { status: 500 });
+    }
+
+    if (!claimed || claimed.length === 0) {
+      console.log(`ℹ️ Campaign ${message_id} already settled - skipping`);
+      return NextResponse.json({ success: true, message_id, all_sent: true, already_settled: true });
+    }
+
+    // Step 5: Settle credits (auto-nudge messages are free)
+    let credits: Record<string, unknown> = { message: 'Auto-nudge messages are free' };
+    if (scheduledMessage.purpose !== 'auto-nudge') {
+      const { releaseReserved, refundAvailable } = computeSettlement(scheduledMessage, successCount, failCount);
+      try {
+        const result = await adjustCredits({
+          userId,
+          availableDelta: refundAvailable,
+          reservedDelta: -releaseReserved,
+          action: `Campaign finished - ${scheduledMessage.title || 'Untitled'}`,
+          referenceId: message_id,
+        });
+        credits = {
+          reserved_credits: result.newReserved,
+          available_credits: result.newAvailable,
+          refunded: refundAvailable,
+        };
+      } catch (creditError) {
+        console.error('Error settling campaign credits:', creditError);
+        return NextResponse.json({ error: 'Failed to update user credits' }, { status: 500 });
+      }
+    }
+
+    // Step 6: Notify the barber
+    const notificationMessage = scheduledMessage.purpose === 'auto-nudge'
+      ? `Your auto-nudge campaign has finished sending. ${successCount} successful, ${failCount} failed out of ${totalCount} total messages.`
+      : `Your SMS campaign has finished sending. ${successCount} successful, ${failCount} failed out of ${totalCount} total messages.`;
+
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        header: scheduledMessage.purpose === 'auto-nudge' ? 'Auto-Nudge Completed' : 'SMS Campaign Completed',
+        message: notificationMessage,
+        reference: message_id,
+        reference_type: 'sms_campaign',
+      });
+
+    if (notificationError) {
+      console.error('Error creating notification:', notificationError);
     }
 
     return NextResponse.json({
       success: true,
       message_id,
-      all_sent: allSent,
-      stats: {
-        success: successCount,
-        fail: failCount,
-        total: totalCount,
-        expected: scheduledMessage.final_clients_to_message,
-      },
-      credits: scheduledMessage.purpose === 'auto-nudge' 
-        ? { message: 'Auto-nudge messages are free' }
-        : {
-            reserved_credits: newReservedCredits,
-            available_credits: newAvailableCredits,
-            refunded: failCount,
-          },
+      all_sent: true,
+      stats: { success: successCount, fail: failCount, total: totalCount, expected },
+      credits,
     });
   } catch (error) {
     console.error('Unexpected error in check-sms-progress:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = verifySignatureAppRouter(handler);

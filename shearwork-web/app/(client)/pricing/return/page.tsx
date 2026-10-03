@@ -401,76 +401,38 @@ function PricingReturnContent() {
       // Profile data was already saved in ProfileStep, we just need to:
       // 1. Save calendar selection (if not already done)
       // 2. Set onboarded to true
-      // 3. Grant trial credits if needed
+      // 3. Start the card-less trial (server grants trial dates + bonus credits)
 
       const { data: currentProfile, error: currentProfileError } = await supabase
         .from('profiles')
-        .select('trial_start, stripe_subscription_status, available_credits, reserved_credits')
+        .select('trial_start, stripe_subscription_status')
         .eq('user_id', user.id)
         .single()
 
       if (currentProfileError) throw currentProfileError
-
-      const profileUpdate: Record<string, unknown> = {
-        calendar: selectedProvider === 'acuity' ? selectedAcuityCalendar : null,
-        onboarded: true,
-        updated_at: new Date().toISOString(),
-      }
 
       const hasPaidSubscription =
         currentProfile?.stripe_subscription_status === 'active' ||
         currentProfile?.stripe_subscription_status === 'trialing'
 
       if (!currentProfile?.trial_start && !hasPaidSubscription) {
-        const now = new Date()
-        const trialEnd = new Date(now)
-        trialEnd.setDate(trialEnd.getDate() + 7)
-
-        profileUpdate.trial_start = now.toISOString()
-        profileUpdate.trial_end = trialEnd.toISOString()
-        profileUpdate.trial_active = true
-      }
-
-      const { data: trialBonus } = await supabase
-        .from('credit_transactions')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('action', 'trial_bonus')
-        .maybeSingle()
-
-      const existingCredits = currentProfile?.available_credits || 0
-      const existingReserved = currentProfile?.reserved_credits || 0
-      const shouldGrantTrialCredits = !trialBonus
-      const trialCreditAmount = 10
-
-      if (shouldGrantTrialCredits) {
-        profileUpdate.available_credits = existingCredits + trialCreditAmount
+        const trialRes = await fetch('/api/trial/start', { method: 'POST' })
+        if (!trialRes.ok) {
+          const trialData = await trialRes.json().catch(() => ({}))
+          throw new Error(trialData.error || 'Failed to start trial')
+        }
       }
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update(profileUpdate)
+        .update({
+          calendar: selectedProvider === 'acuity' ? selectedAcuityCalendar : null,
+          onboarded: true,
+          updated_at: new Date().toISOString(),
+        })
         .eq('user_id', user.id)
 
       if (updateError) throw updateError
-
-      if (shouldGrantTrialCredits) {
-        const { error: creditError } = await supabase
-          .from('credit_transactions')
-          .insert({
-            user_id: user.id,
-            action: 'trial_bonus',
-            old_available: existingCredits,
-            new_available: existingCredits + trialCreditAmount,
-            old_reserved: existingReserved,
-            new_reserved: existingReserved,
-            created_at: new Date().toISOString(),
-          })
-
-        if (creditError) {
-          console.error('Failed to log trial credits:', creditError)
-        }
-      }
 
       setProfile(prev => (prev ? { ...prev, onboarded: true } : prev))
       toast.success('Onboarding complete!')

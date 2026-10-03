@@ -1,8 +1,11 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { chunk } from '../db'
 import {
   NormalizedAppointment,
   ClientResolutionResult,
 } from '../types'
+
+const UPSERT_CHUNK_SIZE = 500
 
 export interface SquareAppointmentUpsertRow {
   user_id: string
@@ -144,37 +147,50 @@ export class SquareAppointmentProcessor {
       updated_at: appt.row.updated_at,
     }))
 
-    const { data: upserted, error: upsertError } = await this.supabase
-      .from(this.tableName)
-      .upsert(rowsToUpsert, { onConflict: 'user_id,square_booking_id' })
-      .select('id, square_booking_id, revenue, tip, manually_edited')
+    const upserted: Array<{
+      id: string
+      square_booking_id: string
+      revenue: number | null
+      tip: number | null
+      manually_edited: boolean | null
+    }> = []
+    for (const rows of chunk(rowsToUpsert, UPSERT_CHUNK_SIZE)) {
+      const { data, error: upsertError } = await this.supabase
+        .from(this.tableName)
+        .upsert(rows, { onConflict: 'user_id,square_booking_id' })
+        .select('id, square_booking_id, revenue, tip, manually_edited')
 
-    if (upsertError) {
-      console.error('Square appointment upsert error:', upsertError)
-      throw upsertError
+      if (upsertError) {
+        console.error('Square appointment upsert error:', upsertError)
+        throw upsertError
+      }
+      upserted.push(...(data ?? []))
     }
 
-    const updateTargets = (upserted || []).filter((appt) => !appt.manually_edited)
+    const updateTargets = upserted.filter((appt) => !appt.manually_edited)
     const insertedTargets = updateTargets.filter(
       (appt) => appt.revenue === null && appt.tip === null
     )
 
-    for (const appt of updateTargets) {
+    // Write Square's revenue/tip in one bulk upsert, and only where it changed
+    // (previously one UPDATE per appointment on every sync)
+    const rowByBookingId = new Map(rowsToUpsert.map((row) => [row.square_booking_id, row]))
+    const changed = updateTargets.flatMap((appt) => {
       const values = valuesByBookingId[appt.square_booking_id]
-      if (!values) continue
+      const row = rowByBookingId.get(appt.square_booking_id)
+      if (!values || !row) return []
+      if (appt.revenue === values.revenue && appt.tip === values.tip) return []
+      return [{ ...row, revenue: values.revenue, tip: values.tip }]
+    })
 
-      const updates = {
-        revenue: values.revenue,
-        tip: values.tip,
-      }
-
+    for (const rows of chunk(changed, UPSERT_CHUNK_SIZE)) {
       const { error } = await this.supabase
         .from(this.tableName)
-        .update(updates)
-        .eq('id', appt.id)
+        .upsert(rows, { onConflict: 'user_id,square_booking_id' })
 
       if (error) {
-        console.error(`Failed to update square appointment ${appt.id}:`, error)
+        console.error('Failed to update square appointment revenue/tip:', error)
+        throw error
       }
     }
 

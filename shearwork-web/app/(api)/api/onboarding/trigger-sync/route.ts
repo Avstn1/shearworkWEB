@@ -1,6 +1,6 @@
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { waitUntil } from '@vercel/functions'
+import { queueMonthsForSync } from '@/lib/booking/syncQueue'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 
 const MONTHS = [
@@ -81,96 +81,24 @@ export async function POST(request: NextRequest) {
         { onConflict: 'user_id,month,year', ignoreDuplicates: false }
       )
 
-    const BYPASS_TOKEN = process.env.BYPASS_TOKEN!
-    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-
-    const runSync = async () => {
-      // Fresh admin client — request-scoped client dies after response is returned on Vercel
-      const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
-      for (const { month, year } of orderedMonths) {
-        const phase = year === currentYear && month === currentMonth ? 'priority' : 'background'
-        let attempt = 0
-        while (true) {
-          attempt++
-          console.log(`[${phase}][${month} ${year}] attempt ${attempt}`)
-
-          try {
-            await adminSupabase
-              .from('sync_status')
-              .update({ status: 'processing', retry_count: attempt - 1, updated_at: new Date().toISOString() })
-              .eq('user_id', userId).eq('month', month).eq('year', year)
-
-            const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/pull?granularity=month&month=${encodeURIComponent(MONTHS[month])}&year=${year}`
-            console.log(`[${phase}][${MONTHS[month]} ${year}] fetching...`)
-
-            const res = await fetch(url, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                'X-User-Id': userId,
-                'x-vercel-protection-bypass': BYPASS_TOKEN,
-              },
-            })
-
-            console.log(`[${phase}][${month} ${year}] response: ${res.status}`)
-            const text = await res.text()
-            console.log(`[${phase}][${month} ${year}] body: ${text.substring(0, 200)}`)
-
-            let data: any
-            try { data = JSON.parse(text) } catch { throw new Error(`Bad JSON: ${text.substring(0, 100)}`) }
-
-            if (!res.ok || data.error) {
-              throw new Error(data.error?.message || data.error || `HTTP ${res.status}`)
-            }
-
-            await adminSupabase
-              .from('sync_status')
-              .update({ status: 'completed', retry_count: attempt - 1, error_message: null, updated_at: new Date().toISOString() })
-              .eq('user_id', userId).eq('month', MONTHS[month]).eq('year', year)
-
-            console.log(`[${phase}][${MONTHS[month]} ${year}] done on attempt ${attempt}`)
-            break // move to next month
-
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err)
-            console.error(`[${phase}][${month} ${year}] attempt ${attempt} failed: ${msg}`)
-
-            await adminSupabase
-              .from('sync_status')
-              .update({ status: 'retrying', retry_count: attempt, error_message: msg })
-              .eq('user_id', userId).eq('month', month).eq('year', year)
-
-            const delay = Math.min(5000 * attempt, 30000)
-            console.log(`[${phase}][${month} ${year}] retrying in ${delay}ms...`)
-            await new Promise(r => setTimeout(r, delay))
-          }
-        }
-      }
-
-      console.log('[trigger-sync] All months synced!')
-
-      await adminSupabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          header: 'Acuity data fully synced',
-          message: "Your data from Acuity has been completely synced. Please refresh to see the latest data.",
-          reference_type: 'sync_completed',
-        })
-
-      console.log('[trigger-sync] Notification sent')
-    }
-
-    // Fire and forget
-    waitUntil(runSync())
+    // One QStash message per month on this barber's queue: current month first, one
+    // month at a time, retried by QStash on failure (see lib/booking/syncQueue.ts)
+    const queued = await queueMonthsForSync(
+      createSupabaseAdminClient(),
+      userId,
+      orderedMonths.map(({ month, year }) => ({
+        month: MONTHS[month],
+        year,
+        sync_phase: year === currentYear && month === currentMonth ? 'priority' : 'background',
+      }))
+    )
+    console.log(`[trigger-sync] queued ${queued}/${orderedMonths.length} months for ${userId}`)
 
     return NextResponse.json({
       success: true,
       message: 'Sync started',
       totalMonths: allMonths.length,
+      queuedMonths: queued,
       priorityMonths: priorityMonths.length,
       backgroundMonths: backgroundMonths.length,
     })

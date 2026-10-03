@@ -1,10 +1,12 @@
 // app/api/acuity/callback/route.ts
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
-  const supabase = await createSupabaseServerClient()
+  // The OAuth return may arrive without a session (mobile in-app browser). user_id comes
+  // from the httpOnly state cookie set by /api/acuity/authorize, so write as the service role.
+  const supabase = createSupabaseAdminClient()
   const cookieStore = await cookies()
   const url = new URL(request.url)
   const code = url.searchParams.get('code')

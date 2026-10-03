@@ -75,6 +75,7 @@ export default function BookingSyncStep({
       if (!syncError && syncStatusData && syncStatusData.length > 0) {
         const hasPending = syncStatusData.some(s => 
           s.status === 'pending' || 
+          s.status === 'queued' || 
           s.status === 'processing' || 
           s.status === 'retrying'
         )

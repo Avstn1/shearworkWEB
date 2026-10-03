@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { fetchAllRows } from '../db'
 import {
   NormalizedAppointment,
   NormalizedClient,
@@ -152,17 +153,31 @@ export class SquareClientProcessor {
   }
 
   private async loadExistingClients(): Promise<void> {
-    const { data: existingClients, error } = await this.supabase
-      .from(this.tableName)
-      .select('customer_id, email, phone_normalized, first_name, last_name, first_appt, second_appt, last_appt, first_source')
-      .eq('user_id', this.userId)
-
-    if (error) {
+    // Paged: a single select stops at PostgREST's 1000-row cap
+    let existingClients: Array<{
+      customer_id: string
+      email: string | null
+      phone_normalized: string | null
+      first_name: string | null
+      last_name: string | null
+      first_appt: string
+      second_appt: string | null
+      last_appt: string
+      first_source: string | null
+    }>
+    try {
+      existingClients = await fetchAllRows((from, to) =>
+        this.supabase
+          .from(this.tableName)
+          .select('customer_id, email, phone_normalized, first_name, last_name, first_appt, second_appt, last_appt, first_source')
+          .eq('user_id', this.userId)
+          .order('customer_id')
+          .range(from, to)
+      )
+    } catch (error) {
       console.error('Error loading square clients:', error)
       throw error
     }
-
-    if (!existingClients) return
 
     for (const client of existingClients) {
       const clientId = client.customer_id
@@ -191,13 +206,18 @@ export class SquareClientProcessor {
     for (let i = 0; i < clientIds.length; i += batchSize) {
       const batch = clientIds.slice(i, i + batchSize)
 
-      const { data, error } = await this.supabase
-        .from(this.appointmentsTable)
-        .select('customer_id')
-        .eq('user_id', this.userId)
-        .in('customer_id', batch)
-
-      if (error) {
+      let data: Array<{ customer_id: string }>
+      try {
+        data = await fetchAllRows<{ customer_id: string }>((from, to) =>
+          this.supabase
+            .from(this.appointmentsTable)
+            .select('customer_id, id')
+            .eq('user_id', this.userId)
+            .in('customer_id', batch)
+            .order('id')
+            .range(from, to)
+        )
+      } catch (error) {
         console.error('Error fetching square appointment counts:', error)
         throw error
       }

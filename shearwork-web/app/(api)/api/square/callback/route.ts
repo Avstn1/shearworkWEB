@@ -1,4 +1,5 @@
 // app/api/square/callback/route.ts
+import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { createClient } from "@supabase/supabase-js"
@@ -76,10 +77,7 @@ export async function GET(request: Request) {
 	}
 
 	// Save tokens to Supabase
-	const supabaseAdmin = createClient(
-		process.env.NEXT_PUBLIC_SUPABASE_URL!,       // ✅ fixes your supabaseUrl required
-		process.env.SUPABASE_SERVICE_ROLE_KEY!
-	)
+	const supabaseAdmin = createSupabaseAdminClient()
 
 	const expiresAt = tokenData.expires_at
 		? new Date(tokenData.expires_at).toISOString()

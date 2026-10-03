@@ -17,6 +17,7 @@ import {
   getTrialDaysRemaining,
   getTrialPromptMode,
 } from '@/utils/trial'
+import { isAdminRole } from '@/lib/auth/routing'
 import type { TrialPromptMode } from '@/components/Dashboard/TrialPromptModal'
 import type { AuthChangeEvent, PostgrestSingleResponse, Session, User } from '@supabase/supabase-js'
 
@@ -303,7 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id])
 
-  const isAdmin = profile?.role === 'Admin' 
+  const isAdmin = isAdminRole(profile?.role)
 
   const isPremiumUser =
     profile?.stripe_subscription_status === 'active' ||

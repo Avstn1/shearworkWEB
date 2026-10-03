@@ -2,8 +2,6 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use server'
-
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
 import { openai } from '@/lib/openaiClient'

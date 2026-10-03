@@ -1,5 +1,3 @@
-'use server'
-
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { getAuthenticatedUser } from '@/utils/api-auth'

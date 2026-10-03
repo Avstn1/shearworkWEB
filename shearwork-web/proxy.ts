@@ -1,128 +1,34 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
-import { isTrialActive } from '@/utils/trial'
+import { resolveRedirect, type RoutingProfile } from '@/lib/auth/routing'
 
 export default async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname
+  const { pathname, search } = request.nextUrl
 
-  // -----------------------------
-  // MOBILE AUTH PASSTHROUGH
-  // -----------------------------
-  const codePassthroughRoutes = ['/pricing/return']
-  if (codePassthroughRoutes.some(route => pathname.startsWith(route))) {
+  // /pricing/return handles Stripe returns and mobile auth codes itself
+  if (pathname.startsWith('/pricing/return')) {
     return NextResponse.next()
   }
 
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // -----------------------------
-  // PUBLIC ROUTES
-  // -----------------------------
-  const publicRoutes = [
-    '/login',
-    '/signup',
-    '/_next',
-    '/api',
-    '/images', 
-    '/heroImages',
-    '/book',
-    '/privacy-policy',
-    '/support'
-  ]
-
-  if (!user) {
-    if (pathname === '/' || publicRoutes.some(p => pathname.startsWith(p))) {
-      return NextResponse.next()
-    }
-    return NextResponse.redirect(new URL('/', request.url))
+  let profile: RoutingProfile | null = null
+  if (user) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role, stripe_subscription_status, onboarded, trial_active, trial_start, trial_end')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (error) console.error('[proxy] profile fetch failed:', error.message)
+    profile = data
   }
 
-  // -----------------------------
-  // PROFILE FETCH (SERVER ONLY)
-  // -----------------------------
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, stripe_subscription_status, cancel_at_period_end, onboarded, trial_active, trial_start, trial_end')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  const role = profile?.role?.toLowerCase()
-  const subStatus = profile?.stripe_subscription_status
-  const hasTrialAccess = isTrialActive(profile)
-
-  // -----------------------------
-  // ONBOARDING CHECK
-  // -----------------------------
-  if (profile && !profile.onboarded && role !== 'admin') {
-    const allowedDuringOnboarding = [
-      '/onboarding',
-      '/pricing',
-      '/pricing/return',
-      '/api/onboarding',
-      '/api/acuity',
-      '/api/square',
-    ]
-
-    if (!allowedDuringOnboarding.some(route => pathname.startsWith(route))) {
-      return NextResponse.redirect(new URL('/onboarding', request.url))
-    }
-  }
-
-  // -----------------------------
-  // ACTIVE/TRIAL REDIRECTS
-  // -----------------------------
-
-  // -----------------------------
-  // PREMIUM ACCESS
-  // -----------------------------
-  const hasPremiumAccess = subStatus === 'active' || hasTrialAccess
-
-  if (subStatus === 'active' || hasTrialAccess) {
-    if (pathname === '/pricing') {
-      console.log('User has active subscription or trial, redirecting to dashboard')
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-    if (pathname === '/pricing/return') {
-      return NextResponse.next()
-    }
-  }
-
-  const premiumRoutes = [
-    '/dashboard',
-    '/account',
-    '/premium',
-    '/user-editor',
-    '/expenses',
-    '/settings',
-    '/client-manager',
-    '/appointment-manager',
-
-  ]
-
-  if (
-    role !== 'admin' &&
-    premiumRoutes.some(path => pathname.startsWith(path))
-  ) {
-    if (!hasPremiumAccess) {
-      console.log('User does not have premium access, redirecting to pricing')  
-      return NextResponse.redirect(new URL('/pricing', request.url))
-    }
-  }
-
-  // -----------------------------
-  // ROLE-BASED ROUTING
-  // -----------------------------
-  if (
-    (role === 'admin') &&
-    (pathname === '/' || pathname === '/dashboard')
-  ) {
-    return NextResponse.redirect(new URL('/admin/dashboard', request.url))
-  }
-
-  if (role !== 'admin' && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  const redirectTo = resolveRedirect({ pathname, search, isLoggedIn: Boolean(user), profile })
+  if (redirectTo) {
+    console.log(`[proxy] ${pathname} -> ${redirectTo} (user: ${user?.id ?? 'none'})`)
+    return NextResponse.redirect(new URL(redirectTo, request.url))
   }
 
   return NextResponse.next()
@@ -130,6 +36,6 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
+    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml|woff2?)$).*)'
   ]
 }
