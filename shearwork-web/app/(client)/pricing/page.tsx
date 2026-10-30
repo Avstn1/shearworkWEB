@@ -58,8 +58,8 @@ const FEATURES = {
 // Loading component for Suspense fallback
 function PricingPageLoader() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
-      <Loader2 className="h-8 w-8 animate-spin text-[#7affc9]" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29]">
+      <Loader2 className="h-8 w-8 animate-spin text-[#d6dcc5]" />
       <p className="mt-4 text-gray-300">Loading pricing...</p>
     </div>
   )
@@ -298,8 +298,8 @@ function PricingPageContent() {
   // Show loading state while authenticating
   if (authenticating) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#7affc9]" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#d6dcc5]" />
         <p className="mt-4 text-gray-300">Authenticating...</p>
       </div>
     )
@@ -313,7 +313,7 @@ function PricingPageContent() {
   const yearlySavings = monthly && yearly ? (monthly.amount * 12) - yearly.amount : null
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#181818] px-4 pt-20 sm:pt-24 pb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#161913] px-4 pt-20 sm:pt-24 pb-8">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
@@ -329,9 +329,9 @@ function PricingPageContent() {
         
         {/* Trial */}
         {showTrial && (
-          <div className="flex-1 bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
+          <div className="flex-1 bg-[#181b15] rounded-2xl p-6 border border-[#282b24]">
             <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-5 w-5 text-[#73aa57]" />
+              <Zap className="h-5 w-5 text-[#aab39a]" />
               <h2 className="text-lg font-semibold text-white">Free Trial</h2>
             </div>
             
@@ -343,7 +343,7 @@ function PricingPageContent() {
             <button
               onClick={() => startCheckout('trial')}
               disabled={loading || loadingPrices}
-              className="w-full rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
+              className="w-full rounded-xl bg-[#282b24] hover:bg-[#31342c] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
             >
               {loading && selectedPlan === 'trial' ? (
                 <Loader2 className="h-4 w-4 mx-auto animate-spin" />
@@ -355,7 +355,7 @@ function PricingPageContent() {
             <ul className="space-y-3">
               {FEATURES.trial.map((feature, i) => (
                 <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                  <Check className="h-4 w-4 text-[#73aa57] flex-shrink-0" />
+                  <Check className="h-4 w-4 text-[#aab39a] flex-shrink-0" />
                   {feature}
                 </li>
               ))}
@@ -364,9 +364,9 @@ function PricingPageContent() {
         )}
 
         {/* Pro Yearly - Featured */}
-        <div className="flex-1 bg-[#1a1a1a] rounded-2xl p-6 border-2 border-[#73aa57]/50 relative">
+        <div className="flex-1 bg-[#181b15] rounded-2xl p-6 border-2 border-[#aab39a]/50 relative">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <span className="bg-[#73aa57] text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+            <span className="bg-[#aab39a] text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
               <Crown className="h-3 w-3" />
               Best Value
             </span>
@@ -387,7 +387,7 @@ function PricingPageContent() {
           </div>
           <p className="text-sm text-gray-500 mb-1">per year</p>
           {yearlySavings && yearlySavings > 0 && (
-            <p className="text-sm text-[#73aa57] font-medium mb-4">
+            <p className="text-sm text-[#aab39a] font-medium mb-4">
               Save {formatAmount(yearlySavings, yearly?.currency || 'usd')} vs monthly
             </p>
           )}
@@ -396,7 +396,7 @@ function PricingPageContent() {
           <button
             onClick={() => startCheckout('yearly')}
             disabled={loading || loadingPrices || !yearly}
-            className="w-full rounded-xl bg-[#73aa57] hover:bg-[#5b8f52] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
+            className="w-full rounded-xl bg-[#aab39a] hover:bg-[#8e9a78] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
           >
             {loading && selectedPlan === 'yearly' ? (
               <Loader2 className="h-4 w-4 mx-auto animate-spin" />
@@ -408,7 +408,7 @@ function PricingPageContent() {
           <ul className="space-y-3">
             {FEATURES.proYearly.map((feature, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                <Check className="h-4 w-4 text-[#73aa57] flex-shrink-0" />
+                <Check className="h-4 w-4 text-[#aab39a] flex-shrink-0" />
                 {feature}
               </li>
             ))}
@@ -416,7 +416,7 @@ function PricingPageContent() {
         </div>
 
         {/* Pro Monthly */}
-        <div className="flex-1 bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
+        <div className="flex-1 bg-[#181b15] rounded-2xl p-6 border border-[#282b24]">
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-lg font-semibold text-white">Pro Monthly</h2>
           </div>
@@ -435,7 +435,7 @@ function PricingPageContent() {
           <button
             onClick={() => startCheckout('monthly')}
             disabled={loading || loadingPrices || !monthly}
-            className="w-full rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
+            className="w-full rounded-xl bg-[#282b24] hover:bg-[#31342c] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
           >
             {loading && selectedPlan === 'monthly' ? (
               <Loader2 className="h-4 w-4 mx-auto animate-spin" />
@@ -447,7 +447,7 @@ function PricingPageContent() {
           <ul className="space-y-3">
             {FEATURES.pro.map((feature, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                <Check className="h-4 w-4 text-[#73aa57] flex-shrink-0" />
+                <Check className="h-4 w-4 text-[#aab39a] flex-shrink-0" />
                 {feature}
               </li>
             ))}
@@ -503,7 +503,7 @@ function PricingPageContent() {
                 setShowCancelModal(false)
                 router.push('/pricing')
               }}
-              className="w-full rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold py-2"
+              className="w-full rounded-xl bg-gradient-to-b from-[#D7DEC4] to-[#aab39a] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx font-semibold py-2"
             >
               Return to pricing
             </button>

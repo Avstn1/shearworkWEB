@@ -2,13 +2,15 @@
 
 import { motion } from 'framer-motion'
 import Image from 'next/image'
+import { BookingToast, SmsNotice } from './GlassNotice'
+import { ButtonLink } from '@/components/ui/Button'
 
 const COLORS = {
-  text: '#FFFFFF',
-  textMuted: 'rgba(255, 255, 255, 0.6)',
-  textSubtle: 'rgba(255, 255, 255, 0.4)',
-  green: '#73aa57',
-  greenGlow: 'rgba(115, 170, 87, 0.3)',
+  text: '#F4F3EC',
+  textMuted: 'rgba(244, 243, 236, 0.66)',
+  textSubtle: 'rgba(244, 243, 236, 0.5)',
+  green: '#aab39a',
+  greenGlow: 'rgba(170, 179, 154, 0.3)',
 }
 
 function SmsBubble() {
@@ -19,29 +21,7 @@ function SmsBubble() {
       transition={{ duration: 0.5, delay: 0.6, ease: 'easeOut' }}
       className="absolute top-[-60px] left-1/2 -translate-x-1/2 w-[250px] sm:w-[280px] lg:w-[310px] z-20"
     >
-      <div 
-        className="rounded-2xl p-3 sm:p-4 bg-zinc-900/80 border border-white/10 backdrop-blur-xl"
-        style={{
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.05)',
-        }}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{ backgroundColor: COLORS.green, color: '#000' }}
-          >
-            C
-          </div>
-          <span className="text-xs sm:text-sm font-medium text-white">Corva</span>
-          <span className="text-[10px] sm:text-xs ml-auto text-white/40">10:00 AM</span>
-        </div>
-        <p className="text-[11px] sm:text-xs leading-relaxed mb-2 text-white/60">
-          Hey Gavin, it&apos;s Corva. You have 22 empty slots this week. Want me to help fill them?
-        </p>
-        <p className="text-[10px] sm:text-[11px] text-white/40">
-          Reply YES to continue and STOP to unsubscribe.
-        </p>
-      </div>
+      <SmsNotice />
     </motion.div>
   )
 }
@@ -53,18 +33,8 @@ function SuccessToast() {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, delay: 0.9, ease: 'easeOut' }}
       className="absolute bottom-[10px] left-1/2 -translate-x-1/2 w-[240px] sm:w-[270px] lg:w-[300px] z-20"
-      style={{
-        boxShadow: '0 0 0 1px rgba(16,185,129,0.35), 0 18px 50px rgba(16,185,129,0.10), 0 8px 24px rgba(0,0,0,0.3)',
-      }}
     >
-      <Image
-        src="/heroImages/notification-success.png"
-        alt="SMS Auto-nudge success notification"
-        width={1320}
-        height={266}
-        className="w-full h-auto rounded-xl"
-        quality={100}
-      />
+      <BookingToast />
     </motion.div>
   )
 }
@@ -77,29 +47,7 @@ function MobileSmsBubble() {
       transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
       className="absolute top-[-50px] left-1/2 -translate-x-1/2 w-[200px] sm:w-[220px] z-20 pointer-events-none"
     >
-      <div 
-        className="rounded-xl p-2.5 sm:p-3 bg-zinc-900/85 border border-white/10 backdrop-blur-xl"
-        style={{
-          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.05)',
-        }}
-      >
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <div
-            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-            style={{ backgroundColor: COLORS.green, color: '#000' }}
-          >
-            C
-          </div>
-          <span className="text-[10px] sm:text-xs font-medium text-white">Corva</span>
-          <span className="text-[9px] sm:text-[10px] ml-auto text-white/40">10:00 AM</span>
-        </div>
-        <p className="text-[10px] sm:text-[11px] leading-relaxed mb-1.5 text-white/60">
-          Hey Gavin, you have 22 empty slots this week. Want me to help fill them?
-        </p>
-        <p className="text-[9px] sm:text-[10px] text-white/40">
-          Reply YES to continue
-        </p>
-      </div>
+      <SmsNotice size="sm" compact />
     </motion.div>
   )
 }
@@ -111,18 +59,8 @@ function MobileSuccessToast() {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.4, delay: 0.7, ease: 'easeOut' }}
       className="absolute bottom-[8px] left-1/2 -translate-x-1/2 w-[180px] sm:w-[200px] z-20 pointer-events-none"
-      style={{
-        boxShadow: '0 0 0 1px rgba(16,185,129,0.3), 0 12px 36px rgba(16,185,129,0.08), 0 6px 18px rgba(0,0,0,0.25)',
-      }}
     >
-      <Image
-        src="/heroImages/notification-success.png"
-        alt="SMS Auto-nudge success notification"
-        width={1320}
-        height={266}
-        className="w-full h-auto rounded-lg"
-        quality={90}
-      />
+      <BookingToast size="sm" />
     </motion.div>
   )
 }
@@ -138,7 +76,7 @@ function CroppedMobileMockup() {
       {/* Emerald glow behind phone */}
       <div 
         className="absolute inset-0 -z-10 rounded-t-[28px] blur-2xl"
-        style={{ background: 'rgba(16,185,129,0.1)' }}
+        style={{ background: 'rgba(142, 154, 120,0.1)' }}
       />
 
       {/* Phone shell - cropped, rounded top only */}
@@ -160,7 +98,7 @@ function CroppedMobileMockup() {
             height={414}
             className="absolute inset-0 w-full h-auto object-cover object-top"
             style={{ 
-              filter: 'blur(3px) saturate(0.6) brightness(0.85)',
+              filter: 'grayscale(1) sepia(0.35) hue-rotate(38deg) saturate(0.9) brightness(0.62) contrast(1.05) blur(3px)',
               transform: 'scale(1.02)'
             }}
             quality={90}
@@ -169,49 +107,20 @@ function CroppedMobileMockup() {
           {/* SMS notification bubbles - inside phone */}
           <div className="absolute inset-x-4 top-4 space-y-3 z-10">
             
-            {/* Bubble 1: Detection */}
             <motion.div
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
-              className="rounded-2xl p-3 bg-zinc-900/90 backdrop-blur-xl border border-white/10"
-              style={{
-                boxShadow: '0 4px 20px rgba(0,0,0,0.4), 0 0 20px rgba(115,170,87,0.08)'
-              }}
             >
-              <div className="flex items-center gap-2 mb-1.5">
-                <div 
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-                  style={{ backgroundColor: COLORS.green, color: '#000' }}
-                >
-                  C
-                </div>
-                <span className="text-[10px] font-medium text-white">Corva</span>
-                <span className="text-[9px] ml-auto text-white/40">10:00 AM</span>
-              </div>
-              <p className="text-[10px] leading-relaxed text-white/70">
-                You have 22 empty slots this week. Want me to help fill them?
-              </p>
+              <SmsNotice size="sm" compact />
             </motion.div>
 
-            {/* Bubble 2: Success confirmation - using real image */}
             <motion.div
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.4, delay: 0.8, ease: 'easeOut' }}
-              className="rounded-xl overflow-hidden"
-              style={{
-                boxShadow: '0 0 0 1px rgba(16,185,129,0.3), 0 4px 20px rgba(0,0,0,0.4), 0 0 24px rgba(16,185,129,0.12)'
-              }}
             >
-              <Image
-                src="/heroImages/notification-success.png"
-                alt="Booking confirmed notification"
-                width={1320}
-                height={266}
-                className="w-full h-auto"
-                quality={90}
-              />
+              <BookingToast size="sm" />
             </motion.div>
 
           </div>
@@ -220,7 +129,7 @@ function CroppedMobileMockup() {
           <div 
             className="absolute inset-x-0 bottom-0 h-[80px] pointer-events-none z-10"
             style={{
-              background: 'linear-gradient(to bottom, transparent 0%, rgba(5,5,5,0.6) 40%, rgba(5,5,5,1) 100%)'
+              background: 'linear-gradient(to bottom, transparent 0%, rgba(14,17,12,0.6) 40%, rgba(14,17,12,1) 100%)'
             }}
           />
 
@@ -263,7 +172,7 @@ function MobileMockupCard() {
             height={414}
             className="w-full h-auto"
             quality={90}
-            style={{ filter: 'saturate(0.72) brightness(0.93) contrast(0.98) blur(2px)' }}
+            style={{ filter: 'grayscale(1) sepia(0.35) hue-rotate(38deg) saturate(0.9) brightness(0.62) contrast(1.05) blur(2.5px)' }}
           />
 
           {/* Inner card frame */}
@@ -320,7 +229,7 @@ function MockupCard() {
             className="w-full h-auto"
             priority
             quality={100}
-            style={{ filter: 'saturate(0.72) brightness(0.93) contrast(0.98) blur(2.75px)' }}
+            style={{ filter: 'grayscale(1) sepia(0.35) hue-rotate(38deg) saturate(0.9) brightness(0.62) contrast(1.05) blur(2.5px)' }}
           />
 
           {/* Inner card frame */}
@@ -375,7 +284,7 @@ export default function Hero() {
     <section
       className="w-full relative overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #050505 0%, #0a0a0a 30%, #0d1210 60%, #080808 100%)',
+        background: 'radial-gradient(120% 90% at 85% 15%, #1E241A 0%, #12150F 45%, #0B0D09 100%)',
         color: COLORS.text,
       }}
     >
@@ -383,10 +292,10 @@ export default function Hero() {
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_70%_70%_at_50%_50%,rgba(0,0,0,0)_0%,rgba(0,0,0,.6)_70%,rgba(0,0,0,.85)_100%)]" />
 
       {/* Emerald blob - top left (soft, pushed away from text) */}
-      <div className="absolute -top-40 -left-60 w-[600px] h-[600px] rounded-full blur-[120px] bg-emerald-600/8 pointer-events-none" />
+      <div className="absolute -top-40 -left-60 w-[600px] h-[600px] rounded-full blur-[120px] bg-olive/25 pointer-events-none" />
 
       {/* Emerald blob - right side (stronger, behind mockup) */}
-      <div className="absolute top-1/4 -right-20 w-[800px] h-[800px] rounded-full blur-[140px] bg-emerald-500/15 pointer-events-none" />
+      <div className="absolute top-1/4 -right-20 w-[800px] h-[800px] rounded-full blur-[140px] bg-[radial-gradient(closest-side,rgb(93_106_72/0.45),transparent)] pointer-events-none" />
 
       {/* Dark pocket behind text for maximum contrast */}
       <div className="absolute left-0 top-0 w-[55%] h-full pointer-events-none bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
@@ -397,16 +306,28 @@ export default function Hero() {
           
           {/* Left Column - Copy (DOMINANT) */}
           <div className="max-w-2xl">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              className="mb-6 sm:mb-8 inline-flex items-center gap-2.5 rounded-full border border-white/[0.09] bg-white/[0.04] py-1.5 pl-2 pr-3.5 text-[12.5px] text-gray-300 backdrop-blur-md shadow-[inset_0_1px_0_rgb(247_245_239/0.06)]"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage opacity-60 motion-reduce:animate-none" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-sage-bright" />
+              </span>
+              Auto-Nudge for independent barbers
+            </motion.p>
             <motion.h1
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: 'easeOut' }}
-              className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 sm:mb-8 lg:mb-10 tracking-tight"
-              style={{ lineHeight: '1.08' }}
+              className="text-4xl sm:text-5xl lg:text-7xl font-semibold mb-6 sm:mb-8 lg:mb-10 tracking-[-0.035em] text-ivory"
+              style={{ lineHeight: '1.04' }}
             >
               <span className="sm:whitespace-nowrap">Stop Relying on Hustle</span>
               <br />
-              <span className="sm:whitespace-nowrap bg-gradient-to-r from-white via-white to-emerald-300 bg-clip-text text-transparent">to Stay Booked.</span>
+              <span className="sm:whitespace-nowrap bg-gradient-to-r from-ivory via-sage-bright to-sage bg-clip-text text-transparent">to Stay Booked.</span>
             </motion.h1>
 
             <motion.p
@@ -414,7 +335,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.12, ease: 'easeOut' }}
               className="text-base sm:text-lg lg:text-2xl mb-4 sm:mb-6 lg:mb-8 max-w-xl"
-              style={{ color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}
+              style={{ color: COLORS.textMuted, lineHeight: '1.6' }}
             >
               Corva detects your open spots and automatically reminds past clients so you recover bookings you would have missed.
             </motion.p>
@@ -424,7 +345,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.18, ease: 'easeOut' }}
               className="text-sm sm:text-base lg:text-lg mb-6 sm:mb-8 lg:mb-12 max-w-lg"
-              style={{ color: 'rgba(255,255,255,0.45)', lineHeight: '1.5' }}
+              style={{ color: COLORS.textSubtle, lineHeight: '1.5' }}
             >
               Independent barbers do not need more hustle. They need a system.
             </motion.p>
@@ -435,41 +356,11 @@ export default function Hero() {
               transition={{ duration: 0.7, delay: 0.24, ease: 'easeOut' }}
               className="flex flex-col sm:flex-row gap-4 sm:gap-5 mb-4 sm:mb-6 lg:mb-8"
             >
-              <a
-                href="/signup"
-                className="inline-flex items-center justify-center font-semibold px-8 py-3.5 rounded-full 
-                           shadow-lg transition-all duration-200 
-                           hover:scale-105 hover:shadow-xl
-                           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black"
-                style={{
-                  backgroundColor: COLORS.green,
-                  color: '#000000',
-                  boxShadow: `0 4px 20px -4px ${COLORS.greenGlow}`,
-                }}
-              >
+              <ButtonLink href="/signup" size="lg" arrow>
                 Start 21-Day Free Trial
-              </a>
+              </ButtonLink>
 
-              <button
-                onClick={scrollToHowItWorks}
-                className="inline-flex items-center justify-center px-8 py-3.5 rounded-full 
-                           border-2 transition-all duration-200 
-                           hover:scale-105 cursor-pointer
-                           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black"
-                style={{
-                  borderColor: COLORS.green,
-                  color: COLORS.green,
-                  backgroundColor: 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = COLORS.green
-                  e.currentTarget.style.color = '#000000'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = COLORS.green
-                }}
-              >
+              <button type="button" onClick={scrollToHowItWorks} className="btn btn-glass btn-lg">
                 See How It Works
               </button>
             </motion.div>

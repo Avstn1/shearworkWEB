@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col p-4 sm:p-6 text-[var(--foreground)] pt-[120px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] gap-6">
+      <div className="min-h-screen flex flex-col p-4 sm:p-6 text-[var(--foreground)] pt-[120px] bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29] gap-6">
         
         {/* Header */}
         <motion.div
@@ -121,7 +121,7 @@ export default function AnalyticsPage() {
           initial="hidden"
           animate="visible"
           custom={1}
-          className="sticky top-[100px] z-20 bg-[#1f2420]/95 backdrop-blur-md p-3 sm:p-4 border border-[#55694b]/50 flex flex-col lg:flex-row items-start lg:items-center gap-3 rounded-2xl shadow-2xl"
+          className="sticky top-[100px] z-20 bg-[#1e241a]/95 backdrop-blur-md p-3 sm:p-4 border border-[#5d6a48]/50 flex flex-col lg:flex-row items-start lg:items-center gap-3 rounded-2xl shadow-2xl"
         >
           {/* Filters Label */}
           <div className="flex items-center gap-2">
@@ -142,16 +142,16 @@ export default function AnalyticsPage() {
                 className={`px-3 sm:px-4 py-2 rounded-xl border text-sm font-medium transition-all duration-300 ${
                   mode === 'month'
                     ? 'bg-lime-300 border-lime-400 text-black shadow-[0_0_12px_rgba(196,255,133,0.5)]'
-                    : 'bg-[#2a2a2a] border-[#3a3a3a] text-white hover:bg-[#3a3a3a]'
+                    : 'bg-[#282b24] border-[#373a32] text-white hover:bg-[#373a32]'
                 }`}
               >
                 {formatMonthLabel(selectedMonth)}
               </button>
 
               {monthDropdownOpen && (
-                <div className="absolute top-12 left-0 z-30 bg-[#1f2420] border border-white/10 rounded-2xl shadow-2xl p-3 w-[220px] backdrop-blur-lg">
-                  <div className="text-xs text-[#bdbdbd] mb-2 px-1 font-medium">Select month</div>
-                  <div className="max-h-56 overflow-auto scrollbar-thin scrollbar-thumb-[#55694b] scrollbar-track-transparent">
+                <div className="absolute top-12 left-0 z-30 bg-[#1e241a] border border-white/10 rounded-2xl shadow-2xl p-3 w-[220px] backdrop-blur-lg">
+                  <div className="text-xs text-[#bdbeb3] mb-2 px-1 font-medium">Select month</div>
+                  <div className="max-h-56 overflow-auto scrollbar-thin scrollbar-thumb-[#5d6a48] scrollbar-track-transparent">
                     {monthOptions.map((m) => (
                       <button
                         key={m}
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
                 className={`px-3 sm:px-4 py-2 rounded-xl border text-sm font-medium transition-all duration-300 ${
                   mode === 'custom'
                     ? 'bg-sky-300 border-sky-400 text-black shadow-[0_0_12px_rgba(127,217,255,0.5)]'
-                    : 'bg-[#2a2a2a] border-[#3a3a3a] text-white hover:bg-[#3a3a3a]'
+                    : 'bg-[#282b24] border-[#373a32] text-white hover:bg-[#373a32]'
                 }`}
               >
                 Custom Range
@@ -209,10 +209,10 @@ export default function AnalyticsPage() {
                       showOutsideDays
                       modifiersClassNames={{ today: 'rdp-day_today-custom' }}
                       modifiersStyles={{
-                        selected: { color: '#F1F5E9', fontWeight: 'bold', background: 'var(--accent-3)' },
-                        range_start: { background: 'var(--accent-3)', color: '#F1F5E9', borderRadius: '0.5rem 0 0 0.5rem' },
-                        range_end: { background: 'var(--accent-3)', color: '#F1F5E9', borderRadius: '0 0.5rem 0.5rem 0' },
-                        range_middle: { background: 'var(--accent-3)', color: '#F1F5E9' },
+                        selected: { color: '#F4F3EC', fontWeight: 'bold', background: 'var(--accent-3)' },
+                        range_start: { background: 'var(--accent-3)', color: '#F4F3EC', borderRadius: '0.5rem 0 0 0.5rem' },
+                        range_end: { background: 'var(--accent-3)', color: '#F4F3EC', borderRadius: '0 0.5rem 0.5rem 0' },
+                        range_middle: { background: 'var(--accent-3)', color: '#F4F3EC' },
                       }}
                       className="bg-transparent text-xs"
                       disabled={{ after: new Date() }}
@@ -225,12 +225,12 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Separator */}
-          <div className="hidden lg:block h-8 w-px bg-gradient-to-b from-transparent via-[#55694b] to-transparent" />
+          <div className="hidden lg:block h-8 w-px bg-gradient-to-b from-transparent via-[#5d6a48] to-transparent" />
 
           {/* View Mode Toggle */}
           <div className="flex items-center gap-2">
             <span className="text-xs sm:text-sm text-[var(--foreground)] opacity-70 font-medium">View:</span>
-            <div className="flex gap-1 bg-[#2a2a2a] p-1 rounded-xl">
+            <div className="flex gap-1 bg-[#282b24] p-1 rounded-xl">
               <button
                 onClick={() => setViewMode('hourly')}
                 className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 ${
@@ -257,7 +257,7 @@ export default function AnalyticsPage() {
           {/* Display Mode Toggle */}
           <div className="flex items-center gap-2">
             <span className="text-xs sm:text-sm text-[var(--foreground)] opacity-70 font-medium">Display:</span>
-            <div className="flex gap-1 bg-[#2a2a2a] p-1 rounded-xl">
+            <div className="flex gap-1 bg-[#282b24] p-1 rounded-xl">
               <button
                 onClick={() => setDisplayMode('separate')}
                 className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 ${
@@ -287,7 +287,7 @@ export default function AnalyticsPage() {
             className={`px-3 sm:px-4 py-2 rounded-xl border text-xs sm:text-sm font-semibold transition-all duration-300 ${
               showAllLogs
                 ? 'bg-purple-400 border-purple-500 text-purple-900 shadow-[0_0_12px_rgba(192,132,252,0.5)]'
-                : 'bg-[#2a2a2a] border-[#3a3a3a] text-white hover:bg-[#3a3a3a]'
+                : 'bg-[#282b24] border-[#373a32] text-white hover:bg-[#373a32]'
             }`}
           >
             All Logs
@@ -300,7 +300,7 @@ export default function AnalyticsPage() {
           {/* <button
             onClick={handleRefresh}
             disabled={loading}
-            className="whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-lime-300 hover:bg-lime-400 text-black text-sm font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(196,255,133,0.3)] hover:shadow-[0_0_16px_rgba(196,255,133,0.5)]"
+            className="whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-lime-300 hover:bg-lime-400 text-black text-sm font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_12px_rgba(196,255,133,0.3)] hover:shadow-[0_0_16px_rgba(196,255,133,0.5)] btn-fx"
           >
             <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Refreshing...' : 'Refresh'}</span>

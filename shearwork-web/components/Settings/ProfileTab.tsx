@@ -746,7 +746,7 @@ export default function ProfileTab() {
             />
             <button
               onClick={updateCommission}
-              className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
+              className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap btn-fx"
             >
               Save Rate
             </button>
@@ -758,7 +758,7 @@ export default function ProfileTab() {
       {showEmailModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Email</h3>
                 <button
@@ -823,7 +823,7 @@ export default function ProfileTab() {
                       <button
                         onClick={handleVerifyEmail}
                         disabled={isVerifyingEmail || !emailVerificationCode.trim()}
-                        className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
                       >
                         {isVerifyingEmail ? 'Verifying...' : 'Verify'}
                       </button>
@@ -840,7 +840,7 @@ export default function ProfileTab() {
       {/* {showPhoneModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Phone Number</h3>
                 <button
@@ -923,7 +923,7 @@ export default function ProfileTab() {
                     <button
                       onClick={handleVerifyPhone}
                       disabled={isVerifyingPhone || !phoneVerificationCode.trim()}
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
                     >
                       {isVerifyingPhone ? 'Verifying...' : 'Verify'}
                     </button>
@@ -939,7 +939,7 @@ export default function ProfileTab() {
       {showPhoneModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Phone Number</h3>
                 <button
@@ -991,7 +991,7 @@ export default function ProfileTab() {
                 <button
                   onClick={handleVerifyPhoneNoOTP}
                   disabled={editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
                 >
                   Save Phone Number
                 </button>
@@ -1005,7 +1005,7 @@ export default function ProfileTab() {
       {isUsernameModalOpen && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Edit Username</h3>
                 <button
@@ -1044,7 +1044,7 @@ export default function ProfileTab() {
                 <button
                   onClick={handleUsernameSave}
                   disabled={!editedUsername || !!usernameError || isCheckingUsername}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
                 >
                   {isCheckingUsername ? 'Checking...' : 'Update Username'}
                 </button>
@@ -1058,7 +1058,7 @@ export default function ProfileTab() {
       {showBookingLinkModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Booking Link</h3>
                 <button
@@ -1086,7 +1086,7 @@ export default function ProfileTab() {
                 <button
                   onClick={handleUpdateBookingLink}
                   disabled={isUpdatingBookingLink || !editedBookingLink.trim()}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
                 >
                   {isUpdatingBookingLink ? 'Updating...' : 'Update Booking Link'}
                 </button>

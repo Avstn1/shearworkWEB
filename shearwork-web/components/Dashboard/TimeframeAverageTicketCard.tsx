@@ -95,7 +95,7 @@ export default function TimeframeAverageTicketCard({
     <div
       className="flex flex-col min-h-[140px]"
     >
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">
+      <h2 className="text-[#8e9480] text-base font-semibold mb-2">
         💵 Avg Ticket ({titleSuffix})
       </h2>
 

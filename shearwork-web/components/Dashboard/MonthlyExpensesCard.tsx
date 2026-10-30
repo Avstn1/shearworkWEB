@@ -129,7 +129,7 @@ export default function MonthlyExpensesCard({ userId, month, year }: MonthlyExpe
       animate="visible"
       className="w-full h-full flex flex-col justify-between"
     >
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">
+      <h2 className="text-[#8e9480] text-base font-semibold mb-2">
         🧾 Monthly Expenses
       </h2>
 

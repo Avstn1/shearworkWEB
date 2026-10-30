@@ -168,13 +168,13 @@ export default function WeeklyReports({
                 </>
               )}
 
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#6ee7b7]">
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#c9d2b3]">
                 <FileText size={16} /> Week {r.week_number} - {r.month} {r.year}
               </div>
             </div>
           ))
         ) : (
-          <div className="text-[#555] text-sm mt-2 col-span-full text-center">
+          <div className="text-[#55584e] text-sm mt-2 col-span-full text-center">
             No weekly reports available for this month/year.
           </div>
         )}

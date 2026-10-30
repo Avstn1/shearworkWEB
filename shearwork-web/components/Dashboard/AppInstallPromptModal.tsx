@@ -9,14 +9,14 @@ interface AppInstallPromptModalProps {
 }
 
 const COLORS = {
-  background: '#181818',
-  cardBg: '#1a1a1a',
-  surface: 'rgba(37, 37, 37, 0.6)',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
-  text: '#FFFFFF',
-  textMuted: 'rgba(255, 255, 255, 0.6)',
-  green: '#73aa57',
-  greenGlow: 'rgba(115, 170, 87, 0.4)',
+  background: '#161913',
+  cardBg: '#181b15',
+  surface: 'rgba(247, 245, 239, 0.05)',
+  glassBorder: 'rgba(247, 245, 239, 0.09)',
+  text: '#F4F3EC',
+  textMuted: 'rgba(244, 243, 236, 0.62)',
+  green: '#aab39a',
+  greenGlow: 'rgba(170, 179, 154, 0.4)',
 }
 
 // TODO: Replace with real App Store ID when available

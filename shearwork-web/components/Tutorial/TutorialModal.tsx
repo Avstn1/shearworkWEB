@@ -115,7 +115,7 @@ export default function TutorialModal({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#9ca3af]">Tutorial</p>
+            <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#a7a99d]">Tutorial</p>
             <h2 id={titleId} className="mt-1 text-lg font-semibold text-white">
               {step.title}
             </h2>
@@ -130,7 +130,7 @@ export default function TutorialModal({
           </button>
         </div>
 
-        <p id={descriptionId} className="mt-3 text-sm text-[#bdbdbd]">
+        <p id={descriptionId} className="mt-3 text-sm text-[#bdbeb3]">
           {step.description}
         </p>
 
@@ -140,7 +140,7 @@ export default function TutorialModal({
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-between text-xs text-[#9ca3af]">
+        <div className="mt-6 flex items-center justify-between text-xs text-[#a7a99d]">
           <span>
             Step {stepIndex + 1} of {totalSteps}
           </span>

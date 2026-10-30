@@ -270,17 +270,17 @@ export default function DashboardPage() {
           <h1 className={`font-bold text-white ${isMobile ? 'text-xl' : 'text-2xl'}`}>
             Welcome back!
           </h1>
-          <p className="text-xs text-[#bdbdbd]">Here's your local daily & monthly summary.</p>
+          <p className="text-xs text-[#bdbeb3]">Here's your local daily & monthly summary.</p>
         </div>
 
         {/* ── View switcher: unified muted style, no multi-color glows ── */}
-        <div data-tutorial-id="dashboard-view-switcher" className="flex gap-1 w-full sm:w-auto bg-[#1a1a1a] rounded-full p-1">
+        <div data-tutorial-id="dashboard-view-switcher" className="flex gap-1 w-full sm:w-auto bg-[#181b15] rounded-full p-1">
           <button
             onClick={() => setDashboardView('monthly')}
             className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
               dashboardView === 'monthly'
                 ? 'bg-white/10 text-white'
-                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+                : 'text-[#bdbeb3] hover:text-white hover:bg-[#282b24]'
             }`}
           >
             Monthly
@@ -290,7 +290,7 @@ export default function DashboardPage() {
             className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
               dashboardView === 'yearly'
                 ? 'bg-white/10 text-white'
-                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+                : 'text-[#bdbeb3] hover:text-white hover:bg-[#282b24]'
             }`}
           >
             Yearly
@@ -300,7 +300,7 @@ export default function DashboardPage() {
             className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
               dashboardView === 'profit'
                 ? 'bg-white/10 text-white'
-                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
+                : 'text-[#bdbeb3] hover:text-white hover:bg-[#282b24]'
             }`}
           >
             Profit/Loss
@@ -325,7 +325,7 @@ export default function DashboardPage() {
             syncAcuityData()
           }}
           disabled={isRefreshing}
-          className="whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#282b24] hover:bg-[#373a32] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Sync data"
         >
           <Loader2 className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -333,7 +333,7 @@ export default function DashboardPage() {
         </button>
 
         {isRefreshing && (
-          <div className="flex items-center gap-1 text-xs text-[#bdbdbd] animate-pulse ml-2">
+          <div className="flex items-center gap-1 text-xs text-[#bdbeb3] animate-pulse ml-2">
             <Loader2 className="h-3 w-3 animate-spin" />
             <span>Syncing...</span>
           </div>
@@ -413,15 +413,15 @@ export default function DashboardPage() {
       {/* RIGHT COLUMN */}
       <div className="flex flex-col gap-4 pl-1">
         <motion.div data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
+          <h2 className="text-[#bdbeb3] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
           <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
         <motion.div id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
+          <h2 className="text-[#bdbeb3] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
           <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
         <motion.div data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
+          <h2 className="text-[#bdbeb3] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
           <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
         </motion.div>
       </div>
@@ -430,10 +430,10 @@ export default function DashboardPage() {
 
   // -------------------- PAGE CONTENT --------------------
   const content = (
-    <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+    <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29]">
       <DashboardHeader />
       {showTrialNote && (
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#bdbdbd]">
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#bdbeb3]">
           <span className="font-semibold text-white">Getting started:</span> Data will populate after your first sync.
           Use the Re‑sync button above after connecting your calendar.
         </div>

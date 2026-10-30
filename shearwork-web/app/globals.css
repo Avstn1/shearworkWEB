@@ -1,71 +1,107 @@
 @import "tailwindcss";
 
 /* =======================
-   🌿 Theme Variables
+   🫒 Corva design tokens
+   Dark, glassy brand built on the olive palette:
+   deep olive #454F35 · forest #303A29 · sage #AAB39A · ivory #F7F5EF · ink #20231E
+   · stone #77796F. Usable as utilities: bg-canvas, bg-surface, text-sage, border-glass ...
    ======================= */
-:root {
-  --background: #E8EDC7;
-  --foreground: #3E3B2E;
-  --navbar: #1e231c;
-  --accent-1: #4f5847;
-  --accent-2: #7B8C68;
-  --accent-3: #5F6F52;
-  --accent-4: #1e231c;
-  --text-muted: #6E725E;
-  --text-bright: #F7F9EE;
-  --text-dark: #56574a;
-  --highlight: #C1A85D;
-  --text-subtle: #868A75;
-  --text-med: #767866;
+@theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+}
 
-  /* 🏆 Card Colors */
-  --card-revenue-bg: linear-gradient(145deg, #3b3a2f, #4a4b38); /* Gradient restored */
-  --card-revenue-border: #C1A85D;
+@theme {
+  /* Core palette */
+  --color-olive: #454F35;
+  --color-olive-bright: #5D6A48;
+  --color-forest: #303A29;
+  --color-forest-900: #1E241A;
+  --color-sage: #AAB39A;
+  --color-sage-bright: #C9D2B3; /* luminous accent text on dark */
+  --color-ivory: #F7F5EF;
+  --color-ink: #20231E;
+  --color-stone: #77796F;
 
-  /* 🧩 Top Clients Card (solid base) */
-  --card-topclients-bg: #3b3a2f;
-  /* 📆 Report Cards */
-  --card-weekly-bg: #708B64;             /* base olive */
-  --card-weekly-border: #5E7256;         /* subtle darker border */
-  --card-weekly-shadow: rgba(0, 0, 0, 0.15);
+  /* Dark surfaces */
+  --color-canvas: #0E110C;    /* page */
+  --color-surface: #161A13;   /* cards */
+  --color-raised: #1E241A;    /* raised cards, menus */
+  --color-glass: rgb(247 245 239 / 0.045);
+  --color-glass-strong: rgb(247 245 239 / 0.08);
+  --color-glass-border: rgb(247 245 239 / 0.09);
+  --color-glass-border-strong: rgb(247 245 239 / 0.16);
+  --color-muted: #A7A99D;     /* secondary text on dark (AA on base) */
 
-  --card-monthly-bg: #7E916E;            /* slightly lighter olive-green */
-  --card-monthly-border: #657A58;        /* richer green-gray tone */
-  --card-monthly-shadow: rgba(0, 0, 0, 0.2);
+  /* Brand greens (lime / green / emerald) become one olive-sage scale, so every
+     existing accent class across the app follows the palette */
+  --color-lime-50: #F4F6EF;   --color-lime-100: #E7EBDD;  --color-lime-200: #D6DCC5;
+  --color-lime-300: #C9D2B3;  --color-lime-400: #AAB39A;  --color-lime-500: #8E9A78;
+  --color-lime-600: #707C5C;  --color-lime-700: #5D6A48;  --color-lime-800: #454F35;
+  --color-lime-900: #303A29;  --color-lime-950: #1E241A;
+  --color-green-50: #F4F6EF;  --color-green-100: #E7EBDD; --color-green-200: #D6DCC5;
+  --color-green-300: #C9D2B3; --color-green-400: #AAB39A; --color-green-500: #8E9A78;
+  --color-green-600: #707C5C; --color-green-700: #5D6A48; --color-green-800: #454F35;
+  --color-green-900: #303A29; --color-green-950: #1E241A;
+  --color-emerald-50: #F4F6EF;  --color-emerald-100: #E7EBDD; --color-emerald-200: #D6DCC5;
+  --color-emerald-300: #C9D2B3; --color-emerald-400: #AAB39A; --color-emerald-500: #8E9A78;
+  --color-emerald-600: #707C5C; --color-emerald-700: #5D6A48; --color-emerald-800: #454F35;
+  --color-emerald-900: #303A29; --color-emerald-950: #1E241A;
+
+  /* Neutrals warmed toward the palette (gray / zinc / neutral) */
+  --color-gray-50: #F7F6F2;  --color-gray-100: #EEEDE6; --color-gray-200: #DEDDD4;
+  --color-gray-300: #C4C4B9; --color-gray-400: #A7A99D; --color-gray-500: #85877C;
+  --color-gray-600: #63655B; --color-gray-700: #474940; --color-gray-800: #2C2F28;
+  --color-gray-900: #1A1D17; --color-gray-950: #10120E;
+  --color-zinc-50: #F7F6F2;  --color-zinc-100: #EEEDE6; --color-zinc-200: #DEDDD4;
+  --color-zinc-300: #C4C4B9; --color-zinc-400: #A7A99D; --color-zinc-500: #85877C;
+  --color-zinc-600: #63655B; --color-zinc-700: #474940; --color-zinc-800: #2C2F28;
+  --color-zinc-900: #1A1D17; --color-zinc-950: #10120E;
+  --color-neutral-50: #F7F6F2;  --color-neutral-100: #EEEDE6; --color-neutral-200: #DEDDD4;
+  --color-neutral-300: #C4C4B9; --color-neutral-400: #A7A99D; --color-neutral-500: #85877C;
+  --color-neutral-600: #63655B; --color-neutral-700: #474940; --color-neutral-800: #2C2F28;
+  --color-neutral-900: #1A1D17; --color-neutral-950: #10120E;
+
+  --shadow-glass: inset 0 1px 0 rgb(247 245 239 / 0.07), 0 1px 0 rgb(0 0 0 / 0.4), 0 24px 48px -28px rgb(0 0 0 / 0.75);
+  --shadow-glow: 0 0 0 1px rgb(170 179 154 / 0.18), 0 18px 48px -18px rgb(170 179 154 / 0.35);
+
+  --animate-float: float 7s ease-in-out infinite;
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
 }
 
 /* =======================
-   🌙 Dark Mode Overrides
+   🌿 Theme Variables (legacy names, now on the olive palette)
+   The app is dark-only, so these no longer flip with the OS colour scheme.
    ======================= */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #2C2A22;
-    --foreground: #E8EDC7;
-    --navbar: #5d6b57;
-    --accent-1: #4f5847;
-    --accent-2: #8FA37A;
-    --accent-3: #A9BA9D;
-    --accent-4: #1e231c;
-    --text-muted: #A9BA9D;
-    --text-bright: #F7F9EE;
-    --highlight: #D4C27B;
-    --text-subtle: #B6B9A2;
-    --text-med: #767866;
-    --text-dark: #56574a;
+:root {
+  --background: #0E110C;
+  --foreground: #F4F3EC;
+  --navbar: #161A13;
+  --accent-1: #454F35;
+  --accent-2: #8E9A78;
+  --accent-3: #AAB39A;
+  --accent-4: #1E241A;
+  --text-muted: #A7A99D;
+  --text-bright: #F7F5EF;
+  --text-dark: #474940;
+  --highlight: #C4B47E;      /* soft brass, pairs with olive */
+  --text-subtle: #A9AE9B;
+  --text-med: #85877C;
 
-    /* 🏆 Dark Mode Gradients + Cards */
-    --card-revenue-bg: linear-gradient(145deg, #5f6145, #151511);
-    --card-revenue-border: #D4C27B;
-    --card-topclients-bg: #2e2f24;
-    --card-weekly-bg: #4a5743;
-    --card-weekly-border: #3a4537;
-    --card-weekly-shadow: rgba(0, 0, 0, 0.5);
+  /* 🏆 Card Colors */
+  --card-revenue-bg: linear-gradient(145deg, #2C3324, #12150F);
+  --card-revenue-border: rgba(196, 180, 126, 0.45);
+  --card-topclients-bg: #1A1F17;
 
-    --card-monthly-bg: #55664e;
-    --card-monthly-border: #404b3c;
-    --card-monthly-shadow: rgba(0, 0, 0, 0.45);
-
-  }
+  /* 📆 Report Cards */
+  --card-weekly-bg: #272E22;
+  --card-weekly-border: #3B4430;
+  --card-weekly-shadow: rgba(0, 0, 0, 0.5);
+  --card-monthly-bg: #303A29;
+  --card-monthly-border: #454F35;
+  --card-monthly-shadow: rgba(0, 0, 0, 0.45);
 }
 
 /* =======================
@@ -219,35 +255,35 @@ html {
 /* SimpleMDE Dark Theme */
 .EasyMDEContainer .CodeMirror {
   background-color: #2f3a2d !important;
-  color: #F1F5E9 !important;
-  border: 1px solid #55694b !important;
+  color: #F4F3EC !important;
+  border: 1px solid #5d6a48 !important;
   border-radius: 0.5rem !important;
 }
 
 .EasyMDEContainer .CodeMirror-cursor {
-  border-left-color: #F1F5E9 !important;
+  border-left-color: #F4F3EC !important;
 }
 
 .EasyMDEContainer .editor-toolbar {
   background-color: #1f2420 !important;
-  border: 1px solid #55694b !important;
+  border: 1px solid #5d6a48 !important;
   border-bottom: none !important;
   border-radius: 0.5rem 0.5rem 0 0 !important;
 }
 
 .EasyMDEContainer .editor-toolbar button {
-  color: #F1F5E9 !important;
+  color: #F4F3EC !important;
 }
 
 .EasyMDEContainer .editor-toolbar button:hover,
 .EasyMDEContainer .editor-toolbar button.active {
-  background-color: #55694b !important;
+  background-color: #5d6a48 !important;
   border-color: #6b8e4e !important;
 }
 
 .EasyMDEContainer .editor-preview {
   background-color: #2f3a2d !important;
-  color: #F1F5E9 !important;
+  color: #F4F3EC !important;
 }
 
 * {
@@ -257,4 +293,258 @@ html {
 
 *::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
+}
+
+@property --btn-beam-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes btn-beam {
+  to { --btn-beam-angle: 360deg; }
+}
+
+/* =======================
+   🫒 Corva components
+   Buttons: .btn + .btn-primary | .btn-glass | .btn-bright | .btn-ghost  (+ .btn-sm / .btn-lg)
+            add <span class="btn-cap"><svg/><svg/></span> for the sliding arrow capsule
+   Glass:   .glass-card / .glass-panel
+   Links:   .link-arrow
+   ======================= */
+@layer components {
+  .btn {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    height: 2.875rem;
+    padding: 0 1.35rem;
+    border-radius: 999px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, background 0.3s ease, color 0.2s ease, border-color 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:has(.btn-cap) { padding-right: 0.35rem; }
+  .btn-sm { height: 2.375rem; padding: 0 1rem; font-size: 0.875rem; gap: 0.55rem; }
+  .btn-sm:has(.btn-cap) { padding-right: 0.3rem; }
+  .btn-lg { height: 3.25rem; padding: 0 1.6rem; font-size: 1rem; }
+  .btn-lg:has(.btn-cap) { padding-right: 0.4rem; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0) scale(0.985); transition-duration: 0.1s; }
+  .btn:focus-visible { outline: 2px solid var(--color-sage); outline-offset: 3px; }
+  .btn:disabled, .btn[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+
+  /* Light sweep across the button on hover */
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 32%, rgb(247 245 239 / 0.22) 50%, transparent 68%);
+    transform: translateX(-130%);
+    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .btn:hover::after { transform: translateX(130%); }
+
+  /* Arrow capsule: two arrows; the first slides out, the second slides in */
+  .btn-cap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    overflow: hidden;
+    transition: background 0.3s ease, color 0.3s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .btn-sm .btn-cap { width: 1.8rem; height: 1.8rem; }
+  .btn-lg .btn-cap { width: 2.5rem; height: 2.5rem; }
+  .btn-cap svg { width: 0.95rem; height: 0.95rem; transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
+  .btn-cap svg + svg { position: absolute; transform: translateX(-170%); }
+  .btn:hover .btn-cap svg:first-child { transform: translateX(170%); }
+  .btn:hover .btn-cap svg + svg { transform: translateX(0); }
+
+  /* Primary: luminous olive glass with a sage rim */
+  .btn-primary {
+    color: var(--color-ivory);
+    background:
+      linear-gradient(180deg, rgb(247 245 239 / 0.14) 0%, rgb(247 245 239 / 0) 52%),
+      linear-gradient(135deg, var(--color-olive-bright) 0%, var(--color-olive) 55%, var(--color-forest) 100%);
+    box-shadow:
+      inset 0 0 0 1px rgb(201 210 179 / 0.28),
+      inset 0 1px 0 rgb(247 245 239 / 0.22),
+      0 1px 2px rgb(0 0 0 / 0.5),
+      0 10px 30px -10px rgb(170 179 154 / 0.45);
+  }
+  .btn-primary .btn-cap { background: var(--color-sage-bright); color: var(--color-ink); }
+  .btn-primary:hover {
+    box-shadow:
+      inset 0 0 0 1px rgb(201 210 179 / 0.45),
+      inset 0 1px 0 rgb(247 245 239 / 0.26),
+      0 2px 4px rgb(0 0 0 / 0.5),
+      0 16px 40px -12px rgb(170 179 154 / 0.6);
+  }
+  .btn-primary:hover .btn-cap { background: var(--color-ivory); }
+
+  /* Light beam travelling around the primary button's rim */
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from var(--btn-beam-angle), transparent 0deg 250deg, rgb(201 210 179 / 0.55) 300deg, rgb(247 245 239 / 0.95) 330deg, transparent 360deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.55;
+    animation: btn-beam 5s linear infinite;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .btn-primary:hover::before { opacity: 1; animation-duration: 2.2s; }
+
+  /* Bright: solid sage, for the single most important action on a dark page */
+  .btn-bright {
+    color: var(--color-ink);
+    background: linear-gradient(180deg, #D7DEC4 0%, var(--color-sage) 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.5),
+      inset 0 -1px 0 rgb(32 35 30 / 0.18),
+      0 12px 32px -12px rgb(170 179 154 / 0.7);
+  }
+  .btn-bright::after { background: linear-gradient(105deg, transparent 32%, rgb(255 255 255 / 0.55) 50%, transparent 68%); }
+  .btn-bright .btn-cap { background: var(--color-ink); color: var(--color-sage-bright); }
+  .btn-bright:hover { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55), inset 0 -1px 0 rgb(32 35 30 / 0.18), 0 18px 40px -12px rgb(170 179 154 / 0.85); }
+
+  /* Glass: frosted, for secondary actions */
+  .btn-glass {
+    color: var(--color-ivory);
+    background: linear-gradient(180deg, rgb(247 245 239 / 0.09), rgb(247 245 239 / 0.03));
+    box-shadow: inset 0 0 0 1px var(--color-glass-border-strong), inset 0 1px 0 rgb(247 245 239 / 0.1), 0 10px 30px -18px rgb(0 0 0 / 0.8);
+    backdrop-filter: blur(18px) saturate(1.3);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  }
+  .btn-glass .btn-cap { background: rgb(247 245 239 / 0.1); color: var(--color-ivory); }
+  .btn-glass:hover {
+    background: linear-gradient(180deg, rgb(247 245 239 / 0.13), rgb(247 245 239 / 0.05));
+    box-shadow: inset 0 0 0 1px rgb(201 210 179 / 0.35), inset 0 1px 0 rgb(247 245 239 / 0.12), 0 12px 32px -16px rgb(170 179 154 / 0.35);
+  }
+  .btn-glass:hover .btn-cap { background: var(--color-sage-bright); color: var(--color-ink); }
+
+  /* Ghost: text-weight action with a soft hover plate */
+  .btn-ghost { color: var(--color-muted); background: transparent; font-weight: 500; }
+  .btn-ghost::after { display: none; }
+  .btn-ghost:hover { color: var(--color-ivory); background: rgb(247 245 239 / 0.06); transform: none; }
+
+  /* Text link with a drawn underline and nudging arrow */
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 500;
+    color: var(--color-sage-bright);
+    padding-bottom: 2px;
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+    transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
+  }
+  .link-arrow svg { width: 0.9rem; height: 0.9rem; transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+  .link-arrow:hover { background-size: 100% 1px; color: var(--color-ivory); }
+  .link-arrow:hover svg { transform: translateX(3px); }
+
+  /* Glass surfaces */
+  .glass-card {
+    position: relative;
+    border-radius: 1.25rem;
+    background: linear-gradient(180deg, rgb(247 245 239 / 0.06) 0%, rgb(247 245 239 / 0.02) 100%);
+    box-shadow: inset 0 0 0 1px var(--color-glass-border), var(--shadow-glass);
+    backdrop-filter: blur(20px) saturate(1.25);
+    -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  }
+  .glass-card-hover { transition: box-shadow 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.35s ease; }
+  .glass-card-hover:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(180deg, rgb(247 245 239 / 0.08) 0%, rgb(247 245 239 / 0.03) 100%);
+    box-shadow: inset 0 0 0 1px rgb(201 210 179 / 0.22), inset 0 1px 0 rgb(247 245 239 / 0.09), 0 28px 56px -28px rgb(0 0 0 / 0.8), 0 0 40px -20px rgb(170 179 154 / 0.35);
+  }
+  .glass-panel {
+    border-radius: 1.75rem;
+    background: linear-gradient(180deg, rgb(30 36 26 / 0.72), rgb(22 26 19 / 0.72));
+    box-shadow: inset 0 0 0 1px var(--color-glass-border), inset 0 1px 0 rgb(247 245 239 / 0.06), 0 40px 80px -40px rgb(0 0 0 / 0.85);
+    backdrop-filter: blur(24px) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-primary::before { animation: none; opacity: 0.35; }
+    .btn, .btn::after, .btn-cap, .btn-cap svg, .link-arrow, .link-arrow svg, .glass-card-hover { transition: none; }
+    .btn:hover, .glass-card-hover:hover { transform: none; }
+    .btn:hover::after { transform: translateX(-130%); }
+    .btn:hover .btn-cap svg:first-child { transform: none; }
+  }
+}
+
+/* Subtle film grain for dark brand surfaces */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* =======================
+   ✨ Site-wide polish (zero-specificity, so component styles still win)
+   ======================= */
+::selection { background: rgb(170 179 154 / 0.35); color: #F7F5EF; }
+
+:where(input, textarea, select) { caret-color: var(--color-sage-bright); accent-color: var(--color-sage); }
+:where(input, textarea, select):focus-visible { outline: 2px solid rgb(170 179 154 / 0.55); outline-offset: 1px; }
+:where(button, a, [role='button']):focus-visible { outline: 2px solid var(--color-sage); outline-offset: 2px; }
+
+/* Slim olive scrollbars */
+* { scrollbar-width: thin; scrollbar-color: rgb(170 179 154 / 0.28) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgb(170 179 154 / 0.25); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: rgb(170 179 154 / 0.45); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* Add to any existing button for the brand sheen, lift and press feel without
+   changing its size or shape. */
+@layer components {
+  .btn-fx {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, filter 0.3s ease;
+  }
+  .btn-fx::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(105deg, transparent 32%, rgb(255 255 255 / 0.35) 50%, transparent 68%);
+    transform: translateX(-130%);
+    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .btn-fx:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 32px -14px rgb(170 179 154 / 0.7); }
+  .btn-fx:hover:not(:disabled)::after { transform: translateX(130%); }
+  .btn-fx:active:not(:disabled) { transform: translateY(0) scale(0.985); transition-duration: 0.1s; }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-fx, .btn-fx::after { transition: none; }
+    .btn-fx:hover:not(:disabled) { transform: none; }
+    .btn-fx:hover:not(:disabled)::after { transform: translateX(-130%); }
+  }
 }

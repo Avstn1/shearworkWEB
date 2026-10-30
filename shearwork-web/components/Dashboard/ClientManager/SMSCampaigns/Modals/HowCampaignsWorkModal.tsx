@@ -22,7 +22,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[75vh] sm:max-h-[90vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
+            className="bg-[#181b15] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[75vh] sm:max-h-[90vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             {/* Modal Header */}
             <div className="flex items-start justify-between p-3 sm:p-6 border-b border-white/10">
@@ -31,7 +31,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                   <Info className="w-4 h-4 sm:w-6 sm:h-6 text-sky-300 flex-shrink-0" />
                   <span className="truncate">How SMS Campaigns Work</span>
                 </h3>
-                <p className="text-xs sm:text-sm text-[#bdbdbd] mt-1 hidden sm:block">
+                <p className="text-xs sm:text-sm text-[#bdbeb3] mt-1 hidden sm:block">
                   Follow these steps to create and launch your automated SMS campaign
                 </p>
               </div>
@@ -39,7 +39,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                 onClick={onClose}
                 className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbdbd]" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbeb3]" />
               </button>
             </div>
 
@@ -55,7 +55,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                       <h4 className="font-semibold text-white mb-2 text-sm sm:text-base">
                         Register Your Phone Number
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3]">
                         Before you can use schedule your Campaigns, you need to register your phone number. Click your profile icon in the top right corner, select <span className="text-white font-semibold">Settings</span>, and update your phone number in the Profile tab. This is required to receive test messages.
                       </p>
                     </div>
@@ -77,7 +77,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           <span className="xs:hidden">Create</span>
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3]">
                         Start by creating a new campaign. You can schedule up to 3 campaigns at once to keep your clients engaged throughout the week or month.
                       </p>
                     </div>
@@ -99,15 +99,15 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           <span className="xs:hidden">Draft</span>
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd] mb-2 sm:mb-3">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3] mb-2 sm:mb-3">
                         Save your message as a draft once it's between 100-240 characters. This preserves your work as unsaved messages disappear when you leave the page.
                       </p>
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="text-[10px] sm:text-xs text-[#bdbdbd]">You'll see:</span>
+                        <span className="text-[10px] sm:text-xs text-[#bdbeb3]">You'll see:</span>
                         <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20">
                           Draft
                         </span>
-                        <span className="text-[10px] sm:text-xs text-[#bdbdbd]">→</span>
+                        <span className="text-[10px] sm:text-xs text-[#bdbeb3]">→</span>
                         <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-lime-300/10 text-lime-300 border border-lime-300/20">
                           Saved
                         </span>
@@ -132,7 +132,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           <span className="xs:hidden">Gen</span>
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3]">
                         Let AI create a professional message template for you. Use it as a starting point or keep it as-is if it perfectly fits your needs.
                       </p>
                     </div>
@@ -155,11 +155,11 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           <span className="xs:hidden">Val</span>
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd] mb-2 sm:mb-3">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3] mb-2 sm:mb-3">
                         Ensures your message meets SMS marketing guidelines. Note: Emojis are prohibited as they double the cost per message.
                       </p>
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="text-[10px] sm:text-xs text-[#bdbdbd]">Status changes to:</span>
+                        <span className="text-[10px] sm:text-xs text-[#bdbeb3]">Status changes to:</span>
                         <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-sky-300/10 text-sky-300 border border-sky-300/20">
                           Verified
                         </span>
@@ -182,7 +182,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           Test
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3]">
                         <span className="font-semibold text-cyan-300">Crucial step!</span> Preview exactly how your message will appear to clients. Test messages cost 1 credit each once your free tests are used up.
                       </p>
                     </div>
@@ -199,13 +199,13 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                       <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <span className="hidden sm:inline">Preview Recipients</span>
                         <span className="sm:hidden">Recipients</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 pointer-events-none">
+                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#bdbeb3] border border-white/10 pointer-events-none">
                           <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                           <span className="hidden sm:inline">Who will receive this message?</span>
                           <span className="sm:hidden">Who?</span>
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3]">
                         View the projected recipient list based on our smart targeting algorithm. This list updates daily to always give you the optimal audience. The final confirmed list is provided after all messages are sent.
                       </p>
                     </div>
@@ -227,18 +227,18 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           <span className="xs:hidden">Activate</span>
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd] mb-2 sm:mb-3">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3] mb-2 sm:mb-3">
                         <span className="font-semibold text-lime-300">Final step!</span> Activate to schedule your message for sending at your chosen time. Messages are ONLY sent when you see the "Active" status.
                       </p>
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1.5 sm:mb-2">
-                        <span className="text-[10px] sm:text-xs text-[#bdbdbd]">Active status:</span>
+                        <span className="text-[10px] sm:text-xs text-[#bdbeb3]">Active status:</span>
                         <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 whitespace-nowrap">
                           <span className="hidden sm:inline">Active - Click to toggle</span>
                           <span className="sm:hidden">Active</span>
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="text-[10px] sm:text-xs text-[#bdbdbd]">Inactive status:</span>
+                        <span className="text-[10px] sm:text-xs text-[#bdbeb3]">Inactive status:</span>
                         <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-gray-500/10 text-gray-400 border border-gray-500/20">
                           Inactive
                         </span>
@@ -262,7 +262,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                           <span className="xs:hidden">Add One-time sms recipient</span>
                         </button>
                       </h4>
-                      <p className="text-xs sm:text-sm text-[#bdbdbd] mb-2 sm:mb-3">
+                      <p className="text-xs sm:text-sm text-[#bdbeb3] mb-2 sm:mb-3">
                         Add clients who should receive this specific message, regardless of the algorithm. These recipients count toward your max clients limit.
                       </p>
                       <div className="p-2 sm:p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-2 sm:mb-3">
@@ -275,11 +275,11 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                       </div>
                       <div className="space-y-1.5 sm:space-y-2">
                         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                          <span className="text-[10px] sm:text-xs text-[#bdbdbd]">Example:</span>
+                          <span className="text-[10px] sm:text-xs text-[#bdbeb3]">Example:</span>
                           <span className="text-[10px] sm:text-xs text-white">Max = 50 → See up to 50 total clients (algorithm + one-time)</span>
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                          <span className="text-[10px] sm:text-xs text-[#bdbdbd]">Example:</span>
+                          <span className="text-[10px] sm:text-xs text-[#bdbeb3]">Example:</span>
                           <span className="text-[10px] sm:text-xs text-rose-300">Max = 0 → No clients visible, no messages sent</span>
                         </div>
                       </div>

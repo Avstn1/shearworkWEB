@@ -58,7 +58,7 @@ export default function MonthDropdown({ selectedMonth, setSelectedMonth, disable
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-20 mt-2 w-32 bg-[#1a1f1b]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg overflow-hidden"
+            className="absolute z-20 mt-2 w-32 bg-[#1a1f17]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg overflow-hidden"
           >
             {MONTHS.map(month => (
               <button

@@ -33,7 +33,7 @@ const fadeInUp: Variants = {
 
 function SettingsPageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29]">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-300 mx-auto mb-4"></div>
         <p className="text-gray-300">Loading settings...</p>
@@ -111,7 +111,7 @@ function SettingsPageContent() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.3 }}
-              className="relative w-64 bg-[#1a1f1b] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
+              className="relative w-64 bg-[#1a1f17] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
             >
               <div className="flex justify-between items-center mb-6">
                 <span className="text-lime-300 text-2xl font-bold">Settings</span>
@@ -136,7 +136,7 @@ function SettingsPageContent() {
 
       {/* Page Content */}
       <div
-        className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] text-white"
+        className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29] text-white"
         style={{ paddingTop: 'calc(80px + 1.5rem)' }}
       >
         <div className="max-w-7xl mx-auto">
@@ -152,7 +152,7 @@ function SettingsPageContent() {
                 )}
               />
             </div>
-            <p className="text-xs text-[#bdbdbd]">Manage your profile, billing, and integrations.</p>
+            <p className="text-xs text-[#bdbeb3]">Manage your profile, billing, and integrations.</p>
           </div>
 
           <div className="flex flex-col lg:flex-row gap-6">

@@ -71,7 +71,7 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
       </h2>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-[#555]">
+        <div className="flex-1 flex items-center justify-center text-sm text-[#55584e]">
           Loading...
         </div>
       ) : error ? (
@@ -79,7 +79,7 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
           {error}
         </div>
       ) : clients.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-[#555] text-center">
+        <div className="flex-1 flex items-center justify-center text-sm text-[#55584e] text-center">
           No data available for {selectedMonth} {selectedYear ?? ''}
         </div>
       ) : (
@@ -87,10 +87,10 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0">
               <tr className="text-left border-b border-white/[0.06]">
-                <th className="py-2 px-3 min-w-[30px] text-[#555] text-xs font-medium">#</th>
-                <th className="py-2 px-3 min-w-[120px] text-[#555] text-xs font-medium">Client</th>
-                <th className="py-2 px-3 min-w-[80px] text-[#555] text-xs font-medium">Total</th>
-                <th className="py-2 px-3 min-w-[60px] text-[#555] text-xs font-medium">Visits</th>
+                <th className="py-2 px-3 min-w-[30px] text-[#55584e] text-xs font-medium">#</th>
+                <th className="py-2 px-3 min-w-[120px] text-[#55584e] text-xs font-medium">Client</th>
+                <th className="py-2 px-3 min-w-[80px] text-[#55584e] text-xs font-medium">Total</th>
+                <th className="py-2 px-3 min-w-[60px] text-[#55584e] text-xs font-medium">Visits</th>
               </tr>
             </thead>
             <tbody>
@@ -106,7 +106,7 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
                   <td className="py-2 px-3 font-semibold truncate text-white">
                     {client.client_name}
                   </td>
-                  <td className="py-2 px-3 font-semibold text-[#6ee7b7]">
+                  <td className="py-2 px-3 font-semibold text-[#c9d2b3]">
                     {formatCurrency(client.total_spent)}
                   </td>
                   <td className="py-2 px-3 font-semibold text-[#a78bfa]">

@@ -197,11 +197,11 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
     return (
       <div
         style={{
-          backgroundColor: '#1f2420',
-          border: '1px solid #55694b',
+          backgroundColor: '#1e241a',
+          border: '1px solid #5d6a48',
           borderRadius: '0.5rem',
           padding: '8px',
-          color: '#c4d2b8',
+          color: '#c9d2b3',
           fontSize: '0.875rem',
         }}
       >
@@ -221,24 +221,24 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
   return (
     <div className="w-full">
       <div className="mb-2">
-        <h2 className="text-[#c4d2b8] font-semibold text-sm sm:text-base">{title}</h2>
+        <h2 className="text-[#c9d2b3] font-semibold text-sm sm:text-base">{title}</h2>
       </div>
 
       <div className="w-full h-64 relative">
         {loading ? (
-          <div className="p-4 text-center text-[#E8EDC7] opacity-70 text-sm">
+          <div className="p-4 text-center text-[#E9ECDD] opacity-70 text-sm">
             Loading {viewMode} data...
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#31342c" />
               <XAxis
                 dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
-                stroke="#ccc"
+                stroke="#cbcbc1"
                 tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
-              <YAxis stroke="#ccc" />
+              <YAxis stroke="#cbcbc1" />
               <Tooltip content={tooltipContent} />
               <Legend />
               

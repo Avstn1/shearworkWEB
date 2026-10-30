@@ -152,7 +152,7 @@ export default function YearlyExpensesCard({ userId, year, timeframe }: Props) {
         height: '100%',
       }}
     >
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">
+      <h2 className="text-[#8e9480] text-base font-semibold mb-2">
         💸 Total Expenses ({titleSuffix})
       </h2>
       <div className="flex-1 flex items-center justify-start">

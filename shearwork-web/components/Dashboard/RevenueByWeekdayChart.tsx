@@ -108,7 +108,7 @@ export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-[#555]">Loading chart...</p>
+          <p className="text-[#55584e]">Loading chart...</p>
         </div>
       ) : (
         <div className="flex-1">
@@ -120,12 +120,12 @@ export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props
               />
               <XAxis
                 dataKey="weekday"
-                tick={{ fill: '#8a9b90', fontSize: 12 }}
+                tick={{ fill: '#8e9480', fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: '#8a9b90', fontSize: 12 }}
+                tick={{ fill: '#8e9480', fontSize: 12 }}
                 tickFormatter={(val) => `$${val}`}
                 axisLine={false}
                 tickLine={false}
@@ -133,7 +133,7 @@ export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props
               <Tooltip
                 formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
                 contentStyle={{
-                  backgroundColor: '#0f1210',
+                  backgroundColor: '#11140e',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
                   color: '#ffffff',
@@ -144,7 +144,7 @@ export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props
               <Bar
                 dataKey="total_revenue"
                 name="Revenue"
-                fill="#6ee7b7"
+                fill="#c9d2b3"
                 radius={[8, 8, 0, 0]}
               />
             </BarChart>

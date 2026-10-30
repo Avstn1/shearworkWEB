@@ -214,7 +214,7 @@ export default function CalendarStep({
                       value={isCalendarLocked ? existingCalendar : selectedAcuityCalendar}
                       onChange={e => setSelectedAcuityCalendar(e.target.value)}
                       disabled={isCalendarLocked}
-                      className={`w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all ${
+                      className={`w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all ${
                         isCalendarLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                       }`}
                     >
@@ -283,7 +283,7 @@ export default function CalendarStep({
             className={`px-8 py-3 font-semibold rounded-xl transition-all ${
               profileLoading || saving || !isCalendarConnected || !isCalendarSelected
                 ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
+                : 'bg-gradient-to-b from-[#D7DEC4] to-[#aab39a] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg'
             }`}
           >
             {saving ? (

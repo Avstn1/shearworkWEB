@@ -206,9 +206,9 @@ export default function LibDocs({
       onSearchChange={setSearch}
     >
       {LIB_ENTRIES.length === 0 ? (
-        <p className="text-sm text-[#9ca89a] text-center py-12">No lib files documented yet.</p>
+        <p className="text-sm text-[#a9ae9b] text-center py-12">No lib files documented yet.</p>
       ) : Object.keys(groups).length === 0 ? (
-        <p className="text-sm text-[#9ca89a] text-center py-12">No lib files match your search.</p>
+        <p className="text-sm text-[#a9ae9b] text-center py-12">No lib files match your search.</p>
       ) : (
         Object.entries(groups).map(([category, entries]) => (
           <DocSection

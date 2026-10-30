@@ -104,7 +104,7 @@ export default function HorizontalLandingPage() {
             className="relative w-screen min-h-screen lg:h-screen snap-start flex-shrink-0 overflow-y-auto lg:overflow-hidden flex flex-col" 
             style={{ 
               color: 'rgba(255, 255, 255, 0.6)',
-              background: 'linear-gradient(135deg, #050505 0%, #0a0a0a 30%, #0d1210 60%, #080808 100%)'
+              background: 'radial-gradient(120% 90% at 85% 15%, #1E241A 0%, #12150F 45%, #0B0D09 100%)'
             }}
           >
             <div className="flex-1 flex items-center">

@@ -9,21 +9,22 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Landing/Footer';
 import { motion } from 'framer-motion';
+import { Button, ButtonLink } from '@/components/ui/Button';
 
 
 // Color palette
 const COLORS = {
-  background: '#181818',
-  cardBg: '#1a1a1a',
-  navBg: '#1b1d1b', 
-  surface: 'rgba(37, 37, 37, 0.6)',
-  surfaceSolid: '#252525',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
-  text: '#FFFFFF',
-  textMuted: 'rgba(255, 255, 255, 0.6)',
-  green: '#73aa57',
-  greenLight: '#5b8f52',
-  greenGlow: 'rgba(115, 170, 87, 0.4)',
+  background: '#161913',
+  cardBg: '#181b15',
+  navBg: '#1a1d17', 
+  surface: 'rgba(247, 245, 239, 0.05)',
+  surfaceSolid: '#161A13',
+  glassBorder: 'rgba(247, 245, 239, 0.09)',
+  text: '#F4F3EC',
+  textMuted: 'rgba(244, 243, 236, 0.62)',
+  green: '#aab39a',
+  greenLight: '#8e9a78',
+  greenGlow: 'rgba(170, 179, 154, 0.4)',
 }
 
 export default function LoginPage() {
@@ -131,7 +132,7 @@ export default function LoginPage() {
             }}
             className="w-2 h-2 rounded-full transition-all duration-200"
             style={{
-              backgroundColor: index === 2 ? '#73aa57' : 'rgba(255, 255, 255, 0.3)',
+              backgroundColor: index === 2 ? '#aab39a' : 'rgba(255, 255, 255, 0.3)',
               transform: index === 2 ? 'scale(1.5)' : 'scale(1)',
               cursor: index === 2 ? 'default' : 'pointer',
             }}
@@ -143,7 +144,7 @@ export default function LoginPage() {
       <section 
         className="h-screen flex items-center overflow-auto lg:overflow-hidden px-4 sm:px-5 lg:px-8 py-4 lg:py-0 relative"
         style={{
-          background: `linear-gradient(135deg, #181818 0%, #1a1a1a 30%, #1c1e1c 70%, #181818 100%)`,
+          background: `linear-gradient(135deg, #161913 0%, #181b15 30%, #1b1e18 70%, #161913 100%)`,
           color: COLORS.text,
         }}
         onWheel={(e) => {
@@ -173,7 +174,7 @@ export default function LoginPage() {
               transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
               className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
               style={{
-                background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
+                background: `linear-gradient(180deg, rgba(247, 245, 239, 0.06) 0%, rgba(247, 245, 239, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}
@@ -274,24 +275,9 @@ export default function LoginPage() {
                   </button>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2 lg:py-3 rounded-md lg:rounded-xl font-bold transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl disabled:opacity-50 disabled:hover:scale-100 mt-0.5 lg:mt-2 relative overflow-hidden group"
-                  style={{
-                    background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
-                    color: '#000000',
-                    boxShadow: `0 8px 32px ${COLORS.greenGlow}`,
-                  }}
-                >
-                  <span className="relative z-10 text-[11px] lg:text-sm">{loading ? 'Logging in...' : 'Log In'}</span>
-                  <div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{
-                      background: `linear-gradient(135deg, ${COLORS.greenLight} 0%, ${COLORS.green} 100%)`,
-                    }}
-                  />
-                </button>
+                <Button type="submit" disabled={loading} arrow className="w-full justify-between mt-0.5 lg:mt-2">
+                  {loading ? 'Logging in...' : 'Log In'}
+                </Button>
 
                 <p className="text-center text-[9px] lg:text-xs leading-tight" style={{ color: COLORS.textMuted }}>
                   Secure login protected by encryption
@@ -377,7 +363,7 @@ export default function LoginPage() {
                       transition={{ duration: 0.4, delay: 0.3 + idx * 0.1, ease: 'easeOut' }}
                       className="flex items-center gap-1.5 lg:gap-2 p-1 lg:p-2 rounded-md lg:rounded-lg transition-all duration-300 hover:-translate-x-1"
                       style={{
-                        backgroundColor: 'rgba(115, 170, 87, 0.1)',
+                        backgroundColor: 'rgba(170, 179, 154, 0.1)',
                       }}
                     >
                       <div 
@@ -407,7 +393,7 @@ export default function LoginPage() {
               transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
               className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl text-center"
               style={{
-                background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
+                background: `linear-gradient(180deg, rgba(247, 245, 239, 0.06) 0%, rgba(247, 245, 239, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}
@@ -418,29 +404,7 @@ export default function LoginPage() {
               >
                 Don&apos;t have an account?
               </p>
-              <a
-                href="/signup"
-                className="inline-block w-full py-2 lg:py-3 rounded-md lg:rounded-xl font-bold transition-all duration-300 hover:scale-[1.02] border-2 relative overflow-hidden group"
-                style={{
-                  borderColor: COLORS.green,
-                  color: COLORS.green,
-                  backgroundColor: 'transparent',
-                }}
-              >
-                <span className="relative z-10 text-[11px] lg:text-sm">Sign Up</span>
-                <div 
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
-                  }}
-                />
-                <span 
-                  className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-bold z-20 text-[11px] lg:text-sm"
-                  style={{ color: '#000000' }}
-                >
-                  Sign Up
-                </span>
-              </a>
+              <ButtonLink href="/signup" variant="glass" className="w-full">Sign Up</ButtonLink>
             </motion.div>
           </div>
         </div>

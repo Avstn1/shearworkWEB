@@ -138,7 +138,7 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
 
   return (
     <div className="relative flex flex-col flex-1">
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
+      <h2 className="text-[#8e9480] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
       <div className="flex-1 flex flex-col justify-center">
         <p className="text-3xl font-bold text-white">
           {loading ? 'Loading...' : revenue !== null ? formatCurrency(revenue) : 'N/A'}
@@ -151,10 +151,10 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       </div>
       <div className="mt-auto">
         {change !== null ? (
-          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#6ee7b7]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#555]'}`}>
-            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#555]">(vs. prior month)</span>
+          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#c9d2b3]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#55584e]'}`}>
+            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#55584e]">(vs. prior month)</span>
           </p>
-        ) : <p className="text-sm text-[#555]">—</p>}
+        ) : <p className="text-sm text-[#55584e]">—</p>}
       </div>
     </div>
   )

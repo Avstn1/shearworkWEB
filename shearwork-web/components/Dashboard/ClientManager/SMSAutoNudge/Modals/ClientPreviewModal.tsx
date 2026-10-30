@@ -59,10 +59,10 @@ export default function ClientPreviewModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
+            className="bg-[#181b15] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 flex-shrink-0 bg-[#1a1a1a]">
+            <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 flex-shrink-0 bg-[#181b15]">
               <div className="flex-1 min-w-0 pr-2">
                 <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-sky-300 flex-shrink-0" />
@@ -70,7 +70,7 @@ export default function ClientPreviewModal({
                   <span className="truncate sm:hidden">Selected Clients</span>
                 </h3>
                 {previewStats && (
-                  <p className="text-xs sm:text-sm text-[#bdbdbd] mt-1">
+                  <p className="text-xs sm:text-sm text-[#bdbeb3] mt-1">
                     {previewStats.total_selected} clients will receive your next SMS
                   </p>
                 )}
@@ -79,7 +79,7 @@ export default function ClientPreviewModal({
                 onClick={onClose}
                 className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
               >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbdbd]" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbeb3]" />
               </button>
             </div>
 
@@ -91,19 +91,19 @@ export default function ClientPreviewModal({
                   {/* Main Stats - Single Row */}
                   <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-4">
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Total</p>
+                      <p className="text-[10px] sm:text-xs text-[#bdbeb3] mb-1">Total</p>
                       <p className="text-lg sm:text-2xl font-bold text-white">{previewStats.total_selected}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Score</p>
+                      <p className="text-[10px] sm:text-xs text-[#bdbeb3] mb-1">Score</p>
                       <p className="text-lg sm:text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Since</p>
+                      <p className="text-[10px] sm:text-xs text-[#bdbeb3] mb-1 truncate">Since</p>
                       <p className="text-lg sm:text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1 truncate">Overdue</p>
+                      <p className="text-[10px] sm:text-xs text-[#bdbeb3] mb-1 truncate">Overdue</p>
                       <p className="text-lg sm:text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
                     </div>
                   </div>
@@ -111,7 +111,7 @@ export default function ClientPreviewModal({
                   {/* Legend and Types - Two Columns */}
                   <div className="pt-3 border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
                     {/* Left Column - Explanations */}
-                    <div className="space-y-1 text-[10px] sm:text-xs text-[#bdbdbd]">
+                    <div className="space-y-1 text-[10px] sm:text-xs text-[#bdbeb3]">
                       <div className="truncate">
                         <span className="text-sky-300 font-medium">Score:</span>{" "}
                         <span className="hidden sm:inline">Higher = more urgent</span>
@@ -206,7 +206,7 @@ export default function ClientPreviewModal({
                           {client.visiting_type}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-4 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-[#bdbdbd] flex-wrap">
+                      <div className="flex items-center gap-2 sm:gap-4 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-[#bdbeb3] flex-wrap">
                         <span className="truncate">{client.phone_normalized}</span>
                         <span className="hidden sm:inline">•</span>
                         <span>{client.days_since_last_visit} days since visit</span>
@@ -216,7 +216,7 @@ export default function ClientPreviewModal({
                     </div>
                     <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0">
                       <p className="text-xs sm:text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                      <p className="text-[10px] sm:text-xs text-[#bdbdbd]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
+                      <p className="text-[10px] sm:text-xs text-[#bdbeb3]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
                     </div>
                   </div>
                 ))}

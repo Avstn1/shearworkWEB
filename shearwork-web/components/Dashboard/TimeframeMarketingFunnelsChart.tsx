@@ -16,7 +16,7 @@ import { supabase } from '@/utils/supabaseClient'
 
 import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal'
 
-const COLORS = ['#8a9b90', '#6ee7b7', '#a78bfa', '#67e8f9', '#fbbf24']
+const COLORS = ['#8e9480', '#c9d2b3', '#a78bfa', '#67e8f9', '#fbbf24']
 
 export interface MarketingFunnel {
   source: string
@@ -245,7 +245,7 @@ export default function TimeframeMarketingFunnelsChart({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-[#555]">Loading marketing funnels...</p>
+        <p className="text-[#55584e]">Loading marketing funnels...</p>
       </div>
     )
   }
@@ -253,7 +253,7 @@ export default function TimeframeMarketingFunnelsChart({
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-[#555]">No data to see here yet!</p>
+        <p className="text-[#55584e]">No data to see here yet!</p>
       </div>
     )
   }
@@ -299,7 +299,7 @@ export default function TimeframeMarketingFunnelsChart({
               <XAxis
                 xAxisId="clients"
                 type="number"
-                stroke="#8a9b90"
+                stroke="#8e9480"
                 hide
                 domain={[0, (dataMax: number) => dataMax / 0.95]}
               />
@@ -307,7 +307,7 @@ export default function TimeframeMarketingFunnelsChart({
                 xAxisId="retention"
                 type="number"
                 domain={[0, 100 / 0.95]}
-                stroke="#8a9b90"
+                stroke="#8e9480"
                 hide
               />
 
@@ -333,7 +333,7 @@ export default function TimeframeMarketingFunnelsChart({
                     : [value, name]
                 }
                 contentStyle={{
-                  backgroundColor: '#0f1210',
+                  backgroundColor: '#11140e',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
                   color: '#ffffff',
@@ -347,7 +347,7 @@ export default function TimeframeMarketingFunnelsChart({
                   value === 'Retention' ? 'Retention (%)' : value
                 }
                 iconType="circle"
-                wrapperStyle={{ color: '#8a9b90', paddingTop: '10px' }}
+                wrapperStyle={{ color: '#8e9480', paddingTop: '10px' }}
               />
 
               <YAxis type="category" axisLine={false} tick={false} width={0} />
@@ -381,7 +381,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#0f1210"
+                          fill="#11140e"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -396,7 +396,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 5}
                         y={y + height / 2}
-                        fill="#8a9b90"
+                        fill="#8e9480"
                         fontSize={labelFontSize}
                         fontWeight="bold"
                         textAnchor="start"
@@ -429,7 +429,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 25}
                           y={y + height / 2}
-                          fill="#0f1210"
+                          fill="#11140e"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -444,7 +444,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 25}
                         y={y + height / 2}
-                        fill="#8a9b90"
+                        fill="#8e9480"
                         fontSize={labelFontSize}
                         fontWeight="bold"
                         textAnchor="start"
@@ -488,7 +488,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#0f1210"
+                          fill="#11140e"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -503,7 +503,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 5}
                         y={y + height / 2}
-                        fill="#8a9b90"
+                        fill="#8e9480"
                         fontSize={labelFontSize}
                         fontWeight="bold"
                         textAnchor="start"
@@ -539,7 +539,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#0f1210"
+                          fill="#11140e"
                           fontSize={labelFontSize}
                           fontWeight="bold"
                           textAnchor="start"
@@ -556,7 +556,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 5}
                         y={y + height / 2}
-                        fill="#8a9b90"
+                        fill="#8e9480"
                         fontSize={labelFontSize}
                         fontWeight="bold"
                         textAnchor="start"

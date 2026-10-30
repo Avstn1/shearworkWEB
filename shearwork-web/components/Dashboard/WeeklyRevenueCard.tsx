@@ -217,7 +217,7 @@ export default function WeeklyRevenueCard({ userId, selectedMonth, selectedYear 
     <div className="w-full h-full flex flex-col">
       {/* Header row: title + chevron navigator */}
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-[#8a9b90] text-base font-semibold">📅 Weekly {label}</h2>
+        <h2 className="text-[#8e9480] text-base font-semibold">📅 Weekly {label}</h2>
 
         <div className="flex items-center gap-1">
           <button
@@ -252,7 +252,7 @@ export default function WeeklyRevenueCard({ userId, selectedMonth, selectedYear 
             onClick={() => setWeekIndex(idx)}
             className={`h-1.5 rounded-full transition-all duration-200 ${
               idx === weekIndex
-                ? 'w-4 bg-[#6ee7b7]'
+                ? 'w-4 bg-[#c9d2b3]'
                 : 'w-1.5 bg-white/10 hover:bg-white/20'
             }`}
             aria-label={`Week ${idx + 1}`}
@@ -282,17 +282,17 @@ export default function WeeklyRevenueCard({ userId, selectedMonth, selectedYear 
           <p
             className={`text-sm font-semibold ${
               change > 0
-                ? 'text-[#6ee7b7]'
+                ? 'text-[#c9d2b3]'
                 : change < 0
                   ? 'text-[#fbbf24]'
-                  : 'text-[#555]'
+                  : 'text-[#55584e]'
             }`}
           >
             {change > 0 ? `+${change}%` : `${change}%`}{' '}
-            <span className="text-[#555]">(vs. {formatWeekLabel(prevWeek.weekStart, prevWeek.weekEnd)})</span>
+            <span className="text-[#55584e]">(vs. {formatWeekLabel(prevWeek.weekStart, prevWeek.weekEnd)})</span>
           </p>
         ) : (
-          <p className="text-sm text-[#555]">—</p>
+          <p className="text-sm text-[#55584e]">—</p>
         )}
       </div>
     </div>

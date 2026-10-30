@@ -66,10 +66,10 @@ export function DocCard({
       className={`
         rounded-lg border transition-all duration-300 cursor-pointer
         ${highlighted
-          ? "border-green-500/70 bg-[#2a2f27] ring-2 ring-green-500/20"
+          ? "border-green-500/70 bg-[#272e22] ring-2 ring-green-500/20"
           : expanded
-          ? "border-[#55694b] bg-[#2a2f27]"
-          : "border-[#55694b]/40 bg-[#242924] hover:border-[#55694b] hover:bg-[#2a2f27]"
+          ? "border-[#5d6a48] bg-[#272e22]"
+          : "border-[#5d6a48]/40 bg-[#242924] hover:border-[#5d6a48] hover:bg-[#272e22]"
         }
       `}
       onClick={() => setExpanded(!expanded)}
@@ -84,16 +84,16 @@ export function DocCard({
             {entry.tags?.map((tag) => (
               <span
                 key={tag}
-                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#3a4431] text-[#9ca89a] border border-[#55694b]/50"
+                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#3b4430] text-[#a9ae9b] border border-[#5d6a48]/50"
               >
                 {tag}
               </span>
             ))}
           </div>
-          <p className="text-[11px] font-mono text-[#9ca89a]/60 truncate">{entry.path}</p>
+          <p className="text-[11px] font-mono text-[#a9ae9b]/60 truncate">{entry.path}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <p className="text-xs text-[#9ca89a] max-w-xs hidden md:block">{entry.summary}</p>
+          <p className="text-xs text-[#a9ae9b] max-w-xs hidden md:block">{entry.summary}</p>
           <ChevronIcon expanded={expanded} />
         </div>
       </div>
@@ -101,22 +101,22 @@ export function DocCard({
       {/* Expanded Content */}
       {expanded && (
         <div
-          className="px-4 pb-4 border-t border-[#55694b]/40"
+          className="px-4 pb-4 border-t border-[#5d6a48]/40"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="pt-4 space-y-4">
             {/* Description */}
             <div>
-              <h4 className="text-[10px] font-mono tracking-widest text-[#9ca89a]/60 uppercase mb-2">
+              <h4 className="text-[10px] font-mono tracking-widest text-[#a9ae9b]/60 uppercase mb-2">
                 Description
               </h4>
-              <p className="text-sm text-[#F1F5E9]/80 leading-relaxed">{entry.description}</p>
+              <p className="text-sm text-[#F4F3EC]/80 leading-relaxed">{entry.description}</p>
             </div>
 
             {/* Related */}
             {entry.related && entry.related.length > 0 && (
               <div>
-                <h4 className="text-[10px] font-mono tracking-widest text-[#9ca89a]/60 uppercase mb-2">
+                <h4 className="text-[10px] font-mono tracking-widest text-[#a9ae9b]/60 uppercase mb-2">
                   Related
                 </h4>
                 <div className="flex flex-wrap gap-2">
@@ -153,7 +153,7 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
       height="14"
       viewBox="0 0 14 14"
       fill="none"
-      className={`text-[#9ca89a] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+      className={`text-[#a9ae9b] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
     >
       <path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -176,13 +176,13 @@ export function DocSection({
   return (
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-3">
-        <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-[#9ca89a]">{title}</h2>
-        <div className="flex-1 h-px bg-[#55694b]/40" />
-        <span className="text-xs font-mono text-[#9ca89a]/60">{entries.length}</span>
+        <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-[#a9ae9b]">{title}</h2>
+        <div className="flex-1 h-px bg-[#5d6a48]/40" />
+        <span className="text-xs font-mono text-[#a9ae9b]/60">{entries.length}</span>
       </div>
       {entries.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#55694b]/40 py-8 text-center">
-          <p className="text-sm text-[#9ca89a]">{emptyMessage}</p>
+        <div className="rounded-lg border border-dashed border-[#5d6a48]/40 py-8 text-center">
+          <p className="text-sm text-[#a9ae9b]">{emptyMessage}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -230,19 +230,19 @@ export function DocTabShell({
               {title}
             </h2>
           </div>
-          <p className="text-xs text-[#9ca89a]">{subtitle}</p>
+          <p className="text-xs text-[#a9ae9b]">{subtitle}</p>
         </div>
 
         {/* Search */}
         <div className="relative w-72">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca89a] text-sm">⌕</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a9ae9b] text-sm">⌕</span>
           <input
             type="text"
             placeholder={searchPlaceholder}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             onClick={(e) => e.stopPropagation()}
-            className="w-full bg-[#242924] border border-[#55694b]/50 rounded-lg pl-8 pr-4 py-2 text-sm text-[#F1F5E9] placeholder-[#9ca89a]/50 focus:outline-none focus:border-[#55694b] transition-colors"
+            className="w-full bg-[#242924] border border-[#5d6a48]/50 rounded-lg pl-8 pr-4 py-2 text-sm text-[#F4F3EC] placeholder-[#a9ae9b]/50 focus:outline-none focus:border-[#5d6a48] transition-colors"
           />
         </div>
       </div>

@@ -50,7 +50,7 @@ export function MessageClientList({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd] -mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-[#bdbeb3] -mb-2">
             <Users className="w-3 h-3 inline mr-1" />
             Recipients ({phoneNumbers.length} clients)
           </label>
@@ -157,10 +157,10 @@ export function MessageClientList({
               </button>
               {(isPartialLock || isTrialPreview) && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  <div className="bg-[#0c0e0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                     {isTrialPreview ? 'Activation available after upgrading' : 'Can be activated again next month'}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      <div className="border-4 border-transparent border-t-[#0c0e0a]" />
                     </div>
                   </div>
                 </div>
@@ -173,7 +173,7 @@ export function MessageClientList({
             <button
               onClick={() => onCancelEdit(msg.id)}
               disabled={isSaving}
-              className="w-full px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-base bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-base bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-2" />
               Cancel

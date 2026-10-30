@@ -33,7 +33,7 @@ export default function TestMessageConfirmModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
+            className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6"
           >
             {/* Header */}
             <div className="flex items-start gap-4 mb-4">
@@ -44,7 +44,7 @@ export default function TestMessageConfirmModal({
                 <h3 className="text-xl font-bold text-white mb-2">
                   Send Test Message?
                 </h3>
-                <p className="text-sm text-[#bdbdbd]">
+                <p className="text-sm text-[#bdbeb3]">
                   {profilePhone ? (
                     <>
                       A test SMS will be sent to <span className="text-white font-semibold">{profilePhone}</span>
@@ -76,7 +76,7 @@ export default function TestMessageConfirmModal({
 
             {/* Info Note */}
             <div className="p-3 bg-white/5 border border-white/10 rounded-lg mb-6">
-              <div className="flex items-start gap-2 text-xs text-[#bdbdbd]">
+              <div className="flex items-start gap-2 text-xs text-[#bdbeb3]">
                 <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
                 <p>
                   Test messages are sent immediately to help you verify message content and formatting before activating your campaign.
@@ -88,7 +88,7 @@ export default function TestMessageConfirmModal({
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                className="flex-1 px-4 py-3 rounded-xl font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
               >
                 Cancel
               </button>

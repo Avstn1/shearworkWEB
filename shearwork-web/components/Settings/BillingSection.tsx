@@ -244,7 +244,7 @@ export default function BillingSection() {
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
-          <div className="relative z-50 w-full max-w-md bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl p-6">
+          <div className="relative z-50 w-full max-w-md bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl p-6">
             <div className="flex items-start gap-4">
               <div className="p-2 bg-amber-500/20 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-amber-400" />
@@ -291,7 +291,7 @@ export default function BillingSection() {
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
-          <div className="relative z-50 w-full max-w-md bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl p-6">
+          <div className="relative z-50 w-full max-w-md bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl p-6">
             <div className="flex items-start gap-4">
               <div className="p-2 bg-emerald-500/20 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-emerald-400" />
@@ -321,7 +321,7 @@ export default function BillingSection() {
               <button
                 onClick={handleConfirmResume}
                 disabled={loadingAction}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold hover:shadow-lg hover:shadow-lime-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold hover:shadow-lg hover:shadow-lime-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
               >
                 {loadingAction && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>Yes, resume</span>

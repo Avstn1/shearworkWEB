@@ -61,7 +61,7 @@ export default function ProfitMarginPieChart({
           background: 'var(--card-revenue-bg)',
         }}
       >
-        <p className="text-[#E8EDC7] opacity-70 text-sm">
+        <p className="text-[#E9ECDD] opacity-70 text-sm">
           No data yet for {selectedMonth}
         </p>
       </div>
@@ -70,7 +70,7 @@ export default function ProfitMarginPieChart({
 
   return (
     <div className="w-full h-64">
-      <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">
+      <h2 className="text-[#c9d2b3] font-semibold mb-2 text-sm sm:text-lg">
         Profit vs Expenses
       </h2>
       <ResponsiveContainer width="100%" height="90%">

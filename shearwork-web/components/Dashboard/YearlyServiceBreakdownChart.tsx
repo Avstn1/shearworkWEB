@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabaseClient'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
 const COLORS = [
-  '#6ee7b7', '#a78bfa', '#67e8f9', '#fbbf24', '#f0abfc',
+  '#c9d2b3', '#a78bfa', '#67e8f9', '#fbbf24', '#f0abfc',
   '#86efac', '#c4b5fd', '#a5f3fc', '#fcd34d', '#f5d0fe',
   '#bbf7d0', '#ddd6fe', '#cffafe', '#fde68a', '#fae8ff',
   '#d1fae5', '#ede9fe', '#e0f2fe', '#fef3c7', '#fdf4ff',
@@ -128,7 +128,7 @@ export default function YearlyServiceBreakdownChart({
       <div
         className="flex items-center justify-center min-h-[360px]"
       >
-        <p className="text-[#555]">Loading service breakdown...</p>
+        <p className="text-[#55584e]">Loading service breakdown...</p>
       </div>
     )
   }
@@ -138,7 +138,7 @@ export default function YearlyServiceBreakdownChart({
       <div
         className="flex items-center justify-center min-h-[360px]"
       >
-        <p className="text-[#555]">
+        <p className="text-[#55584e]">
           No service data for this timeframe.
         </p>
       </div>
@@ -182,7 +182,7 @@ export default function YearlyServiceBreakdownChart({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f1210',
+                  backgroundColor: '#11140e',
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: '8px',
                   color: '#ffffff',
@@ -198,7 +198,7 @@ export default function YearlyServiceBreakdownChart({
 
         {/* Legend */}
         <div
-          className="flex flex-wrap md:flex-col gap-3 justify-center md:justify-start md:pl-4 text-[#8a9b90]"
+          className="flex flex-wrap md:flex-col gap-3 justify-center md:justify-start md:pl-4 text-[#8e9480]"
           style={{
             fontSize: '0.95rem',
             lineHeight: 1.3,

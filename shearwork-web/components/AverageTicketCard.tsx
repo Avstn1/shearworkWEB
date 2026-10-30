@@ -106,7 +106,7 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
     <div
       className="flex flex-col min-h-[140px]"
     >
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">💵 Avg Ticket</h2>
+      <h2 className="text-[#8e9480] text-base font-semibold mb-2">💵 Avg Ticket</h2>
 
       <div className="flex-1 flex items-center">
         <p className="text-3xl font-bold text-white">
@@ -123,16 +123,16 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
           <p
             className={`text-sm font-semibold ${
               change > 0
-                ? 'text-[#6ee7b7]'
+                ? 'text-[#c9d2b3]'
                 : change < 0
                   ? 'text-[#fbbf24]'
-                  : 'text-[#555]'
+                  : 'text-[#55584e]'
             }`}
           >
-            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-[#555]">(vs. prior month)</span>
+            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-[#55584e]">(vs. prior month)</span>
           </p>
         ) : (
-          <p className="text-sm text-[#555]">—</p>
+          <p className="text-sm text-[#55584e]">—</p>
         )}
       </div>
     </div>
