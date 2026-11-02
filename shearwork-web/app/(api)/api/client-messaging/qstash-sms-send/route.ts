@@ -7,6 +7,7 @@ import { getAuthenticatedUser } from '@/utils/api-auth'
 import { unauthorized } from '@/lib/api/guards'
 import { adjustCredits, InsufficientCreditsError } from '@/lib/credits'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
+import { SMS_SENDS_PAUSED, smsPausedResponse } from '@/lib/smsPause'
 import { qstashClient } from '@/lib/qstashClient'
 import pMap from "p-map"
 import { isTrialActive } from '@/utils/trial'
@@ -42,6 +43,9 @@ const authToken = process.env.TWILIO_AUTH_TOKEN
 const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
 
 async function handler(request: Request) {
+  // Ack with 200 so QStash doesn't retry, and before any credits are charged
+  if (SMS_SENDS_PAUSED) return smsPausedResponse('qstash-sms-send')
+
   try {
     // Get parameters from query
     const { searchParams } = new URL(request.url)
