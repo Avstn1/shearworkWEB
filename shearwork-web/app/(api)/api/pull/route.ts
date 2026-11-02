@@ -172,7 +172,11 @@ async function setStatus(key: StatusKey, status: 'completed' | 'retrying' | 'fai
   if (error) console.error('[pull] failed to update sync_status:', error)
 }
 
-/** After a backlog month finishes: tell the barber once every queued month is done. */
+/**
+ * After a backlog month finishes: tell the barber once every queued month is done.
+ * Only the initial history sync after onboarding notifies; later re-syncs (dashboard,
+ * daily jobs) also drain the queue but must stay silent.
+ */
 async function notifyIfHistoryComplete(userId: string) {
   const { count } = await serviceSupabase
     .from('sync_status')
@@ -181,6 +185,18 @@ async function notifyIfHistoryComplete(userId: string) {
     .neq('status', 'completed')
 
   if (count !== 0) return
+
+  const { count: alreadyNotified, error: lookupError } = await serviceSupabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('reference_type', 'sync_completed')
+
+  if (lookupError) {
+    console.error('[pull] failed to check for an earlier sync notification:', lookupError)
+    return
+  }
+  if ((alreadyNotified ?? 0) > 0) return
 
   const { error } = await serviceSupabase.from('notifications').insert({
     user_id: userId,

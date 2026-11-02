@@ -124,6 +124,17 @@ describe('/api/pull sync_status handling', () => {
     expect(db.tables.notifications).toHaveLength(0)
   })
 
+  it('only the initial history sync notifies; later re-syncs that drain the queue stay silent', async () => {
+    db = memorySupabase({
+      sync_status: [statusRow('May', 2026, 'queued'), statusRow('April', 2026, 'completed')],
+      notifications: [{ id: 'n1', user_id: USER, reference_type: 'sync_completed' }],
+    })
+    const res = await call({ 'upstash-message-id': 'msg' })
+    expect(res.status).toBe(200)
+    expect(db.tables.sync_status.find(r => r.month === 'May')?.status).toBe('completed')
+    expect(db.tables.notifications).toHaveLength(1)
+  })
+
   it('daily re-syncs of an already completed month do not send notifications', async () => {
     db = memorySupabase({ sync_status: [statusRow('May', 2026, 'completed')], notifications: [] })
     await call()
