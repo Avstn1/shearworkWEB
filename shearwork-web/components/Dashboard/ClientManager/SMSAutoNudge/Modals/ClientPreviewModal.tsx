@@ -51,35 +51,34 @@ export default function ClientPreviewModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 min-h-screen" 
+          className="modal-backdrop !z-50 flex items-center justify-center p-2 sm:p-4 min-h-screen"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ y: 8, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#181B19] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
+            className="modal-surface w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 flex-shrink-0 bg-[#181B19]">
-              <div className="flex-1 min-w-0 pr-2">
-                <h3 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-sky-300 flex-shrink-0" />
-                  <span className="truncate hidden sm:inline">Clients Selected for Next Campaign</span>
-                  <span className="truncate sm:hidden">Selected Clients</span>
-                </h3>
-                {previewStats && (
-                  <p className="text-xs sm:text-sm text-[#B8BCB5] mt-1">
-                    {previewStats.total_selected} clients will receive your next SMS
-                  </p>
-                )}
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-white/[0.07] flex-shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Users className="w-[18px] h-[18px] text-sage flex-shrink-0" strokeWidth={1.75} />
+                <div className="min-w-0">
+                  <h3 className="text-[15px] font-semibold text-ivory truncate">
+                    <span className="hidden sm:inline">Clients selected for next campaign</span>
+                    <span className="sm:hidden">Selected clients</span>
+                  </h3>
+                  {previewStats && (
+                    <p className="text-xs text-muted mt-0.5">
+                      {previewStats.total_selected} clients will receive your next SMS
+                    </p>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#B8BCB5]" />
+              <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Close">
+                <X className="w-4 h-4" strokeWidth={1.75} />
               </button>
             </div>
 
@@ -87,43 +86,43 @@ export default function ClientPreviewModal({
             <div className="flex-1 overflow-y-auto min-h-0">
               {/* Stats - Part of scroll content */}
               {previewStats && (
-                <div className="p-3 sm:p-6 border-b border-white/10 bg-white/5">
+                <div className="px-4 sm:px-5 py-4 border-b border-white/[0.07] bg-white/[0.02]">
                   {/* Main Stats - Single Row */}
                   <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-4">
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#B8BCB5] mb-1">Total</p>
-                      <p className="text-lg sm:text-2xl font-bold text-white">{previewStats.total_selected}</p>
+                      <p className="stat-label mb-1">Total</p>
+                      <p className="text-lg sm:text-2xl font-semibold text-ivory tabular-nums">{previewStats.total_selected}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#B8BCB5] mb-1">Score</p>
-                      <p className="text-lg sm:text-2xl font-bold text-sky-300">{previewStats.avg_score}</p>
+                      <p className="stat-label mb-1">Score</p>
+                      <p className="text-lg sm:text-2xl font-semibold text-sage-bright tabular-nums">{previewStats.avg_score}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#B8BCB5] mb-1 truncate">Since</p>
-                      <p className="text-lg sm:text-2xl font-bold text-purple-400">{previewStats.avg_days_since_last_visit}</p>
+                      <p className="stat-label mb-1 truncate">Since</p>
+                      <p className="text-lg sm:text-2xl font-semibold text-[#A9C0D2] tabular-nums">{previewStats.avg_days_since_last_visit}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] sm:text-xs text-[#B8BCB5] mb-1 truncate">Overdue</p>
-                      <p className="text-lg sm:text-2xl font-bold text-orange-400">{previewStats.avg_days_overdue}</p>
+                      <p className="stat-label mb-1 truncate">Overdue</p>
+                      <p className="text-lg sm:text-2xl font-semibold text-[#D8C59A] tabular-nums">{previewStats.avg_days_overdue}</p>
                     </div>
                   </div>
 
                   {/* Legend and Types - Two Columns */}
-                  <div className="pt-3 border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+                  <div className="pt-3 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
                     {/* Left Column - Explanations */}
-                    <div className="space-y-1 text-[10px] sm:text-xs text-[#B8BCB5]">
+                    <div className="space-y-1 text-[11px] sm:text-xs text-muted">
                       <div className="truncate">
-                        <span className="text-sky-300 font-medium">Score:</span>{" "}
+                        <span className="text-sage-bright font-medium">Score:</span>{" "}
                         <span className="hidden sm:inline">Higher = more urgent</span>
                         <span className="sm:hidden">Urgency</span>
                       </div>
                       <div className="truncate">
-                        <span className="text-purple-400 font-medium">Since:</span>{" "}
+                        <span className="text-[#A9C0D2] font-medium">Since:</span>{" "}
                         <span className="hidden sm:inline">Days since last appointment</span>
                         <span className="sm:hidden">Since visit</span>
                       </div>
                       <div className="truncate">
-                        <span className="text-orange-400 font-medium">Overdue:</span>{" "}
+                        <span className="text-[#D8C59A] font-medium">Overdue:</span>{" "}
                         <span className="hidden sm:inline">How late vs typical pattern</span>
                         <span className="sm:hidden">How late</span>
                       </div>
@@ -132,49 +131,51 @@ export default function ClientPreviewModal({
                     {/* Right Column - Client Types */}
                     <div className="flex flex-wrap gap-1.5 sm:gap-2 content-start">
                       {previewStats.breakdown.consistent > 0 && (
-                        <span className="bg-green-500/10 text-green-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                          <span className="font-medium hidden sm:inline">Consistent:</span>
-                          <span className="font-medium sm:hidden">Cons:</span>
-                          <span className="hidden sm:inline">Weekly</span>
-                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-green-500/20">
+                        <span className="badge badge-sage">
+                          <span className="hidden sm:inline">Consistent:</span>
+                          <span className="sm:hidden">Cons:</span>
+                          <span className="hidden sm:inline font-normal">Weekly</span>
+                          <span className="tabular-nums text-ivory/90">
                             {previewStats.breakdown.consistent}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown["semi-consistent"] > 0 && (
-                        <span className="bg-blue-500/10 text-blue-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                          <span className="font-medium hidden sm:inline">Semi:</span>
-                          <span className="font-medium sm:hidden">Semi:</span>
-                          <span className="hidden sm:inline">2-3w</span>
-                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-blue-500/20">
+                        <span className="badge badge-info">
+                          <span className="hidden sm:inline">Semi:</span>
+                          <span className="sm:hidden">Semi:</span>
+                          <span className="hidden sm:inline font-normal">2-3w</span>
+                          <span className="tabular-nums text-ivory/90">
                             {previewStats.breakdown["semi-consistent"]}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown["easy-going"] > 0 && (
-                        <span className="bg-yellow-500/10 text-yellow-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                          <span className="font-medium hidden sm:inline">Easy:</span>
-                          <span className="font-medium sm:hidden">Easy:</span>
-                          <span className="hidden sm:inline">1-2mo</span>
-                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-yellow-500/20">
+                        <span className="badge badge-warn">
+                          <span className="hidden sm:inline">Easy:</span>
+                          <span className="sm:hidden">Easy:</span>
+                          <span className="hidden sm:inline font-normal">1-2mo</span>
+                          <span className="tabular-nums text-ivory/90">
                             {previewStats.breakdown["easy-going"]}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown.rare > 0 && (
-                        <span className="bg-red-500/10 text-red-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                          <span className="font-medium">Rare:</span>
-                          <span className="hidden sm:inline">2+mo</span>
-                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-red-500/20">
+                        <span className="badge badge-danger">
+                          <span className="hidden sm:inline">Rare:</span>
+                          <span className="sm:hidden">Rare:</span>
+                          <span className="hidden sm:inline font-normal">2+mo</span>
+                          <span className="tabular-nums text-ivory/90">
                             {previewStats.breakdown.rare}
                           </span>
                         </span>
                       )}
                       {previewStats.breakdown.new > 0 && (
-                        <span className="bg-gray-500/10 text-gray-400 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[11px] flex items-center gap-1">
-                          <span className="font-medium">New:</span>
-                          <span className="hidden sm:inline">First</span>
-                          <span className="px-1 sm:px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-gray-500/20">
+                        <span className="badge ">
+                          <span className="hidden sm:inline">New:</span>
+                          <span className="sm:hidden">New:</span>
+                          <span className="hidden sm:inline font-normal">First</span>
+                          <span className="tabular-nums text-ivory/90">
                             {previewStats.breakdown.new}
                           </span>
                         </span>
@@ -185,38 +186,38 @@ export default function ClientPreviewModal({
               )}
 
               {/* Client Cards */}
-              <div className="p-3 sm:p-6 space-y-2">
+              <div className="p-3 sm:p-5 space-y-2">
                 {previewClients.map((client) => (
                   <div
                     key={client.client_id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors gap-2 sm:gap-0"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:px-4 bg-white/[0.02] border border-white/[0.07] rounded-lg hover:bg-white/[0.04] transition-colors gap-2 sm:gap-0"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                        <h4 className="font-semibold text-white text-sm sm:text-base truncate">
+                        <h4 className="font-semibold text-ivory text-sm truncate">
                           {client.first_name} {client.last_name}
                         </h4>
-                        <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full flex-shrink-0 ${
-                          client.visiting_type === 'consistent' ? 'bg-green-500/20 text-green-400' :
-                          client.visiting_type === 'semi-consistent' ? 'bg-blue-500/20 text-blue-400' :
-                          client.visiting_type === 'easy-going' ? 'bg-yellow-500/20 text-yellow-400' :
-                          client.visiting_type === 'rare' ? 'bg-red-500/20 text-red-400' :
-                          'bg-gray-500/20 text-gray-400'
+                        <span className={`badge flex-shrink-0 ${
+                          client.visiting_type === 'consistent' ? 'badge-sage' :
+                          client.visiting_type === 'semi-consistent' ? 'badge-info' :
+                          client.visiting_type === 'easy-going' ? 'badge-warn' :
+                          client.visiting_type === 'rare' ? 'badge-danger' :
+                          ''
                         }`}>
                           {client.visiting_type}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-4 mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-[#B8BCB5] flex-wrap">
+                      <div className="flex items-center gap-2 sm:gap-3 mt-1.5 text-[11px] sm:text-xs text-muted flex-wrap tabular-nums">
                         <span className="truncate">{client.phone_normalized}</span>
-                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline text-gray-600">·</span>
                         <span>{client.days_since_last_visit} days since visit</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span className="text-orange-400">{client.days_overdue} days overdue</span>
+                        <span className="hidden sm:inline text-gray-600">·</span>
+                        <span className="text-[#D8C59A]">{client.days_overdue} days overdue</span>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0">
-                      <p className="text-xs sm:text-sm font-semibold text-sky-300">Score: {client.score}</p>
-                      <p className="text-[10px] sm:text-xs text-[#B8BCB5]">{client.avg_weekly_visits?.toFixed(2)}/week</p>
+                    <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0 tabular-nums">
+                      <p className="text-xs sm:text-[13px] font-semibold text-sage-bright">Score: {client.score}</p>
+                      <p className="text-[11px] sm:text-xs text-muted">{client.avg_weekly_visits?.toFixed(2)}/week</p>
                     </div>
                   </div>
                 ))}

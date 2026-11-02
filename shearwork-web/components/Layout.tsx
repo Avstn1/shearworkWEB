@@ -11,10 +11,6 @@ const navLinksBase = [
   { href: '/dashboard', label: 'Dashboard' },
 ]
 
-// SignOutButton ships its own colours; these override them to match the outline (.btn-glass) look
-const SIGN_OUT_CLASSES =
-  'w-full h-10 !rounded-lg !bg-transparent !text-ivory !shadow-none border border-white/[0.12] text-sm !font-medium hover:!bg-white/[0.05]'
-
 function Brand() {
   return (
     <span className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-ivory">
@@ -81,7 +77,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {navLinks.map((link) => renderLink(link))}
           </nav>
           <div className="mt-auto border-t border-white/[0.07] p-3">
-            <SignOutButton className={SIGN_OUT_CLASSES} />
+            <SignOutButton className="w-full" />
           </div>
         </aside>
       )}
@@ -118,7 +114,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <nav className="flex flex-1 flex-col space-y-0.5 overflow-hidden bg-[#141614] px-3 py-4" aria-label="Main">
             {navLinks.map((link) => renderLink(link, () => setMobileMenuOpen(false)))}
             <div className="mt-auto border-t border-white/[0.07] pt-3">
-              <SignOutButton className={SIGN_OUT_CLASSES} />
+              <SignOutButton className="w-full" />
             </div>
           </nav>
         </div>

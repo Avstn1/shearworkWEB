@@ -219,7 +219,7 @@ export default function UserExpensesPage() {
           <ExpensesViewer barberId={user.id} month={selectedMonth} year={selectedYear.toString()} onUpdate={fetchData} />
           {/* AdminRecurringExpenses ships its own card chrome; flatten it so it sits inside the panel. */}
           <section className="panel">
-            <div className="panel-body [&>div]:rounded-none [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0 [&>div]:shadow-none [&>div]:backdrop-blur-none">
+            <div className="panel-body">
               <AdminRecurringExpenses barberId={user.id} month={selectedMonth} year={selectedYear} onUpdate={fetchData} />
             </div>
           </section>

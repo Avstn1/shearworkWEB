@@ -86,11 +86,11 @@ export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
   return (
     <div className="relative flex items-center" ref={dropdownRef}>
       {/* Avatar button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
+      <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className="relative flex items-center justify-center w-10 h-10 rounded-full overflow-hidden bg-gradient-to-r from-amber-400/30 to-lime-500/30 border border-white/10 shadow-md hover:shadow-lg backdrop-blur-md transition-all"
+        aria-label="Account menu"
+        className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/[0.12] bg-raised transition-colors hover:border-white/[0.2]"
       >
         {profile?.avatar_url ? (
           <img
@@ -99,11 +99,11 @@ export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
             className="w-full h-full object-cover rounded-full"
           />
         ) : (
-          <span className="text-white font-bold text-lg">
+          <span className="text-sm font-semibold text-ivory">
             {profile?.full_name?.[0]?.toUpperCase() || 'U'}
           </span>
         )}
-      </motion.button>
+      </button>
 
       {/* Dropdown menu */}
       <AnimatePresence>
@@ -114,7 +114,7 @@ export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
             exit="closed"
             variants={menuVariants}
             ref={dropdownRef}
-            className="absolute top-full right-0 mt-3 w-72 bg-[#1a1e18]/90 border border-white/10 rounded-2xl shadow-2xl p-4 z-[9999] backdrop-blur-xl origin-top-right"
+            className="modal-surface absolute top-full right-0 z-[9999] mt-2 w-72 origin-top-right p-4"
             style={{
               transformOrigin: 'top right',
               maxWidth: 'calc(100vw - 1rem)', // ensures it never overflows screen width
@@ -122,9 +122,9 @@ export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
           >
             <motion.div
               variants={itemVariants}
-              className="flex flex-col items-center text-[var(--text-bright)] space-y-1"
+              className="flex flex-col items-center space-y-1 text-ivory"
             >
-              <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-r from-lime-400/30 to-amber-400/30 border border-white/10 shadow-md mb-2">
+              <div className="mb-2 h-14 w-14 overflow-hidden rounded-full border border-white/[0.12] bg-raised">
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
@@ -132,26 +132,26 @@ export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="flex items-center justify-center w-full h-full text-xl text-white font-bold">
+                  <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-ivory">
                     {profile?.full_name?.[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
               </div>
 
-              <span className="font-semibold text-lg text-amber-200">
+              <span className="text-[15px] font-semibold text-ivory">
                 {profile?.full_name || 'User'}
               </span>
-              <span className="text-xs text-gray-400 uppercase tracking-wide">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
                 {profile?.role || 'Barber'}
               </span>
-              <span className="text-sm text-lime-200/80 break-words">
+              <span className="break-words text-[13px] text-gray-400">
                 {profile?.email || ''}
               </span>
             </motion.div>
 
             <motion.hr
               variants={itemVariants}
-              className="my-3 border-white/10"
+              className="my-3 border-white/[0.07]"
             />
 
             {/* Hide Settings link during onboarding (signOutOnly mode) */}
@@ -159,7 +159,7 @@ export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
               <motion.div variants={itemVariants}>
                 <Link
                   href="/settings"
-                  className="block w-full text-center py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-amber-400/30 to-lime-500/30 border border-white/10 text-white hover:shadow-md hover:scale-[1.02] transition-all"
+                  className="btn btn-glass btn-sm mb-2 w-full"
                 >
                   Settings
                 </Link>
@@ -167,7 +167,7 @@ export default function UserProfile({ signOutOnly = false }: UserProfileProps) {
             )}
 
             <motion.div variants={itemVariants}>
-              <SignOutButton className="w-full bg-white/10 border border-white/10 text-white py-2 rounded-lg text-sm font-semibold hover:bg-white/20 hover:scale-[1.02] transition-all" />
+              <SignOutButton className="w-full" />
             </motion.div>
           </motion.div>
         )}

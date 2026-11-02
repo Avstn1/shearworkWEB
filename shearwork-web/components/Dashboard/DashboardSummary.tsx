@@ -50,44 +50,48 @@ export default function DashboardSummary() {
     fetchSummary()
   }, [user?.id])
 
-  if (loading) return <p className="text-gray-400">Loading summary...</p>
-  if (error) return <p className="text-red-400 bg-gray-800 p-2 rounded">{error}</p>
+  if (loading) return <p className="text-sm text-gray-500">Loading summary…</p>
+  if (error) return <p className="badge badge-danger">{error}</p>
 
   return (
-    <div className="bg-gray-800 rounded-xl p-6 mb-10 shadow-lg text-gray-100">
-      <h2 className="text-3xl font-semibold mb-6 text-teal-300">Performance Summary</h2>
+    <section className="panel mb-10">
+      <header className="panel-header">
+        <h2 className="panel-title">Performance Summary</h2>
+      </header>
       {summary.length === 0 ? (
-        <p className="text-gray-400 text-center">No summary data found.</p>
+        <div className="empty-state">
+          <strong>No summary data found.</strong>
+        </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-700 rounded-lg overflow-hidden">
-            <thead className="bg-gray-700 text-teal-300">
+          <table className="table-clean">
+            <thead>
               <tr>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-right">Revenue ($)</th>
-                <th className="px-4 py-2 text-right">Expenses ($)</th>
-                <th className="px-4 py-2 text-right">Clients</th>
-                <th className="px-4 py-2 text-right">Returning</th>
-                <th className="px-4 py-2 text-right">New</th>
-                <th className="px-4 py-2 text-right">Avg Ticket ($)</th>
+                <th>Date</th>
+                <th className="text-right">Revenue ($)</th>
+                <th className="text-right">Expenses ($)</th>
+                <th className="text-right">Clients</th>
+                <th className="text-right">Returning</th>
+                <th className="text-right">New</th>
+                <th className="text-right">Avg Ticket ($)</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="tabular-nums">
               {summary.map((row) => (
-                <tr key={row.date} className="border-t border-gray-700 hover:bg-gray-750 transition">
-                  <td className="px-4 py-2">{format(new Date(row.date), 'd MMM yyyy')}</td>
-                  <td className="px-4 py-2 text-right">{row.revenue.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right">{row.expenses.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right">{row.total_clients}</td>
-                  <td className="px-4 py-2 text-right">{row.returning_clients}</td>
-                  <td className="px-4 py-2 text-right">{row.new_clients}</td>
-                  <td className="px-4 py-2 text-right">{row.avg_ticket.toFixed(2)}</td>
+                <tr key={row.date}>
+                  <td>{format(new Date(row.date), 'd MMM yyyy')}</td>
+                  <td className="text-right">{row.revenue.toFixed(2)}</td>
+                  <td className="text-right">{row.expenses.toFixed(2)}</td>
+                  <td className="text-right">{row.total_clients}</td>
+                  <td className="text-right">{row.returning_clients}</td>
+                  <td className="text-right">{row.new_clients}</td>
+                  <td className="text-right">{row.avg_ticket.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
+    </section>
   )
 }

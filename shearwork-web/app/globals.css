@@ -369,6 +369,10 @@ html {
   .btn-glass { color: var(--color-ivory); background: rgb(255 255 255 / 0.02); box-shadow: inset 0 0 0 1px var(--color-glass-border-strong); }
   .btn-glass:hover { background: rgb(255 255 255 / 0.05); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.2); }
 
+  /* Danger: destructive confirms (delete, log out everywhere) */
+  .btn-danger { color: var(--color-ink); background: #D99A8B; }
+  .btn-danger:hover { background: #E3AC9E; }
+
   /* Ghost: text-weight action with a soft hover plate */
   .btn-ghost { color: var(--color-muted); background: transparent; font-weight: 500; }
   .btn-ghost:hover { color: var(--color-ivory); background: rgb(255 255 255 / 0.05); }
