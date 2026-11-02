@@ -6,6 +6,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import twilio from 'npm:twilio@4'
+import { SMS_SENDS_PAUSED, smsPausedResponse } from '../_shared/smsPause.ts'
 
 const supabase = createClient(
   Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? '',
@@ -146,6 +147,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS })
   }
+
+  if (SMS_SENDS_PAUSED) return smsPausedResponse('send_sms_smart_bucket')
 
   const responseHeaders = { 'Content-Type': 'application/json', ...CORS_HEADERS }
 

@@ -4,12 +4,15 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
 import twilio from 'twilio'
+import { SMS_SENDS_PAUSED, smsPausedResponse } from '@/lib/smsPause'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
 
 async function handler(request: Request) {
+  if (SMS_SENDS_PAUSED) return smsPausedResponse('enqueue-sms')
+
   const { messageId, user_id, purpose, message, phone_normalized } = await request.json();
   
   try {

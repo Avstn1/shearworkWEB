@@ -3,6 +3,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import twilio from 'npm:twilio'
+import { SMS_SENDS_PAUSED, smsPausedResponse } from '../_shared/smsPause.ts'
 
 const supabase = createClient(
   Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? '',
@@ -383,6 +384,8 @@ function buildDailyMessage(
 // ----------------------------------------------------------------
 
 Deno.serve(async (req) => {
+  if (SMS_SENDS_PAUSED) return smsPausedResponse('barber_nudge_daily_update')
+
   try {
     const dayOfWeek = getCurrentDayOfWeek()
     const isoWeek = getISOWeek()
