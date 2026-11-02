@@ -291,14 +291,14 @@ export default function MarketingFunnelsDetailsModal({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           >
-            <div className="bg-gradient-to-br from-[#1a1f17] to-[#303a29] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full h-[85vh] sm:h-[80vh] max-w-3xl flex flex-col overflow-hidden">
+            <div className="bg-gradient-to-br from-[#0E110F] to-[#161A18] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full h-[85vh] sm:h-[80vh] max-w-3xl flex flex-col overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-[#8E9A78]/30 to-[#9AC8CD]/30 border-b border-white/10 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
+              <div className="bg-gradient-to-r from-[#A9DB5C]/30 to-[#9AC8CD]/30 border-b border-white/10 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
                 <div className="min-w-0 flex-1 pr-2">
-                  <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[#E9ECDD] to-[#9AC8CD] bg-clip-text text-transparent">
+                  <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[#E6EAE3] to-[#9AC8CD] bg-clip-text text-transparent">
                     📣 Marketing Funnels Details
                   </h2>
-                  <p className="text-[10px] sm:text-xs text-[#E9ECDD]/70 mt-0.5">
+                  <p className="text-[10px] sm:text-xs text-[#E6EAE3]/70 mt-0.5">
                     {monthsDisplay} {year} • {detailedData.length} source{detailedData.length !== 1 ? 's' : ''}
                   </p>
                 </div>
@@ -306,7 +306,7 @@ export default function MarketingFunnelsDetailsModal({
                   onClick={onClose}
                   className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
                 >
-                  <X className="w-5 h-5 sm:w-5 sm:h-5 text-[#E9ECDD]" />
+                  <X className="w-5 h-5 sm:w-5 sm:h-5 text-[#E6EAE3]" />
                 </button>
               </div>
 
@@ -315,7 +315,7 @@ export default function MarketingFunnelsDetailsModal({
                 <div className="p-3 sm:p-4">
                   {detailedData.length === 0 ? (
                     <div className="text-center py-12">
-                      <p className="text-[#E9ECDD] opacity-70 text-sm">No data available</p>
+                      <p className="text-[#E6EAE3] opacity-70 text-sm">No data available</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -330,17 +330,17 @@ export default function MarketingFunnelsDetailsModal({
                             className="w-full p-2.5 sm:p-3 flex items-center justify-between hover:bg-white/5 transition-colors text-left"
                           >
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-[#8E9A78] to-[#9AC8CD] flex items-center justify-center text-[#2a3612ff] font-bold text-xs">
+                              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-[#A9DB5C] to-[#9AC8CD] flex items-center justify-center text-[#2a3612ff] font-bold text-xs">
                                 {idx + 1}
                               </div>
-                              <h3 className="text-[#E9ECDD] text-sm sm:text-base font-semibold">
+                              <h3 className="text-[#E6EAE3] text-sm sm:text-base font-semibold">
                                 {funnel.source}
                               </h3>
                             </div>
                             {expandedSource === funnel.source ? (
-                              <ChevronUp className="w-4 h-4 text-[#E9ECDD]/70 flex-shrink-0" />
+                              <ChevronUp className="w-4 h-4 text-[#E6EAE3]/70 flex-shrink-0" />
                             ) : (
-                              <ChevronDown className="w-4 h-4 text-[#E9ECDD]/70 flex-shrink-0" />
+                              <ChevronDown className="w-4 h-4 text-[#E6EAE3]/70 flex-shrink-0" />
                             )}
                           </button>
 
@@ -352,15 +352,15 @@ export default function MarketingFunnelsDetailsModal({
                                   <Users className="w-2.5 h-2.5 text-[#9AC8CD]" />
                                   <p className="text-[#9AC8CD] text-[12px] font-semibold">New</p>
                                 </div>
-                                <p className="text-[#E9ECDD] text-base sm:text-lg font-bold">{funnel.new_clients}</p>
+                                <p className="text-[#E6EAE3] text-base sm:text-lg font-bold">{funnel.new_clients}</p>
                               </div>
                               
-                              <div className="bg-gradient-to-br from-[#8E9A78]/10 to-[#8E9A78]/5 border border-[#8E9A78]/20 p-1.5 rounded">
+                              <div className="bg-gradient-to-br from-[#A9DB5C]/10 to-[#A9DB5C]/5 border border-[#A9DB5C]/20 p-1.5 rounded">
                                 <div className="flex items-center gap-0.5 mb-1">
-                                  <TrendingUp className="w-2.5 h-2.5 text-[#8E9A78]" />
-                                  <p className="text-[#8E9A78] text-[12px] font-semibold">Returned</p>
+                                  <TrendingUp className="w-2.5 h-2.5 text-[#A9DB5C]" />
+                                  <p className="text-[#A9DB5C] text-[12px] font-semibold">Returned</p>
                                 </div>
-                                <p className="text-[#E9ECDD] text-base sm:text-lg font-bold">{funnel.new_clients_retained}</p>
+                                <p className="text-[#E6EAE3] text-base sm:text-lg font-bold">{funnel.new_clients_retained}</p>
                               </div>
                               
                               <div className="bg-gradient-to-br from-[#B19470]/10 to-[#B19470]/5 border border-[#B19470]/20 p-1.5 rounded">
@@ -368,7 +368,7 @@ export default function MarketingFunnelsDetailsModal({
                                   <Percent className="w-2.5 h-2.5 text-[#B19470]" />
                                   <p className="text-[#B19470] text-[12px] font-semibold">Retention</p>
                                 </div>
-                                <p className="text-[#E9ECDD] text-base sm:text-lg font-bold">
+                                <p className="text-[#E6EAE3] text-base sm:text-lg font-bold">
                                   {funnel.retention.toFixed(1)}%
                                 </p>
                               </div>
@@ -381,7 +381,7 @@ export default function MarketingFunnelsDetailsModal({
                                   <DollarSign className="w-2.5 h-2.5 text-[#F1EEDC]" />
                                   <p className="text-[#F1EEDC] text-[12px] font-semibold">Average Ticket</p>
                                 </div>
-                                <p className="text-[#E9ECDD] text-base sm:text-lg font-bold">
+                                <p className="text-[#E6EAE3] text-base sm:text-lg font-bold">
                                   ${funnel.avg_ticket.toFixed(0)}
                                 </p>
                               </div>
@@ -399,7 +399,7 @@ export default function MarketingFunnelsDetailsModal({
                                 className="overflow-hidden"
                               >
                                 <div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 border-t border-white/10 pt-2.5 sm:pt-3">
-                                  <h4 className="text-[#E9ECDD] text-[10px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5">
+                                  <h4 className="text-[#E6EAE3] text-[10px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5">
                                     <Users className="w-3 h-3" />
                                     New Clients ({funnel.client_names?.length || 0}):
                                   </h4>
@@ -414,19 +414,19 @@ export default function MarketingFunnelsDetailsModal({
                                             className="bg-gradient-to-r from-white/5 to-white/10 border border-white/10 p-1.5 rounded hover:border-[#9AC8CD]/30 transition-colors"
                                           >
                                             <div className="flex flex-col gap-1">
-                                              <span className="text-[#E9ECDD] text-[12px] capitalize font-medium truncate">
+                                              <span className="text-[#E6EAE3] text-[12px] capitalize font-medium truncate">
                                                 {client.client_name}
                                               </span>
                                               <div className="flex items-center gap-1.5 text-[9px]">
                                                 <div className="flex items-center gap-0.5">
-                                                  <span className="text-[#E9ECDD]/50 font-semibold">1st:</span>
-                                                  <span className="text-[#E9ECDD] bg-[#9AC8CD]/20 px-1 py-0.5 rounded whitespace-nowrap">
+                                                  <span className="text-[#E6EAE3]/50 font-semibold">1st:</span>
+                                                  <span className="text-[#E6EAE3] bg-[#9AC8CD]/20 px-1 py-0.5 rounded whitespace-nowrap">
                                                     {new Date(client.first_visit + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                   </span>
                                                 </div>
                                                 <div className="flex items-center gap-0.5">
-                                                  <span className="text-[#E9ECDD]/50 font-semibold">2nd:</span>
-                                                  <span className={`px-1 py-0.5 rounded text-[8px] ${hasSecondVisitInTimeline ? 'text-[#E9ECDD] bg-[#8E9A78]/20' : 'text-[#E9ECDD]/40 bg-white/5'}`}>
+                                                  <span className="text-[#E6EAE3]/50 font-semibold">2nd:</span>
+                                                  <span className={`px-1 py-0.5 rounded text-[8px] ${hasSecondVisitInTimeline ? 'text-[#E6EAE3] bg-[#A9DB5C]/20' : 'text-[#E6EAE3]/40 bg-white/5'}`}>
                                                     {hasSecondVisitInTimeline
                                                       ? new Date(client.second_visit! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                                       : timelineInfo.message
@@ -440,7 +440,7 @@ export default function MarketingFunnelsDetailsModal({
                                       })}
                                     </div>
                                   ) : (
-                                    <p className="text-[#E9ECDD] opacity-50 text-xs">No client data available</p>
+                                    <p className="text-[#E6EAE3] opacity-50 text-xs">No client data available</p>
                                   )}
                                 </div>
                               </motion.div>
@@ -455,12 +455,12 @@ export default function MarketingFunnelsDetailsModal({
 
               {/* Footer */}
               <div className="p-2.5 sm:p-3 border-t border-white/10 bg-black/20 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
-                <p className="text-[10px] sm:text-[12px] text-[#E9ECDD]/50 text-center sm:text-left">
+                <p className="text-[10px] sm:text-[12px] text-[#E6EAE3]/50 text-center sm:text-left">
                   Click on any source to view client details
                 </p>
                 <button
                   onClick={onClose}
-                  className="px-4 sm:px-5 py-1.5 bg-gradient-to-r from-[#8E9A78] to-[#9AC8CD] hover:from-[#9AC8CD] hover:to-[#8E9A78] text-[#2a3612ff] rounded-lg transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 text-xs sm:text-sm w-full sm:w-auto"
+                  className="px-4 sm:px-5 py-1.5 bg-gradient-to-r from-[#A9DB5C] to-[#9AC8CD] hover:from-[#9AC8CD] hover:to-[#A9DB5C] text-[#2a3612ff] rounded-lg transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 text-xs sm:text-sm w-full sm:w-auto"
                 >
                   Close
                 </button>

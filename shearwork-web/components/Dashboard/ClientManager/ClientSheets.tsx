@@ -350,7 +350,7 @@ export default function ClientSheets() {
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between flex-shrink-0">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-white">Client Sheets</h2>
-          <p className="text-xs text-[#bdbeb3]">
+          <p className="text-xs text-[#BAC0B8]">
             View and manage detailed client information, visit history, and preferences.
           </p>
         </div>
@@ -385,7 +385,7 @@ export default function ClientSheets() {
           {activeFilters.map((filter) => (
             <div
               key={filter.id}
-              className="px-3 py-1.5 rounded-full bg-lime-300/10 border border-lime-300/30 text-lime-300 text-xs font-medium flex items-center gap-2"
+              className="px-3 py-1.5 rounded-lg bg-lime-300/10 border border-lime-300/30 text-lime-300 text-xs font-medium flex items-center gap-2"
             >
               <span>{filter.label}</span>
               <button
@@ -401,7 +401,7 @@ export default function ClientSheets() {
               setActiveFilters([]);
               setPage(1);
             }}
-            className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-colors"
+            className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-colors"
           >
             Clear All
           </button>
@@ -411,7 +411,7 @@ export default function ClientSheets() {
       {/* Pagination bar with summary chips */}
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between flex-shrink-0">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="text-xs text-[#bdbeb3]">
+          <div className="text-xs text-[#BAC0B8]">
             {total > 0 ? (
               <>
                 Showing <span className="text-white">{pageStart}</span>–
@@ -429,7 +429,7 @@ export default function ClientSheets() {
             )}
           </div>
           
-          <div className="px-3 py-2 rounded-full bg-black/30 border border-white/10 text-[#e5e5e5] text-xs flex items-center gap-2">
+          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-[#e5e5e5] text-xs flex items-center gap-2">
             <span>Total clients: <span className="font-semibold">{total}</span></span>
             <button
               onClick={() => {
@@ -441,13 +441,13 @@ export default function ClientSheets() {
             </button>
           </div>
 
-          <div className="px-3 py-2 rounded-full bg-black/30 border border-white/10 text-[#e5e5e5] text-xs">
+          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-[#e5e5e5] text-xs">
             Repeat clients (2+ visits) on this page:{' '}
             <span className="font-semibold">
               {displayClients.filter((c) => (c.total_appointments ?? 0) >= 2).length}
             </span>
           </div>
-          <div className="px-3 py-2 rounded-full bg-black/30 border border-white/10 text-[#e5e5e5] text-xs">
+          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-[#e5e5e5] text-xs">
             Heavy regulars (10+ visits) on this page:{' '}
             <span className="font-semibold">
               {displayClients.filter((c) => (c.total_appointments ?? 0) >= 10).length}
@@ -506,12 +506,12 @@ export default function ClientSheets() {
       {/* Table - Scrollable */}
       <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-white/10 bg-black/20 backdrop-blur-md">
         {loading ? (
-          <div className="py-16 text-center text-sm text-[#bdbeb3]">Loading clients. Please refresh the site</div>
+          <div className="py-16 text-center text-sm text-[#BAC0B8]">Loading clients. Please refresh the site</div>
         ) : error ? (
           <div className="py-16 text-center text-sm text-red-300">{error}</div>
         ) : displayClients.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-sm text-[#bdbeb3]">
+            <p className="text-sm text-[#BAC0B8]">
               {activeFilters.length > 0
                 ? 'No clients match your current filters.'
                 : 'No clients found.'}
@@ -530,7 +530,7 @@ export default function ClientSheets() {
           </div>
         ) : (
           <table className="min-w-full text-sm">
-            <thead className="sticky top-0 bg-[#121613] border-b border-white/10 text-[10px] sm:text-xs uppercase tracking-wide text-[#bdbeb3]">
+            <thead className="sticky top-0 bg-[#121613] border-b border-white/10 text-[10px] sm:text-xs uppercase tracking-wide text-[#BAC0B8]">
               <tr>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Name</th>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Email</th>

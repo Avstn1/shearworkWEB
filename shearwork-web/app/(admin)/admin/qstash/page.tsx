@@ -245,7 +245,7 @@ export default function QStashPage() {
                     setStateFilter(e.target.value)
                     setCurrentPage(1)
                   }}
-                  className="px-3 py-2 bg-[#303a29] text-[#F4F3EC] border-2 border-[#a8d88e] rounded-md text-sm min-w-[150px]"
+                  className="px-3 py-2 bg-[#161A18] text-[#F2F5EF] border-2 border-[#a8d88e] rounded-md text-sm min-w-[150px]"
                 >
                   <option value="all">All States</option>
                   {uniqueStates.map(state => (

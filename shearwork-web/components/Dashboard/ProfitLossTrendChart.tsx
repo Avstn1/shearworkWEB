@@ -93,7 +93,7 @@ export default function ProfitLossTrendChart({
           background: 'var(--card-revenue-bg)',
         }}
       >
-        <p className="text-[#E9ECDD] opacity-70 text-sm">
+        <p className="text-[#E6EAE3] opacity-70 text-sm">
           No daily data yet for {selectedMonth}
         </p>
       </div>
@@ -102,25 +102,25 @@ export default function ProfitLossTrendChart({
 
   return (
     <div className="w-full h-64">
-      <h2 className="text-[#c9d2b3] font-semibold mb-2 text-sm sm:text-lg">
+      <h2 className="text-[#D8FA9C] font-semibold mb-2 text-sm sm:text-lg">
         Profit/Loss Trend (Daily)
       </h2>
 
       <ResponsiveContainer width="100%" height="90%">
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#31342c" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#2E3330" />
           <XAxis
             dataKey="date"
-            stroke="#cbcbc1"
+            stroke="#CDD2CB"
             label={{
               value: 'Day of Month',
               position: 'insideBottom',
               offset: -5,
-              fill: '#cbcbc1',
+              fill: '#CDD2CB',
               fontSize: 12,
             }}
           />
-          <YAxis stroke="#cbcbc1" />
+          <YAxis stroke="#CDD2CB" />
           <Tooltip
             contentStyle={{
               backgroundColor: '#2b2b2b',
@@ -128,7 +128,7 @@ export default function ProfitLossTrendChart({
               borderRadius: '8px',
               color: '#F5F5DC',
             }}
-            itemStyle={{ color: '#E9ECDD' }}
+            itemStyle={{ color: '#E6EAE3' }}
             formatter={(value: number, name: string) => {
               let label = ''
               switch (name) {

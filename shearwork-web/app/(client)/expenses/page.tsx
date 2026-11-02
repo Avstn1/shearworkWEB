@@ -173,7 +173,7 @@ export default function UserExpensesPage() {
     setOpenMenu(null)
   }
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen text-[#bdbeb3]">Loading your expenses dashboard...</div>
+  if (isLoading) return <div className="flex justify-center items-center h-screen text-[#BAC0B8]">Loading your expenses dashboard...</div>
 
   if (!user) {
     router.replace('/login')
@@ -191,7 +191,7 @@ export default function UserExpensesPage() {
         <motion.div variants={fadeInUp} className="flex flex-wrap justify-between items-center gap-4 mb-6">
           <div>
             <h1 className="font-bold bg-gradient-to-r from-amber-200 to-lime-400 bg-clip-text text-transparent text-2xl animate-gradient">Monthly Expenses</h1>
-            <p className="text-xs text-[#bdbeb3]">Track your one-off and recurring expenses per month.</p>
+            <p className="text-xs text-[#BAC0B8]">Track your one-off and recurring expenses per month.</p>
           </div>
         </motion.div>
 
@@ -202,7 +202,7 @@ export default function UserExpensesPage() {
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="ml-2 px-4 py-2 rounded-full bg-zinc-900/90 text-white text-sm font-semibold border border-zinc-700 shadow focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
+              className="ml-2 px-4 py-2 rounded-lg bg-zinc-900/90 text-white text-sm font-semibold border border-zinc-700 shadow focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
             >{MONTHS.map(m => <option key={m} value={m}>{m}</option>)}</select>
           </div>
           <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ export default function UserExpensesPage() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="ml-2 px-4 py-2 rounded-full bg-zinc-900/90 text-white text-sm font-semibold border border-zinc-700 shadow focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
+              className="ml-2 px-4 py-2 rounded-lg bg-zinc-900/90 text-white text-sm font-semibold border border-zinc-700 shadow focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
             >{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
           </div>
         </motion.div>
@@ -218,7 +218,7 @@ export default function UserExpensesPage() {
         {/* Current Expense */}
         <motion.div variants={fadeInUp} className="mb-6">
           <p className="text-white font-semibold text-lg">Total Expenses to Date: <span className="text-lime-300 font-bold">${currentExpense.toFixed(2)}</span></p>
-          <p className="text-xs text-[#bdbeb3] mt-1">
+          <p className="text-xs text-[#BAC0B8] mt-1">
             {(() => {
               const monthIndex = MONTHS.indexOf(selectedMonth)
               const today = new Date()
@@ -245,7 +245,7 @@ export default function UserExpensesPage() {
           {receipts.length === 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="col-span-2 sm:col-span-4 flex items-center justify-center h-40 border border-white/10 rounded-lg">
-                <p className="text-sm text-[#bdbeb3]">No receipts uploaded yet.</p>
+                <p className="text-sm text-[#BAC0B8]">No receipts uploaded yet.</p>
               </div>
             </div>
           ) : (

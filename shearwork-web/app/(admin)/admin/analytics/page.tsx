@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col p-4 sm:p-6 text-[var(--foreground)] pt-[120px] bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29] gap-6">
+      <div className="min-h-screen flex flex-col p-4 sm:p-6 text-[var(--foreground)] pt-[120px] bg-gradient-to-br from-[#0A0C0B] via-[#0E110F] to-[#161A18] gap-6">
         
         {/* Header */}
         <motion.div
@@ -121,7 +121,7 @@ export default function AnalyticsPage() {
           initial="hidden"
           animate="visible"
           custom={1}
-          className="sticky top-[100px] z-20 bg-[#1e241a]/95 backdrop-blur-md p-3 sm:p-4 border border-[#5d6a48]/50 flex flex-col lg:flex-row items-start lg:items-center gap-3 rounded-2xl shadow-2xl"
+          className="sticky top-[100px] z-20 bg-[#111412]/95 backdrop-blur-md p-3 sm:p-4 border border-[#2A302C]/50 flex flex-col lg:flex-row items-start lg:items-center gap-3 rounded-2xl shadow-2xl"
         >
           {/* Filters Label */}
           <div className="flex items-center gap-2">
@@ -149,9 +149,9 @@ export default function AnalyticsPage() {
               </button>
 
               {monthDropdownOpen && (
-                <div className="absolute top-12 left-0 z-30 bg-[#1e241a] border border-white/10 rounded-2xl shadow-2xl p-3 w-[220px] backdrop-blur-lg">
-                  <div className="text-xs text-[#bdbeb3] mb-2 px-1 font-medium">Select month</div>
-                  <div className="max-h-56 overflow-auto scrollbar-thin scrollbar-thumb-[#5d6a48] scrollbar-track-transparent">
+                <div className="absolute top-12 left-0 z-30 bg-[#111412] border border-white/10 rounded-2xl shadow-2xl p-3 w-[220px] backdrop-blur-lg">
+                  <div className="text-xs text-[#BAC0B8] mb-2 px-1 font-medium">Select month</div>
+                  <div className="max-h-56 overflow-auto scrollbar-thin scrollbar-thumb-[#2A302C] scrollbar-track-transparent">
                     {monthOptions.map((m) => (
                       <button
                         key={m}
@@ -209,10 +209,10 @@ export default function AnalyticsPage() {
                       showOutsideDays
                       modifiersClassNames={{ today: 'rdp-day_today-custom' }}
                       modifiersStyles={{
-                        selected: { color: '#F4F3EC', fontWeight: 'bold', background: 'var(--accent-3)' },
-                        range_start: { background: 'var(--accent-3)', color: '#F4F3EC', borderRadius: '0.5rem 0 0 0.5rem' },
-                        range_end: { background: 'var(--accent-3)', color: '#F4F3EC', borderRadius: '0 0.5rem 0.5rem 0' },
-                        range_middle: { background: 'var(--accent-3)', color: '#F4F3EC' },
+                        selected: { color: '#F2F5EF', fontWeight: 'bold', background: 'var(--accent-3)' },
+                        range_start: { background: 'var(--accent-3)', color: '#F2F5EF', borderRadius: '0.5rem 0 0 0.5rem' },
+                        range_end: { background: 'var(--accent-3)', color: '#F2F5EF', borderRadius: '0 0.5rem 0.5rem 0' },
+                        range_middle: { background: 'var(--accent-3)', color: '#F2F5EF' },
                       }}
                       className="bg-transparent text-xs"
                       disabled={{ after: new Date() }}
@@ -225,7 +225,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Separator */}
-          <div className="hidden lg:block h-8 w-px bg-gradient-to-b from-transparent via-[#5d6a48] to-transparent" />
+          <div className="hidden lg:block h-8 w-px bg-gradient-to-b from-transparent via-[#2A302C] to-transparent" />
 
           {/* View Mode Toggle */}
           <div className="flex items-center gap-2">

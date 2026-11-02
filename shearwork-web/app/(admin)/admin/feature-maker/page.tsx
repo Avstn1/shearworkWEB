@@ -86,7 +86,7 @@ export default function FeatureMakerPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col text-[var(--foreground)] bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29] pt-20">
+    <div className="fixed inset-0 flex flex-col text-[var(--foreground)] bg-gradient-to-br from-[#0A0C0B] via-[#0E110F] to-[#161A18] pt-20">
       
       {/* Header */}
       <motion.div

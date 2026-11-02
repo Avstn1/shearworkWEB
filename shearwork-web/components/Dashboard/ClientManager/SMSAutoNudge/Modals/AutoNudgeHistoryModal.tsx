@@ -298,7 +298,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[70vw] max-w-5xl h-[70vh] sm:h-[80vh] flex flex-col overflow-hidden"
+            className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[70vw] max-w-5xl h-[70vh] sm:h-[80vh] flex flex-col overflow-hidden"
           >
             <AnimatePresence mode="wait">
               {view === 'list' && (
@@ -317,7 +317,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                         <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-lime-300 flex-shrink-0" />
                         <span className="truncate">Barber Nudge History</span>
                       </h3>
-                      <p className="text-sm text-[#bdbeb3] mt-2">
+                      <p className="text-sm text-[#BAC0B8] mt-2">
                         Track your weekly barber nudge campaign success
                       </p>
                     </div>
@@ -325,7 +325,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                       onClick={onClose}
                       className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                     >
-                      <X className="w-5 h-5 text-[#bdbeb3]" />
+                      <X className="w-5 h-5 text-[#BAC0B8]" />
                     </button>
                   </div>
 
@@ -334,13 +334,13 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                     {isLoading ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
-                        <p className="text-base text-[#bdbeb3]">Updating your campaign history...</p>
+                        <p className="text-base text-[#BAC0B8]">Updating your campaign history...</p>
                       </div>
                     ) : campaigns.length === 0 ? (
                       <div className="text-center py-12">
-                        <TrendingUp className="w-12 h-12 text-[#bdbeb3] mx-auto mb-4 opacity-50" />
-                        <p className="text-base text-[#bdbeb3]">No barber nudge campaigns yet</p>
-                        <p className="text-sm text-[#bdbeb3] mt-2">
+                        <TrendingUp className="w-12 h-12 text-[#BAC0B8] mx-auto mb-4 opacity-50" />
+                        <p className="text-base text-[#BAC0B8]">No barber nudge campaigns yet</p>
+                        <p className="text-sm text-[#BAC0B8] mt-2">
                           Successful campaigns will appear here
                         </p>
                       </div>
@@ -360,7 +360,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                                 {campaign.clients_booked} booked
                               </span>
                             </div>
-                            <div className="flex items-center gap-4 text-xs text-[#bdbeb3] flex-wrap">
+                            <div className="flex items-center gap-4 text-xs text-[#BAC0B8] flex-wrap">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3 flex-shrink-0" />
                                 Started {formatDate(campaign.campaign_start)}
@@ -404,13 +404,13 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                         onClick={handleBack}
                         className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                       >
-                        <ArrowLeft className="w-4 h-4 text-[#bdbeb3]" />
+                        <ArrowLeft className="w-4 h-4 text-[#BAC0B8]" />
                       </button>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-bold text-white truncate">
                           {selectedCampaign.week_start} - {selectedCampaign.week_end}
                         </h3>
-                        <p className="text-xs text-[#bdbeb3] mt-0.5 truncate">
+                        <p className="text-xs text-[#BAC0B8] mt-0.5 truncate">
                           Started {formatDate(selectedCampaign.campaign_start)}
                         </p>
                       </div>
@@ -419,7 +419,7 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                       onClick={onClose}
                       className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                     >
-                      <X className="w-5 h-5 text-[#bdbeb3]" />
+                      <X className="w-5 h-5 text-[#BAC0B8]" />
                     </button>
                   </div>
 
@@ -427,15 +427,15 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                   <div className="px-4 py-3 border-b border-white/10 bg-white/5 flex-shrink-0">
                     <div className="flex gap-4 text-xs">
                       <div>
-                        <p className="text-[#bdbeb3] mb-0.5">Clients Booked</p>
+                        <p className="text-[#BAC0B8] mb-0.5">Clients Booked</p>
                         <p className="text-base font-bold text-lime-300">{selectedCampaign.clients_booked}</p>
                       </div>
                       <div>
-                        <p className="text-[#bdbeb3] mb-0.5">Clients Nudged</p>
+                        <p className="text-[#BAC0B8] mb-0.5">Clients Nudged</p>
                         <p className="text-base font-bold text-white">{selectedCampaign.total_clients}</p>
                       </div>
                       <div>
-                        <p className="text-[#bdbeb3] mb-0.5">Week</p>
+                        <p className="text-[#BAC0B8] mb-0.5">Week</p>
                         <p className="text-base font-bold text-white">
                           {selectedCampaign.iso_week_number.split('-W')[1]}
                         </p>
@@ -448,12 +448,12 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                     {loadingRecipients ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
-                        <p className="text-base text-[#bdbeb3]">Loading recipients...</p>
+                        <p className="text-base text-[#BAC0B8]">Loading recipients...</p>
                       </div>
                     ) : recipients.length === 0 ? (
                       <div className="text-center py-8">
-                        <Users className="w-10 h-10 text-[#bdbeb3] mx-auto mb-2 opacity-50" />
-                        <p className="text-sm text-[#bdbeb3]">No recipients found</p>
+                        <Users className="w-10 h-10 text-[#BAC0B8] mx-auto mb-2 opacity-50" />
+                        <p className="text-sm text-[#BAC0B8]">No recipients found</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -473,13 +473,13 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                                     {capitalizeName(`${recipient.first_name} ${recipient.last_name}`)}
                                   </h4>
                                 ) : (
-                                  <h4 className="font-bold text-[#bdbeb3] text-sm sm:text-base mb-1">Unknown Client</h4>
+                                  <h4 className="font-bold text-[#BAC0B8] text-sm sm:text-base mb-1">Unknown Client</h4>
                                 )}
-                                <p className="text-xs sm:text-sm text-[#bdbeb3]">
+                                <p className="text-xs sm:text-sm text-[#BAC0B8]">
                                   {formatPhoneNumber(recipient.phone_normalized || recipient.phone)}
                                 </p>
                               </div>
-                              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap flex-shrink-0 ${
+                              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold whitespace-nowrap flex-shrink-0 ${
                                 recipient.status === 'booked'
                                   ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
                                   : 'bg-amber-300/20 text-amber-300 border border-amber-300/30'
@@ -492,16 +492,16 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                               <div className="pt-3 border-t border-white/10">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] sm:text-xs text-[#bdbeb3] mb-1">Service</p>
+                                    <p className="text-[10px] sm:text-xs text-[#BAC0B8] mb-1">Service</p>
                                     <p className="text-sm font-semibold text-lime-300 truncate">{recipient.service}</p>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] sm:text-xs text-[#bdbeb3] mb-1">Appointment</p>
+                                    <p className="text-[10px] sm:text-xs text-[#BAC0B8] mb-1">Appointment</p>
                                     <p className="text-xs sm:text-sm font-semibold text-white break-words">{formatAppointmentDate(recipient.appointment_date)}</p>
                                   </div>
                                   {recipient.price && (
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-[10px] sm:text-xs text-[#bdbeb3] mb-1">Price</p>
+                                      <p className="text-[10px] sm:text-xs text-[#BAC0B8] mb-1">Price</p>
                                       <p className="text-sm font-semibold text-lime-300">${recipient.price}</p>
                                     </div>
                                   )}

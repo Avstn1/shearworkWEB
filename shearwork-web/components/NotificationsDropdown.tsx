@@ -147,7 +147,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
       >
         <Bell className="w-6 h-6 text-white" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-lime-300 text-black text-[10px] font-bold flex items-center justify-center shadow-[0_0_8px_#c9d2b3]">
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-lime-300 text-black text-[10px] font-bold flex items-center justify-center shadow-[0_0_8px_#D8FA9C]">
             {unreadCount}
           </span>
         )}
@@ -161,7 +161,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
             className="fixed md:absolute right-4 md:right-0 top-16 md:top-auto md:mt-2 w-[calc(100vw-2rem)] md:w-96
-              bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
+              bg-[#141716] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -170,7 +170,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
               </h3>
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-[#bdbeb3] hover:text-lime-300 transition"
+                className="text-xs text-[#BAC0B8] hover:text-lime-300 transition"
               >
                 Mark all read
               </button>
@@ -178,7 +178,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
 
             {/* Content */}
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-sm text-[#bdbeb3]">
+              <div className="p-6 text-center text-sm text-[#BAC0B8]">
                 No notifications
               </div>
             ) : (
@@ -203,7 +203,7 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
                         <p className="text-sm font-semibold text-white">
                           {n.header}
                         </p>
-                        <p className="text-xs text-[#bdbeb3] mt-0.5">
+                        <p className="text-xs text-[#BAC0B8] mt-0.5">
                           {n.message}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[#8a8a8a]">

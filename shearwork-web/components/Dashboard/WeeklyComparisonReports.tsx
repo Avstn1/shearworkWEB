@@ -193,7 +193,7 @@ export default function WeeklyComparisonReports({
                   }}
                   className="flex-1 flex flex-col gap-1"
                 >
-                  <div className="flex items-center gap-1 text-sm font-semibold text-[#c9d2b3]">
+                  <div className="flex items-center gap-1 text-sm font-semibold text-[#D8FA9C]">
                     <FileText size={16} /> Weekly Comparison - {r.month} {r.year}
                   </div>
                   <div className="text-xs text-[#7a9485] max-h-20 overflow-hidden relative">

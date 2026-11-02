@@ -259,7 +259,7 @@ export default function AppointmentSheets() {
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-white">Daily Appointments</h2>
-          <p className="text-xs text-[#bdbeb3]">
+          <p className="text-xs text-[#BAC0B8]">
             Select a date to view appointments. Click any row to edit tips or revenue.
           </p>
         </div>
@@ -390,14 +390,14 @@ export default function AppointmentSheets() {
 
         {/* Summary chips */}
         <div className="flex flex-wrap gap-3 text-xs">
-          <div className="px-3 py-2 rounded-full bg-black/30 border border-white/10 text-[#e5e5e5]">
+          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-[#e5e5e5]">
             Appointments: <span className="font-semibold text-white">{dayTotals.count}</span>
           </div>
-          <div className="px-3 py-2 rounded-full bg-black/30 border border-green-500/20 text-[#e5e5e5]">
+          <div className="px-3 py-2 rounded-lg bg-black/30 border border-green-500/20 text-[#e5e5e5]">
             Revenue:{' '}
             <span className="font-semibold text-green-300">{formatCurrency(dayTotals.revenueTotal)}</span>
           </div>
-          <div className="px-3 py-2 rounded-full bg-black/30 border border-amber-500/20 text-[#e5e5e5]">
+          <div className="px-3 py-2 rounded-lg bg-black/30 border border-amber-500/20 text-[#e5e5e5]">
             Tips:{' '}
             <span className="font-semibold text-amber-300">{formatCurrency(dayTotals.tipTotal)}</span>
           </div>
@@ -407,7 +407,7 @@ export default function AppointmentSheets() {
       {/* Table */}
       <div className="flex-1 overflow-auto rounded-xl border border-white/10 bg-black/20 backdrop-blur-md">
         {loading ? (
-          <div className="py-16 text-center text-sm text-[#bdbeb3]">
+          <div className="py-16 text-center text-sm text-[#BAC0B8]">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-amber-300 mb-2"></div>
             <p>Loading appointments…</p>
           </div>
@@ -416,7 +416,7 @@ export default function AppointmentSheets() {
         ) : appointments.length === 0 ? (
           <div className="py-16 text-center">
             <div className="text-4xl mb-3">📅</div>
-            <p className="text-sm text-[#bdbeb3]">
+            <p className="text-sm text-[#BAC0B8]">
               No appointments found for {formatDateDisplay(selectedDate)}.
             </p>
             <p className="text-xs text-[#777] mt-1">
@@ -425,7 +425,7 @@ export default function AppointmentSheets() {
           </div>
         ) : (
           <table className="min-w-full text-sm">
-            <thead className="sticky top-0 bg-[#121613] border-b border-white/10 text-xs uppercase tracking-wide text-[#bdbeb3]">
+            <thead className="sticky top-0 bg-[#121613] border-b border-white/10 text-xs uppercase tracking-wide text-[#BAC0B8]">
               <tr>
                 <th className="px-4 py-3 text-left w-16">#</th>
                 <th className="px-4 py-3 text-left">Time</th>
@@ -468,7 +468,7 @@ export default function AppointmentSheets() {
                       <span className="text-green-300 font-medium">{formatCurrency(appt.revenue)}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`font-medium ${appt.tip && appt.tip > 0 ? 'text-amber-300' : 'text-[#55584e]'}`}>
+                      <span className={`font-medium ${appt.tip && appt.tip > 0 ? 'text-amber-300' : 'text-[#565C57]'}`}>
                         {formatCurrency(appt.tip)}
                       </span>
                     </td>

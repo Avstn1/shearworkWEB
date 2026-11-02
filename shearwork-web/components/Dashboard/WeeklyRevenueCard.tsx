@@ -252,7 +252,7 @@ export default function WeeklyRevenueCard({ userId, selectedMonth, selectedYear 
             onClick={() => setWeekIndex(idx)}
             className={`h-1.5 rounded-full transition-all duration-200 ${
               idx === weekIndex
-                ? 'w-4 bg-[#c9d2b3]'
+                ? 'w-4 bg-[#D8FA9C]'
                 : 'w-1.5 bg-white/10 hover:bg-white/20'
             }`}
             aria-label={`Week ${idx + 1}`}
@@ -282,17 +282,17 @@ export default function WeeklyRevenueCard({ userId, selectedMonth, selectedYear 
           <p
             className={`text-sm font-semibold ${
               change > 0
-                ? 'text-[#c9d2b3]'
+                ? 'text-[#D8FA9C]'
                 : change < 0
                   ? 'text-[#fbbf24]'
-                  : 'text-[#55584e]'
+                  : 'text-[#565C57]'
             }`}
           >
             {change > 0 ? `+${change}%` : `${change}%`}{' '}
-            <span className="text-[#55584e]">(vs. {formatWeekLabel(prevWeek.weekStart, prevWeek.weekEnd)})</span>
+            <span className="text-[#565C57]">(vs. {formatWeekLabel(prevWeek.weekStart, prevWeek.weekEnd)})</span>
           </p>
         ) : (
-          <p className="text-sm text-[#55584e]">—</p>
+          <p className="text-sm text-[#565C57]">—</p>
         )}
       </div>
     </div>

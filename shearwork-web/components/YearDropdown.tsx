@@ -36,7 +36,7 @@ export default function YearDropdown({ years, selectedYear, setSelectedYear, dis
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         className={`
-          w-full flex justify-between items-center px-4 py-2 rounded-full font-semibold text-sm border shadow-md
+          w-full flex justify-between items-center px-4 py-2 rounded-lg font-semibold text-sm border shadow-md
           bg-gradient-to-r from-amber-500/30 to-lime-500/30 text-white
           transition-all duration-200
           ${disabled

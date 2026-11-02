@@ -17,7 +17,7 @@ import { supabase } from '@/utils/supabaseClient'
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal';
 
-const COLORS = ['#8e9480', '#c9d2b3', '#a78bfa', '#67e8f9', '#fbbf24']
+const COLORS = ['#8e9480', '#D8FA9C', '#a78bfa', '#67e8f9', '#fbbf24']
 
 export interface MarketingFunnel {
   source: string
@@ -180,7 +180,7 @@ export default function MarketingFunnelsChart({
       <div
         className="flex items-center justify-center min-h-[400px]"
       >
-        <p className="text-[#55584e]">No data to see here yet!</p>
+        <p className="text-[#565C57]">No data to see here yet!</p>
       </div>
     )
 

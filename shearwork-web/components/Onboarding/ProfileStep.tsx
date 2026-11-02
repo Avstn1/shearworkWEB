@@ -247,7 +247,7 @@ export default function ProfileStep({
             <button
               type="button"
               onClick={handleAvatarClick}
-              className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-full px-4 py-1.5 hover:border-white/20"
+              className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-lg px-4 py-1.5 hover:border-white/20"
             >
               Change photo
             </button>
@@ -267,7 +267,7 @@ export default function ProfileStep({
                 type="text"
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
-                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all"
+                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C5F27A] transition-all"
                 required
               />
               {showValidationErrors && !fullName.trim() && (
@@ -285,7 +285,7 @@ export default function ProfileStep({
                   type="tel"
                   value={phoneNumber}
                   onChange={handlePhoneChange}
-                  className="flex-1 p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all"
+                  className="flex-1 p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C5F27A] transition-all"
                   placeholder="(555) 123-4567"
                   maxLength={14}
                   required
@@ -309,7 +309,7 @@ export default function ProfileStep({
                 setUserType(value)
                 setSelectedRole({ label: '', role: value === 'barber' ? 'Barber' : 'Owner', barber_type: '' })
               }}
-              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all"
+              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#C5F27A] transition-all"
             >
               <option value="">Select...</option>
               <option value="barber">Barber</option>
@@ -333,7 +333,7 @@ export default function ProfileStep({
                     barber_type: barberType,
                   })
                 }}
-                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all"
+                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#C5F27A] transition-all"
               >
                 <option value="">Select...</option>
                 <option value="commission">Commission</option>
@@ -356,7 +356,7 @@ export default function ProfileStep({
                   max="100"
                   value={commissionRate}
                   onChange={e => setCommissionRate(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all"
+                  className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C5F27A] transition-all"
                   required
                 />
                 {showValidationErrors && !isCommissionValid && (
@@ -386,7 +386,7 @@ export default function ProfileStep({
               type="url"
               value={bookingLink}
               onChange={e => setBookingLink(e.target.value)}
-              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all"
+              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C5F27A] transition-all"
               placeholder="https://your-booking-site.com"
               required
             />
@@ -405,7 +405,7 @@ export default function ProfileStep({
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                className="w-full p-3 pr-10 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#aab39a] transition-all"
+                className="w-full p-3 pr-10 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#C5F27A] transition-all"
                 placeholder="yourname"
                 required
               />
@@ -440,7 +440,7 @@ export default function ProfileStep({
             type="button"
             onClick={handleNextClick}
             disabled={saving}
-            className="px-8 py-3 font-semibold rounded-xl transition-all bg-gradient-to-b from-[#D7DEC4] to-[#aab39a] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
+            className="px-8 py-3 font-semibold rounded-xl transition-all bg-gradient-to-b from-[#E6FFB8] to-[#C5F27A] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
           >
             {saving ? (
               <span className="inline-flex items-center gap-2">

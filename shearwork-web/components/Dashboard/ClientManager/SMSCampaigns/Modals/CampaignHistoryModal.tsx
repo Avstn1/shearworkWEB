@@ -151,7 +151,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#181b15] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
+            className="bg-[#141716] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             <AnimatePresence mode="wait">
               {view === 'list' && (
@@ -170,7 +170,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                         <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300 flex-shrink-0" />
                         <span className="truncate">Campaign History</span>
                       </h3>
-                      <p className="text-xs sm:text-sm text-[#bdbeb3] mt-1 hidden sm:block">
+                      <p className="text-xs sm:text-sm text-[#BAC0B8] mt-1 hidden sm:block">
                         View your past SMS campaigns and their performance
                       </p>
                     </div>
@@ -178,7 +178,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                       onClick={onClose}
                       className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                     >
-                      <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbeb3]" />
+                      <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#BAC0B8]" />
                     </button>
                   </div>
 
@@ -187,13 +187,13 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                     {isLoading ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-300 animate-spin mx-auto mb-4" />
-                        <p className="text-sm sm:text-base text-[#bdbeb3]">Loading campaigns...</p>
+                        <p className="text-sm sm:text-base text-[#BAC0B8]">Loading campaigns...</p>
                       </div>
                     ) : campaigns.length === 0 ? (
                       <div className="text-center py-12">
-                        <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-[#bdbeb3] mx-auto mb-4 opacity-50" />
-                        <p className="text-sm sm:text-base text-[#bdbeb3]">No completed campaigns yet</p>
-                        <p className="text-xs text-[#bdbeb3] mt-2">
+                        <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-[#BAC0B8] mx-auto mb-4 opacity-50" />
+                        <p className="text-sm sm:text-base text-[#BAC0B8]">No completed campaigns yet</p>
+                        <p className="text-xs text-[#BAC0B8] mt-2">
                           Completed campaigns will appear here
                         </p>
                       </div>
@@ -213,7 +213,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                                 Completed
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-[#bdbeb3] flex-wrap">
+                            <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-[#BAC0B8] flex-wrap">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                                 {formatDate(campaign.cron)}
@@ -233,7 +233,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                                 </>
                               )}
                             </div>
-                            <div className="mt-2 text-[10px] sm:text-xs text-[#bdbeb3] line-clamp-2 sm:line-clamp-1">
+                            <div className="mt-2 text-[10px] sm:text-xs text-[#BAC0B8] line-clamp-2 sm:line-clamp-1">
                               {campaign.message}
                             </div>
                           </button>
@@ -270,11 +270,11 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                         onClick={handleBack}
                         className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                       >
-                        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#bdbeb3]" />
+                        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#BAC0B8]" />
                       </button>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm sm:text-lg font-bold text-white truncate">{selectedCampaign.title}</h3>
-                        <p className="text-[10px] sm:text-xs text-[#bdbeb3] mt-0.5 truncate">
+                        <p className="text-[10px] sm:text-xs text-[#BAC0B8] mt-0.5 truncate">
                           {formatDate(selectedCampaign.cron)}
                         </p>
                       </div>
@@ -283,7 +283,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                       onClick={onClose}
                       className="p-1.5 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                     >
-                      <X className="w-4 h-4 text-[#bdbeb3]" />
+                      <X className="w-4 h-4 text-[#BAC0B8]" />
                     </button>
                   </div>
 
@@ -292,20 +292,20 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                     <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5 flex-shrink-0">
                       <div className="flex gap-3 sm:gap-4 text-[10px] sm:text-xs mb-2">
                         <div>
-                          <p className="text-[#bdbeb3] mb-0.5">Total</p>
+                          <p className="text-[#BAC0B8] mb-0.5">Total</p>
                           <p className="text-sm sm:text-base font-bold text-white">{recipientsStats.total}</p>
                         </div>
                         <div>
-                          <p className="text-[#bdbeb3] mb-0.5">Successful</p>
+                          <p className="text-[#BAC0B8] mb-0.5">Successful</p>
                           <p className="text-sm sm:text-base font-bold text-lime-300">{recipientsStats.successful}</p>
                         </div>
                         <div>
-                          <p className="text-[#bdbeb3] mb-0.5">Failed</p>
+                          <p className="text-[#BAC0B8] mb-0.5">Failed</p>
                           <p className="text-sm sm:text-base font-bold text-rose-300">{recipientsStats.failed || 0}</p>
                         </div>
                         {((recipientsStats.successful / (recipientsStats.successful + (recipientsStats.failed || 0))) * 100) > 0 && (
                           <div className="hidden xs:block">
-                            <p className="text-[#bdbeb3] mb-0.5">Success Rate</p>
+                            <p className="text-[#BAC0B8] mb-0.5">Success Rate</p>
                             <p className="text-sm sm:text-base font-bold text-sky-300">
                               {((recipientsStats.successful / (recipientsStats.successful + (recipientsStats.failed || 0))) * 100).toFixed(1)}%
                             </p>
@@ -323,12 +323,12 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                     {loadingRecipients ? (
                       <div className="text-center py-12">
                         <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-sky-300 animate-spin mx-auto mb-4" />
-                        <p className="text-sm sm:text-base text-[#bdbeb3]">Loading recipients...</p>
+                        <p className="text-sm sm:text-base text-[#BAC0B8]">Loading recipients...</p>
                       </div>
                     ) : recipients.length === 0 ? (
                       <div className="text-center py-8">
-                        <Users className="w-8 h-8 sm:w-10 sm:h-10 text-[#bdbeb3] mx-auto mb-2 opacity-50" />
-                        <p className="text-xs sm:text-sm text-[#bdbeb3]">No recipients found</p>
+                        <Users className="w-8 h-8 sm:w-10 sm:h-10 text-[#BAC0B8] mx-auto mb-2 opacity-50" />
+                        <p className="text-xs sm:text-sm text-[#BAC0B8]">No recipients found</p>
                       </div>
                     ) : (
                       <div className="space-y-1.5">
@@ -349,7 +349,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                                       {recipient.first_name} {recipient.last_name}
                                     </h4>
                                   ) : (
-                                    <h4 className="font-semibold text-[#bdbeb3] text-xs sm:text-sm">Unknown Client</h4>
+                                    <h4 className="font-semibold text-[#BAC0B8] text-xs sm:text-sm">Unknown Client</h4>
                                   )}
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold flex-shrink-0 ${
                                     recipient.is_sent
@@ -365,7 +365,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[10px] sm:text-[11px] text-[#bdbeb3] mt-0.5">
+                                <p className="text-[10px] sm:text-[11px] text-[#BAC0B8] mt-0.5">
                                   {recipient.phone_normalized}
                                 </p>
                               </div>

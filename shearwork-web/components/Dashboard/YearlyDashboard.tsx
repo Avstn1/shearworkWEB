@@ -48,12 +48,12 @@ export default function YearlyDashboard({
       <div className="flex flex-col gap-4 pr-1">
         {/* Timeframe selector */}
         <div className="flex justify-end">
-          <label className="text-sm text-[#bdbeb3] flex items-center gap-2">
+          <label className="text-sm text-[#BAC0B8] flex items-center gap-2">
             <span>Timeline:</span>
             <select
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-              className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-white/20"
             >
               <option value="year">Year</option>
               <option value="Q1">Q1 (Jan–Mar)</option>

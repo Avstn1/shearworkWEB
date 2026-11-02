@@ -27,10 +27,10 @@ export default function RevenueDayMonthToggleChart({
         <button
           type="button"
           onClick={() => setView('weekday')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 ${
             view === 'weekday'
               ? 'bg-[rgba(167,139,250,0.18)] text-white border-[rgba(167,139,250,0.35)]'
-              : 'bg-black/40 text-[#55584e] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
+              : 'bg-black/40 text-[#565C57] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
           }`}
         >
           Day
@@ -38,10 +38,10 @@ export default function RevenueDayMonthToggleChart({
         <button
           type="button"
           onClick={() => setView('month')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 ${
             view === 'month'
               ? 'bg-[rgba(167,139,250,0.18)] text-white border-[rgba(167,139,250,0.35)]'
-              : 'bg-black/40 text-[#55584e] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
+              : 'bg-black/40 text-[#565C57] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
           }`}
         >
           Month

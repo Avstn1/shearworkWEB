@@ -1,107 +1,118 @@
 @import "tailwindcss";
 
 /* =======================
-   🫒 Corva design tokens
-   Dark, glassy brand built on the olive palette:
-   deep olive #454F35 · forest #303A29 · sage #AAB39A · ivory #F7F5EF · ink #20231E
-   · stone #77796F. Usable as utilities: bg-canvas, bg-surface, text-sage, border-glass ...
+   🌌 Corva design tokens — "Aurora"
+   Near-black canvas, electric lime accent, teal aurora secondary, frosted glass.
+   Legacy token names (sage, olive, forest, ivory, ink) are kept so existing
+   utilities (text-sage, bg-forest-900 ...) pick up the new palette.
    ======================= */
 @theme inline {
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  /* Headlines use the same system stack as body text (original Corva type) */
+  --font-display: var(--font-sans);
 }
 
 @theme {
-  /* Core palette */
-  --color-olive: #454F35;
-  --color-olive-bright: #5D6A48;
-  --color-forest: #303A29;
-  --color-forest-900: #1E241A;
-  --color-sage: #AAB39A;
-  --color-sage-bright: #C9D2B3; /* luminous accent text on dark */
-  --color-ivory: #F7F5EF;
-  --color-ink: #20231E;
-  --color-stone: #77796F;
+  /* Accent */
+  --color-sage: #C5F27A;          /* lime: primary accent */
+  --color-sage-bright: #D8FA9C;   /* lime light: accent text on dark */
+  --color-aurora: #5FC8A8;        /* teal: secondary accent, gradients */
+  --color-olive: #3F5A1E;         /* deep lime, tinted fills */
+  --color-olive-bright: #628A2A;
+  --color-ivory: #F2F5EF;
+  --color-ink: #0B1206;           /* text on lime */
+  --color-stone: #757B76;
 
-  /* Dark surfaces */
-  --color-canvas: #0E110C;    /* page */
-  --color-surface: #161A13;   /* cards */
-  --color-raised: #1E241A;    /* raised cards, menus */
-  --color-glass: rgb(247 245 239 / 0.045);
-  --color-glass-strong: rgb(247 245 239 / 0.08);
-  --color-glass-border: rgb(247 245 239 / 0.09);
-  --color-glass-border-strong: rgb(247 245 239 / 0.16);
-  --color-muted: #A7A99D;     /* secondary text on dark (AA on base) */
+  /* Surfaces */
+  --color-canvas: #07090A;
+  --color-surface: #0F1211;
+  --color-raised: #151917;
+  --color-forest: #161A18;
+  --color-forest-900: #0F1211;
+  --color-glass: rgb(255 255 255 / 0.045);
+  --color-glass-strong: rgb(255 255 255 / 0.08);
+  --color-glass-border: rgb(255 255 255 / 0.09);
+  --color-glass-border-strong: rgb(255 255 255 / 0.16);
+  --color-muted: #A3AAA2;
 
-  /* Brand greens (lime / green / emerald) become one olive-sage scale, so every
-     existing accent class across the app follows the palette */
-  --color-lime-50: #F4F6EF;   --color-lime-100: #E7EBDD;  --color-lime-200: #D6DCC5;
-  --color-lime-300: #C9D2B3;  --color-lime-400: #AAB39A;  --color-lime-500: #8E9A78;
-  --color-lime-600: #707C5C;  --color-lime-700: #5D6A48;  --color-lime-800: #454F35;
-  --color-lime-900: #303A29;  --color-lime-950: #1E241A;
-  --color-green-50: #F4F6EF;  --color-green-100: #E7EBDD; --color-green-200: #D6DCC5;
-  --color-green-300: #C9D2B3; --color-green-400: #AAB39A; --color-green-500: #8E9A78;
-  --color-green-600: #707C5C; --color-green-700: #5D6A48; --color-green-800: #454F35;
-  --color-green-900: #303A29; --color-green-950: #1E241A;
-  --color-emerald-50: #F4F6EF;  --color-emerald-100: #E7EBDD; --color-emerald-200: #D6DCC5;
-  --color-emerald-300: #C9D2B3; --color-emerald-400: #AAB39A; --color-emerald-500: #8E9A78;
-  --color-emerald-600: #707C5C; --color-emerald-700: #5D6A48; --color-emerald-800: #454F35;
-  --color-emerald-900: #303A29; --color-emerald-950: #1E241A;
+  /* lime + green: one electric lime scale; emerald: aurora teal */
+  --color-lime-50: #F7FEE9;  --color-lime-100: #EEFCD3; --color-lime-200: #E6FFB8;
+  --color-lime-300: #D8FA9C; --color-lime-400: #C5F27A; --color-lime-500: #A9DB5C;
+  --color-lime-600: #84B53B; --color-lime-700: #628A2A; --color-lime-800: #3F5A1E;
+  --color-lime-900: #26371A; --color-lime-950: #141E0E;
+  --color-green-50: #F7FEE9;  --color-green-100: #EEFCD3; --color-green-200: #E6FFB8;
+  --color-green-300: #D8FA9C; --color-green-400: #C5F27A; --color-green-500: #A9DB5C;
+  --color-green-600: #84B53B; --color-green-700: #628A2A; --color-green-800: #3F5A1E;
+  --color-green-900: #26371A; --color-green-950: #141E0E;
+  --color-emerald-50: #EBFAF5;  --color-emerald-100: #D0F3E8; --color-emerald-200: #A6E8D4;
+  --color-emerald-300: #7DDBC0; --color-emerald-400: #5FC8A8; --color-emerald-500: #3FAE8E;
+  --color-emerald-600: #2E8C72; --color-emerald-700: #256F5B; --color-emerald-800: #1E5848;
+  --color-emerald-900: #17443A; --color-emerald-950: #0C2620;
 
-  /* Neutrals warmed toward the palette (gray / zinc / neutral) */
-  --color-gray-50: #F7F6F2;  --color-gray-100: #EEEDE6; --color-gray-200: #DEDDD4;
-  --color-gray-300: #C4C4B9; --color-gray-400: #A7A99D; --color-gray-500: #85877C;
-  --color-gray-600: #63655B; --color-gray-700: #474940; --color-gray-800: #2C2F28;
-  --color-gray-900: #1A1D17; --color-gray-950: #10120E;
-  --color-zinc-50: #F7F6F2;  --color-zinc-100: #EEEDE6; --color-zinc-200: #DEDDD4;
-  --color-zinc-300: #C4C4B9; --color-zinc-400: #A7A99D; --color-zinc-500: #85877C;
-  --color-zinc-600: #63655B; --color-zinc-700: #474940; --color-zinc-800: #2C2F28;
-  --color-zinc-900: #1A1D17; --color-zinc-950: #10120E;
-  --color-neutral-50: #F7F6F2;  --color-neutral-100: #EEEDE6; --color-neutral-200: #DEDDD4;
-  --color-neutral-300: #C4C4B9; --color-neutral-400: #A7A99D; --color-neutral-500: #85877C;
-  --color-neutral-600: #63655B; --color-neutral-700: #474940; --color-neutral-800: #2C2F28;
-  --color-neutral-900: #1A1D17; --color-neutral-950: #10120E;
+  /* Neutrals: near-neutral with a whisper of green (gray / zinc / neutral) */
+  --color-gray-50: #F5F7F4;  --color-gray-100: #ECEFEA; --color-gray-200: #DADFD8;
+  --color-gray-300: #BAC0B8; --color-gray-400: #A3AAA2; --color-gray-500: #7E857D;
+  --color-gray-600: #5B625B; --color-gray-700: #3E443F; --color-gray-800: #262B28;
+  --color-gray-900: #151917; --color-gray-950: #0B0D0C;
+  --color-zinc-50: #F5F7F4;  --color-zinc-100: #ECEFEA; --color-zinc-200: #DADFD8;
+  --color-zinc-300: #BAC0B8; --color-zinc-400: #A3AAA2; --color-zinc-500: #7E857D;
+  --color-zinc-600: #5B625B; --color-zinc-700: #3E443F; --color-zinc-800: #262B28;
+  --color-zinc-900: #151917; --color-zinc-950: #0B0D0C;
+  --color-neutral-50: #F5F7F4;  --color-neutral-100: #ECEFEA; --color-neutral-200: #DADFD8;
+  --color-neutral-300: #BAC0B8; --color-neutral-400: #A3AAA2; --color-neutral-500: #7E857D;
+  --color-neutral-600: #5B625B; --color-neutral-700: #3E443F; --color-neutral-800: #262B28;
+  --color-neutral-900: #151917; --color-neutral-950: #0B0D0C;
 
-  --shadow-glass: inset 0 1px 0 rgb(247 245 239 / 0.07), 0 1px 0 rgb(0 0 0 / 0.4), 0 24px 48px -28px rgb(0 0 0 / 0.75);
-  --shadow-glow: 0 0 0 1px rgb(170 179 154 / 0.18), 0 18px 48px -18px rgb(170 179 154 / 0.35);
+  /* Tighter corners site-wide: crisp, not bubbly */
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 0.875rem;
+
+  --shadow-glass: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 1px 0 rgb(0 0 0 / 0.5), 0 30px 60px -30px rgb(0 0 0 / 0.9);
+  --shadow-glow: 0 0 0 1px rgb(197 242 122 / 0.2), 0 18px 48px -18px rgb(197 242 122 / 0.45);
 
   --animate-float: float 7s ease-in-out infinite;
   @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-6px); }
   }
+  --animate-aurora: aurora 18s ease-in-out infinite alternate;
+  @keyframes aurora {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(-4%, 3%, 0) scale(1.08); }
+    100% { transform: translate3d(3%, -2%, 0) scale(0.96); }
+  }
 }
 
 /* =======================
-   🌿 Theme Variables (legacy names, now on the olive palette)
-   The app is dark-only, so these no longer flip with the OS colour scheme.
+   🌿 Theme Variables (legacy names, on the Aurora palette; app is dark-only)
    ======================= */
 :root {
-  --background: #0E110C;
-  --foreground: #F4F3EC;
-  --navbar: #161A13;
-  --accent-1: #454F35;
-  --accent-2: #8E9A78;
-  --accent-3: #AAB39A;
-  --accent-4: #1E241A;
-  --text-muted: #A7A99D;
-  --text-bright: #F7F5EF;
-  --text-dark: #474940;
-  --highlight: #C4B47E;      /* soft brass, pairs with olive */
-  --text-subtle: #A9AE9B;
-  --text-med: #85877C;
+  --background: #07090A;
+  --foreground: #F2F5EF;
+  --navbar: #0F1211;
+  --accent-1: #3F5A1E;
+  --accent-2: #A9DB5C;
+  --accent-3: #C5F27A;
+  --accent-4: #111412;
+  --text-muted: #A3AAA2;
+  --text-bright: #F2F5EF;
+  --text-dark: #3E443F;
+  --highlight: #C5F27A;
+  --text-subtle: #A3AAA2;
+  --text-med: #7E857D;
 
   /* 🏆 Card Colors */
-  --card-revenue-bg: linear-gradient(145deg, #2C3324, #12150F);
-  --card-revenue-border: rgba(196, 180, 126, 0.45);
-  --card-topclients-bg: #1A1F17;
+  --card-revenue-bg: linear-gradient(145deg, #1A2414, #0A0C0B);
+  --card-revenue-border: rgba(197, 242, 122, 0.35);
+  --card-topclients-bg: #111412;
 
   /* 📆 Report Cards */
-  --card-weekly-bg: #272E22;
-  --card-weekly-border: #3B4430;
-  --card-weekly-shadow: rgba(0, 0, 0, 0.5);
-  --card-monthly-bg: #303A29;
-  --card-monthly-border: #454F35;
-  --card-monthly-shadow: rgba(0, 0, 0, 0.45);
+  --card-weekly-bg: #121513;
+  --card-weekly-border: #262B28;
+  --card-weekly-shadow: rgba(0, 0, 0, 0.6);
+  --card-monthly-bg: #151917;
+  --card-monthly-border: #2A302C;
+  --card-monthly-shadow: rgba(0, 0, 0, 0.55);
 }
 
 /* =======================
@@ -254,36 +265,36 @@ html {
 
 /* SimpleMDE Dark Theme */
 .EasyMDEContainer .CodeMirror {
-  background-color: #2f3a2d !important;
-  color: #F4F3EC !important;
-  border: 1px solid #5d6a48 !important;
+  background-color: #161A18 !important;
+  color: #F2F5EF !important;
+  border: 1px solid #2A302C !important;
   border-radius: 0.5rem !important;
 }
 
 .EasyMDEContainer .CodeMirror-cursor {
-  border-left-color: #F4F3EC !important;
+  border-left-color: #F2F5EF !important;
 }
 
 .EasyMDEContainer .editor-toolbar {
-  background-color: #1f2420 !important;
-  border: 1px solid #5d6a48 !important;
+  background-color: #111412 !important;
+  border: 1px solid #2A302C !important;
   border-bottom: none !important;
   border-radius: 0.5rem 0.5rem 0 0 !important;
 }
 
 .EasyMDEContainer .editor-toolbar button {
-  color: #F4F3EC !important;
+  color: #F2F5EF !important;
 }
 
 .EasyMDEContainer .editor-toolbar button:hover,
 .EasyMDEContainer .editor-toolbar button.active {
-  background-color: #5d6a48 !important;
-  border-color: #6b8e4e !important;
+  background-color: #2A302C !important;
+  border-color: #3E443F !important;
 }
 
 .EasyMDEContainer .editor-preview {
-  background-color: #2f3a2d !important;
-  color: #F4F3EC !important;
+  background-color: #161A18 !important;
+  color: #F2F5EF !important;
 }
 
 * {
@@ -305,11 +316,12 @@ html {
 }
 
 /* =======================
-   🫒 Corva components
-   Buttons: .btn + .btn-primary | .btn-glass | .btn-bright | .btn-ghost  (+ .btn-sm / .btn-lg)
+   🌌 Corva components
+   Buttons: .btn + .btn-primary | .btn-bright | .btn-glass | .btn-ghost  (+ .btn-sm / .btn-lg)
             add <span class="btn-cap"><svg/><svg/></span> for the sliding arrow capsule
-   Glass:   .glass-card / .glass-panel
-   Links:   .link-arrow
+   Glass:   .glass-card / .glass-panel (gradient hairline rims)
+   Text:    .text-gradient-aurora (lime → teal gradient), .link-arrow
+   Backdrop: .aurora-bg (animated glow field)
    ======================= */
 @layer components {
   .btn {
@@ -321,20 +333,21 @@ html {
     gap: 0.75rem;
     height: 2.875rem;
     padding: 0 1.35rem;
-    border-radius: 999px;
+    border-radius: 0.625rem;
     font-size: 0.9375rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     white-space: nowrap;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, background 0.3s ease, color 0.2s ease, border-color 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, background 0.3s ease, color 0.2s ease;
     -webkit-tap-highlight-color: transparent;
   }
   .btn:has(.btn-cap) { padding-right: 0.35rem; }
-  .btn-sm { height: 2.375rem; padding: 0 1rem; font-size: 0.875rem; gap: 0.55rem; }
+  .btn-sm { height: 2.375rem; padding: 0 1rem; font-size: 0.875rem; gap: 0.55rem; border-radius: 0.5rem; }
+  .btn-sm .btn-cap { border-radius: 0.3125rem; }
   .btn-sm:has(.btn-cap) { padding-right: 0.3rem; }
-  .btn-lg { height: 3.25rem; padding: 0 1.6rem; font-size: 1rem; }
+  .btn-lg { height: 3.375rem; padding: 0 1.6rem; font-size: 1rem; }
   .btn-lg:has(.btn-cap) { padding-right: 0.4rem; }
   .btn:hover { transform: translateY(-1px); }
   .btn:active { transform: translateY(0) scale(0.985); transition-duration: 0.1s; }
@@ -347,7 +360,7 @@ html {
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(105deg, transparent 32%, rgb(247 245 239 / 0.22) 50%, transparent 68%);
+    background: linear-gradient(105deg, transparent 32%, rgb(255 255 255 / 0.45) 50%, transparent 68%);
     transform: translateX(-130%);
     transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
@@ -362,89 +375,91 @@ html {
     flex-shrink: 0;
     width: 2.2rem;
     height: 2.2rem;
-    border-radius: 999px;
+    border-radius: 0.4375rem;
     overflow: hidden;
     transition: background 0.3s ease, color 0.3s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .btn-sm .btn-cap { width: 1.8rem; height: 1.8rem; }
-  .btn-lg .btn-cap { width: 2.5rem; height: 2.5rem; }
+  .btn-lg .btn-cap { width: 2.6rem; height: 2.6rem; }
   .btn-cap svg { width: 0.95rem; height: 0.95rem; transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
   .btn-cap svg + svg { position: absolute; transform: translateX(-170%); }
   .btn:hover .btn-cap svg:first-child { transform: translateX(170%); }
   .btn:hover .btn-cap svg + svg { transform: translateX(0); }
 
-  /* Primary: luminous olive glass with a sage rim */
+  /* Primary: electric lime with a dark capsule and a light beam on the rim */
   .btn-primary {
-    color: var(--color-ivory);
-    background:
-      linear-gradient(180deg, rgb(247 245 239 / 0.14) 0%, rgb(247 245 239 / 0) 52%),
-      linear-gradient(135deg, var(--color-olive-bright) 0%, var(--color-olive) 55%, var(--color-forest) 100%);
+    color: var(--color-ink);
+    background: linear-gradient(180deg, #E2FCB0 0%, #C5F27A 45%, #A9DB5C 100%);
     box-shadow:
-      inset 0 0 0 1px rgb(201 210 179 / 0.28),
-      inset 0 1px 0 rgb(247 245 239 / 0.22),
-      0 1px 2px rgb(0 0 0 / 0.5),
-      0 10px 30px -10px rgb(170 179 154 / 0.45);
+      inset 0 1px 0 rgb(255 255 255 / 0.65),
+      inset 0 -1px 0 rgb(11 18 6 / 0.18),
+      0 0 0 1px rgb(216 250 156 / 0.45),
+      0 12px 36px -10px rgb(169 219 92 / 0.6);
   }
-  .btn-primary .btn-cap { background: var(--color-sage-bright); color: var(--color-ink); }
+  .btn-primary .btn-cap { background: var(--color-ink); color: var(--color-sage-bright); }
   .btn-primary:hover {
     box-shadow:
-      inset 0 0 0 1px rgb(201 210 179 / 0.45),
-      inset 0 1px 0 rgb(247 245 239 / 0.26),
-      0 2px 4px rgb(0 0 0 / 0.5),
-      0 16px 40px -12px rgb(170 179 154 / 0.6);
+      inset 0 1px 0 rgb(255 255 255 / 0.7),
+      inset 0 -1px 0 rgb(11 18 6 / 0.18),
+      0 0 0 1px rgb(230 255 184 / 0.7),
+      0 18px 48px -10px rgb(169 219 92 / 0.8);
   }
-  .btn-primary:hover .btn-cap { background: var(--color-ivory); }
-
-  /* Light beam travelling around the primary button's rim */
   .btn-primary::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    padding: 1px;
-    background: conic-gradient(from var(--btn-beam-angle), transparent 0deg 250deg, rgb(201 210 179 / 0.55) 300deg, rgb(247 245 239 / 0.95) 330deg, transparent 360deg);
+    padding: 1.5px;
+    background: conic-gradient(from var(--btn-beam-angle), transparent 0deg 260deg, rgb(255 255 255 / 0.5) 310deg, #fff 335deg, transparent 360deg);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    opacity: 0.55;
-    animation: btn-beam 5s linear infinite;
-    transition: opacity 0.3s ease;
+    opacity: 0.7;
+    animation: btn-beam 4.5s linear infinite;
     pointer-events: none;
   }
-  .btn-primary:hover::before { opacity: 1; animation-duration: 2.2s; }
+  .btn-primary:hover::before { opacity: 1; animation-duration: 2s; }
 
-  /* Bright: solid sage, for the single most important action on a dark page */
+  /* Bright: aurora gradient (lime → teal) for hero-level moments */
   .btn-bright {
     color: var(--color-ink);
-    background: linear-gradient(180deg, #D7DEC4 0%, var(--color-sage) 100%);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.5),
-      inset 0 -1px 0 rgb(32 35 30 / 0.18),
-      0 12px 32px -12px rgb(170 179 154 / 0.7);
+    background: linear-gradient(110deg, #E6FFB8 0%, #C5F27A 40%, #7DDBC0 100%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 0 0 1px rgb(230 255 184 / 0.4), 0 14px 40px -12px rgb(95 200 168 / 0.6);
   }
-  .btn-bright::after { background: linear-gradient(105deg, transparent 32%, rgb(255 255 255 / 0.55) 50%, transparent 68%); }
   .btn-bright .btn-cap { background: var(--color-ink); color: var(--color-sage-bright); }
-  .btn-bright:hover { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55), inset 0 -1px 0 rgb(32 35 30 / 0.18), 0 18px 40px -12px rgb(170 179 154 / 0.85); }
+  .btn-bright:hover { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.65), 0 0 0 1px rgb(230 255 184 / 0.7), 0 20px 48px -12px rgb(95 200 168 / 0.8); }
 
-  /* Glass: frosted, for secondary actions */
+  /* Glass: frosted with a gradient hairline rim */
   .btn-glass {
     color: var(--color-ivory);
-    background: linear-gradient(180deg, rgb(247 245 239 / 0.09), rgb(247 245 239 / 0.03));
-    box-shadow: inset 0 0 0 1px var(--color-glass-border-strong), inset 0 1px 0 rgb(247 245 239 / 0.1), 0 10px 30px -18px rgb(0 0 0 / 0.8);
-    backdrop-filter: blur(18px) saturate(1.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.025));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 10px 30px -18px rgb(0 0 0 / 0.9);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
   }
-  .btn-glass .btn-cap { background: rgb(247 245 239 / 0.1); color: var(--color-ivory); }
-  .btn-glass:hover {
-    background: linear-gradient(180deg, rgb(247 245 239 / 0.13), rgb(247 245 239 / 0.05));
-    box-shadow: inset 0 0 0 1px rgb(201 210 179 / 0.35), inset 0 1px 0 rgb(247 245 239 / 0.12), 0 12px 32px -16px rgb(170 179 154 / 0.35);
+  .btn-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.05));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    transition: background 0.3s ease;
+    pointer-events: none;
   }
-  .btn-glass:hover .btn-cap { background: var(--color-sage-bright); color: var(--color-ink); }
+  .btn-glass::after { background: linear-gradient(105deg, transparent 32%, rgb(255 255 255 / 0.12) 50%, transparent 68%); }
+  .btn-glass .btn-cap { background: rgb(255 255 255 / 0.1); color: var(--color-ivory); }
+  .btn-glass:hover { background: linear-gradient(180deg, rgb(255 255 255 / 0.11), rgb(255 255 255 / 0.04)); }
+  .btn-glass:hover::before { background: linear-gradient(180deg, rgb(216 250 156 / 0.6), rgb(197 242 122 / 0.1)); }
+  .btn-glass:hover .btn-cap { background: var(--color-sage); color: var(--color-ink); }
 
   /* Ghost: text-weight action with a soft hover plate */
   .btn-ghost { color: var(--color-muted); background: transparent; font-weight: 500; }
   .btn-ghost::after { display: none; }
-  .btn-ghost:hover { color: var(--color-ivory); background: rgb(247 245 239 / 0.06); transform: none; }
+  .btn-ghost:hover { color: var(--color-ivory); background: rgb(255 255 255 / 0.06); transform: none; }
 
   /* Text link with a drawn underline and nudging arrow */
   .link-arrow {
@@ -452,40 +467,71 @@ html {
     align-items: center;
     gap: 0.4rem;
     font-weight: 500;
-    color: var(--color-sage-bright);
+    color: var(--color-sage);
     padding-bottom: 2px;
     background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
     transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
   }
   .link-arrow svg { width: 0.9rem; height: 0.9rem; transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
-  .link-arrow:hover { background-size: 100% 1px; color: var(--color-ivory); }
+  .link-arrow:hover { background-size: 100% 1px; color: var(--color-sage-bright); }
   .link-arrow:hover svg { transform: translateX(3px); }
 
-  /* Glass surfaces */
-  .glass-card {
-    position: relative;
-    border-radius: 1.25rem;
-    background: linear-gradient(180deg, rgb(247 245 239 / 0.06) 0%, rgb(247 245 239 / 0.02) 100%);
-    box-shadow: inset 0 0 0 1px var(--color-glass-border), var(--shadow-glass);
-    backdrop-filter: blur(20px) saturate(1.25);
-    -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  /* Lime → teal gradient text */
+  .text-gradient-aurora {
+    background: linear-gradient(95deg, #E6FFB8 0%, #C5F27A 45%, #7DDBC0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
+
+  /* Glass surfaces: frosted fill + gradient hairline rim (brighter at the top edge) */
+  .glass-card, .glass-panel {
+    position: relative;
+    background: linear-gradient(160deg, rgb(255 255 255 / 0.07) 0%, rgb(255 255 255 / 0.02) 100%);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(22px) saturate(1.5);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  }
+  .glass-card { border-radius: 0.75rem; }
+  .glass-panel { border-radius: 1rem; background: linear-gradient(165deg, rgb(197 242 122 / 0.1) 0%, rgb(255 255 255 / 0.025) 45%, rgb(255 255 255 / 0.015) 100%); }
+  .glass-card::before, .glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.04) 60%, rgb(255 255 255 / 0.07));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    transition: background 0.35s ease;
+  }
+  .glass-panel::before { background: linear-gradient(180deg, rgb(216 250 156 / 0.45), rgb(255 255 255 / 0.05) 55%, rgb(95 200 168 / 0.2)); }
   .glass-card-hover { transition: box-shadow 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.35s ease; }
   .glass-card-hover:hover {
-    transform: translateY(-2px);
-    background: linear-gradient(180deg, rgb(247 245 239 / 0.08) 0%, rgb(247 245 239 / 0.03) 100%);
-    box-shadow: inset 0 0 0 1px rgb(201 210 179 / 0.22), inset 0 1px 0 rgb(247 245 239 / 0.09), 0 28px 56px -28px rgb(0 0 0 / 0.8), 0 0 40px -20px rgb(170 179 154 / 0.35);
+    transform: translateY(-3px);
+    background: linear-gradient(160deg, rgb(255 255 255 / 0.09) 0%, rgb(255 255 255 / 0.03) 100%);
+    box-shadow: var(--shadow-glass), 0 0 50px -20px rgb(197 242 122 / 0.4);
   }
-  .glass-panel {
-    border-radius: 1.75rem;
-    background: linear-gradient(180deg, rgb(30 36 26 / 0.72), rgb(22 26 19 / 0.72));
-    box-shadow: inset 0 0 0 1px var(--color-glass-border), inset 0 1px 0 rgb(247 245 239 / 0.06), 0 40px 80px -40px rgb(0 0 0 / 0.85);
-    backdrop-filter: blur(24px) saturate(1.2);
-    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  .glass-card-hover:hover::before { background: linear-gradient(180deg, rgb(216 250 156 / 0.5), rgb(255 255 255 / 0.05) 60%, rgb(95 200 168 / 0.2)); }
+
+  /* Animated aurora glow field; place inside a relative container */
+  .aurora-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .aurora-bg::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    background:
+      radial-gradient(38% 42% at 78% 18%, rgb(170 219 92 / 0.32), transparent 70%),
+      radial-gradient(34% 38% at 12% 70%, rgb(63 90 30 / 0.55), transparent 70%),
+      radial-gradient(30% 34% at 62% 88%, rgb(64 160 130 / 0.22), transparent 70%);
+    filter: blur(40px);
+    animation: var(--animate-aurora);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .btn-primary::before { animation: none; opacity: 0.35; }
+    .btn-primary::before, .aurora-bg::before { animation: none; }
     .btn, .btn::after, .btn-cap, .btn-cap svg, .link-arrow, .link-arrow svg, .glass-card-hover { transition: none; }
     .btn:hover, .glass-card-hover:hover { transform: none; }
     .btn:hover::after { transform: translateX(-130%); }
@@ -507,17 +553,17 @@ html {
 /* =======================
    ✨ Site-wide polish (zero-specificity, so component styles still win)
    ======================= */
-::selection { background: rgb(170 179 154 / 0.35); color: #F7F5EF; }
+::selection { background: rgb(197 242 122 / 0.35); color: #F2F5EF; }
 
 :where(input, textarea, select) { caret-color: var(--color-sage-bright); accent-color: var(--color-sage); }
-:where(input, textarea, select):focus-visible { outline: 2px solid rgb(170 179 154 / 0.55); outline-offset: 1px; }
+:where(input, textarea, select):focus-visible { outline: 2px solid rgb(197 242 122 / 0.55); outline-offset: 1px; }
 :where(button, a, [role='button']):focus-visible { outline: 2px solid var(--color-sage); outline-offset: 2px; }
 
-/* Slim olive scrollbars */
-* { scrollbar-width: thin; scrollbar-color: rgb(170 179 154 / 0.28) transparent; }
+/* Slim lime-tinted scrollbars */
+* { scrollbar-width: thin; scrollbar-color: rgb(197 242 122 / 0.28) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: rgb(170 179 154 / 0.25); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
-*::-webkit-scrollbar-thumb:hover { background-color: rgb(170 179 154 / 0.45); }
+*::-webkit-scrollbar-thumb { background: rgb(197 242 122 / 0.25); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: rgb(197 242 122 / 0.45); }
 *::-webkit-scrollbar-track { background: transparent; }
 
 /* Add to any existing button for the brand sheen, lift and press feel without
@@ -539,7 +585,7 @@ html {
     transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
   }
-  .btn-fx:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 32px -14px rgb(170 179 154 / 0.7); }
+  .btn-fx:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 32px -14px rgb(197 242 122 / 0.7); }
   .btn-fx:hover:not(:disabled)::after { transform: translateX(130%); }
   .btn-fx:active:not(:disabled) { transform: translateY(0) scale(0.985); transition-duration: 0.1s; }
   @media (prefers-reduced-motion: reduce) {

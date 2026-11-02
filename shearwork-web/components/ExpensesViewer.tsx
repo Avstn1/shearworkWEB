@@ -469,11 +469,11 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
                     <div className="flex gap-2 justify-end mt-1">
                       <button
                         onClick={() => setEditingId(null)}
-                        className="px-3 py-1 text-sm rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white transition"
+                        className="px-3 py-1 text-sm rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 text-white transition"
                       >Cancel</button>
                       <button
                         onClick={handleSaveEdit}
-                        className="px-3 py-1 text-sm rounded-full border border-lime-400/40 bg-lime-400/20 hover:bg-lime-400/30 text-lime-200 font-semibold transition"
+                        className="px-3 py-1 text-sm rounded-lg border border-lime-400/40 bg-lime-400/20 hover:bg-lime-400/30 text-lime-200 font-semibold transition"
                       >Save</button>
                     </div>
                   </div>
@@ -520,11 +520,11 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
                     <div className="flex gap-2">
                       <button
                         onClick={() => startEdit(exp)}
-                        className="text-sm px-3 py-1 rounded-full border border-lime-400/30 bg-lime-400/20 hover:bg-lime-400/30 text-lime-300 font-semibold transition"
+                        className="text-sm px-3 py-1 rounded-lg border border-lime-400/30 bg-lime-400/20 hover:bg-lime-400/30 text-lime-300 font-semibold transition"
                       >Edit</button>
                       <button
                         onClick={() => handleDelete(exp.id)}
-                        className="text-sm px-3 py-1 rounded-full border border-white/15 bg-white/10 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-white/60 font-semibold transition"
+                        className="text-sm px-3 py-1 rounded-lg border border-white/15 bg-white/10 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-white/60 font-semibold transition"
                       >Delete</button>
                     </div>
                   </>
@@ -539,7 +539,7 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
               <button
                 disabled={page === 1}
                 onClick={() => setPage(p => p - 1)}
-                className="px-3 py-1 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50 transition"
+                className="px-3 py-1 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50 transition"
               >
                 Previous
               </button>
@@ -547,7 +547,7 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
               <button
                 disabled={page === totalPages}
                 onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50 transition"
+                className="px-3 py-1 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50 transition"
               >
                 Next
               </button>

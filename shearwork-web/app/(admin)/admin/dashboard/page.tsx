@@ -319,12 +319,12 @@ export default function AdminDashboardPage() {
           <input
             type="text"
             placeholder="Search barbers..."
-            className="flex-shrink-0 w-full sm:w-64 h-10 bg-[#303a29] border border-[#5d6a48] text-[#F4F3EC] rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+            className="flex-shrink-0 w-full sm:w-64 h-10 bg-[#161A18] border border-[#2A302C] text-[#F2F5EF] rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <select
-            className="h-10 px-3 rounded-md bg-[#303a29] border border-[#5d6a48] text-[#F4F3EC] text-sm"
+            className="h-10 px-3 rounded-md bg-[#161A18] border border-[#2A302C] text-[#F2F5EF] text-sm"
             value={selectedMonth}
             onChange={(e) => {
               setSelectedMonth(e.target.value)
@@ -554,10 +554,10 @@ export default function AdminDashboardPage() {
                         'alignleft aligncenter alignright alignjustify | ' +
                         'bullist numlist outdent indent | removeformat | help',
                       content_style: `
-                        body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color:#F4F3EC; background-color:#1e241a; }
+                        body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color:#F2F5EF; background-color:#111412; }
                         table { width:100%; border-collapse:collapse; }
                         th, td { border:1px solid #444; padding:6px; }
-                        th { background:#31342c; white-space:nowrap; }
+                        th { background:#2E3330; white-space:nowrap; }
                       `,
                     }}
                   />
@@ -609,7 +609,7 @@ export default function AdminDashboardPage() {
             )}
           </>
         ) : (
-          <p className="text-sm text-[#bdbeb3] mt-4">Select a barber to view reports and add new reports.</p>
+          <p className="text-sm text-[#BAC0B8] mt-4">Select a barber to view reports and add new reports.</p>
         )}
       </div>
     </>

@@ -14,17 +14,17 @@ import { Button, ButtonLink } from '@/components/ui/Button';
 
 // Color palette
 const COLORS = {
-  background: '#161913',
-  cardBg: '#181b15',
-  navBg: '#1a1d17', 
-  surface: 'rgba(247, 245, 239, 0.05)',
-  surfaceSolid: '#161A13',
-  glassBorder: 'rgba(247, 245, 239, 0.09)',
-  text: '#F4F3EC',
-  textMuted: 'rgba(244, 243, 236, 0.62)',
-  green: '#aab39a',
-  greenLight: '#8e9a78',
-  greenGlow: 'rgba(170, 179, 154, 0.4)',
+  background: '#121513',
+  cardBg: '#141716',
+  navBg: '#121513', 
+  surface: 'rgba(242, 245, 239, 0.05)',
+  surfaceSolid: '#111412',
+  glassBorder: 'rgba(242, 245, 239, 0.09)',
+  text: '#F2F5EF',
+  textMuted: 'rgba(242, 245, 239, 0.62)',
+  green: '#C5F27A',
+  greenLight: '#A9DB5C',
+  greenGlow: 'rgba(197, 242, 122, 0.4)',
 }
 
 export default function LoginPage() {
@@ -132,7 +132,7 @@ export default function LoginPage() {
             }}
             className="w-2 h-2 rounded-full transition-all duration-200"
             style={{
-              backgroundColor: index === 2 ? '#aab39a' : 'rgba(255, 255, 255, 0.3)',
+              backgroundColor: index === 2 ? '#C5F27A' : 'rgba(255, 255, 255, 0.3)',
               transform: index === 2 ? 'scale(1.5)' : 'scale(1)',
               cursor: index === 2 ? 'default' : 'pointer',
             }}
@@ -144,7 +144,7 @@ export default function LoginPage() {
       <section 
         className="h-screen flex items-center overflow-auto lg:overflow-hidden px-4 sm:px-5 lg:px-8 py-4 lg:py-0 relative"
         style={{
-          background: `linear-gradient(135deg, #161913 0%, #181b15 30%, #1b1e18 70%, #161913 100%)`,
+          background: `linear-gradient(135deg, #121513 0%, #141716 30%, #1b1e18 70%, #121513 100%)`,
           color: COLORS.text,
         }}
         onWheel={(e) => {
@@ -172,9 +172,9 @@ export default function LoginPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-              className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
+              className="rounded-lg lg:rounded-xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
               style={{
-                background: `linear-gradient(180deg, rgba(247, 245, 239, 0.06) 0%, rgba(247, 245, 239, 0.02) 100%)`,
+                background: `linear-gradient(180deg, rgba(242, 245, 239, 0.06) 0%, rgba(242, 245, 239, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}
@@ -326,7 +326,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-              className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden group flex-1"
+              className="rounded-lg lg:rounded-xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden group flex-1"
               style={{
                 background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1e221e 100%)`,
                 borderWidth: 1,
@@ -363,7 +363,7 @@ export default function LoginPage() {
                       transition={{ duration: 0.4, delay: 0.3 + idx * 0.1, ease: 'easeOut' }}
                       className="flex items-center gap-1.5 lg:gap-2 p-1 lg:p-2 rounded-md lg:rounded-lg transition-all duration-300 hover:-translate-x-1"
                       style={{
-                        backgroundColor: 'rgba(170, 179, 154, 0.1)',
+                        backgroundColor: 'rgba(197, 242, 122, 0.1)',
                       }}
                     >
                       <div 
@@ -391,9 +391,9 @@ export default function LoginPage() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
-              className="rounded-lg lg:rounded-2xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl text-center"
+              className="rounded-lg lg:rounded-xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl text-center"
               style={{
-                background: `linear-gradient(180deg, rgba(247, 245, 239, 0.06) 0%, rgba(247, 245, 239, 0.02) 100%)`,
+                background: `linear-gradient(180deg, rgba(242, 245, 239, 0.06) 0%, rgba(242, 245, 239, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}

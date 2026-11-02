@@ -115,7 +115,7 @@ export default function TutorialModal({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#a7a99d]">Tutorial</p>
+            <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#A3AAA2]">Tutorial</p>
             <h2 id={titleId} className="mt-1 text-lg font-semibold text-white">
               {step.title}
             </h2>
@@ -130,7 +130,7 @@ export default function TutorialModal({
           </button>
         </div>
 
-        <p id={descriptionId} className="mt-3 text-sm text-[#bdbeb3]">
+        <p id={descriptionId} className="mt-3 text-sm text-[#BAC0B8]">
           {step.description}
         </p>
 
@@ -140,7 +140,7 @@ export default function TutorialModal({
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-between text-xs text-[#a7a99d]">
+        <div className="mt-6 flex items-center justify-between text-xs text-[#A3AAA2]">
           <span>
             Step {stepIndex + 1} of {totalSteps}
           </span>
@@ -149,7 +149,7 @@ export default function TutorialModal({
               type="button"
               onClick={onPrev}
               disabled={stepIndex === 0}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" />
               Back
@@ -157,7 +157,7 @@ export default function TutorialModal({
             <button
               type="button"
               onClick={stepIndex === totalSteps - 1 ? onFinish : onNext}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/30"
+              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/30"
             >
               {stepIndex === totalSteps - 1 ? 'Finish' : 'Next'}
               <ChevronRight className="h-4 w-4" />

@@ -89,17 +89,17 @@ export default function FeaturesList({
       className="lg:w-1/3 flex flex-col gap-3 min-h-0"
     >
       {/* Toggle Buttons */}
-      <div className="flex gap-2 bg-[#1e241a]/95 backdrop-blur-md p-2 rounded-2xl border border-[#5d6a48]/50 flex-shrink-0">
+      <div className="flex gap-2 bg-[#111412]/95 backdrop-blur-md p-2 rounded-2xl border border-[#2A302C]/50 flex-shrink-0">
         {showMajorMinorToggle ? (
           viewMode === 'major' ? (
             <>
-              <div className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold bg-[#5d6a48]/40 text-[#d4e7c5] flex items-center justify-center gap-2">
+              <div className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold bg-[#2A302C]/40 text-[#d4e7c5] flex items-center justify-center gap-2">
                 <Sparkles className="w-4 h-4" />
                 Major Updates
               </div>
               <button
                 onClick={handleCreateClick}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#707c5c]/40 hover:bg-[#707c5c]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#84B53B]/40 hover:bg-[#84B53B]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
               >
                 <Edit className="w-4 h-4" />
                 Create Feature
@@ -126,7 +126,7 @@ export default function FeaturesList({
               </div>
               <button
                 onClick={handleCreateClick}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#707c5c]/40 hover:bg-[#707c5c]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#84B53B]/40 hover:bg-[#84B53B]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
               >
                 <Edit className="w-4 h-4" />
                 Create Feature
@@ -143,13 +143,13 @@ export default function FeaturesList({
         ) : (
           // For 'both' platform - no major/minor, just list view
           <>
-            <div className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold bg-[#5d6a48]/40 text-[#d4e7c5] flex items-center justify-center gap-2">
+            <div className="flex-1 px-4 py-2 rounded-xl text-sm font-semibold bg-[#2A302C]/40 text-[#d4e7c5] flex items-center justify-center gap-2">
               <Sparkles className="w-4 h-4" />
               All Updates
             </div>
             <button
               onClick={handleCreateClick}
-              className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#707c5c]/40 hover:bg-[#707c5c]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#84B53B]/40 hover:bg-[#84B53B]/60 text-[#a8d5ba] transition-all duration-300 flex items-center gap-2"
             >
               <Edit className="w-4 h-4" />
               Create Feature
@@ -167,7 +167,7 @@ export default function FeaturesList({
 
       {/* Features List - Scrollable */}
       <div className="flex-1 bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 overflow-y-auto min-h-0">
-        <h2 className="text-lg font-semibold mb-4 text-[#F4F3EC]">
+        <h2 className="text-lg font-semibold mb-4 text-[#F2F5EF]">
           {platform === 'both' 
             ? 'Web & Mobile Updates'
             : viewMode === 'major' 
@@ -188,16 +188,16 @@ export default function FeaturesList({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => onMajorClick(major.version)}
-                  className="bg-[#1e241a]/80 border border-[#5d6a48]/30 rounded-xl p-4 hover:border-[#5d6a48]/80 transition-all duration-300 cursor-pointer group"
+                  className="bg-[#111412]/80 border border-[#2A302C]/30 rounded-xl p-4 hover:border-[#2A302C]/80 transition-all duration-300 cursor-pointer group"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-[#9ca87f]" />
-                      <span className="text-2xl font-bold text-[#F4F3EC]">
+                      <span className="text-2xl font-bold text-[#F2F5EF]">
                         Version {major.version}
                       </span>
                     </div>
-                    <span className="px-3 py-1 bg-[#5d6a48]/30 text-[#d4e7c5] text-xs font-bold rounded-full border border-[#5d6a48]/50">
+                    <span className="px-3 py-1 bg-[#2A302C]/30 text-[#d4e7c5] text-xs font-bold rounded-lg border border-[#2A302C]/50">
                       {major.count} {major.count === 1 ? 'update' : 'updates'}
                     </span>
                   </div>
@@ -221,8 +221,8 @@ export default function FeaturesList({
                   key={feature.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`bg-[#1e241a]/80 border rounded-xl p-3 transition-all duration-300 ${
-                    editingId === feature.id ? 'border-[#8e9a78] ring-2 ring-[#8e9a78]/50' : 'border-[#5d6a48]/30'
+                  className={`bg-[#111412]/80 border rounded-xl p-3 transition-all duration-300 ${
+                    editingId === feature.id ? 'border-[#A9DB5C] ring-2 ring-[#A9DB5C]/50' : 'border-[#2A302C]/30'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -232,7 +232,7 @@ export default function FeaturesList({
                     >
                       <div className="flex items-center gap-2 mb-1">
                         {feature.version && (
-                          <span className="px-2 py-0.5 bg-[#5d6a48]/30 text-lime-300 text-xs font-mono rounded">
+                          <span className="px-2 py-0.5 bg-[#2A302C]/30 text-lime-300 text-xs font-mono rounded">
                             v{feature.version}
                           </span>
                         )}
@@ -240,7 +240,7 @@ export default function FeaturesList({
                           {feature.category}
                         </span>
                       </div>
-                      <h3 className="text-sm font-semibold text-[#F4F3EC] line-clamp-2">
+                      <h3 className="text-sm font-semibold text-[#F2F5EF] line-clamp-2">
                         {feature.title}
                       </h3>
                     </div>
@@ -253,7 +253,7 @@ export default function FeaturesList({
                         className={`px-2 py-1 rounded-lg transition-all duration-200 text-[10px] font-medium whitespace-nowrap ${
                           feature.is_published
                             ? 'bg-[#6b5b3a]/30 hover:bg-[#6b5b3a]/40 border border-[#6b5b3a]/50 text-[#d4a574]'
-                            : 'bg-[#707c5c]/30 hover:bg-[#707c5c]/40 border border-[#707c5c]/50 text-[#a8d5ba]'
+                            : 'bg-[#84B53B]/30 hover:bg-[#84B53B]/40 border border-[#84B53B]/50 text-[#a8d5ba]'
                         }`}
                       >
                         {feature.is_published ? 'Click to deactivate' : 'Click to publish'}

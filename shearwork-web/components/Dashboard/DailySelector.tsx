@@ -140,7 +140,7 @@ export default function DailySelector({
         type="button"
         onClick={() => !disabled && setOpen(!open)}
         className={`
-          flex-1 flex justify-between items-center px-3 py-2 rounded-full font-semibold text-sm border shadow-md
+          flex-1 flex justify-between items-center px-3 py-2 rounded-lg font-semibold text-sm border shadow-md
           bg-gradient-to-r from-amber-500/30 to-lime-500/30 text-white
           transition-all duration-200
           hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1

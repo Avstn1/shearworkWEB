@@ -25,7 +25,7 @@ export default function UnderConstructionWrapper({ children }: UnderConstruction
     <div className="relative h-full">
       {/* Overlay with construction message */}
       <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-2xl">
-        <div className="text-center px-6 py-8 bg-gradient-to-br from-[#1a1f17]/95 to-[#303a29]/95 border border-lime-300/20 rounded-2xl shadow-2xl max-w-md mx-4">
+        <div className="text-center px-6 py-8 bg-gradient-to-br from-[#0E110F]/95 to-[#161A18]/95 border border-lime-300/20 rounded-2xl shadow-2xl max-w-md mx-4">
           <div className="mb-4 flex justify-center">
             <div className="relative">
               <Construction className="w-16 h-16 text-lime-300 animate-pulse" />
@@ -37,14 +37,14 @@ export default function UnderConstructionWrapper({ children }: UnderConstruction
           {/* <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent mb-3">
             Under Construction
           </h2> */}
-          {/* <p className="text-[#bdbeb3] text-sm leading-relaxed">
+          {/* <p className="text-[#BAC0B8] text-sm leading-relaxed">
             This feature is currently being built and will be available soon. 
             We're working hard to bring you an amazing experience!
           </p> */}
           <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent mb-3">
             Under Maintenance
           </h2>
-          <p className="text-[#bdbeb3] text-sm leading-relaxed">
+          <p className="text-[#BAC0B8] text-sm leading-relaxed">
             The site is currently undergoing maintenance and updates.
             We appreciate your patience and understanding during this time.
           </p>

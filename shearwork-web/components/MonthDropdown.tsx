@@ -37,7 +37,7 @@ export default function MonthDropdown({ selectedMonth, setSelectedMonth, disable
         disabled={disabled}
         onClick={() => !disabled && setOpen(prev => !prev)}
         className={`
-          flex items-center gap-2 px-4 py-1.5 rounded-full font-semibold text-sm transition-all duration-200
+          flex items-center gap-2 px-4 py-1.5 rounded-lg font-semibold text-sm transition-all duration-200
           ${open
             ? 'bg-gradient-to-r from-amber-300 to-lime-300 text-black shadow-[0_0_6px_#fffb85]'
             : 'bg-white/10 text-white hover:bg-white/20'}
@@ -58,7 +58,7 @@ export default function MonthDropdown({ selectedMonth, setSelectedMonth, disable
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-20 mt-2 w-32 bg-[#1a1f17]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg overflow-hidden"
+            className="absolute z-20 mt-2 w-32 bg-[#0E110F]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg overflow-hidden"
           >
             {MONTHS.map(month => (
               <button

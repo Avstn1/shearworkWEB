@@ -158,8 +158,8 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 bg-[#161616] flex-shrink-0">
             {/* Avatar */}
-            <div className="w-9 h-9 rounded-full bg-[#aab39a]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold text-[#aab39a]">{initials}</span>
+            <div className="w-9 h-9 rounded-full bg-[#C5F27A]/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-[#C5F27A]">{initials}</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{client_name}</p>
@@ -199,7 +199,7 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                     <button
                       onClick={handleSeeMore}
                       disabled={loadingMore}
-                      className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors py-1 px-3 rounded-full bg-white/5 hover:bg-white/10"
+                      className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors py-1 px-3 rounded-lg bg-white/5 hover:bg-white/10"
                     >
                       {loadingMore
                         ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -241,7 +241,7 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                           <div
                             className={`max-w-[78%] px-3.5 py-2 text-sm leading-relaxed ${
                               isOutbound
-                                ? 'bg-[#aab39a] text-white'
+                                ? 'bg-[#C5F27A] text-white'
                                 : 'bg-[#282b24] text-white/90'
                             }`}
                             style={{ borderRadius: isOutbound ? outboundRadius : inboundRadius }}

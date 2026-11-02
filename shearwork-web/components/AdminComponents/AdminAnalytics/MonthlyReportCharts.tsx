@@ -197,11 +197,11 @@ export default function MonthlyReportChart({ startDate, endDate, targetDate, vie
     return (
       <div
         style={{
-          backgroundColor: '#1e241a',
-          border: '1px solid #5d6a48',
+          backgroundColor: '#111412',
+          border: '1px solid #2A302C',
           borderRadius: '0.5rem',
           padding: '8px',
-          color: '#c9d2b3',
+          color: '#D8FA9C',
           fontSize: '0.875rem',
         }}
       >
@@ -221,24 +221,24 @@ export default function MonthlyReportChart({ startDate, endDate, targetDate, vie
   return (
     <div className="w-full">
       <div className="mb-2">
-        <h2 className="text-[#c9d2b3] font-semibold text-sm sm:text-base">{title}</h2>
+        <h2 className="text-[#D8FA9C] font-semibold text-sm sm:text-base">{title}</h2>
       </div>
 
       <div className="w-full h-64 relative">
         {loading ? (
-          <div className="p-4 text-center text-[#E9ECDD] opacity-70 text-sm">
+          <div className="p-4 text-center text-[#E6EAE3] opacity-70 text-sm">
             Loading {viewMode} data...
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#31342c" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2E3330" />
               <XAxis
                 dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
-                stroke="#cbcbc1"
+                stroke="#CDD2CB"
                 tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
-              <YAxis stroke="#cbcbc1" />
+              <YAxis stroke="#CDD2CB" />
               <Tooltip content={tooltipContent} />
               <Legend />
               

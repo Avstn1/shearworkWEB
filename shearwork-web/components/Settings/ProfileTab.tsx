@@ -588,7 +588,7 @@ export default function ProfileTab() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-full px-4 py-1 hover:border-white/20"
+              className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-lg px-4 py-1 hover:border-white/20"
             >
               Change photo
             </button>
@@ -758,7 +758,7 @@ export default function ProfileTab() {
       {showEmailModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Email</h3>
                 <button
@@ -840,7 +840,7 @@ export default function ProfileTab() {
       {/* {showPhoneModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Phone Number</h3>
                 <button
@@ -939,7 +939,7 @@ export default function ProfileTab() {
       {showPhoneModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Phone Number</h3>
                 <button
@@ -1005,7 +1005,7 @@ export default function ProfileTab() {
       {isUsernameModalOpen && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Edit Username</h3>
                 <button
@@ -1058,7 +1058,7 @@ export default function ProfileTab() {
       {showBookingLinkModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Booking Link</h3>
                 <button

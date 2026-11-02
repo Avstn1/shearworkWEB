@@ -1,22 +1,22 @@
-import { BrandMark } from '@/components/ui/BrandMark'
 
 type Size = 'sm' | 'md'
 
 function MarkTile({ size }: { size: Size }) {
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-olive-bright to-forest-900 text-sage-bright ring-1 ring-inset ring-white/10 shadow-[0_0_18px_-6px_rgb(170_179_154/0.6)] ${
+      className={`grid shrink-0 place-items-center rounded-md bg-white/[0.06] ring-1 ring-inset ring-white/10 shadow-[0_0_18px_-6px_rgb(197_242_122/0.6)] ${
         size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'
       }`}
     >
-      <BrandMark className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/images/corvalogo.png" alt="" className={size === 'sm' ? 'h-5 w-auto' : 'h-6 w-auto'} />
     </span>
   )
 }
 
 const SHELL =
-  'rounded-2xl border border-white/[0.09] bg-[linear-gradient(180deg,rgb(30_36_26/0.78),rgb(16_19_14/0.78))] ' +
-  'shadow-[inset_0_1px_0_rgb(247_245_239/0.07),0_20px_44px_-20px_rgb(0_0_0/0.85)] backdrop-blur-xl backdrop-saturate-150'
+  'rounded-xl border border-white/[0.09] bg-[linear-gradient(180deg,rgb(24_28_26/0.72),rgb(12_14_13/0.72))] ' +
+  'shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_20px_44px_-20px_rgb(0_0_0/0.85)] backdrop-blur-xl backdrop-saturate-150'
 
 /** Corva's Auto-Nudge text asking the barber before it reaches out to clients. */
 export function SmsNotice({ size = 'md', compact = false }: { size?: Size; compact?: boolean }) {
@@ -45,7 +45,7 @@ export function BookingToast({ size = 'md' }: { size?: Size }) {
   const sm = size === 'sm'
   return (
     <div
-      className={`${SHELL} flex items-start ${sm ? 'gap-2 p-2.5' : 'gap-3 p-3.5'} shadow-[inset_0_1px_0_rgb(247_245_239/0.07),0_0_0_1px_rgb(170_179_154/0.22),0_20px_44px_-20px_rgb(0_0_0/0.85),0_0_36px_-14px_rgb(170_179_154/0.45)]`}
+      className={`${SHELL} flex items-start ${sm ? 'gap-2 p-2.5' : 'gap-3 p-3.5'} shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_0_0_1px_rgb(197_242_122/0.22),0_20px_44px_-20px_rgb(0_0_0/0.85),0_0_36px_-14px_rgb(197_242_122/0.45)]`}
     >
       <MarkTile size={size} />
       <span className="min-w-0 flex-1">

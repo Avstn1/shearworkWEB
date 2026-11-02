@@ -135,10 +135,10 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
       </div>
       <div className="mt-auto">
         {change !== null ? (
-          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#c9d2b3]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#55584e]'}`}>
-            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#55584e]">(vs. last record: {prevDataDate})</span>
+          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#D8FA9C]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#565C57]'}`}>
+            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#565C57]">(vs. last record: {prevDataDate})</span>
           </p>
-        ) : <p className="text-sm text-[#55584e]">—</p>}
+        ) : <p className="text-sm text-[#565C57]">—</p>}
       </div>
     </div>
   )

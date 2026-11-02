@@ -130,7 +130,7 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
   return (
     <div className="bg-[#1f1f1a] p-4 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-[#E9ECDD] font-semibold text-lg">💈 Service Breakdown Editor</h3>
+        <h3 className="text-[#E6EAE3] font-semibold text-lg">💈 Service Breakdown Editor</h3>
         <button
           onClick={handleAdd}
           className="px-3 py-1 bg-[#445539] rounded hover:bg-[#4d6544] text-white"

@@ -244,7 +244,7 @@ export default function BillingSection() {
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
-          <div className="relative z-50 w-full max-w-md bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl p-6">
+          <div className="relative z-50 w-full max-w-md bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl p-6">
             <div className="flex items-start gap-4">
               <div className="p-2 bg-amber-500/20 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-amber-400" />
@@ -291,7 +291,7 @@ export default function BillingSection() {
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={handleCloseModal}
           />
-          <div className="relative z-50 w-full max-w-md bg-[#1a1f17] border border-white/10 rounded-2xl shadow-2xl p-6">
+          <div className="relative z-50 w-full max-w-md bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl p-6">
             <div className="flex items-start gap-4">
               <div className="p-2 bg-emerald-500/20 rounded-lg">
                 <AlertTriangle className="h-6 w-6 text-emerald-400" />

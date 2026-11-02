@@ -67,11 +67,11 @@ export default function YearlyTopClientsCard({
       </h2>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-[#55584e]">
+        <div className="flex-1 flex items-center justify-center text-sm text-[#565C57]">
           Loading...
         </div>
       ) : clients.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-[#55584e] text-center">
+        <div className="flex-1 flex items-center justify-center text-sm text-[#565C57] text-center">
           No data available for {titleSuffix}
         </div>
       ) : (
@@ -79,10 +79,10 @@ export default function YearlyTopClientsCard({
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0">
               <tr className="text-left border-b border-white/[0.06]">
-                <th className="py-2 px-3 min-w-[30px] text-[#55584e] text-xs font-medium">#</th>
-                <th className="py-2 px-3 min-w-[120px] text-[#55584e] text-xs font-medium">Client</th>
-                <th className="py-2 px-3 min-w-[80px] text-[#55584e] text-xs font-medium">Total</th>
-                <th className="py-2 px-3 min-w-[60px] text-[#55584e] text-xs font-medium">Visits</th>
+                <th className="py-2 px-3 min-w-[30px] text-[#565C57] text-xs font-medium">#</th>
+                <th className="py-2 px-3 min-w-[120px] text-[#565C57] text-xs font-medium">Client</th>
+                <th className="py-2 px-3 min-w-[80px] text-[#565C57] text-xs font-medium">Total</th>
+                <th className="py-2 px-3 min-w-[60px] text-[#565C57] text-xs font-medium">Visits</th>
               </tr>
             </thead>
             <tbody>
@@ -98,7 +98,7 @@ export default function YearlyTopClientsCard({
                   <td className="py-2 px-3 font-semibold truncate text-white">
                     {client.client_name}
                   </td>
-                  <td className="py-2 px-3 font-semibold text-[#c9d2b3]">
+                  <td className="py-2 px-3 font-semibold text-[#D8FA9C]">
                     ${client.total_spent.toFixed(2)}
                   </td>
                   <td className="py-2 px-3 font-semibold text-[#a78bfa]">

@@ -11,7 +11,7 @@ export default function SiteDownWrapper({ children }: SiteDownWrapperProps) {
     <div className="relative h-full">
       {/* Overlay with service interruption message */}
       <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-2xl">
-        <div className="text-center px-6 py-8 bg-gradient-to-br from-[#1a1f17]/95 to-[#303a29]/95 border border-amber-300/20 rounded-2xl shadow-2xl max-w-md mx-4">
+        <div className="text-center px-6 py-8 bg-gradient-to-br from-[#0E110F]/95 to-[#161A18]/95 border border-amber-300/20 rounded-2xl shadow-2xl max-w-md mx-4">
           <div className="mb-4 flex justify-center">
             <div className="relative">
               <AlertCircle className="w-16 h-16 text-amber-300 animate-pulse" />
@@ -23,10 +23,10 @@ export default function SiteDownWrapper({ children }: SiteDownWrapperProps) {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-amber-300 bg-clip-text text-transparent mb-3">
             Temporary Service Interruption
           </h2>
-          <p className="text-[#bdbeb3] text-sm leading-relaxed mb-4">
+          <p className="text-[#BAC0B8] text-sm leading-relaxed mb-4">
             We're experiencing a temporary issue that's preventing us from accessing data right now.
           </p>
-          <p className="text-[#bdbeb3] text-sm leading-relaxed">
+          <p className="text-[#BAC0B8] text-sm leading-relaxed">
             Our team has been notified and is working to get everything back up and running as quickly as possible. We sincerely apologize for any inconvenience this may cause.
           </p>
           <div className="mt-6 pt-4 border-t border-lime-300/10">

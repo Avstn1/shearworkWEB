@@ -152,35 +152,35 @@ export default function SystemLogsPage() {
         <button
           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
-          className="px-3 py-1 rounded-lg bg-[#3b4430] text-[#F4F3EC] disabled:opacity-50 hover:bg-[#454f35] transition-colors"
+          className="px-3 py-1 rounded-lg bg-[#262B28] text-[#F2F5EF] disabled:opacity-50 hover:bg-[#1F2522] transition-colors"
         >&larr;</button>
         <span>Page {currentPage} of {totalPages}</span>
         <button
           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-lg bg-[#3b4430] text-[#F4F3EC] disabled:opacity-50 hover:bg-[#454f35] transition-colors"
+          className="px-3 py-1 rounded-lg bg-[#262B28] text-[#F2F5EF] disabled:opacity-50 hover:bg-[#1F2522] transition-colors"
         >&rarr;</button>
       </div>
     ) : null
 
   return (
     <>
-      <div className="p-4 sm:p-6 min-h-screen bg-[#1e241a] text-[#F4F3EC]">
+      <div className="p-4 sm:p-6 min-h-screen bg-[#111412] text-[#F2F5EF]">
         <h1 className="text-3xl font-bold text-[var(--highlight)] mb-6">System Logs</h1>
 
-        <div className="sticky top-0 z-20 bg-[#1e241a] p-3 border-b border-[#5d6a48] flex flex-wrap gap-4 items-center">
+        <div className="sticky top-0 z-20 bg-[#111412] p-3 border-b border-[#2A302C] flex flex-wrap gap-4 items-center">
           <input
             type="text"
             placeholder="Search all fields..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-[200px] px-4 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+            className="flex-1 min-w-[200px] px-4 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
           />
           <Pagination />
 
           <button
             onClick={fetchLogs}
-            className="px-4 py-2 rounded-lg bg-[#3b4430] text-[#F4F3EC] hover:bg-[#454f35] transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#262B28] text-[#F2F5EF] hover:bg-[#1F2522] transition-colors"
           >
             <RefreshCcw size={25} />
           </button>
@@ -188,7 +188,7 @@ export default function SystemLogsPage() {
           <select
             value={statusFilter || ''}
             onChange={e => setStatusFilter(e.target.value || null)}
-            className="px-4 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+            className="px-4 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
           >
             <option value="">All Statuses</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
@@ -197,7 +197,7 @@ export default function SystemLogsPage() {
           <select
             value={sourceFilter || ''}
             onChange={e => setSourceFilter(e.target.value || null)}
-            className="px-4 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+            className="px-4 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
           >
             <option value="">All Sources</option>
             {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -211,13 +211,13 @@ export default function SystemLogsPage() {
                 setDatePreset(value)
                 if (value === 'Custom') setShowCustomPicker(true)
               }}
-              className="px-4 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+              className="px-4 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
             >
               {DATE_PRESETS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
             {datePreset === 'Custom' && showCustomPicker && (
-              <div className="absolute top-full mt-2 z-50 bg-[#303a29] border border-[#5d6a48] rounded-lg shadow-lg p-2">
+              <div className="absolute top-full mt-2 z-50 bg-[#161A18] border border-[#2A302C] rounded-lg shadow-lg p-2">
                 <div className="flex justify-end mb-1">
                   <button
                     onClick={() => setShowCustomPicker(false)}
@@ -230,12 +230,12 @@ export default function SystemLogsPage() {
                   mode="range"
                   selected={customRange}
                   onSelect={range => setCustomRange(range as DateRange | undefined)}
-                  className="rounded-lg border border-[#5d6a48] bg-[#303a29] text-[#F4F3EC]"
+                  className="rounded-lg border border-[#2A302C] bg-[#161A18] text-[#F2F5EF]"
                   modifiersClassNames={{
-                    selected: 'bg-green-600 text-[#F4F3EC] rounded-full',
-                    range_start: 'bg-green-700 text-[#F4F3EC] rounded-l-full',
-                    range_end: 'bg-green-700 text-[#F4F3EC] rounded-r-full',
-                    range_middle: 'bg-green-500 text-[#F4F3EC]',
+                    selected: 'bg-green-600 text-[#F2F5EF] rounded-full',
+                    range_start: 'bg-green-700 text-[#F2F5EF] rounded-l-full',
+                    range_end: 'bg-green-700 text-[#F2F5EF] rounded-r-full',
+                    range_middle: 'bg-green-500 text-[#F2F5EF]',
                   }}
                   showOutsideDays
                 />
@@ -246,7 +246,7 @@ export default function SystemLogsPage() {
           <select
             value={itemsPerPage}
             onChange={e => setItemsPerPage(Number(e.target.value))}
-            className="px-3 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+            className="px-3 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
           >
             {ITEMS_OPTIONS.map(i => <option key={i} value={i}>{i} per page</option>)}
           </select>
@@ -254,9 +254,9 @@ export default function SystemLogsPage() {
           <button onClick={resetFilters} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">Reset</button>
         </div>
 
-        <div className="mt-4 bg-[#272e22] rounded-xl shadow-md border border-[#5d6a48] max-h-[80vh] overflow-auto">
-          <table className="min-w-full divide-y divide-[#5d6a48]">
-            <thead className="bg-[#303a29] sticky top-0 z-10">
+        <div className="mt-4 bg-[#141815] rounded-xl shadow-md border border-[#2A302C] max-h-[80vh] overflow-auto">
+          <table className="min-w-full divide-y divide-[#2A302C]">
+            <thead className="bg-[#161A18] sticky top-0 z-10">
               <tr>
                 {['Log ID', 'Timestamp', 'Action', 'Details', 'Status', 'Source'].map((col, idx) => (
                   <th
@@ -276,7 +276,7 @@ export default function SystemLogsPage() {
                 <tr><td colSpan={6} className="text-center py-6">No logs found.</td></tr>
               ) : (
                 paginatedLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-[#3b4430] transition-colors">
+                  <tr key={log.id} className="hover:bg-[#262B28] transition-colors">
                     <td className="px-6 py-3">{log.id}</td>
                     <td className="px-6 py-3">{weekdays[new Date(log.timestamp).getUTCDay()]}, {formatTimestamp(log.timestamp)}</td>
                     <td className="px-6 py-3">{log.action}</td>

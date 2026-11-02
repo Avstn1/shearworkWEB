@@ -709,7 +709,7 @@ export default function SMSCampaigns() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-sky-300 animate-spin mx-auto mb-4" />
-          <p className="text-[#bdbeb3]">Loading your messages...</p>
+          <p className="text-[#BAC0B8]">Loading your messages...</p>
         </div>
       </div>
     );
@@ -718,7 +718,7 @@ export default function SMSCampaigns() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {isTrialUser && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#bdbeb3]">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#BAC0B8]">
           <p className="text-white font-semibold mb-1">Trial credits unlocked</p>
           <p>
             You have 10 credits to test SMS campaigns during your trial.
@@ -754,7 +754,7 @@ export default function SMSCampaigns() {
               </button>
             </div>
             
-            <p className="text-[#bdbeb3] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
+            <p className="text-[#BAC0B8] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
               Schedule targeted SMS campaigns to stay connected with your clients
             </p>
           </div>
@@ -762,7 +762,7 @@ export default function SMSCampaigns() {
           <div className="flex flex-col items-stretch lg:items-end gap-2 sm:gap-3">
             {/* Credits, Tests, and Create Button - All responsive */}
             <div className="grid grid-cols-4 lg:grid-cols-2 gap-1.5 sm:gap-2">
-              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1">
+              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-lg flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1">
                 <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-lime-300 flex-shrink-0" />
                 <span className="text-[10px] sm:text-sm font-semibold text-lime-300 truncate">
                   <span className="hidden sm:inline">{availableCredits.toLocaleString()} credits available</span>
@@ -770,7 +770,7 @@ export default function SMSCampaigns() {
                 </span>
               </div>
               
-              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-full flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 bg-sky-300/10 border border-sky-300/20">
+              <div className="px-2 py-1.5 sm:px-3 sm:py-1.5 rounded-lg flex items-center justify-center gap-1 sm:gap-2 lg:col-span-1 bg-sky-300/10 border border-sky-300/20">
                 <Send className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 text-sky-300" />
                 <span className="text-[10px] sm:text-sm font-semibold truncate text-sky-300">
                   <span className="hidden sm:inline">Test messages cost 1 credit</span>
@@ -782,7 +782,7 @@ export default function SMSCampaigns() {
               {messages.length < 3 && (
                 <button
                   onClick={addMessage}
-                  className="col-span-2 flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-300 text-black rounded-full font-semibold text-[10px] sm:text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+                  className="col-span-2 flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-300 text-black rounded-lg font-semibold text-[10px] sm:text-sm hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
                 >
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Create Message</span>
@@ -794,7 +794,7 @@ export default function SMSCampaigns() {
         </div>
 
         {/* Usage indicator */}
-        <div className="flex items-center gap-2 text-[10px] sm:text-xs text-[#bdbeb3]">
+        <div className="flex items-center gap-2 text-[10px] sm:text-xs text-[#BAC0B8]">
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <div
@@ -899,12 +899,12 @@ export default function SMSCampaigns() {
             <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
               No messages scheduled
             </h3>
-            <p className="text-[#bdbeb3] text-sm sm:text-base mb-6 max-w-md mx-auto">
+            <p className="text-[#BAC0B8] text-sm sm:text-base mb-6 max-w-md mx-auto">
               Create your first automated SMS message to stay connected with your clients
             </p>
             <button
               onClick={addMessage}
-              className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-sky-300 text-black rounded-full font-semibold text-sm sm:text-base hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
+              className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-sky-300 text-black rounded-lg font-semibold text-sm sm:text-base hover:bg-sky-400 transition-all duration-300 shadow-[0_0_12px_rgba(125,211,252,0.4)] hover:shadow-[0_0_16px_rgba(125,211,252,0.6)]"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               Create Message

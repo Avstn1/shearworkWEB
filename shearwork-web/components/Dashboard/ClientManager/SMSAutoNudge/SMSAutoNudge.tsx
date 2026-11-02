@@ -375,7 +375,7 @@ export default function SMSAutoNudge() {
                   </div>
                 </div>
                 {selectedCampaign && (
-                  <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full">
+                  <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-lg">
                     <Users className="w-3.5 h-3.5 text-lime-300" />
                     <span className="text-xs font-bold text-lime-300">{recipients.length} recipients</span>
                   </div>

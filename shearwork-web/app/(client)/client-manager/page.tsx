@@ -56,7 +56,7 @@ export default function ClientManagerPage() {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#12150f] via-[#1a1f17] to-[#303a29]">
+      <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#0A0C0B] via-[#0E110F] to-[#161A18]">
         {/* Header */}
         <motion.div
           variants={fadeInUp}
@@ -71,19 +71,19 @@ export default function ClientManagerPage() {
               <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent animate-gradient">
                 Client Manager
               </h1>
-              <p className="text-[10px] sm:text-xs text-[#bdbeb3] mt-0.5">
+              <p className="text-[10px] sm:text-xs text-[#BAC0B8] mt-0.5">
                 Manage your clients, appointments, and communications
               </p>
             </div>
 
             {/* View Switcher */}
-            <div data-tutorial-id="client-manager-tabs" className="flex gap-1 bg-[#181b15] rounded-full p-1">
+            <div data-tutorial-id="client-manager-tabs" className="flex gap-1 bg-[#141716] rounded-full p-1">
               <button
                 onClick={() => handleSetView('sheets')}
-                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sheets'
-                    ? 'bg-lime-300 text-black shadow-[0_0_8px_#c9d2b3]'
-                    : 'text-[#bdbeb3] hover:text-white hover:bg-[#282b24]'
+                    ? 'bg-lime-300 text-black shadow-[0_0_8px_#D8FA9C]'
+                    : 'text-[#BAC0B8] hover:text-white hover:bg-[#282b24]'
                 }`}
               >
                 <span className="hidden xs:inline">Client Sheets</span>
@@ -91,10 +91,10 @@ export default function ClientManagerPage() {
               </button>
               <button
                 onClick={() => handleSetView('sms')}
-                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
-                    : 'text-[#bdbeb3] hover:text-white hover:bg-[#282b24]'
+                    : 'text-[#BAC0B8] hover:text-white hover:bg-[#282b24]'
                 }`}
               >
                 <span className="hidden xs:inline">SMS Auto Nudge</span>
@@ -102,10 +102,10 @@ export default function ClientManagerPage() {
               </button>
               <button
                 onClick={() => handleSetView('sms-campaign')}
-                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
+                className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms-campaign'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
-                    : 'text-[#bdbeb3] hover:text-white hover:bg-[#282b24]'
+                    : 'text-[#BAC0B8] hover:text-white hover:bg-[#282b24]'
                 }`}
               >
                 <span className="hidden xs:inline">SMS Campaigns</span>
@@ -128,7 +128,7 @@ export default function ClientManagerPage() {
             {/* FAQ Button */}
             <button
               onClick={() => setShowFAQ(true)}
-              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 active:scale-95 sm:hover:scale-105 whitespace-nowrap"
+              className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 active:scale-95 sm:hover:scale-105 whitespace-nowrap"
             >
               <svg 
                 className="w-3.5 h-3.5 sm:w-4 sm:h-4" 

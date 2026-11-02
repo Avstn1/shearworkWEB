@@ -7,7 +7,6 @@ import Navbar from '@/components/Navbar'
 import LayoutWrapper from '@/components/Wrappers/LayoutWrapper'
 import { AuthProvider } from '@/contexts/AuthContext'
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
-import { siteFontVariables } from '@/lib/fonts'
 
 export const metadata = {
   title: 'Corva',
@@ -31,7 +30,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={siteFontVariables}>
+    <html lang="en">
       <head>
         <link rel="icon" type="image/png" href="/images/corvalogo.png" />
       </head>

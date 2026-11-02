@@ -177,14 +177,14 @@ export default function BookingSyncStep({
         {/* Back Warning Modal */}
         {showBackWarning && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-[#1a1f17] border border-white/10 rounded-2xl p-6 max-w-md mx-4">
+            <div className="bg-[#0E110F] border border-white/10 rounded-2xl p-6 max-w-md mx-4">
               <h3 className="text-lg font-semibold text-white mb-2">Sync in Progress</h3>
               <p className="text-sm text-gray-300 mb-4">
                 Please wait for the priority sync to complete before navigating away. Your older data will continue syncing in the background.
               </p>
               <button
                 onClick={() => setShowBackWarning(false)}
-                className="w-full px-4 py-2 bg-gradient-to-r from-emerald-400 to-[#aab39a] text-black font-semibold rounded-xl hover:shadow-lg transition-all"
+                className="w-full px-4 py-2 bg-gradient-to-r from-emerald-400 to-[#C5F27A] text-black font-semibold rounded-xl hover:shadow-lg transition-all"
               >
                 Got it
               </button>
@@ -233,7 +233,7 @@ export default function BookingSyncStep({
             className={`px-8 py-3 font-semibold rounded-xl transition-all ${
               profileLoading || !syncComplete
                 ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-b from-[#D7DEC4] to-[#aab39a] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg'
+                : 'bg-gradient-to-b from-[#E6FFB8] to-[#C5F27A] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg'
             }`}
           >
             {!syncComplete && isSyncing ? 'Syncing...' : 'Next'}

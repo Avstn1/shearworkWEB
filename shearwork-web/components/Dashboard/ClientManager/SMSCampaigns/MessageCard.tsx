@@ -278,14 +278,14 @@ export function MessageCard({
                   {msg.isEditing && !isLocked && (
                     <button
                       onClick={() => onStartEditingTitle(msg.id, msg.title)}
-                      className="p-1 rounded hover:bg-white/10 text-[#bdbeb3] hover:text-white transition-all flex-shrink-0"
+                      className="p-1 rounded hover:bg-white/10 text-[#BAC0B8] hover:text-white transition-all flex-shrink-0"
                     >
                       <Pencil className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     </button>
                   )}
                 </div>
               )}
-              <p className="text-[10px] sm:text-xs text-[#bdbeb3] flex items-center gap-1 mt-0.5">
+              <p className="text-[10px] sm:text-xs text-[#BAC0B8] flex items-center gap-1 mt-0.5">
                 <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
                 <span className="truncate">{getSchedulePreview(msg)}{msg.validationStatus !== 'ACCEPTED' ? ' | Inactive' : ''}</span>
               </p>
@@ -300,7 +300,7 @@ export function MessageCard({
                 <button
                   onClick={() => onLoadPreview(Math.min(previewCount || msg.clientLimit, availableCredits || msg.clientLimit))}
                   disabled={loadingPreview}
-                  className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#bdbeb3] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-white/5 text-[#BAC0B8] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingPreview ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -318,16 +318,16 @@ export function MessageCard({
               <div className="relative group">
                 <button
                   onClick={() => onEnableEdit(msg.id)}
-                  className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#bdbeb3] border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-300 flex items-center gap-1"
+                  className="px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-white/5 text-[#BAC0B8] border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-300 flex items-center gap-1"
                 >
                   <Edit className="w-3 h-3" />
                   <span className="hidden sm:inline">Edit</span>
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0c0e0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  <div className="bg-[#08090A] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                     Edit this message
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0c0e0a]" />
+                      <div className="border-4 border-transparent border-t-[#08090A]" />
                     </div>
                   </div>
                 </div>
@@ -379,15 +379,15 @@ export function MessageCard({
             {/* Locked indicator */}
             {isLocked && !campaignProgress?.is_finished && (
               <div className="relative group">
-                <div className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20 flex items-center gap-1">
+                <div className="px-2 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20 flex items-center gap-1">
                   <Lock className="w-3 h-3" />
                   <span className="hidden sm:inline">Locked</span>
                 </div>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0c0e0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  <div className="bg-[#08090A] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                     Campaign is sending - cannot edit until complete
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0c0e0a]" />
+                      <div className="border-4 border-transparent border-t-[#08090A]" />
                     </div>
                   </div>
                 </div>
@@ -404,10 +404,10 @@ export function MessageCard({
                   <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
                 <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0c0e0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  <div className="bg-[#08090A] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                     Delete this message permanently
                     <div className="absolute top-full right-4 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0c0e0a]" />
+                      <div className="border-4 border-transparent border-t-[#08090A]" />
                     </div>
                   </div>
                 </div>
@@ -430,9 +430,9 @@ export function MessageCard({
                   <span className="font-semibold text-white text-sm">Message Content</span>
                 </div>
                 {showMessageContent ? (
-                  <ChevronUp className="w-4 h-4 text-[#bdbeb3]" />
+                  <ChevronUp className="w-4 h-4 text-[#BAC0B8]" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-[#bdbeb3]" />
+                  <ChevronDown className="w-4 h-4 text-[#BAC0B8]" />
                 )}
               </button>
               <AnimatePresence>
@@ -470,9 +470,9 @@ export function MessageCard({
                   <span className="font-semibold text-white text-sm">Schedule & Recipients</span>
                 </div>
                 {showScheduleSettings ? (
-                  <ChevronUp className="w-4 h-4 text-[#bdbeb3]" />
+                  <ChevronUp className="w-4 h-4 text-[#BAC0B8]" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-[#bdbeb3]" />
+                  <ChevronDown className="w-4 h-4 text-[#BAC0B8]" />
                 )}
               </button>
               <AnimatePresence>
@@ -517,9 +517,9 @@ export function MessageCard({
                   <span className="font-semibold text-white text-sm sm:text-base">Message Details</span>
                 </div>
                 {showContent ? (
-                  <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbeb3]" />
+                  <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#BAC0B8]" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-[#bdbeb3]" />
+                  <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-[#BAC0B8]" />
                 )}
               </button>
               <AnimatePresence>
@@ -568,14 +568,14 @@ export function MessageCard({
         {/* Locked Message View */}
         {isLocked && !msg.isEditing && (
           <div className="p-4 sm:p-6 bg-white/5 border border-white/10 rounded-xl">
-            <p className="text-xs sm:text-sm text-[#bdbeb3] mb-3 sm:mb-4">Message content:</p>
+            <p className="text-xs sm:text-sm text-[#BAC0B8] mb-3 sm:mb-4">Message content:</p>
             <p className="text-white text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
               {msg.message}
             </p>
             {campaignProgress?.is_finished && (
               <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <p className="text-[10px] sm:text-xs text-[#bdbeb3]">
+                  <p className="text-[10px] sm:text-xs text-[#BAC0B8]">
                     This campaign has finished. You can delete this message or create a new one.
                   </p>
                   <button
@@ -613,7 +613,7 @@ export function MessageCard({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#181b15] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+              className="bg-[#141716] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10">
@@ -623,7 +623,7 @@ export function MessageCard({
                     <span className="truncate">Campaign Recipients - {msg.title}</span>
                   </h3>
                   {recipientsStats && (
-                    <p className="text-[10px] sm:text-xs text-[#bdbeb3] mt-0.5">
+                    <p className="text-[10px] sm:text-xs text-[#BAC0B8] mt-0.5">
                       {recipientsStats.total} total • {recipientsStats.successful} successful • {recipientsStats.failed} failed
                     </p>
                   )}
@@ -632,7 +632,7 @@ export function MessageCard({
                   onClick={() => setShowRecipientsModal(false)}
                   className="p-1.5 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                 >
-                  <X className="w-4 h-4 text-[#bdbeb3]" />
+                  <X className="w-4 h-4 text-[#BAC0B8]" />
                 </button>
               </div>
 
@@ -640,16 +640,16 @@ export function MessageCard({
               {recipientsStats && (
                 <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5 flex gap-3 sm:gap-4 text-[10px] sm:text-xs">
                   <div>
-                    <p className="text-[#bdbeb3] mb-0.5">Total</p>
+                    <p className="text-[#BAC0B8] mb-0.5">Total</p>
                     <p className="text-sm sm:text-base font-bold text-white">{recipientsStats.total}</p>
                   </div>
                   <div>
-                    <p className="text-[#bdbeb3] mb-0.5">Successful</p>
+                    <p className="text-[#BAC0B8] mb-0.5">Successful</p>
                     <p className="text-sm sm:text-base font-bold text-lime-300">{recipientsStats.successful}</p>
                   </div>
                   {recipientsStats.failed > 0 && (
                     <div>
-                      <p className="text-[#bdbeb3] mb-0.5">Failed</p>
+                      <p className="text-[#BAC0B8] mb-0.5">Failed</p>
                       <p className="text-sm sm:text-base font-bold text-rose-300">{recipientsStats.failed}</p>
                     </div>
                   )}
@@ -660,8 +660,8 @@ export function MessageCard({
               <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-3 sm:p-4">
                 {recipients.length === 0 ? (
                   <div className="text-center py-8">
-                    <Users className="w-8 h-8 sm:w-10 sm:h-10 text-[#bdbeb3] mx-auto mb-2 opacity-50" />
-                    <p className="text-xs sm:text-sm text-[#bdbeb3]">No recipients found</p>
+                    <Users className="w-8 h-8 sm:w-10 sm:h-10 text-[#BAC0B8] mx-auto mb-2 opacity-50" />
+                    <p className="text-xs sm:text-sm text-[#BAC0B8]">No recipients found</p>
                   </div>
                 ) : (
                   <div className="space-y-1.5">
@@ -682,7 +682,7 @@ export function MessageCard({
                                   {recipient.first_name} {recipient.last_name}
                                 </h4>
                               ) : (
-                                <h4 className="font-semibold text-[#bdbeb3] text-xs sm:text-sm">Unknown Client</h4>
+                                <h4 className="font-semibold text-[#BAC0B8] text-xs sm:text-sm">Unknown Client</h4>
                               )}
                               <span className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold flex-shrink-0 ${
                                 recipient.is_sent
@@ -699,7 +699,7 @@ export function MessageCard({
                                 </span>
                               )}
                             </div>
-                            <p className="text-[10px] sm:text-[11px] text-[#bdbeb3] mt-0.5">
+                            <p className="text-[10px] sm:text-[11px] text-[#BAC0B8] mt-0.5">
                               {recipient.phone_normalized}
                             </p>
                           </div>
@@ -746,7 +746,7 @@ export function MessageCard({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#181b15] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6"
+              className="bg-[#141716] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6"
             >
               <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
@@ -756,7 +756,7 @@ export function MessageCard({
                   <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
                     Deactivate Campaign?
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#bdbeb3]">
+                  <p className="text-xs sm:text-sm text-[#BAC0B8]">
                     This will set your campaign to draft and refund{' '}
                     <span className="text-lime-300 font-semibold">{previewCount || 0} credits</span>{' '}
                     back to your available balance.
@@ -779,7 +779,7 @@ export function MessageCard({
               <div className="flex gap-2 sm:gap-3">
                 <button
                   onClick={() => setShowDeactivateModal(false)}
-                  className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                  className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                 >
                   Cancel
                 </button>

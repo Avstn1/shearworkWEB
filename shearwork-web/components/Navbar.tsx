@@ -14,21 +14,20 @@ import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 import CreditsModal from '@/components/Dashboard/CreditsModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { ButtonLink } from '@/components/ui/Button'
-import { BrandMark } from '@/components/ui/BrandMark'
 
 // Color palette matching React Native app
 const COLORS = {
-  background: '#161913',
-  cardBg: '#181b15',
-  navBg: '#1a1d17', 
-  surface: 'rgba(247, 245, 239, 0.05)',
-  surfaceSolid: '#161A13',
-  glassBorder: 'rgba(247, 245, 239, 0.09)',
-  text: '#F4F3EC',
-  textMuted: 'rgba(244, 243, 236, 0.62)',
-  green: '#aab39a',
-  greenLight: '#8e9a78',
-  greenGlow: 'rgba(170, 179, 154, 0.4)',
+  background: '#121513',
+  cardBg: '#141716',
+  navBg: '#121513', 
+  surface: 'rgba(242, 245, 239, 0.05)',
+  surfaceSolid: '#111412',
+  glassBorder: 'rgba(242, 245, 239, 0.09)',
+  text: '#F2F5EF',
+  textMuted: 'rgba(242, 245, 239, 0.62)',
+  green: '#C5F27A',
+  greenLight: '#A9DB5C',
+  greenGlow: 'rgba(197, 242, 122, 0.4)',
 }
 
 type HoverEvent = React.MouseEvent<HTMLElement>
@@ -37,7 +36,7 @@ type HoverEvent = React.MouseEvent<HTMLElement>
 const hoverHighlight = {
   onMouseEnter: (e: HoverEvent) => {
     e.currentTarget.style.color = COLORS.green
-    e.currentTarget.style.backgroundColor = 'rgba(170, 179, 154, 0.1)'
+    e.currentTarget.style.backgroundColor = 'rgba(197, 242, 122, 0.1)'
   },
   onMouseLeave: (e: HoverEvent) => {
     e.currentTarget.style.color = COLORS.text
@@ -417,9 +416,9 @@ export default function Navbar() {
     <>
       <nav 
         ref={navRef}
-        className="fixed top-0 w-full z-50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_rgb(247_245_239/0.06),0_12px_32px_-20px_rgb(0_0_0/0.8)]"
+        className="fixed top-0 w-full z-50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_rgb(255_255_255/0.06),0_12px_32px_-20px_rgb(0_0_0/0.8)]"
         style={{
-          backgroundColor: 'rgba(14, 17, 12, 0.72)',
+          backgroundColor: 'rgba(7, 9, 10, 0.68)',
         }}
       >
         <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
@@ -428,11 +427,13 @@ export default function Navbar() {
             href="/" 
             className="flex items-center gap-0"
           >
-            <BrandMark className="h-9 w-9 text-sage-bright drop-shadow-[0_0_14px_rgb(170_179_154/0.45)]" />
-            <span className="sr-only">Corva</span>
-            <span
-              aria-hidden="true"
-              className="text-[clamp(1.25rem,4vw,1.65rem)] -ml-0.5 font-semibold tracking-tight bg-gradient-to-r from-ivory via-sage-bright to-sage bg-clip-text text-transparent"
+            <img 
+              src="/images/corvalogo.png" 
+              alt="Corva Logo" 
+              className="h-12 w-auto"
+            />
+            <span 
+              className="text-[clamp(1.25rem,4vw,2rem)] -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent"
             >
               orva
             </span>
@@ -482,7 +483,7 @@ export default function Navbar() {
               className="md:hidden fixed left-0 top-0 h-screen w-64 z-50 shadow-2xl"
               style={{
                 backgroundColor: COLORS.navBg,
-                borderRight: `1px solid rgba(170, 179, 154, 0.2)`,
+                borderRight: `1px solid rgba(197, 242, 122, 0.2)`,
                 animation: 'slideInLeft 0.3s ease-out',
               }}
             >
@@ -500,8 +501,12 @@ export default function Navbar() {
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <div className="flex items-center gap-0">
-                  <BrandMark className="h-8 w-8 text-sage-bright drop-shadow-[0_0_12px_rgb(170_179_154/0.45)]" />
-                  <span className="text-xl -ml-0.5 font-semibold tracking-tight bg-gradient-to-r from-ivory via-sage-bright to-sage bg-clip-text text-transparent">
+                  <img 
+                    src="/images/corvalogo.png" 
+                    alt="Corva Logo" 
+                    className="h-10 w-auto"
+                  />
+                  <span className="text-xl -ml-1 font-bold bg-gradient-to-r from-[#3CE55F] via-[#2ED743] to-[#3CE55F] bg-clip-text text-transparent">
                     orva
                   </span>
                 </div>

@@ -104,10 +104,11 @@ export default function HorizontalLandingPage() {
             className="relative w-screen min-h-screen lg:h-screen snap-start flex-shrink-0 overflow-y-auto lg:overflow-hidden flex flex-col" 
             style={{ 
               color: 'rgba(255, 255, 255, 0.6)',
-              background: 'radial-gradient(120% 90% at 85% 15%, #1E241A 0%, #12150F 45%, #0B0D09 100%)'
+              background: '#07090A'
             }}
           >
-            <div className="flex-1 flex items-center">
+            <div className="aurora-bg" />
+            <div className="relative z-10 flex-1 flex items-center">
               <Hero />
             </div>
             <Footer />

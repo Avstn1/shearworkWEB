@@ -22,14 +22,14 @@ function SectionCard({ icon, title, num, delay = 0, children }: SectionCardProps
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-60px' }}
       transition={{ duration: 0.45, delay, ease: 'easeOut' }}
-      className="rounded-2xl mb-5 overflow-hidden border border-white/[0.09] bg-[#181b15] hover:border-[#aab39a]/20 transition-colors duration-300"
+      className="rounded-2xl mb-5 overflow-hidden border border-white/[0.09] bg-[#141716] hover:border-[#C5F27A]/20 transition-colors duration-300"
     >
       <div className="flex items-center gap-3 px-6 py-4 border-b border-white/[0.09]">
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #aab39a 0%, #8e9a78 100%)',
-            boxShadow: '0 4px 14px rgba(170, 179, 154,0.35)',
+            background: 'linear-gradient(135deg, #C5F27A 0%, #A9DB5C 100%)',
+            boxShadow: '0 4px 14px rgba(197, 242, 122,0.35)',
           }}
         >
           {icon}
@@ -51,12 +51,12 @@ export default function SupportPage() {
 
       <main
         className="min-h-screen relative overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #161913 0%, #181b15 30%, #1b1e18 70%, #161913 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #121513 0%, #141716 30%, #1b1e18 70%, #121513 100%)' }}
       >
         {/* Ambient glow */}
         <div
           className="absolute top-[-80px] left-[-100px] w-72 h-72 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'rgba(170, 179, 154,0.4)', opacity: 0.1 }}
+          style={{ background: 'rgba(197, 242, 122,0.4)', opacity: 0.1 }}
         />
 
         <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-6 pt-28 pb-24">
@@ -68,18 +68,18 @@ export default function SupportPage() {
             transition={{ duration: 0.6, ease: 'easeOut' }}
             className="mb-12"
           >
-            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-4 bg-[rgba(170, 179, 154,0.08)] border border-[rgba(170, 179, 154,0.22)]">
+            <div className="inline-flex items-center gap-2 rounded-lg px-3 py-1 mb-4 bg-[rgba(197, 242, 122,0.08)] border border-[rgba(197, 242, 122,0.22)]">
               <span
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ background: '#aab39a', boxShadow: '0 0 6px rgba(170, 179, 154,0.8)' }}
+                style={{ background: '#C5F27A', boxShadow: '0 0 6px rgba(197, 242, 122,0.8)' }}
               />
-              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-[#aab39a]">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-[#C5F27A]">
                 Support
               </span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-[1.1] mb-3">
-              We're here to <span className="text-[#aab39a]">help.</span>
+              We're here to <span className="text-[#C5F27A]">help.</span>
             </h1>
 
             <p className="text-sm text-white/55 max-w-lg">
@@ -105,7 +105,7 @@ export default function SupportPage() {
               </p>
               <a
                 href="mailto:support@corva.ca"
-                className="text-[#aab39a] font-semibold text-sm hover:underline"
+                className="text-[#C5F27A] font-semibold text-sm hover:underline"
               >
                 support@corva.ca
               </a>
@@ -123,10 +123,10 @@ export default function SupportPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.45 }}
-            className="rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mt-4 border border-[rgba(170, 179, 154,0.25)]"
+            className="rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mt-4 border border-[rgba(197, 242, 122,0.25)]"
             style={{
               background:
-                'linear-gradient(135deg, rgba(170, 179, 154,0.12) 0%, rgba(91,143,82,0.06) 100%)',
+                'linear-gradient(135deg, rgba(197, 242, 122,0.12) 0%, rgba(91,143,82,0.06) 100%)',
             }}
           >
             <div>

@@ -218,9 +218,9 @@ export default function EdgeFunctionDocs({
       onSearchChange={setSearch}
     >
       {EDGE_ENTRIES.length === 0 ? (
-        <p className="text-sm text-[#a9ae9b] text-center py-12">No edge functions documented yet.</p>
+        <p className="text-sm text-[#A3AAA2] text-center py-12">No edge functions documented yet.</p>
       ) : Object.keys(groups).length === 0 ? (
-        <p className="text-sm text-[#a9ae9b] text-center py-12">No edge functions match your search.</p>
+        <p className="text-sm text-[#A3AAA2] text-center py-12">No edge functions match your search.</p>
       ) : (
         Object.entries(groups).map(([category, entries]) => (
           <DocSection

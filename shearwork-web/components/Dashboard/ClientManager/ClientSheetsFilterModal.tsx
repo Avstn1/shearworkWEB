@@ -216,7 +216,7 @@ export default function ClientSheetsFilterDropdown({
   };
 
   const renderFilterInput = (row: FilterRow) => {
-    const inputClass = "flex-1 px-2 py-1.5 rounded-lg bg-[#0d0f0d] border border-white/10 text-xs text-white placeholder:text-[#55584e] focus:outline-none focus:ring-2 focus:ring-lime-300/70";
+    const inputClass = "flex-1 px-2 py-1.5 rounded-lg bg-[#0d0f0d] border border-white/10 text-xs text-white placeholder:text-[#565C57] focus:outline-none focus:ring-2 focus:ring-lime-300/70";
 
     if (!row.type) {
       return (
@@ -225,7 +225,7 @@ export default function ClientSheetsFilterDropdown({
           disabled
           value=""
           placeholder="Select a filter first"
-          className="flex-1 px-2 py-1.5 rounded-lg bg-[#0d0f0d]/50 border border-white/10 text-xs text-white/40 placeholder:text-[#55584e] cursor-not-allowed"
+          className="flex-1 px-2 py-1.5 rounded-lg bg-[#0d0f0d]/50 border border-white/10 text-xs text-white/40 placeholder:text-[#565C57] cursor-not-allowed"
         />
       );
     }

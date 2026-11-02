@@ -177,7 +177,7 @@ export default function MonthlyReports({
                   <div className="flex items-center justify-center gap-1 text-sm font-semibold text-[#a78bfa]">
                     <FileText size={16} /> {r.month} {r.year}
                   </div>
-                  <div className="text-xs text-[#55584e] max-h-20 overflow-hidden relative prose prose-sm">
+                  <div className="text-xs text-[#565C57] max-h-20 overflow-hidden relative prose prose-sm">
                     <div
                       dangerouslySetInnerHTML={{
                         __html: r.content
@@ -237,7 +237,7 @@ export default function MonthlyReports({
             </div>
           ))
         ) : (
-          <div className="text-[#55584e] text-sm mt-2 text-center w-full">
+          <div className="text-[#565C57] text-sm mt-2 text-center w-full">
             No monthly reports for this month/year.
           </div>
         )}

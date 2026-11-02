@@ -63,13 +63,13 @@ export default function FeatureForm({
     <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-6 flex-1 overflow-y-auto min-h-0">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3 flex-1">
-          <Megaphone className="w-6 h-6 text-[#8e9a78]" />
+          <Megaphone className="w-6 h-6 text-[#A9DB5C]" />
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-xl font-bold text-[#F4F3EC]">
+            <h2 className="text-xl font-bold text-[#F2F5EF]">
               {editMode ? 'Edit Feature Update' : 'Create New Feature Update'}
             </h2>
             {editMode && formData.version && (
-              <span className="text-xs text-[#9ca87f] bg-[#5d6a48]/20 px-3 py-1 rounded-full border border-[#5d6a48]/40">
+              <span className="text-xs text-[#9ca87f] bg-[#2A302C]/20 px-3 py-1 rounded-lg border border-[#2A302C]/40">
                 Editing v{formData.version}
               </span>
             )}
@@ -91,7 +91,7 @@ export default function FeatureForm({
         <div className={`grid ${requiresVersion ? 'grid-cols-3' : 'grid-cols-2'} gap-3`}>
           {requiresVersion && (
             <div>
-              <label className="block text-xs font-semibold mb-1.5 text-[#F4F3EC]">
+              <label className="block text-xs font-semibold mb-1.5 text-[#F2F5EF]">
                 Version *
               </label>
               <input
@@ -99,8 +99,8 @@ export default function FeatureForm({
                 required
                 value={formData.version}
                 onChange={(e) => onVersionChange(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg bg-[#303a29] border text-[#F4F3EC] text-sm focus:outline-none focus:ring-1 focus:ring-[#8e9a78]/50 focus:border-[#8e9a78] ${
-                  versionValidationError ? 'border-red-400' : 'border-[#5d6a48]'
+                className={`w-full px-3 py-2 rounded-lg bg-[#161A18] border text-[#F2F5EF] text-sm focus:outline-none focus:ring-1 focus:ring-[#A9DB5C]/50 focus:border-[#A9DB5C] ${
+                  versionValidationError ? 'border-red-400' : 'border-[#2A302C]'
                 }`}
                 placeholder="1.0.1"
               />
@@ -111,27 +111,27 @@ export default function FeatureForm({
           )}
 
           <div>
-            <label className="block text-xs font-semibold mb-1.5 text-[#F4F3EC]">
+            <label className="block text-xs font-semibold mb-1.5 text-[#F2F5EF]">
               Priority
             </label>
             <input
               type="number"
               value={formData.priority}
               onChange={(e) => onFormDataChange({ ...formData, priority: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] text-[#F4F3EC] text-sm focus:outline-none focus:ring-1 focus:ring-[#8e9a78]/50 focus:border-[#8e9a78]"
+              className="w-full px-3 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] text-[#F2F5EF] text-sm focus:outline-none focus:ring-1 focus:ring-[#A9DB5C]/50 focus:border-[#A9DB5C]"
               placeholder="0"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold mb-1.5 text-[#F4F3EC]">
+            <label className="block text-xs font-semibold mb-1.5 text-[#F2F5EF]">
               Category *
             </label>
             <select
               required
               value={formData.category}
               onChange={(e) => onFormDataChange({ ...formData, category: e.target.value as any })}
-              className="w-full px-3 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] text-[#F4F3EC] text-sm focus:outline-none focus:ring-1 focus:ring-[#8e9a78]/50 focus:border-[#8e9a78]"
+              className="w-full px-3 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] text-[#F2F5EF] text-sm focus:outline-none focus:ring-1 focus:ring-[#A9DB5C]/50 focus:border-[#A9DB5C]"
             >
               <option value="feature">Feature</option>
               <option value="improvement">Improvement</option>
@@ -143,7 +143,7 @@ export default function FeatureForm({
 
         {/* Title */}
         <div className="flex-shrink-0">
-          <label className="block text-xs font-semibold mb-1.5 text-[#F4F3EC]">
+          <label className="block text-xs font-semibold mb-1.5 text-[#F2F5EF]">
             Title *
           </label>
           <input
@@ -151,14 +151,14 @@ export default function FeatureForm({
             required
             value={formData.title}
             onChange={(e) => onFormDataChange({ ...formData, title: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] text-[#F4F3EC] text-sm focus:outline-none focus:ring-1 focus:ring-[#8e9a78]/50 focus:border-[#8e9a78]"
+            className="w-full px-3 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] text-[#F2F5EF] text-sm focus:outline-none focus:ring-1 focus:ring-[#A9DB5C]/50 focus:border-[#A9DB5C]"
             placeholder="New SMS Campaign Feature"
           />
         </div>
 
         {/* Description */}
         <div className="flex-1 flex flex-col min-h-0 flex-shrink-0">
-          <label className="block text-xs font-semibold mb-1.5 text-[#F4F3EC] flex-shrink-0">
+          <label className="block text-xs font-semibold mb-1.5 text-[#F2F5EF] flex-shrink-0">
             Description *
           </label>
           <div className="flex-1 overflow-hidden">
@@ -173,27 +173,27 @@ export default function FeatureForm({
         {/* Row 2: Image URL & Video URL */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-shrink-0">
           <div>
-            <label className="block text-xs font-semibold mb-1.5 text-[#F4F3EC]">
+            <label className="block text-xs font-semibold mb-1.5 text-[#F2F5EF]">
               Image URL <span className="text-gray-500 font-normal">(optional)</span>
             </label>
             <input
               type="url"
               value={formData.image_url}
               onChange={(e) => onFormDataChange({ ...formData, image_url: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] text-[#F4F3EC] text-sm focus:outline-none focus:ring-1 focus:ring-[#8e9a78]/50 focus:border-[#8e9a78]"
+              className="w-full px-3 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] text-[#F2F5EF] text-sm focus:outline-none focus:ring-1 focus:ring-[#A9DB5C]/50 focus:border-[#A9DB5C]"
               placeholder="https://..."
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold mb-1.5 text-[#F4F3EC]">
+            <label className="block text-xs font-semibold mb-1.5 text-[#F2F5EF]">
               Video URL <span className="text-gray-500 font-normal">(optional)</span>
             </label>
             <input
               type="url"
               value={formData.video_url}
               onChange={(e) => onFormDataChange({ ...formData, video_url: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg bg-[#303a29] border border-[#5d6a48] text-[#F4F3EC] text-sm focus:outline-none focus:ring-1 focus:ring-[#8e9a78]/50 focus:border-[#8e9a78]"
+              className="w-full px-3 py-2 rounded-lg bg-[#161A18] border border-[#2A302C] text-[#F2F5EF] text-sm focus:outline-none focus:ring-1 focus:ring-[#A9DB5C]/50 focus:border-[#A9DB5C]"
               placeholder="https://..."
             />
           </div>
@@ -201,15 +201,15 @@ export default function FeatureForm({
 
         {/* Admin View Exclusion Toggle - Only for drafts */}
         {!formData.is_published && (
-          <div className="flex items-center gap-3 p-3 bg-[#1e241a]/50 rounded-xl border border-[#5d6a48]/30 flex-shrink-0">
+          <div className="flex items-center gap-3 p-3 bg-[#111412]/50 rounded-xl border border-[#2A302C]/30 flex-shrink-0">
             <input
               type="checkbox"
               id="admin_view_excluded"
               checked={formData.admin_view_excluded}
               onChange={(e) => onFormDataChange({ ...formData, admin_view_excluded: e.target.checked })}
-              className="w-4 h-4 rounded border-[#5d6a48] bg-[#303a29] text-amber-500 focus:ring-1 focus:ring-amber-500/50"
+              className="w-4 h-4 rounded border-[#2A302C] bg-[#161A18] text-amber-500 focus:ring-1 focus:ring-amber-500/50"
             />
-            <label htmlFor="admin_view_excluded" className="text-xs font-semibold text-[#F4F3EC] cursor-pointer">
+            <label htmlFor="admin_view_excluded" className="text-xs font-semibold text-[#F2F5EF] cursor-pointer">
               Exclude from Admin view <span className="text-gray-500 font-normal">(drafts only)</span>
             </label>
           </div>
@@ -219,7 +219,7 @@ export default function FeatureForm({
         <button
           type="submit"
           disabled={loading || !!versionValidationError}
-          className="w-full py-2.5 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-[#5d6a48] hover:bg-[#8e9a78] text-[#F4F3EC] shadow-md text-sm flex-shrink-0"
+          className="w-full py-2.5 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-[#2A302C] hover:bg-[#A9DB5C] text-[#F2F5EF] shadow-md text-sm flex-shrink-0"
         >
           {loading ? (editMode ? 'Updating...' : 'Creating...') : (editMode ? 'Update Feature' : 'Create Feature Update')}
         </button>

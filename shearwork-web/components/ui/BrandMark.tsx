@@ -23,7 +23,7 @@ export function BrandMark({ className = 'h-8 w-8' }: { className?: string }) {
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 ${className}`}>
-      <BrandMark className="h-8 w-8 text-sage-bright drop-shadow-[0_0_12px_rgb(170_179_154/0.45)]" />
+      <BrandMark className="h-8 w-8 text-sage-bright drop-shadow-[0_0_12px_rgb(197_242_122/0.45)]" />
       <span className="bg-gradient-to-r from-ivory via-sage-bright to-sage bg-clip-text text-[1.35rem] font-semibold tracking-tight text-transparent">
         Corva
       </span>

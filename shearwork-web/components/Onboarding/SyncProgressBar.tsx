@@ -146,7 +146,7 @@ export default function SyncProgressBar({
       
       <div className="w-full bg-black/40 rounded-full h-3 overflow-hidden border border-white/10">
         <div
-          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#aab39a]"
+          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#C5F27A]"
           style={{ width: `${displayProgress}%` }}
         />
       </div>

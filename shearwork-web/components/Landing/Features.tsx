@@ -4,17 +4,17 @@ import { motion } from 'framer-motion'
 
 // Color palette
 const COLORS = {
-  background: '#161913',
-  cardBg: '#181b15',
-  navBg: '#1a1d17', 
-  surface: 'rgba(247, 245, 239, 0.05)',
-  surfaceSolid: '#161A13',
-  glassBorder: 'rgba(247, 245, 239, 0.09)',
-  text: '#F4F3EC',
-  textMuted: 'rgba(244, 243, 236, 0.62)',
-  green: '#aab39a',
-  greenLight: '#8e9a78',
-  greenGlow: 'rgba(170, 179, 154, 0.4)',
+  background: '#121513',
+  cardBg: '#141716',
+  navBg: '#121513', 
+  surface: 'rgba(242, 245, 239, 0.05)',
+  surfaceSolid: '#111412',
+  glassBorder: 'rgba(242, 245, 239, 0.09)',
+  text: '#F2F5EF',
+  textMuted: 'rgba(242, 245, 239, 0.62)',
+  green: '#C5F27A',
+  greenLight: '#A9DB5C',
+  greenGlow: 'rgba(197, 242, 122, 0.4)',
 }
 
 export default function Features() {
@@ -51,7 +51,7 @@ export default function Features() {
       id="features" 
       className="py-24 text-center"
       style={{
-        background: `linear-gradient(180deg, #161913 0%, #181b15 50%, #161913 100%)`,
+        background: `linear-gradient(180deg, #121513 0%, #141716 50%, #121513 100%)`,
       }}
     >
       <motion.h2

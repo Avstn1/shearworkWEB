@@ -965,7 +965,7 @@ return (
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
             className="
-              bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl
+              bg-[#141716] border border-white/10 rounded-2xl shadow-2xl
               w-full
               max-w-4xl
               h-[85dvh] md:h-auto
@@ -984,7 +984,7 @@ return (
                     <span className="truncate">Recipients for {messageTitle}</span>
                   </h3>
                   {previewStats && (
-                    <p className="text-xs md:text-sm text-[#bdbeb3] mt-1">
+                    <p className="text-xs md:text-sm text-[#BAC0B8] mt-1">
                       <span className="block sm:inline">
                         {clientLimit === 0 ? 0 : activeClientCount} active • {selectedClients.length} selected
                       </span>
@@ -999,7 +999,7 @@ return (
                   onClick={onClose}
                   className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
                 >
-                  <X className="w-5 h-5 text-[#bdbeb3]" />
+                  <X className="w-5 h-5 text-[#BAC0B8]" />
                 </button>
               </div>
             </div>
@@ -1011,7 +1011,7 @@ return (
                 className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold transition-all relative flex justify-center items-center ${
                   activeTab === "client-list"
                     ? "text-sky-300"
-                    : "text-[#bdbeb3] hover:text-white"
+                    : "text-[#BAC0B8] hover:text-white"
                 }`}
               >
                 <span className="hidden sm:inline">Client List</span>
@@ -1032,7 +1032,7 @@ return (
                 className={`px-3 md:px-4 py-3 text-xs md:text-sm font-semibold transition-all relative flex justify-center items-center ${
                   activeTab === "deselected"
                     ? "text-sky-300"
-                    : "text-[#bdbeb3] hover:text-white"
+                    : "text-[#BAC0B8] hover:text-white"
                 }`}
               >
                 <span className="hidden sm:inline">Other Clients</span>
@@ -1052,13 +1052,13 @@ return (
             {/* Search Bar */}
             <div className="p-3 md:p-4 border-b border-white/10 flex-shrink-0">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#bdbeb3]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#BAC0B8]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name or phone..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm md:text-base text-white placeholder-[#bdbeb3]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm md:text-base text-white placeholder-[#BAC0B8]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all"
                 />
               </div>
             </div>
@@ -1071,7 +1071,7 @@ return (
                   <div className="flex items-center justify-between gap-3 md:gap-6">
                     <div className="grid grid-cols-2 md:flex md:gap-6 gap-3 md:gap-y-0 w-full">
                       <div>
-                        <p className="text-[10px] md:text-xs text-[#bdbeb3] mb-0.5">
+                        <p className="text-[10px] md:text-xs text-[#BAC0B8] mb-0.5">
                           Total Selected
                         </p>
                         <p className="text-base md:text-xl font-bold text-white">
@@ -1079,13 +1079,13 @@ return (
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] md:text-xs text-[#bdbeb3] mb-0.5">Avg Score</p>
+                        <p className="text-[10px] md:text-xs text-[#BAC0B8] mb-0.5">Avg Score</p>
                         <p className="text-base md:text-xl font-bold text-sky-300">
                           {previewStats.avg_score}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] md:text-xs text-[#bdbeb3] mb-0.5">
+                        <p className="text-[10px] md:text-xs text-[#BAC0B8] mb-0.5">
                           Avg Days Since
                         </p>
                         <p className="text-base md:text-xl font-bold text-purple-400">
@@ -1093,7 +1093,7 @@ return (
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] md:text-xs text-[#bdbeb3] mb-0.5">
+                        <p className="text-[10px] md:text-xs text-[#BAC0B8] mb-0.5">
                           Avg Overdue
                         </p>
                         <p className="text-base md:text-xl font-bold text-orange-400">
@@ -1104,7 +1104,7 @@ return (
                   </div>
 
                   {/* Metric Explanations */}
-                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-[10px] md:text-xs text-[#bdbeb3]">
+                  <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5 text-[10px] md:text-xs text-[#BAC0B8]">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
                       <div>
                         <span className="text-sky-300 font-medium">Score:</span>{" "}
@@ -1177,10 +1177,10 @@ return (
 
               {/* Sticky Pagination - Client List */}
               {activeTab === "client-list" && (
-                <div className="sticky top-0 z-10 bg-[#181b15] border-b border-white/10 px-3 md:px-6 py-2 md:py-3">
+                <div className="sticky top-0 z-10 bg-[#141716] border-b border-white/10 px-3 md:px-6 py-2 md:py-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 md:gap-4 min-w-0">
-                      <p className="text-xs md:text-sm text-[#bdbeb3] truncate">
+                      <p className="text-xs md:text-sm text-[#BAC0B8] truncate">
                         <span className="hidden sm:inline">Page {clientListPage} of {clientListTotalPages} • </span>
                         {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}
                       </p>
@@ -1208,7 +1208,7 @@ return (
                           <div className="w-px h-6 md:h-8 bg-white/10" />
                           <button
                             onClick={() => setBatchSelectedForAction(new Set())}
-                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                           >
                             Clear
                           </button>
@@ -1248,10 +1248,10 @@ return (
 
               {/* Sticky Pagination - Deselected Clients */}
               {activeTab === "deselected" && (
-                <div className="sticky top-0 z-10 bg-[#181b15] border-b border-white/10 px-3 md:px-6 py-2 md:py-3">
+                <div className="sticky top-0 z-10 bg-[#141716] border-b border-white/10 px-3 md:px-6 py-2 md:py-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 md:gap-4 min-w-0">
-                      <p className="text-xs md:text-sm text-[#bdbeb3] truncate">
+                      <p className="text-xs md:text-sm text-[#BAC0B8] truncate">
                         <span className="hidden sm:inline">Page {currentPage} of {totalPages} • </span>
                         {allClients.length} client{allClients.length !== 1 ? "s" : ""}
                       </p>
@@ -1271,7 +1271,7 @@ return (
                           <div className="w-px h-6 md:h-8 bg-white/10" />
                           <button
                             onClick={() => setBatchSelectedForAction(new Set())}
-                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                            className="px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                           >
                             Clear
                           </button>
@@ -1313,12 +1313,12 @@ return (
                 {loadingAllClients && activeTab === "deselected" ? (
                   <div className="text-center py-12">
                     <div className="w-8 h-8 border-2 border-sky-300 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-[#bdbeb3]">Loading clients...</p>
+                    <p className="text-[#BAC0B8]">Loading clients...</p>
                   </div>
                 ) : filteredClients.length === 0 ? (
                   <div className="text-center py-12">
-                    <Users className="w-12 h-12 text-[#bdbeb3] mx-auto mb-4 opacity-50" />
-                    <p className="text-sm md:text-base text-[#bdbeb3]">
+                    <Users className="w-12 h-12 text-[#BAC0B8] mx-auto mb-4 opacity-50" />
+                    <p className="text-sm md:text-base text-[#BAC0B8]">
                       {debouncedSearch
                         ? "No clients found matching your search"
                         : activeTab === "deselected"
@@ -1391,7 +1391,7 @@ return (
                                   {client.visiting_type}
                                 </span>
                               </div>
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1.5 md:mt-2 text-[10px] md:text-xs text-[#bdbeb3]">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1.5 md:mt-2 text-[10px] md:text-xs text-[#BAC0B8]">
                                 <span className="truncate">{client.phone_normalized}</span>
                                 <span className="hidden sm:inline">•</span>
                                 <span className="truncate">
@@ -1408,7 +1408,7 @@ return (
                                 Score: {client.score}
                               </p>
                               {normalVisitInterval && (
-                                <p className="text-[10px] md:text-xs text-[#bdbeb3] hidden sm:block">
+                                <p className="text-[10px] md:text-xs text-[#BAC0B8] hidden sm:block">
                                   Every ~{normalVisitInterval} days
                                 </p>
                               )}
@@ -1454,7 +1454,7 @@ return (
                                   </span>
                                 )}
                               </div>
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1.5 md:mt-2 text-[10px] md:text-xs text-[#bdbeb3]">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-1.5 md:mt-2 text-[10px] md:text-xs text-[#BAC0B8]">
                                 <span className="truncate">
                                   {(client.phone_normalized || 
                                     ('phone' in client ? client.phone : '') || 
@@ -1474,7 +1474,7 @@ return (
                               </div>
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="text-[10px] md:text-xs text-[#bdbeb3]">
+                              <p className="text-[10px] md:text-xs text-[#BAC0B8]">
                                 {client.total_appointments} visits
                               </p>
                             </div>
@@ -1502,7 +1502,7 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-sky-300/20 text-sky-300 flex items-center justify-center flex-shrink-0">
@@ -1512,7 +1512,7 @@ return (
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Select Client?
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         <span className="text-white font-semibold">
                           {pendingSelectClient.first_name}{" "}
                           {pendingSelectClient.last_name}
@@ -1539,7 +1539,7 @@ return (
                         setShowSelectModal(false);
                         setPendingSelectClient(null);
                       }}
-                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
@@ -1570,7 +1570,7 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
@@ -1580,7 +1580,7 @@ return (
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Remove Selection?
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         <span className="text-white font-semibold">
                           {pendingUnselectClient.first_name}{" "}
                           {pendingUnselectClient.last_name}
@@ -1606,7 +1606,7 @@ return (
                         setShowUnselectModal(false);
                         setPendingUnselectClient(null);
                       }}
-                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
@@ -1637,7 +1637,7 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
@@ -1647,7 +1647,7 @@ return (
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Deselect Client?
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         <span className="text-white font-semibold">
                           {pendingDeselectName}
                         </span>{" "}
@@ -1674,7 +1674,7 @@ return (
                         setPendingDeselectPhone(null);
                         setPendingDeselectName("");
                       }}
-                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
@@ -1705,7 +1705,7 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-lime-300/20 text-lime-300 flex items-center justify-center flex-shrink-0">
@@ -1715,7 +1715,7 @@ return (
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Remove from Deselected?
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         <span className="text-white font-semibold">
                           {pendingReselectName}
                         </span>{" "}
@@ -1742,7 +1742,7 @@ return (
                         setPendingReselectPhone(null);
                         setPendingReselectName("");
                       }}
-                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
@@ -1772,7 +1772,7 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start gap-3 md:gap-4 mb-4">
                     <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -1784,7 +1784,7 @@ return (
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         {batchActionType === 'select' ? 'Select' : 'Deselect'} {batchSelectedForAction.size} Client{batchSelectedForAction.size > 1 ? 's' : ''}?
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         {batchActionType === 'select' 
                           ? `${batchSelectedForAction.size} client${batchSelectedForAction.size > 1 ? 's' : ''} will always receive this message regardless of the algorithm.`
                           : `${batchSelectedForAction.size} client${batchSelectedForAction.size > 1 ? 's' : ''} will not receive this message.`
@@ -1815,7 +1815,7 @@ return (
                         setShowBatchConfirmModal(false);
                         setBatchActionType(null);
                       }}
-                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
@@ -1850,7 +1850,7 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0">
@@ -1860,7 +1860,7 @@ return (
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Reset All Selections?
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         This will reset all your deselected and manually selected clients. The algorithm will return to its default selection.
                       </p>
                     </div>
@@ -1878,7 +1878,7 @@ return (
                   <div className="flex gap-2 md:gap-3">
                     <button
                       onClick={() => setShowResetModal(false)}
-                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
@@ -1909,14 +1909,14 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Add One-time Recipient
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         This client will receive this message once, regardless of the algorithm.
                       </p>
                     </div>
@@ -1924,14 +1924,14 @@ return (
                       onClick={() => setShowAddCustomModal(false)}
                       className="p-1 hover:bg-white/10 rounded-full transition-colors"
                     >
-                      <X className="w-5 h-5 text-[#bdbeb3]" />
+                      <X className="w-5 h-5 text-[#BAC0B8]" />
                     </button>
                   </div>
 
                   <div className="space-y-4 mb-6">
                     {/* First Name */}
                     <div>
-                      <label className="block text-xs md:text-sm font-medium text-[#bdbeb3] mb-1.5">
+                      <label className="block text-xs md:text-sm font-medium text-[#BAC0B8] mb-1.5">
                         First Name
                       </label>
                       <input
@@ -1939,13 +1939,13 @@ return (
                         value={customFirstName}
                         onChange={(e) => setCustomFirstName(e.target.value)}
                         placeholder="John"
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#bdbeb3]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#BAC0B8]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
                       />
                     </div>
 
                     {/* Last Name */}
                     <div>
-                      <label className="block text-xs md:text-sm font-medium text-[#bdbeb3] mb-1.5">
+                      <label className="block text-xs md:text-sm font-medium text-[#BAC0B8] mb-1.5">
                         Last Name
                       </label>
                       <input
@@ -1953,13 +1953,13 @@ return (
                         value={customLastName}
                         onChange={(e) => setCustomLastName(e.target.value)}
                         placeholder="Doe"
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#bdbeb3]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#BAC0B8]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
                       />
                     </div>
 
                     {/* Phone Number */}
                     <div>
-                      <label className="block text-xs md:text-sm font-medium text-[#bdbeb3] mb-1.5">
+                      <label className="block text-xs md:text-sm font-medium text-[#BAC0B8] mb-1.5">
                         Phone Number
                       </label>
                       <div className="relative">
@@ -1986,10 +1986,10 @@ return (
                           }}
                           placeholder="(123) 456-7890"
                           maxLength={14}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 md:pl-12 pr-3 md:pr-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#bdbeb3]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 md:pl-12 pr-3 md:pr-4 py-2 md:py-2.5 text-sm md:text-base text-white placeholder-[#BAC0B8]/50 focus:outline-none focus:ring-2 focus:ring-lime-300/50 focus:border-lime-300/50 transition-all"
                         />
                       </div>
-                      <p className="text-[10px] md:text-xs text-[#bdbeb3] mt-1">
+                      <p className="text-[10px] md:text-xs text-[#BAC0B8] mt-1">
                         Enter 10-digit phone number
                       </p>
                     </div>
@@ -2012,7 +2012,7 @@ return (
                         setCustomLastName('');
                         setCustomPhone('');
                       }}
-                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#bdbeb3] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                      className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
                     >
                       Cancel
                     </button>
@@ -2042,7 +2042,7 @@ return (
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.95, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-[#181b15] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+                  className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
                 >
                   <div className="flex items-start gap-3 md:gap-4 mb-4">
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-300/20 text-amber-300 flex items-center justify-center flex-shrink-0">
@@ -2052,7 +2052,7 @@ return (
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">
                         Increase Max Clients
                       </h3>
-                      <p className="text-xs md:text-sm text-[#bdbeb3]">
+                      <p className="text-xs md:text-sm text-[#BAC0B8]">
                         You currently have {selectedClients.length} one-time recipient{selectedClients.length !== 1 ? 's' : ''} selected, 
                         but your max clients is set to 0.
                       </p>
