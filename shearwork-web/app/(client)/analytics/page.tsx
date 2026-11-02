@@ -267,7 +267,7 @@ export default function DashboardPage() {
   }
 
   const DashboardHeader = () => (
-    <PageHeader icon={TrendingUp} tone="sage"
+    <PageHeader icon={TrendingUp} tone="violet"
       title="Analytics"
       subtitle={VIEW_SUBTITLES[dashboardView]}
       actions={

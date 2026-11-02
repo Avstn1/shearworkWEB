@@ -30,9 +30,9 @@ export default function DonutBreakdown({
   const focus = active != null ? items[active] : null
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 items-center gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="grid min-h-0 flex-1 grid-cols-1 items-center gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:grid-rows-[minmax(0,1fr)]">
       {/* Donut */}
-      <div className="relative mx-auto aspect-square h-full max-h-[260px] w-full max-w-[260px] min-h-[180px] sm:max-h-none sm:max-w-none">
+      <div className="relative mx-auto aspect-square max-h-[260px] w-full max-w-[260px] min-h-[160px] sm:h-full sm:max-h-full sm:w-auto sm:max-w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -71,7 +71,7 @@ export default function DonutBreakdown({
       </div>
 
       {/* Ranked list */}
-      <ul className="min-w-0 space-y-3 self-center">
+      <ul className="max-h-full min-w-0 space-y-2.5 self-center overflow-y-auto pr-1">
         {items.map((item, i) => (
           <li
             key={item.name}

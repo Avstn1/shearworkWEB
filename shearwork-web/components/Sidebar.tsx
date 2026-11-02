@@ -90,11 +90,11 @@ export default function Sidebar() {
   // ]
 
   const navItems = [
-    { href: '/dashboard', icon: Grid, label: 'Dashboard' },
-    { href: '/analytics', icon: TrendingUp, label: 'Analytics' },
-    { href: '/client-manager', icon: UserCog, label: 'Client Manager' },
-    { href: '/appointment-manager', icon: Calendar, label: 'Appointments' },
-    { href: '/expenses', icon: CreditCard, label: 'Expenses' },
+    { href: '/dashboard', icon: Grid, label: 'Dashboard', tone: 'sage' },
+    { href: '/analytics', icon: TrendingUp, label: 'Analytics', tone: 'violet' },
+    { href: '/client-manager', icon: UserCog, label: 'Client Manager', tone: 'sky' },
+    { href: '/appointment-manager', icon: Calendar, label: 'Appointments', tone: 'sand' },
+    { href: '/expenses', icon: CreditCard, label: 'Expenses', tone: 'coral' },
   ]
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
@@ -115,12 +115,18 @@ export default function Sidebar() {
                 href={item.href}
                 title={item.label}
                 aria-current={active ? 'page' : undefined}
-                className={`relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors md:justify-center lg:justify-start ${
-                  active ? 'bg-[rgb(140_196_112/0.12)] text-ivory' : 'text-gray-400 hover:bg-white/[0.04] hover:text-ivory'
+                className={`tone-${item.tone} relative flex h-10 items-center gap-3 rounded-lg px-2 text-sm font-medium transition-colors md:justify-center lg:justify-start ${
+                  active ? 'bg-[rgb(var(--tone)/0.12)] text-ivory' : 'text-gray-400 hover:bg-white/[0.04] hover:text-ivory'
                 }`}
               >
-                {active && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded-r bg-sage" />}
-                <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-sage-bright' : ''}`} strokeWidth={1.75} />
+                {active && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded-r bg-[rgb(var(--tone))]" />}
+                <span
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-md transition-colors ${
+                    active ? 'bg-[rgb(var(--tone)/0.22)] text-tone' : 'text-[color:var(--tone-fg)] opacity-80'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" strokeWidth={1.9} />
+                </span>
                 <span className="hidden truncate lg:inline">{item.label}</span>
               </Link>
             )

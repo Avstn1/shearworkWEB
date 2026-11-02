@@ -476,15 +476,15 @@ html {
   .stat-delta-down { font-size: 0.75rem; font-weight: 600; color: #D99A8B; }
 
   .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.4rem; border-radius: 0.3125rem; font-size: 0.6875rem; font-weight: 600; line-height: 1.4; white-space: nowrap; background: rgb(255 255 255 / 0.06); color: var(--color-gray-300); }
-  .badge-sage { background: rgb(143 181 122 / 0.14); color: var(--color-sage-bright); }
-  .badge-warn { background: rgb(216 197 154 / 0.14); color: #D8C59A; }
-  .badge-danger { background: rgb(217 154 139 / 0.14); color: #D99A8B; }
-  .badge-info { background: rgb(150 176 196 / 0.14); color: #A9C0D2; }
+  .badge-sage { background: rgb(140 196 112 / 0.16); color: #B3DA98; box-shadow: inset 0 0 0 1px rgb(140 196 112 / 0.22); }
+  .badge-warn { background: rgb(226 184 110 / 0.16); color: #EBCB91; box-shadow: inset 0 0 0 1px rgb(226 184 110 / 0.22); }
+  .badge-danger { background: rgb(232 132 112 / 0.16); color: #F2A796; box-shadow: inset 0 0 0 1px rgb(232 132 112 / 0.22); }
+  .badge-info { background: rgb(112 166 222 / 0.16); color: #A6CBF2; box-shadow: inset 0 0 0 1px rgb(112 166 222 / 0.22); }
 
   .segmented { display: inline-flex; gap: 0.25rem; padding: 0.25rem; border-radius: 0.5rem; background: var(--color-canvas); border: 1px solid var(--color-glass-border); }
   .segmented-item { flex: 1; padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.8125rem; font-weight: 500; color: var(--color-muted); white-space: nowrap; transition: background-color 0.15s ease, color 0.15s ease; }
   .segmented-item:hover { color: var(--color-ivory); }
-  .segmented-item[data-active='true'] { background: var(--color-raised); color: var(--color-ivory); box-shadow: inset 0 0 0 1px var(--color-glass-border-strong); }
+  .segmented-item[data-active='true'] { background: linear-gradient(180deg, rgb(140 196 112 / 0.20), rgb(140 196 112 / 0.10)); color: #F4F6F1; box-shadow: inset 0 0 0 1px rgb(140 196 112 / 0.35); }
 
   .field {
     width: 100%;
@@ -509,7 +509,7 @@ html {
   .table-clean tbody tr:last-child td { border-bottom: 0; }
 
   .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; padding: 2.5rem 1rem; text-align: center; color: var(--color-muted); font-size: 0.875rem; }
-  .empty-state svg { width: 1.75rem; height: 1.75rem; color: var(--color-gray-500); }
+  .empty-state > svg { box-sizing: content-box; width: 1.25rem; height: 1.25rem; padding: 0.75rem; border-radius: 999px; color: #A6CBF2; background: rgb(112 166 222 / 0.12); box-shadow: inset 0 0 0 1px rgb(112 166 222 / 0.22); }
   .empty-state strong { color: var(--color-ivory); font-weight: 600; }
 
   .divider { height: 1px; background: var(--color-glass-border); border: 0; }
@@ -560,9 +560,9 @@ html {
     width: 2rem;
     height: 2rem;
     border-radius: 0.5rem;
-    background: rgb(var(--tone, 143 181 122) / 0.12);
-    color: var(--tone-fg, #A9C79A);
-    box-shadow: inset 0 0 0 1px rgb(var(--tone, 143 181 122) / 0.18);
+    background: linear-gradient(160deg, rgb(var(--tone, 140 196 112) / 0.26), rgb(var(--tone, 140 196 112) / 0.10));
+    color: var(--tone-fg, #B3DA98);
+    box-shadow: inset 0 0 0 1px rgb(var(--tone, 140 196 112) / 0.32), inset 0 1px 0 rgb(255 255 255 / 0.08);
   }
   .icon-tile svg { width: 1rem; height: 1rem; }
   .icon-tile-sm { width: 1.625rem; height: 1.625rem; border-radius: 0.4375rem; }
@@ -590,8 +590,14 @@ html {
   .bar-fill { height: 100%; border-radius: inherit; background: rgb(var(--tone, 143 181 122)); }
 
   /* In the product UI the primary action is sage so key actions stand out */
-  .app-page .btn-primary, .app-surface .btn-primary, .modal-surface .btn-primary { color: var(--color-ink); background: var(--color-sage-bright); box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.12); }
-  .app-page .btn-primary:hover, .app-surface .btn-primary:hover, .modal-surface .btn-primary:hover { background: #BCD3AF; }
+  .app-page .btn-primary, .app-surface .btn-primary, .modal-surface .btn-primary {
+    color: #F4F6F1;
+    background: linear-gradient(180deg, #679A51 0%, #557F43 100%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), inset 0 0 0 1px rgb(140 196 112 / 0.35), 0 6px 16px -8px rgb(85 127 67 / 0.7);
+  }
+  .app-page .btn-primary:hover, .app-surface .btn-primary:hover, .modal-surface .btn-primary:hover {
+    background: linear-gradient(180deg, #72A85B 0%, #5E8B4A 100%);
+  }
 
 
   .modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / 0.6); backdrop-filter: blur(4px); }

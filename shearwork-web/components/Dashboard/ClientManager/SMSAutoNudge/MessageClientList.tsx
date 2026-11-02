@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { NUDGING_PAUSED } from '@/lib/featureFlags'
 import { Users, Loader2, FileText, Zap, Clock, AlertCircle, X } from 'lucide-react';
 import { SMSMessage, PhoneNumber } from './types';
 
@@ -113,7 +114,7 @@ className="btn btn-glass btn-sm w-full px-3 text-xs sm:text-sm"
             <div className="relative group">
               <button
                 onClick={() => {
-                  if (!isPartialLock && !isTrialPreview) {
+                  if (!isPartialLock && !isTrialPreview && !NUDGING_PAUSED) {
                     onSave(msg.id, 'activate');
                   }
                 }}
@@ -122,9 +123,10 @@ className="btn btn-glass btn-sm w-full px-3 text-xs sm:text-sm"
                   msg.message.length < 100 ||
                   !msg.isValidated ||
                   isPartialLock ||
-                  isTrialPreview
+                  isTrialPreview ||
+                  NUDGING_PAUSED
                 }
-className="btn btn-primary btn-sm w-full px-3 text-xs sm:text-sm"
+                className="btn btn-primary btn-sm w-full px-3 text-xs sm:text-sm"
               >
                 {isSaving && savingMode === 'activate' ? (
                   <>
@@ -144,10 +146,10 @@ className="btn btn-primary btn-sm w-full px-3 text-xs sm:text-sm"
                   </>
                 )}
               </button>
-              {(isPartialLock || isTrialPreview) && (
+              {(isPartialLock || isTrialPreview || NUDGING_PAUSED) && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
                   <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
-                    {isTrialPreview ? 'Activation available after upgrading' : 'Can be activated again next month'}
+                    {NUDGING_PAUSED ? 'Client nudging is paused for now' : isTrialPreview ? 'Activation available after upgrading' : 'Can be activated again next month'}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
                       <div className="border-4 border-transparent border-t-raised" />
                     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { Search, X, UserCheck, SearchX, PartyPopper, HeartPulse } from 'lucide-react'
 import { IconTile } from '@/components/ui/AppKit'
+import { NUDGING_PAUSED } from '@/lib/featureFlags'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
 import { EmptyState, Segmented } from '@/components/ui/AppKit'
@@ -324,6 +325,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
   const clientCount = getClientCount()
 
   const handleNudge = async () => {
+    if (NUDGING_PAUSED) return
     setNudging(true)
     try {
       const res = await fetch('/api/barber-nudge/manual-smart-bucket', { method: 'POST' })
@@ -355,7 +357,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
     return name.includes(q) || c.phone_normalized.includes(q)
   })
 
-  const nudgeDisabled = isNudgeButtonDisabled()
+  const nudgeDisabled = NUDGING_PAUSED || isNudgeButtonDisabled()
 
   return (
     <div className="flex h-full flex-col">
@@ -428,9 +430,10 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
         type="button"
         onClick={() => setShowConfirm(true)}
         disabled={nudgeDisabled}
+        title={NUDGING_PAUSED ? 'Client nudging is paused for now' : undefined}
         className="btn btn-primary btn-sm mt-3 w-full flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Nudge clients
+        {NUDGING_PAUSED ? 'Nudging paused' : 'Nudge clients'}
       </button>
 
       {/* Confirmation Modal */}

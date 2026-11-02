@@ -181,7 +181,7 @@ export default function UserExpensesPage() {
 
   return (
     <AppPage>
-      <PageHeader icon={Receipt} tone="sand"
+      <PageHeader icon={Receipt} tone="coral"
         title="Expenses"
         subtitle="Track your one-off and recurring expenses per month."
         actions={
