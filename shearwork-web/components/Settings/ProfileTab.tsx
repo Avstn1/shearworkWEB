@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import EditableAvatar from '@/components/EditableAvatar'
-import { Mail, Phone, Upload, Check, X } from 'lucide-react'
+import { Mail, Phone, Upload, Check, X, Loader2 } from 'lucide-react'
+import { Panel } from '@/components/ui/AppKit'
 
 // Modal Portal Component - defined outside to prevent re-creation
 const Modal = ({ children }: { children: React.ReactNode }) => {
@@ -19,6 +20,34 @@ const Modal = ({ children }: { children: React.ReactNode }) => {
   if (!isMounted) return null
   return createPortal(children, document.body)
 }
+
+// Graphite modal chrome: backdrop + surface, title row with close, optional right-aligned footer
+const ModalShell = ({
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+  footer?: React.ReactNode
+}) => (
+  <div className="modal-backdrop z-[100] flex items-center justify-center p-4">
+    <div className="modal-surface w-full max-w-md overflow-hidden">
+      <div className="panel-header">
+        <h3 className="panel-title">{title}</h3>
+        <button onClick={onClose} className="btn btn-ghost btn-sm h-8 w-8 p-0" aria-label="Close">
+          <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
+        </button>
+      </div>
+      <div className="space-y-4 p-5">{children}</div>
+      {footer && (
+        <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">{footer}</div>
+      )}
+    </div>
+  </div>
+)
 
 export default function ProfileTab() {
   const [profile, setProfile] = useState<any>(null)
@@ -555,27 +584,33 @@ export default function ProfileTab() {
   }
 
   if (!profile || !authUser) return (
-    <div className="flex items-center justify-center py-12">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
+    <div className="panel flex items-center justify-center py-16">
+      <Loader2 className="h-5 w-5 animate-spin text-sage" strokeWidth={1.75} />
     </div>
   )
 
-  return (
-    <div className="space-y-8">
-      <h2 className="text-2xl font-bold">Profile Information</h2>
+  const verifiedBadge = (
+    <span className="badge badge-sage">
+      <Check className="h-3 w-3" strokeWidth={2} />
+      Verified
+    </span>
+  )
+  const unverifiedBadge = <span className="badge">Not verified</span>
 
-      {/* Avatar + User Info Card */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+  return (
+    <div className="space-y-4 md:space-y-5">
+      {/* Avatar + User Info */}
+      <Panel title="Profile" subtitle="How you appear across Corva.">
+        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
           <div className="flex flex-col items-center gap-2">
-            <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <div className="group relative cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               <EditableAvatar
                 avatarUrl={profile.avatar_url || '/default-avatar.png'}
                 fullName={profile.full_name}
-                size={96}
+                size={80}
               />
-              <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Upload className="w-6 h-6 text-white" />
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                <Upload className="h-5 w-5 text-ivory" strokeWidth={1.75} />
               </div>
               <input
                 ref={fileInputRef}
@@ -588,251 +623,216 @@ export default function ProfileTab() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-lg px-4 py-1 hover:border-white/20"
+              className="btn btn-ghost btn-sm h-8 text-xs"
             >
               Change photo
             </button>
           </div>
 
-          <div className="space-y-2 flex-1">
+          <div className="min-w-0 flex-1 space-y-2">
             {/* Full name with username */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-xl font-semibold">{profile.full_name}</h3>
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <h3 className="text-lg font-semibold text-ivory">{profile.full_name}</h3>
               <button
                 onClick={handleUsernameClick}
-                className="text-md text-gray-400 hover:text-teal-400 transition mt-2"
+                className="text-sm text-muted transition-colors hover:text-sage-bright"
               >
                 @{profile.username || 'set username'}
               </button>
             </div>
-            
-            <p className="text-sm text-gray-400 capitalize">
-              {profile.role === "Barber" 
-                ? profile.barber_type === "rental" 
-                  ? "Rental Barber" 
+
+            <p className="text-[13px] capitalize text-muted">
+              {profile.role === "Barber"
+                ? profile.barber_type === "rental"
+                  ? "Rental Barber"
                   : "Commission Barber"
                 : profile.role
               }
             </p>
-            
+
             {/* Email with verification status */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Mail className="w-4 h-4 text-gray-400" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Mail className="h-4 w-4 text-gray-500" strokeWidth={1.75} />
               <span className="text-sm text-gray-300">{profile.email || authUser.email}</span>
-              {profile.email_verified ? (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
-                  <Check className="w-3 h-3" />
-                  Verified
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full flex items-center gap-1">
-                  <X className="w-3 h-3" />
-                  Not Verified
-                </span>
-              )}
+              {profile.email_verified ? verifiedBadge : unverifiedBadge}
             </div>
 
             {/* Phone with verification status */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Phone className="w-4 h-4 text-gray-400" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Phone className="h-4 w-4 text-gray-500" strokeWidth={1.75} />
               {profile.phone ? (
                 <>
                   <span className="text-sm text-gray-300">{formatPhoneNumber(profile.phone)}</span>
-                  {profile.phone_verified ? (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
-                      <Check className="w-3 h-3" />
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full flex items-center gap-1">
-                      <X className="w-3 h-3" />
-                      Not Verified
-                    </span>
-                  )}
+                  {profile.phone_verified ? verifiedBadge : unverifiedBadge}
                 </>
               ) : (
                 <>
-                  <span className="text-sm text-gray-400 italic">No phone number</span>
-                  <span className="px-2 py-0.5 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full">
-                    Required for SMS
-                  </span>
+                  <span className="text-sm italic text-gray-500">No phone number</span>
+                  <span className="badge badge-warn">Required for SMS</span>
                 </>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </Panel>
 
-      {/* Email Section */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium text-gray-300">Email Address</label>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="email"
-            value={profile.email || authUser.email}
-            disabled
-            className="flex-1 px-4 py-3 rounded-xl border bg-white/5 border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:cursor-not-allowed"
-          />
-          <button
-            onClick={() => {
-              setEditedEmail(profile.email || authUser.email)
-              setShowEmailModal(true)
-            }}
-            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
-          >
-            Update
-          </button>
-        </div>
-      </div>
+      {/* Contact details */}
+      <Panel title="Contact & booking" subtitle="Used for notifications, SMS features and your booking page.">
+        <div className="space-y-5">
+          {/* Email */}
+          <div>
+            <label className="field-label" htmlFor="profile-email">Email address</label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                id="profile-email"
+                type="email"
+                value={profile.email || authUser.email}
+                disabled
+                className="field flex-1 cursor-not-allowed text-gray-300"
+              />
+              <button
+                onClick={() => {
+                  setEditedEmail(profile.email || authUser.email)
+                  setShowEmailModal(true)
+                }}
+                className="btn btn-glass btn-sm h-10 self-end sm:self-auto"
+              >
+                Update
+              </button>
+            </div>
+          </div>
 
-      {/* Phone Section */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium text-gray-300">Phone Number</label>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="tel"
-            value={profile.phone ? formatPhoneNumber(profile.phone) : ''}
-            disabled
-            placeholder="No phone number set"
-            className="flex-1 px-4 py-3 rounded-xl border bg-white/5 border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:cursor-not-allowed"
-          />
-          <button
-            onClick={() => {
-              const formattedPhone = initializeEditedPhone(profile.phone || '');
-              setEditedPhone(formattedPhone);
-              setOriginalPhone(formattedPhone);
-              setShowPhoneModal(true)
-            }}
-            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
-          >
-            Update
-          </button>
-        </div>
-      </div>
+          {/* Phone */}
+          <div>
+            <label className="field-label" htmlFor="profile-phone">Phone number</label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                id="profile-phone"
+                type="tel"
+                value={profile.phone ? formatPhoneNumber(profile.phone) : ''}
+                disabled
+                placeholder="No phone number set"
+                className="field flex-1 cursor-not-allowed text-gray-300"
+              />
+              <button
+                onClick={() => {
+                  const formattedPhone = initializeEditedPhone(profile.phone || '');
+                  setEditedPhone(formattedPhone);
+                  setOriginalPhone(formattedPhone);
+                  setShowPhoneModal(true)
+                }}
+                className="btn btn-glass btn-sm h-10 self-end sm:self-auto"
+              >
+                Update
+              </button>
+            </div>
+          </div>
 
-      {/* Booking link Section */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium text-gray-300">Booking Link</label>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            value={profile.booking_link || 'No booking link set.'}
-            disabled
-            className="flex-1 px-4 py-3 rounded-xl border bg-white/5 border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:cursor-not-allowed"
-          />
-          <button
-            onClick={() => {
-              setEditedBookingLink(profile.booking_link || '')
-              setShowBookingLinkModal(true)
-            }}
-            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap"
-          >
-            Update
-          </button>
+          {/* Booking link */}
+          <div>
+            <label className="field-label" htmlFor="profile-booking">Booking link</label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                id="profile-booking"
+                type="text"
+                value={profile.booking_link || 'No booking link set.'}
+                disabled
+                className="field flex-1 cursor-not-allowed text-gray-300"
+              />
+              <button
+                onClick={() => {
+                  setEditedBookingLink(profile.booking_link || '')
+                  setShowBookingLinkModal(true)
+                }}
+                className="btn btn-glass btn-sm h-10 self-end sm:self-auto"
+              >
+                Update
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      </Panel>
 
       {/* Commission */}
       {profile.barber_type === 'commission' && (
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-gray-300">Commission Rate (%)</label>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <input
-              value={commission}
-              onChange={e => setCommission(e.target.value)}
-              type="number"
-              placeholder="Enter commission rate"
-              className="w-full sm:w-40 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            />
-            <button
-              onClick={updateCommission}
-              className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all whitespace-nowrap btn-fx"
-            >
-              Save Rate
+        <Panel title="Commission" subtitle="The share of each service you keep.">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="w-full sm:w-48">
+              <label className="field-label" htmlFor="profile-commission">Commission rate (%)</label>
+              <input
+                id="profile-commission"
+                value={commission}
+                onChange={e => setCommission(e.target.value)}
+                type="number"
+                placeholder="Enter commission rate"
+                className="field tabular-nums"
+              />
+            </div>
+            <button onClick={updateCommission} className="btn btn-primary btn-sm h-10 self-end">
+              Save rate
             </button>
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* Email Modal */}
       {showEmailModal && (
         <Modal>
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#141614] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Update Email</h3>
-                <button
-                  onClick={() => {
-                    setShowEmailModal(false)
-                    setEmailVerificationCode('')
-                  }}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+          <ModalShell
+            title="Update email"
+            onClose={() => {
+              setShowEmailModal(false)
+              setEmailVerificationCode('')
+            }}
+          >
+            <div>
+              <label className="field-label">Email address</label>
+              <input
+                type="email"
+                value={editedEmail}
+                onChange={(e) => setEditedEmail(e.target.value)}
+                className="field"
+                placeholder="Enter email address"
+              />
+            </div>
 
-              <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] text-muted">Current status</span>
+              {profile.email_verified ? verifiedBadge : unverifiedBadge}
+            </div>
+
+            {!profile.email_verified && (
+              <div className="space-y-3 rounded-lg border border-white/[0.07] bg-raised p-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Email Address
-                  </label>
+                  <label className="field-label">Verification code</label>
                   <input
-                    type="email"
-                    value={editedEmail}
-                    onChange={(e) => setEditedEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-                    placeholder="Enter email address"
+                    type="text"
+                    value={emailVerificationCode}
+                    onChange={(e) => setEmailVerificationCode(e.target.value)}
+                    className="field tabular-nums tracking-widest"
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
                   />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">Current Status:</span>
-                  {profile.email_verified ? (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full">
-                      Not Verified
-                    </span>
-                  )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={handleSendEmailCode}
+                    disabled={isSendingEmailCode}
+                    className="btn btn-glass btn-sm"
+                  >
+                    {isSendingEmailCode ? 'Sending...' : 'Send code'}
+                  </button>
+                  <button
+                    onClick={handleVerifyEmail}
+                    disabled={isVerifyingEmail || !emailVerificationCode.trim()}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {isVerifyingEmail ? 'Verifying...' : 'Verify'}
+                  </button>
                 </div>
-
-                {!profile.email_verified && (
-                  <div className="space-y-3 p-4 bg-white/5 border border-white/10 rounded-xl">
-                    <label className="block text-sm font-medium text-gray-300">
-                      Verification Code
-                    </label>
-                    <input
-                      type="text"
-                      value={emailVerificationCode}
-                      onChange={(e) => setEmailVerificationCode(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-                      placeholder="Enter 6-digit code"
-                      maxLength={6}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSendEmailCode}
-                        disabled={isSendingEmailCode}
-                        className="flex-1 px-4 py-3 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl font-semibold hover:bg-amber-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSendingEmailCode ? 'Sending...' : 'Send Code'}
-                      </button>
-                      <button
-                        onClick={handleVerifyEmail}
-                        disabled={isVerifyingEmail || !emailVerificationCode.trim()}
-                        className="flex-1 px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
-                      >
-                        {isVerifyingEmail ? 'Verifying...' : 'Verify'}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
-            </div>
-          </div>
+            )}
+          </ModalShell>
         </Modal>
       )}
 
@@ -938,161 +938,128 @@ export default function ProfileTab() {
       {/* Phone Modal without phone verification */}
       {showPhoneModal && (
         <Modal>
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#141614] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Update Phone Number</h3>
-                <button
-                  onClick={() => setShowPhoneModal(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Phone Number
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium">
-                      +1
-                    </div>
-                    <input
-                      type="tel"
-                      value={editedPhone}
-                      onChange={handlePhoneInput}
-                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-                      placeholder="(647) 111-2222"
-                      maxLength={14}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    Enter your 10-digit phone number
-                  </p>
-                </div>
-
-                {profile.phone && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-400">Current:</span>
-                    <span className="text-sm font-medium">{profile.phone}</span>
-                  </div>
-                )}
-
-                {!profile.phone && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
-                    <p className="text-sm text-rose-300">
-                      Phone number is required for SMS marketing features
-                    </p>
-                  </div>
-                )}
-
+          <ModalShell
+            title="Update phone number"
+            onClose={() => setShowPhoneModal(false)}
+            footer={
+              <>
+                <button onClick={() => setShowPhoneModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
                 <button
                   onClick={handleVerifyPhoneNoOTP}
                   disabled={editedPhone.replace(/\D/g, '').length !== 10 || !hasPhoneChanged()}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
+                  className="btn btn-primary btn-sm"
                 >
-                  Save Phone Number
+                  Save phone number
                 </button>
+              </>
+            }
+          >
+            <div>
+              <label className="field-label">Phone number</label>
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 items-center rounded-lg border border-white/[0.09] bg-raised px-3 text-sm text-gray-300">
+                  +1
+                </div>
+                <input
+                  type="tel"
+                  value={editedPhone}
+                  onChange={handlePhoneInput}
+                  className="field flex-1 tabular-nums"
+                  placeholder="(647) 111-2222"
+                  maxLength={14}
+                />
               </div>
+              <p className="mt-2 text-xs text-gray-500">Enter your 10-digit phone number</p>
             </div>
-          </div>
+
+            {profile.phone && (
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-muted">Current</span>
+                <span className="text-sm tabular-nums text-ivory">{profile.phone}</span>
+              </div>
+            )}
+
+            {!profile.phone && (
+              <p className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-[13px] text-amber-300">
+                Phone number is required for SMS marketing features
+              </p>
+            )}
+          </ModalShell>
         </Modal>
       )}
 
       {/* Username Edit Modal */}
       {isUsernameModalOpen && (
         <Modal>
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#141614] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Edit Username</h3>
-                <button
-                  onClick={() => setIsUsernameModalOpen(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Username
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                      @
-                    </span>
-                    <input
-                      type="text"
-                      value={editedUsername}
-                      onChange={handleUsernameChange}
-                      className="w-full pl-9 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50 text-white"
-                      placeholder="username"
-                    />
-                  </div>
-                  {usernameError && (
-                    <p className="mt-2 text-sm text-red-400">{usernameError}</p>
-                  )}
-                  <p className="mt-2 text-xs text-gray-400">
-                    Only lowercase letters and numbers allowed
-                  </p>
-                </div>
-
+          <ModalShell
+            title="Edit username"
+            onClose={() => setIsUsernameModalOpen(false)}
+            footer={
+              <>
+                <button onClick={() => setIsUsernameModalOpen(false)} className="btn btn-ghost btn-sm">Cancel</button>
                 <button
                   onClick={handleUsernameSave}
                   disabled={!editedUsername || !!usernameError || isCheckingUsername}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
+                  className="btn btn-primary btn-sm"
                 >
-                  {isCheckingUsername ? 'Checking...' : 'Update Username'}
+                  {isCheckingUsername ? 'Checking...' : 'Update username'}
                 </button>
+              </>
+            }
+          >
+            <div>
+              <label className="field-label">Username</label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                  @
+                </span>
+                <input
+                  type="text"
+                  value={editedUsername}
+                  onChange={handleUsernameChange}
+                  className="field pl-7"
+                  placeholder="username"
+                />
               </div>
+              {usernameError && (
+                <p className="mt-2 text-[13px] text-[#D99A8B]">{usernameError}</p>
+              )}
+              <p className="mt-2 text-xs text-gray-500">Only lowercase letters and numbers allowed</p>
             </div>
-          </div>
+          </ModalShell>
         </Modal>
       )}
 
       {/* Booking Link Modal */}
       {showBookingLinkModal && (
         <Modal>
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#141614] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Update Booking Link</h3>
-                <button
-                  onClick={() => setShowBookingLinkModal(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Booking URL
-                  </label>
-                  <input
-                    type="url"
-                    value={editedBookingLink}
-                    onChange={(e) => setEditedBookingLink(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-                    placeholder="https://your-booking-site.com"
-                  />
-                </div>
-
+          <ModalShell
+            title="Update booking link"
+            onClose={() => setShowBookingLinkModal(false)}
+            footer={
+              <>
+                <button onClick={() => setShowBookingLinkModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
                 <button
                   onClick={handleUpdateBookingLink}
                   disabled={isUpdatingBookingLink || !editedBookingLink.trim()}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
+                  className="btn btn-primary btn-sm"
                 >
-                  {isUpdatingBookingLink ? 'Updating...' : 'Update Booking Link'}
+                  {isUpdatingBookingLink ? 'Updating...' : 'Update booking link'}
                 </button>
-              </div>
+              </>
+            }
+          >
+            <div>
+              <label className="field-label">Booking URL</label>
+              <input
+                type="url"
+                value={editedBookingLink}
+                onChange={(e) => setEditedBookingLink(e.target.value)}
+                className="field"
+                placeholder="https://your-booking-site.com"
+              />
             </div>
-          </div>
+          </ModalShell>
         </Modal>
       )}
     </div>

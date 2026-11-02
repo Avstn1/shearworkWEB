@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { Filter, X, ChevronDown } from 'lucide-react';
+import { Filter, X, ChevronDown, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Info, Loader2, AlertCircle, Users } from 'lucide-react';
 import ClientSheetsFilterDropdown, {
   ActiveFilter,
   FilterType,
@@ -339,284 +339,286 @@ export default function ClientSheets() {
   };
 
   const sortIndicator = (field: SortField) =>
-    sortField === field ? (sortDir === 'asc' ? '▲' : '▼') : '';
+    sortField === field ? (
+      sortDir === 'asc' ? (
+        <ArrowUp size={12} strokeWidth={2} className="inline-block align-[-1px]" aria-hidden="true" />
+      ) : (
+        <ArrowDown size={12} strokeWidth={2} className="inline-block align-[-1px]" aria-hidden="true" />
+      )
+    ) : null;
+
+  const sortableTh = 'cursor-pointer select-none transition-colors hover:!text-ivory';
 
   const pageStart = total === 0 ? 0 : (page - 1) * limit + 1;
   const pageEnd = Math.min(page * limit, total);
 
+  const repeatOnPage = displayClients.filter((c) => (c.total_appointments ?? 0) >= 2).length;
+  const regularsOnPage = displayClients.filter((c) => (c.total_appointments ?? 0) >= 10).length;
+
   return (
-    <div className="flex flex-col gap-3 overflow-hidden p-1" style={{ height: 'calc(80vh - 80px)', maxHeight: 'calc(82vh - 80px)' }}>
-      {/* Top controls */}
-      <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between flex-shrink-0">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-white">Client Sheets</h2>
-          <p className="text-xs text-[#B8BCB5]">
-            View and manage detailed client information, visit history, and preferences.
-          </p>
-        </div>
-
-        <div className="relative">
-          <button
-            data-filter-toggle
-            onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-            className="px-4 py-2 rounded-lg bg-lime-300 text-black text-sm font-semibold shadow hover:bg-lime-200 transition flex items-center gap-2"
-          >
-            <Filter size={16} />
-            Add Filter
-            <ChevronDown size={16} className={`transition-transform ${isFilterModalOpen ? 'rotate-180' : ''}`} />
-          </button>
-          
-          <ClientSheetsFilterDropdown
-            isOpen={isFilterModalOpen}
-            onToggle={() => setIsFilterModalOpen(false)}
-            activeFilters={activeFilters}
-            onFiltersChange={(filters) => {
-              setActiveFilters(filters);
-              setPage(1);
-            }}
-            minYear={minYear}
-          />
-        </div>
-      </div>
-
-      {/* Active Filters */}
-      {activeFilters.length > 0 && (
-        <div className="flex flex-wrap gap-2 flex-shrink-0">
-          {activeFilters.map((filter) => (
-            <div
-              key={filter.id}
-              className="px-3 py-1.5 rounded-lg bg-lime-300/10 border border-lime-300/30 text-lime-300 text-xs font-medium flex items-center gap-2"
-            >
-              <span>{filter.label}</span>
-              <button
-                onClick={() => handleRemoveFilter(filter.id)}
-                className="hover:bg-lime-300/20 rounded-full p-0.5 transition-colors"
-              >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() => {
-              setActiveFilters([]);
-              setPage(1);
-            }}
-            className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-colors"
-          >
-            Clear All
-          </button>
-        </div>
-      )}
-
-      {/* Pagination bar with summary chips */}
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between flex-shrink-0">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="text-xs text-[#B8BCB5]">
-            {total > 0 ? (
-              <>
-                Showing <span className="text-white">{pageStart}</span>–
-                <span className="text-white">{pageEnd}</span> of{' '}
-                <span className="text-white">{total}</span>
-                {activeFilters.length > 0 && (
-                  <>
-                    {' '}
-                    <span className="text-[#a0a0a0]">(filtered)</span>
-                  </>
-                )}
-              </>
-            ) : (
-              <>Showing 0 results</>
-            )}
-          </div>
-          
-          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-[#e5e5e5] text-xs flex items-center gap-2">
-            <span>Total clients: <span className="font-semibold">{total}</span></span>
+    <div className="flex flex-col gap-4">
+      {/* Summary strip */}
+      <div className="panel grid grid-cols-1 divide-y divide-white/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:block">
+          <p className="stat-label flex items-center gap-2">
+            Total clients
             <button
+              type="button"
               onClick={() => {
                 setIsFAQOpen(true);
               }}
-              className="italic text-lime-400/70 hover:text-lime-400 transition-colors text-xs sm:text-[10px] px-1 py-0.5"
+              className="inline-flex items-center gap-1 normal-case tracking-normal text-[11px] font-medium text-sage transition-colors hover:text-sage-bright"
+              aria-label="Why is this number different from my SMS clients?"
             >
+              <Info size={12} strokeWidth={1.75} />
               Info
             </button>
-          </div>
-
-          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-[#e5e5e5] text-xs">
-            Repeat clients (2+ visits) on this page:{' '}
-            <span className="font-semibold">
-              {displayClients.filter((c) => (c.total_appointments ?? 0) >= 2).length}
-            </span>
-          </div>
-          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-[#e5e5e5] text-xs">
-            Heavy regulars (10+ visits) on this page:{' '}
-            <span className="font-semibold">
-              {displayClients.filter((c) => (c.total_appointments ?? 0) >= 10).length}
-            </span>
-          </div>
+          </p>
+          <p className="text-xl font-semibold tabular-nums text-ivory sm:mt-1.5">{total.toLocaleString()}</p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={limit}
-            onChange={(e) => {
-              const newLimit = parseInt(e.target.value, 10);
-              setLimit(newLimit);
-              setPage(1);
-            }}
-            className="px-2 py-2 rounded-lg bg-black/30 border border-white/15 text-xs text-white focus:outline-none focus:ring-2 focus:ring-lime-300/50"
-          >
-            {[10, 25, 50, 100].map((n) => (
-              <option key={n} value={n}>
-                {n}/page
-              </option>
-            ))}
-          </select>
-
-          <button
-            disabled={loading || page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition ${
-              loading || page <= 1
-                ? 'bg-white/10 text-white/40 cursor-not-allowed'
-                : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          >
-            Prev
-          </button>
-
-          <div className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-xs text-white">
-            Page <span className="font-semibold">{page}</span> /{' '}
-            <span className="font-semibold">{totalPages}</span>
-          </div>
-
-          <button
-            disabled={loading || page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition ${
-              loading || page >= totalPages
-                ? 'bg-white/10 text-white/40 cursor-not-allowed'
-                : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          >
-            Next
-          </button>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:block">
+          <p className="stat-label">Repeat clients on page</p>
+          <p className="text-xl font-semibold tabular-nums text-ivory sm:mt-1.5">
+            {repeatOnPage}
+            <span className="ml-1.5 text-xs font-normal text-gray-500">2+ visits</span>
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:block">
+          <p className="stat-label">Heavy regulars on page</p>
+          <p className="text-xl font-semibold tabular-nums text-ivory sm:mt-1.5">
+            {regularsOnPage}
+            <span className="ml-1.5 text-xs font-normal text-gray-500">10+ visits</span>
+          </p>
         </div>
       </div>
 
-      {/* Table - Scrollable */}
-      <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-white/10 bg-black/20 backdrop-blur-md">
-        {loading ? (
-          <div className="py-16 text-center text-sm text-[#B8BCB5]">Loading clients. Please refresh the site</div>
-        ) : error ? (
-          <div className="py-16 text-center text-sm text-red-300">{error}</div>
-        ) : displayClients.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="text-sm text-[#B8BCB5]">
-              {activeFilters.length > 0
-                ? 'No clients match your current filters.'
-                : 'No clients found.'}
+      {/* Table panel */}
+      <section className="panel flex flex-col" style={{ maxHeight: 'calc(100dvh - var(--navbar-height, 72px) - 2rem)' }}>
+        <header className="panel-header flex-wrap">
+          <div className="min-w-0">
+            <h2 className="panel-title">Client sheets</h2>
+            <p className="panel-subtitle">
+              {total > 0 ? (
+                <>
+                  Showing <span className="tabular-nums text-gray-200">{pageStart}–{pageEnd}</span> of{' '}
+                  <span className="tabular-nums text-gray-200">{total.toLocaleString()}</span>
+                  {activeFilters.length > 0 && <span className="text-gray-500"> (filtered)</span>}
+                </>
+              ) : (
+                <>Showing 0 results</>
+              )}
             </p>
-            {activeFilters.length > 0 && (
-              <button
-                onClick={() => {
-                  setActiveFilters([]);
-                  setPage(1);
-                }}
-                className="mt-3 text-xs text-lime-300 hover:text-lime-200 underline"
-              >
-                Clear filters
-              </button>
-            )}
           </div>
-        ) : (
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 bg-[#121613] border-b border-white/10 text-[10px] sm:text-xs uppercase tracking-wide text-[#B8BCB5]">
-              <tr>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Name</th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Email</th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Phone</th>
-                <th
-                  className="px-2 sm:px-4 py-2 sm:py-3 text-left cursor-pointer select-none hover:text-lime-200"
-                  onClick={() => handleSortClick('first_appt')}
-                >
-                  First Visit {sortIndicator('first_appt')}
-                </th>
-                <th
-                  className="px-2 sm:px-4 py-2 sm:py-3 text-left cursor-pointer select-none hover:text-lime-200"
-                  onClick={() => handleSortClick('last_appt')}
-                >
-                  Last Visit {sortIndicator('last_appt')}
-                </th>
-                <th
-                  className="px-2 sm:px-4 py-2 sm:py-3 text-left cursor-pointer select-none hover:text-lime-200"
-                  onClick={() => handleSortClick('total_appointments')}
-                >
-                  Total Visits {sortIndicator('total_appointments')}
-                </th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Visiting Type</th>
-                <th
-                  className="px-2 sm:px-4 py-2 sm:py-3 text-left cursor-pointer select-none hover:text-lime-200"
-                  onClick={() => handleSortClick('date_last_sms_sent')}
-                >
-                  Last SMS Sent {sortIndicator('date_last_sms_sent')}
-                </th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">SMS Subscribed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayClients.map((c) => {
-                const fullName =
-                  `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() || 'Unknown';
 
-                const lastVisit = formatDate(c.last_appt);
-                const firstVisit = formatDate(c.first_appt);
-                const lastSmsSent = formatDateTime(c.date_last_sms_sent);
+          <div className="relative">
+            <button
+              type="button"
+              data-filter-toggle
+              onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+              aria-expanded={isFilterModalOpen}
+              className="btn btn-glass btn-sm"
+            >
+              <Filter size={16} strokeWidth={1.75} />
+              Add Filter
+              <ChevronDown size={16} strokeWidth={1.75} className={`transition-transform ${isFilterModalOpen ? 'rotate-180' : ''}`} />
+            </button>
 
-                return (
-                  <tr
-                    key={c.client_id}
-                    className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-white">
-                      <div className="font-medium text-xs sm:text-sm">{fullName}</div>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc]">
-                      <div className="text-[10px] sm:text-[11px]">{c.email || '—'}</div>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc]">
-                      <div className="text-[11px] sm:text-[12px]">{c.phone || '—'}</div>
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc] text-xs sm:text-sm">{firstVisit}</td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc] text-xs sm:text-sm">{lastVisit}</td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc] text-xs sm:text-sm">
-                      {(c.total_appointments ?? 0).toString()}
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc] text-xs sm:text-sm">
-                      {c.visiting_type ? (
-                        <span className="capitalize">{c.visiting_type.replace('-', ' ')}</span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc] text-xs sm:text-sm">{lastSmsSent}</td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 text-[#d6d6cc] text-xs sm:text-sm">
-                      {c.sms_subscribed ? (
-                        <span className="text-lime-300">Yes</span>
-                      ) : (
-                        <span className="text-red-300">No</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+            <ClientSheetsFilterDropdown
+              isOpen={isFilterModalOpen}
+              onToggle={() => setIsFilterModalOpen(false)}
+              activeFilters={activeFilters}
+              onFiltersChange={(filters) => {
+                setActiveFilters(filters);
+                setPage(1);
+              }}
+              minYear={minYear}
+            />
+          </div>
+        </header>
+
+        {/* Active Filters */}
+        {activeFilters.length > 0 && (
+          <div className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-white/[0.07] px-5 py-3">
+            {activeFilters.map((filter) => (
+              <span
+                key={filter.id}
+                className="badge badge-sage !py-1 !pl-2 !pr-1 !text-xs !font-medium"
+              >
+                <span>{filter.label}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFilter(filter.id)}
+                  aria-label={`Remove filter ${filter.label}`}
+                  className="rounded p-0.5 transition-colors hover:bg-white/10"
+                >
+                  <X size={12} strokeWidth={2} />
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveFilters([]);
+                setPage(1);
+              }}
+              className="ml-1 text-xs font-medium text-muted transition-colors hover:text-[#D99A8B]"
+            >
+              Clear all
+            </button>
+          </div>
         )}
-      </div>
+
+        {/* Table - Scrollable */}
+        <div className="min-h-[240px] flex-1 overflow-auto">
+          {loading ? (
+            <div className="empty-state">
+              <Loader2 className="animate-spin" aria-hidden="true" />
+              <p>Loading clients. Please refresh the site</p>
+            </div>
+          ) : error ? (
+            <div className="empty-state">
+              <AlertCircle aria-hidden="true" />
+              <p className="text-[#D99A8B]">{error}</p>
+            </div>
+          ) : displayClients.length === 0 ? (
+            <div className="empty-state">
+              <Users aria-hidden="true" />
+              <strong>
+                {activeFilters.length > 0
+                  ? 'No clients match your current filters.'
+                  : 'No clients found.'}
+              </strong>
+              {activeFilters.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFilters([]);
+                    setPage(1);
+                  }}
+                  className="btn btn-glass btn-sm mt-2"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <table className="table-clean min-w-full">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th className={sortableTh} onClick={() => handleSortClick('first_appt')}>
+                    First Visit {sortIndicator('first_appt')}
+                  </th>
+                  <th className={sortableTh} onClick={() => handleSortClick('last_appt')}>
+                    Last Visit {sortIndicator('last_appt')}
+                  </th>
+                  <th className={sortableTh} onClick={() => handleSortClick('total_appointments')}>
+                    Total Visits {sortIndicator('total_appointments')}
+                  </th>
+                  <th>Visiting Type</th>
+                  <th className={sortableTh} onClick={() => handleSortClick('date_last_sms_sent')}>
+                    Last SMS Sent {sortIndicator('date_last_sms_sent')}
+                  </th>
+                  <th>SMS Subscribed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayClients.map((c) => {
+                  const fullName =
+                    `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() || 'Unknown';
+
+                  const lastVisit = formatDate(c.last_appt);
+                  const firstVisit = formatDate(c.first_appt);
+                  const lastSmsSent = formatDateTime(c.date_last_sms_sent);
+
+                  return (
+                    <tr key={c.client_id}>
+                      <td className="whitespace-nowrap font-medium !text-ivory">{fullName}</td>
+                      <td className="text-[13px] !text-muted">{c.email || '—'}</td>
+                      <td className="whitespace-nowrap text-[13px] tabular-nums">{c.phone || '—'}</td>
+                      <td className="whitespace-nowrap tabular-nums">{firstVisit}</td>
+                      <td className="whitespace-nowrap tabular-nums">{lastVisit}</td>
+                      <td className="tabular-nums">{(c.total_appointments ?? 0).toString()}</td>
+                      <td className="whitespace-nowrap">
+                        {c.visiting_type ? (
+                          <span className="capitalize">{c.visiting_type.replace('-', ' ')}</span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap tabular-nums">{lastSmsSent}</td>
+                      <td>
+                        {c.sms_subscribed ? (
+                          <span className="badge badge-sage">Yes</span>
+                        ) : (
+                          <span className="badge badge-danger">No</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pagination footer */}
+        <footer className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] px-4 py-3 sm:px-5">
+          <label className="flex items-center gap-2 text-xs text-muted">
+            Rows
+            <select
+              value={limit}
+              onChange={(e) => {
+                const newLimit = parseInt(e.target.value, 10);
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              className="field !h-8 !w-auto !px-2 !text-xs"
+            >
+              {[10, 25, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}/page
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={loading || page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="btn btn-glass btn-sm !h-8 !px-2.5"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} strokeWidth={1.75} />
+              <span className="hidden sm:inline">Prev</span>
+            </button>
+
+            <span className="px-1 text-xs text-muted tabular-nums">
+              Page <span className="font-semibold text-ivory">{page}</span> of{' '}
+              <span className="font-semibold text-ivory">{totalPages}</span>
+            </span>
+
+            <button
+              type="button"
+              disabled={loading || page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="btn btn-glass btn-sm !h-8 !px-2.5"
+              aria-label="Next page"
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight size={16} strokeWidth={1.75} />
+            </button>
+          </div>
+        </footer>
+      </section>
 
       {/* FAQ Modal - Renders to document.body via portal */}
-      <FAQModal 
-        isOpen={isFAQOpen} 
+      <FAQModal
+        isOpen={isFAQOpen}
         onClose={() => {
           setIsFAQOpen(false);
         }}

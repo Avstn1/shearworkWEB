@@ -216,25 +216,15 @@ export default function ProfileStep({
   }
 
   return (
-    <div className="space-y-6 animate-fadeInUp min-h-[calc(100vh-340px)]">
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeInUp {
-          animation: fadeInUp 0.4s ease-out forwards;
-        }
-      `}</style>
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h2 className="panel-title">Your profile</h2>
+          <p className="panel-subtitle">How you appear to clients and how you get paid</p>
+        </div>
+      </header>
 
-      <div className="space-y-6 rounded-2xl border border-white/10 bg-black/20 p-6">
-        <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Your profile</h3>
+      <div className="panel-body space-y-6">
         {/* Avatar, Full Name, and Phone Number */}
         <div className="grid gap-6 md:grid-cols-[160px_1fr] items-start">
           <div className="flex flex-col items-center gap-3 mt-3">
@@ -247,7 +237,7 @@ export default function ProfileStep({
             <button
               type="button"
               onClick={handleAvatarClick}
-              className="text-xs font-semibold text-[#cbd5f5] border border-white/10 rounded-lg px-4 py-1.5 hover:border-white/20"
+              className="btn btn-glass btn-sm"
             >
               Change photo
             </button>
@@ -262,37 +252,37 @@ export default function ProfileStep({
 
           <div className="space-y-4">
             <div>
-              <label className="block mb-2 text-sm font-semibold text-white">Barber Name</label>
+              <label className="field-label">Barber Name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
-                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8FB57A] transition-all"
+                className="field"
                 required
               />
               {showValidationErrors && !fullName.trim() && (
-                <p className="mt-1 text-xs text-rose-300">Enter your barber name</p>
+                <p className="mt-1 text-xs text-[#D99A8B]">Enter your barber name</p>
               )}
             </div>
 
             <div>
-              <label className="block mb-2 text-sm font-semibold text-white">Phone Number</label>
+              <label className="field-label">Phone Number</label>
               <div className="flex items-center gap-2">
-                <div className="px-4 py-3 bg-white/10 border border-white/10 rounded-xl font-medium text-white">
+                <div className="flex h-10 items-center rounded-lg border border-white/[0.09] bg-raised px-3 text-sm font-medium tabular-nums text-gray-300">
                   +1
                 </div>
                 <input
                   type="tel"
                   value={phoneNumber}
                   onChange={handlePhoneChange}
-                  className="flex-1 p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8FB57A] transition-all"
+                  className="field flex-1"
                   placeholder="(555) 123-4567"
                   maxLength={14}
                   required
                 />
               </div>
               {showValidationErrors && !isPhoneNumberValid && (
-                <p className="mt-1 text-xs text-rose-300">Enter a valid 10-digit phone number</p>
+                <p className="mt-1 text-xs text-[#D99A8B]">Enter a valid 10-digit phone number</p>
               )}
             </div>
           </div>
@@ -301,7 +291,7 @@ export default function ProfileStep({
         {/* What best describes you, How do you operate, and Commission Rate */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block mb-2 text-sm font-semibold text-white">What best describes you?</label>
+            <label className="field-label">What best describes you?</label>
             <select
               value={userType}
               onChange={e => {
@@ -309,20 +299,20 @@ export default function ProfileStep({
                 setUserType(value)
                 setSelectedRole({ label: '', role: value === 'barber' ? 'Barber' : 'Owner', barber_type: '' })
               }}
-              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#8FB57A] transition-all"
+              className="field cursor-pointer"
             >
               <option value="">Select...</option>
               <option value="barber">Barber</option>
               <option value="owner">Shop Owner / Manager</option>
             </select>
             {showValidationErrors && userType === '' && (
-              <p className="mt-1 text-xs text-rose-300">Select what best describes you</p>
+              <p className="mt-1 text-xs text-[#D99A8B]">Select what best describes you</p>
             )}
           </div>
 
           <div className={selectedRole.barber_type === 'commission' ? 'grid gap-4 md:grid-cols-2' : ''}>
             <div>
-              <label className="block mb-2 text-sm font-semibold text-white">How do you operate?</label>
+              <label className="field-label">How do you operate?</label>
               <select
                 value={selectedRole.barber_type}
                 onChange={e => {
@@ -333,20 +323,20 @@ export default function ProfileStep({
                     barber_type: barberType,
                   })
                 }}
-                className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#8FB57A] transition-all"
+                className="field cursor-pointer"
               >
                 <option value="">Select...</option>
                 <option value="commission">Commission</option>
                 <option value="rental">Chair Rental</option>
               </select>
               {showValidationErrors && selectedRole.barber_type === '' && (
-                <p className="mt-1 text-xs text-rose-300">Select how you operate</p>
+                <p className="mt-1 text-xs text-[#D99A8B]">Select how you operate</p>
               )}
             </div>
 
             {selectedRole.barber_type === 'commission' && (
               <div>
-                <label className="block mb-2 text-sm font-semibold text-white">
+                <label className="field-label">
                   Commission Rate (%)
                 </label>
                 <input
@@ -356,11 +346,11 @@ export default function ProfileStep({
                   max="100"
                   value={commissionRate}
                   onChange={e => setCommissionRate(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8FB57A] transition-all"
+                  className="field"
                   required
                 />
                 {showValidationErrors && !isCommissionValid && (
-                  <p className="mt-1 text-xs text-rose-300">
+                  <p className="mt-1 text-xs text-[#D99A8B]">
                     Enter a rate between 1-100
                   </p>
                 )}
@@ -371,8 +361,8 @@ export default function ProfileStep({
 
         {/* Trust Message */}
         {userType && (
-          <div className="rounded-xl border border-blue-400/30 bg-blue-400/10 p-3">
-            <p className="text-xs text-blue-200">
+          <div className="rounded-lg border border-[#A9C0D2]/20 bg-[#A9C0D2]/[0.06] px-3 py-2.5">
+            <p className="text-xs text-[#A9C0D2]">
               You will only see your own schedule and data.
             </p>
           </div>
@@ -381,12 +371,12 @@ export default function ProfileStep({
         {/* Booking Link and Username */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block mb-2 text-sm font-semibold text-white">Booking Link</label>
+            <label className="field-label">Booking Link</label>
             <input
               type="url"
               value={bookingLink}
               onChange={e => setBookingLink(e.target.value)}
-              className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8FB57A] transition-all"
+              className="field"
               placeholder="https://your-booking-site.com"
               required
             />
@@ -394,53 +384,55 @@ export default function ProfileStep({
               Where clients can book appointments with you directly
             </p>
             {showValidationErrors && !isBookingLinkValid && (
-              <p className="mt-1 text-xs text-rose-300">Enter your booking link</p>
+              <p className="mt-1 text-xs text-[#D99A8B]">Enter your booking link</p>
             )}
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-white">Username</label>
+            <label className="field-label">Username</label>
             <div className="relative">
               <input
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                className="w-full p-3 pr-10 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#8FB57A] transition-all"
+                className="field pr-10"
                 placeholder="yourname"
                 required
               />
               {usernameStatus === 'checking' && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-gray-400" />
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
               )}
               {usernameStatus === 'available' && (
-                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
+                <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sage" />
               )}
               {usernameStatus === 'taken' && (
-                <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-rose-400" />
+                <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#D99A8B]" />
               )}
             </div>
             <p className="mt-1 text-xs text-gray-400">
               Used for tracking SMS bookings: https://www.corva.ca/book?profile={username || 'yourname'}
             </p>
             {showValidationErrors && !isUsernameValid && username.trim().length === 0 && (
-              <p className="mt-1 text-xs text-rose-300">Enter a username</p>
+              <p className="mt-1 text-xs text-[#D99A8B]">Enter a username</p>
             )}
             {username.trim() && username.length < 3 && (
-              <p className="mt-1 text-xs text-rose-300">Username must be at least 3 characters</p>
+              <p className="mt-1 text-xs text-[#D99A8B]">Username must be at least 3 characters</p>
             )}
             {usernameStatus === 'taken' && (
-              <p className="mt-1 text-xs text-rose-300">This username is already taken</p>
+              <p className="mt-1 text-xs text-[#D99A8B]">This username is already taken</p>
             )}
           </div>
         </div>
 
-        {/* Next Button */}
-        <div className="flex justify-end pt-4 border-t border-white/10">
+      </div>
+
+      {/* Next Button */}
+      <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-4">
           <button
             type="button"
             onClick={handleNextClick}
             disabled={saving}
-            className="px-8 py-3 font-semibold rounded-xl transition-all bg-gradient-to-b from-[#BCD3AF] to-[#8FB57A] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed btn-fx"
+            className="btn btn-primary min-w-[120px]"
           >
             {saving ? (
               <span className="inline-flex items-center gap-2">
@@ -448,11 +440,10 @@ export default function ProfileStep({
                 Saving...
               </span>
             ) : (
-              'Next'
+              'Continue'
             )}
           </button>
-        </div>
       </div>
-    </div>
+    </section>
   )
 }

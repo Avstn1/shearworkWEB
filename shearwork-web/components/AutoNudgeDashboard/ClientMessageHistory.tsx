@@ -141,7 +141,7 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+        className="modal-backdrop flex items-end justify-center p-0 sm:items-center sm:p-4"
         onClick={onClose}
       >
         {/* Modal */}
@@ -151,31 +151,36 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="w-full sm:max-w-sm bg-[#111] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Message history with ${client_name}`}
+          className="modal-surface flex w-full flex-col overflow-hidden rounded-b-none sm:max-w-sm sm:rounded-b-[0.875rem]"
           style={{ height: '80vh', maxHeight: '640px' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 bg-[#161616] flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-3 border-b border-white/[0.07] px-4 py-3">
             {/* Avatar */}
-            <div className="w-9 h-9 rounded-full bg-[#8FB57A]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold text-[#8FB57A]">{initials}</span>
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-sage/15">
+              <span className="text-sm font-semibold text-sage-bright">{initials}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{client_name}</p>
-              <p className="text-xs text-white/40 truncate">{client_phone}</p>
+              <p className="panel-title truncate">{client_name}</p>
+              <p className="truncate text-xs tabular-nums text-muted">{client_phone}</p>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="w-7 h-7 rounded-full bg-white/8 flex items-center justify-center hover:bg-white/15 transition-colors flex-shrink-0"
+              aria-label="Close"
+              className="btn btn-ghost btn-sm h-8 w-8 flex-shrink-0 px-0"
             >
-              <X className="w-3.5 h-3.5 text-white/60" />
+              <X className="h-4 w-4" strokeWidth={1.75} />
             </button>
           </div>
 
           {/* Formatting note */}
-          <div className="px-4 py-2 bg-amber-400/5 border-b border-amber-400/10 flex-shrink-0">
-            <p className="text-[10px] text-amber-400/60 leading-relaxed">
+          <div className="flex-shrink-0 border-b border-white/[0.07] bg-raised px-4 py-2">
+            <p className="text-[11px] leading-relaxed text-gray-500">
               Messages may appear less formatted than what was actually sent. Spacing and line breaks look better in the real SMS.
             </p>
           </div>
@@ -185,11 +190,11 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
 
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin text-gray-500" strokeWidth={1.75} />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-sm text-white/30 text-center">No messages yet.</p>
+                <p className="text-center text-sm text-muted">No messages yet.</p>
               </div>
             ) : (
               <>
@@ -197,13 +202,14 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                 {hasMore && (
                   <div className="flex justify-center mb-2">
                     <button
+                      type="button"
                       onClick={handleSeeMore}
                       disabled={loadingMore}
-                      className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors py-1 px-3 rounded-lg bg-white/5 hover:bg-white/10"
+                      className="btn btn-ghost btn-sm h-7 px-2.5 text-xs"
                     >
                       {loadingMore
-                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : <ChevronUp className="w-3 h-3" />
+                        ? <Loader2 className="h-3 w-3 animate-spin" strokeWidth={1.75} />
+                        : <ChevronUp className="h-3 w-3" strokeWidth={1.75} />
                       }
                       See more
                     </button>
@@ -214,9 +220,9 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                   <div key={group.date} className="flex flex-col gap-1">
                     {/* Date separator */}
                     <div className="flex items-center gap-2 my-2">
-                      <div className="flex-1 h-px bg-white/8" />
-                      <span className="text-[10px] text-white/30 flex-shrink-0">{group.date}</span>
-                      <div className="flex-1 h-px bg-white/8" />
+                      <div className="h-px flex-1 bg-white/[0.07]" />
+                      <span className="flex-shrink-0 text-[11px] text-gray-500">{group.date}</span>
+                      <div className="h-px flex-1 bg-white/[0.07]" />
                     </div>
 
                     {group.items.map((msg, i) => {
@@ -227,8 +233,8 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                       const sameAsNext = next?.direction === msg.direction
 
                       // Bubble tail rounding: iOS-style grouping
-                      const outboundRadius = `${sameAsPrev ? '18px' : '18px'} ${sameAsPrev ? '4px' : '18px'} ${sameAsNext ? '4px' : '18px'} 18px`
-                      const inboundRadius  = `${sameAsPrev ? '4px' : '18px'} 18px 18px ${sameAsNext ? '4px' : '18px'}`
+                      const outboundRadius = `12px ${sameAsPrev ? '4px' : '12px'} ${sameAsNext ? '4px' : '12px'} 12px`
+                      const inboundRadius  = `${sameAsPrev ? '4px' : '12px'} 12px 12px ${sameAsNext ? '4px' : '12px'}`
 
                       return (
                         <motion.div
@@ -241,8 +247,8 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                           <div
                             className={`max-w-[78%] px-3.5 py-2 text-sm leading-relaxed ${
                               isOutbound
-                                ? 'bg-[#8FB57A] text-white'
-                                : 'bg-[#282b24] text-white/90'
+                                ? 'bg-sage text-ink'
+                                : 'bg-raised text-ivory ring-1 ring-inset ring-white/[0.07]'
                             }`}
                             style={{ borderRadius: isOutbound ? outboundRadius : inboundRadius }}
                           >
@@ -250,7 +256,7 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                           </div>
                           {/* Timestamp — only show on last in a group run */}
                           {!sameAsNext && (
-                            <p className="text-[10px] text-white/25 mt-1 px-1">{formatTime(msg.timestamp)}</p>
+                            <p className="mt-1 px-1 text-[11px] tabular-nums text-gray-500">{formatTime(msg.timestamp)}</p>
                           )}
                         </motion.div>
                       )

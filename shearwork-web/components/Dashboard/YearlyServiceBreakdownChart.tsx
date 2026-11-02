@@ -3,14 +3,11 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { PieChart as PieIcon } from 'lucide-react'
+import { EmptyState } from '@/components/ui/AppKit'
 
-const COLORS = [
-  '#A9C79A', '#a78bfa', '#67e8f9', '#fbbf24', '#f0abfc',
-  '#86efac', '#c4b5fd', '#a5f3fc', '#fcd34d', '#f5d0fe',
-  '#bbf7d0', '#ddd6fe', '#cffafe', '#fde68a', '#fae8ff',
-  '#d1fae5', '#ede9fe', '#e0f2fe', '#fef3c7', '#fdf4ff',
-  '#ecfdf5', '#f5f3ff', '#f0f9ff', '#fffbeb',
-]
+// Graphite chart palette (series order); index 6 ("Others") is a neutral grey.
+const COLORS = ['#8FB57A', '#A9C0D2', '#D8C59A', '#B8BCB5', '#D99A8B', '#6F8F63', '#5C615B']
 
 export interface ServiceBooking {
   service_name: string
@@ -125,71 +122,62 @@ export default function YearlyServiceBreakdownChart({
 
   if (loading) {
     return (
-      <div
-        className="flex items-center justify-center min-h-[360px]"
-      >
-        <p className="text-[#5C615B]">Loading service breakdown...</p>
+      <div className="flex min-h-[360px] flex-col">
+        <h2 className="panel-title">{timeframeLabel(timeframe, year)}</h2>
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm text-gray-500">Loading service breakdown…</p>
+        </div>
       </div>
     )
   }
 
   if (!data.length) {
     return (
-      <div
-        className="flex items-center justify-center min-h-[360px]"
-      >
-        <p className="text-[#5C615B]">
-          No service data for this timeframe.
-        </p>
+      <div className="flex min-h-[360px] flex-col">
+        <h2 className="panel-title">{timeframeLabel(timeframe, year)}</h2>
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState icon={PieIcon} title="No service data for this timeframe" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div
-      className="flex flex-col flex-1"
-      style={{
-        minHeight: '360px',
-      }}
-    >
-      <h2 className="text-white text-xl font-semibold mb-4">
-        💈 {timeframeLabel(timeframe, year)}
-      </h2>
+    <div className="flex min-h-[360px] flex-1 flex-col">
+      <h2 className="panel-title mb-4">{timeframeLabel(timeframe, year)}</h2>
 
-      <div
-        className="flex flex-col md:flex-row gap-2 md:items-center flex-1"
-        style={{ overflow: 'hidden' }}
-      >
+      <div className="flex flex-1 flex-col gap-4 overflow-hidden md:flex-row md:items-center">
         {/* Chart */}
-        <div className="flex-1 flex items-center justify-center min-h-[300px] md:min-h-[320px]">
-          <ResponsiveContainer width="100%" height={340}>
+        <div className="flex min-h-[280px] flex-1 items-center justify-center md:min-h-[320px]">
+          <ResponsiveContainer width="100%" height={320}>
             <PieChart>
               <Pie
                 data={data}
                 dataKey="bookings"
                 nameKey="service_name"
                 outerRadius="80%"
-                innerRadius="45%"
+                innerRadius="55%"
+                paddingAngle={1}
+                stroke="#171A18"
+                strokeWidth={2}
                 labelLine={false}
                 isAnimationActive={false}
               >
                 {data.map((_, index) => (
-                  <Cell
-                    key={index}
-                    fill={COLORS[index % COLORS.length]}
-                  />
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#11140e',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
+                  backgroundColor: '#1D201E',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8,
+                  color: '#ECEDEA',
                   padding: '8px 12px',
+                  fontSize: 12,
                 }}
-                itemStyle={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}
-                labelStyle={{ color: '#ffffff', fontWeight: 600 }}
+                itemStyle={{ color: '#ECEDEA', fontWeight: 500 }}
+                labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
                 formatter={(value, name) => [`${value} bookings`, name as string]}
               />
             </PieChart>
@@ -197,33 +185,18 @@ export default function YearlyServiceBreakdownChart({
         </div>
 
         {/* Legend */}
-        <div
-          className="flex flex-wrap md:flex-col gap-3 justify-center md:justify-start md:pl-4 text-[#8e9480]"
-          style={{
-            fontSize: '0.95rem',
-            lineHeight: 1.3,
-            flexShrink: 0,
-          }}
-        >
+        <ul className="flex shrink-0 flex-wrap justify-center gap-x-4 gap-y-2 text-[13px] text-gray-300 md:flex-col md:justify-start md:pl-2">
           {data.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2"
-              style={{ minWidth: '110px', wordBreak: 'break-word' }}
-            >
+            <li key={index} className="flex min-w-[110px] items-center gap-2 break-words">
               <span
-                style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  backgroundColor: COLORS[index % COLORS.length],
-                  display: 'inline-block',
-                }}
+                className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                style={{ backgroundColor: COLORS[index % COLORS.length] }}
               />
-              <span>{item.service_name}</span>
-            </div>
+              <span className="min-w-0 flex-1">{item.service_name}</span>
+              <span className="tabular-nums text-gray-500">{item.bookings}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   )

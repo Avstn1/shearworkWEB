@@ -16,8 +16,11 @@ import { supabase } from '@/utils/supabaseClient'
 
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal';
+import { Megaphone } from 'lucide-react'
+import { EmptyState } from '@/components/ui/AppKit'
 
-const COLORS = ['#8e9480', '#A9C79A', '#a78bfa', '#67e8f9', '#fbbf24']
+// Graphite chart palette, indexed to keep series mapping: [1] new, [3] retained, [2] retention
+const COLORS = ['#B8BCB5', '#8FB57A', '#D8C59A', '#A9C0D2', '#D99A8B']
 
 export interface MarketingFunnel {
   source: string
@@ -177,10 +180,11 @@ export default function MarketingFunnelsChart({
 
   if (data.length === 0)
     return (
-      <div
-        className="flex items-center justify-center min-h-[400px]"
-      >
-        <p className="text-[#5C615B]">No data to see here yet!</p>
+      <div className="flex min-h-[400px] flex-col">
+        <h2 className="panel-title">Marketing Funnels</h2>
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState icon={Megaphone} title="No data to see here yet" />
+        </div>
       </div>
     )
 
@@ -199,14 +203,15 @@ export default function MarketingFunnelsChart({
         }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white text-xl font-semibold">
-            📣 Marketing Funnels
+          <h2 className="panel-title">
+            Marketing Funnels
           </h2>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-[rgba(167,139,250,0.1)] hover:bg-[rgba(167,139,250,0.2)] text-[#a78bfa] rounded-lg transition-all duration-200 font-semibold border border-[rgba(167,139,250,0.15)] flex items-center gap-2"
+            type="button"
+            className="btn btn-glass btn-sm"
           >
-            <span>Details</span>
+            Details
           </button>
         </div>
 
@@ -218,10 +223,10 @@ export default function MarketingFunnelsChart({
               margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
               barCategoryGap={filteredData.length > 10 ? '30%' : '15%'}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
 
-              <XAxis xAxisId="clients" type="number" stroke="#8e9480" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
-              <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#8e9480" hide />
+              <XAxis xAxisId="clients" type="number" stroke="#7C817A" hide domain={[0, (dataMax: number) => dataMax / 0.95]} />
+              <XAxis xAxisId="retention" type="number" domain={[0, 100 / 0.95]} stroke="#7C817A" hide />
               
               <YAxis
                 yAxisId="hidden"
@@ -245,21 +250,21 @@ export default function MarketingFunnelsChart({
                     : [value, name]
                 }
                 contentStyle={{
-                  backgroundColor: '#11140e',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
+                  backgroundColor: '#1D201E',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8,
+                  color: '#ECEDEA',
                 }}
-                itemStyle={{ color: 'rgba(255,255,255,0.5)' }}
-                labelStyle={{ color: '#ffffff' }}
+                itemStyle={{ color: '#ECEDEA' }}
+                labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
               />
 
               <Legend
                 formatter={(value) =>
                   value === 'Retention' ? 'Retention (%)' : value
                 }
-                iconType="circle"
-                wrapperStyle={{ color: '#8e9480', paddingTop: '10px' }}
+                iconType="square"
+                wrapperStyle={{ color: '#9EA39C', paddingTop: '10px', fontSize: 12 }}
               />
 
               <YAxis
@@ -274,7 +279,7 @@ export default function MarketingFunnelsChart({
                 dataKey="new_clients"
                 name="New Clients"
                 fill={COLORS[1]}
-                radius={[8, 8, 0, 0]}
+                radius={[0, 3, 3, 0]}
                 barSize={barSize}
               >
                 <LabelList
@@ -294,9 +299,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#11140e"
+                          fill="#111312"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >
@@ -309,9 +314,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 5}
                           y={y + height / 2}
-                          fill="#8e9480"
+                          fill="#9EA39C"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >
@@ -340,9 +345,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 25}
                           y={y + height / 2}
-                          fill="#11140e"
+                          fill="#111312"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >
@@ -355,9 +360,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 25}
                           y={y + height / 2}
-                          fill="#8e9480"
+                          fill="#9EA39C"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >
@@ -374,7 +379,7 @@ export default function MarketingFunnelsChart({
                 dataKey="new_clients_retained"
                 name="New Clients Retained"
                 fill={COLORS[3]}
-                radius={[8, 8, 0, 0]}
+                radius={[0, 3, 3, 0]}
                 barSize={barSize}
               >
                 {/* Show new_clients_retained value - conditionally positioned based on % of max */}
@@ -398,9 +403,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#11140e"
+                          fill="#111312"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >
@@ -413,9 +418,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 5}
                           y={y + height / 2}
-                          fill="#8e9480"
+                          fill="#9EA39C"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >
@@ -432,7 +437,7 @@ export default function MarketingFunnelsChart({
                 dataKey="retention"
                 name="Retention"
                 fill={COLORS[2]}
-                radius={[8, 8, 0, 0]}
+                radius={[0, 3, 3, 0]}
                 barSize={barSize}
               >
                 {/* Show retention % value - conditionally positioned based on percentage */}
@@ -452,9 +457,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#11140e"
+                          fill="#111312"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >
@@ -467,9 +472,9 @@ export default function MarketingFunnelsChart({
                         <text
                           x={x + width + 5}
                           y={y + height / 2}
-                          fill="#8e9480"
+                          fill="#9EA39C"
                           fontSize={labelFontSize}
-                          fontWeight="bold"
+                          fontWeight={600}
                           textAnchor="start"
                           dominantBaseline="middle"
                         >

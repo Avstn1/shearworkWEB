@@ -1,41 +1,40 @@
 'use client'
 
 import React from 'react'
-import { User, Calendar, Shield, LogOut, CreditCard, Store } from 'lucide-react' // ← ADD Store
+import { User, Calendar, Shield, LogOut, CreditCard, Store } from 'lucide-react'
 
 interface Props {
 	activeTab: string
 	setActiveTab: (tab: string) => void
 }
 
-export default function SidebarTabs({ activeTab, setActiveTab }: Props) {
-	const tabs = [
-		{ id: 'profile', label: 'Profile', icon: User },
-		{ id: 'acuity', label: 'Acuity', icon: Calendar },
-		{ id: 'square', label: 'Square', icon: Store }, 
-		{ id: 'security', label: 'Security', icon: Shield },
-		{ id: 'billing', label: 'Billing', icon: CreditCard },
-		{ id: 'logout', label: 'Logout', icon: LogOut },
-	]
+export const SETTINGS_TABS = [
+	{ id: 'profile', label: 'Profile', icon: User },
+	{ id: 'acuity', label: 'Acuity', icon: Calendar },
+	{ id: 'square', label: 'Square', icon: Store },
+	{ id: 'security', label: 'Security', icon: Shield },
+	{ id: 'billing', label: 'Billing', icon: CreditCard },
+	{ id: 'logout', label: 'Logout', icon: LogOut },
+]
 
+export default function SidebarTabs({ activeTab, setActiveTab }: Props) {
 	return (
-		<nav className="w-full lg:w-64 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 flex flex-col gap-2 shadow-xl lg:sticky lg:top-[100px] h-fit">
-			{tabs.map(tab => {
+		<nav aria-label="Settings" className="flex w-full flex-col gap-0.5 lg:sticky lg:top-[calc(var(--navbar-height,72px)+1.5rem)]">
+			{SETTINGS_TABS.map(tab => {
 				const Icon = tab.icon
 				const isActive = activeTab === tab.id
 				return (
 					<button
 						key={tab.id}
+						type="button"
 						onClick={() => setActiveTab(tab.id)}
-						className={`
-              flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
-              ${isActive
-								? 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black shadow-lg shadow-lime-400/20'
-								: 'text-gray-300 hover:bg-white/10 hover:text-white'
-							}
-            `}
+						aria-current={isActive ? 'page' : undefined}
+						className={`relative flex h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors ${
+							isActive ? 'bg-white/[0.06] text-ivory' : 'text-gray-400 hover:bg-white/[0.04] hover:text-ivory'
+						}`}
 					>
-						<Icon className="w-5 h-5 flex-shrink-0" />
+						{isActive && <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-sage" />}
+						<Icon className={`h-[18px] w-[18px] flex-shrink-0 ${isActive ? 'text-sage-bright' : ''}`} strokeWidth={1.75} />
 						<span>{tab.label}</span>
 					</button>
 				)

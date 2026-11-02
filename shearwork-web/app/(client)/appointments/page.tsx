@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { Loader2 } from 'lucide-react'
+import { AppPage, PageHeader, Panel } from '@/components/ui/AppKit'
 
 export default function AppointmentsList() {
   const [appointments, setAppointments] = useState<any[]>([])
@@ -23,13 +25,26 @@ export default function AppointmentsList() {
     fetchAppointments()
   }, [])
 
-  if (isLoading && loading) return <p>Loading...</p>
-
   return (
-    <ul>
-      {appointments.map((a) => (
-        <li key={a.id}>{a.firstName} {a.lastName} - {a.date}</li>
-      ))}
-    </ul>
+    <AppPage>
+      <PageHeader title="Appointments" />
+      <Panel bodyClassName="">
+        {isLoading && loading ? (
+          <div className="empty-state">
+            <Loader2 className="animate-spin" aria-hidden="true" />
+            <p>Loading...</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-white/[0.05]">
+            {appointments.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
+                <span className="font-medium text-ivory">{a.firstName} {a.lastName}</span>
+                <span className="tabular-nums text-muted">{a.date}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </AppPage>
   )
 }

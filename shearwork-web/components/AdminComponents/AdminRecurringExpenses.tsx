@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, ChangeEvent } from 'react'
-import { motion } from 'framer-motion'
+import { Upload, X } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 
@@ -133,181 +133,198 @@ export default function AdminRecurringExpenses({ barberId, month, year, onUpdate
   }
 
   return (
-    <div className="bg-black/20 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6 flex flex-col gap-5">
-      <h3 className="font-semibold text-lg text-white mb-2">Add Recurring Expense</h3>
-
-      <input
-        type="text"
-        value={label}
-        onChange={e => setLabel(e.target.value)}
-        placeholder="Expense label"
-        className="px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 w-full focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-      />
-
-      <input
-        type="text"
-        inputMode="decimal"
-        value={amount}
-        onChange={e => {
-          const v = e.target.value
-          if (/^\d*\.?\d{0,2}$/.test(v)) setAmount(v)
-        }}
-        placeholder="Amount"
-        className="px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 w-full focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
-      />
-
-      {/* Frequency */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {['once', 'weekly', 'monthly', 'yearly'].map(freq => (
-          <button
-            key={freq}
-            onClick={() => setFrequency(freq as Frequency)}
-            className={`px-3 py-1 rounded-lg text-sm font-semibold transition ${
-              frequency === freq
-                ? 'bg-lime-400/30 text-lime-100'
-                : 'bg-white/10 text-white/70 hover:text-white/90'
-            }`}
-          >
-            {freq.charAt(0).toUpperCase() + freq.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Recurrence Options */}
-      {frequency === 'weekly' && (
-        <div className="flex gap-1 flex-wrap mt-1">
-          {DAYS.map(d => (
-            <button
-              key={d}
-              onClick={() => handleDayToggle(d)}
-              className={`px-2 py-1 rounded-md text-xs font-semibold transition ${
-                selectedDays.includes(d)
-                  ? 'bg-lime-400/40 text-lime-100'
-                  : 'bg-white/10 text-white/70 hover:text-white/90'
-              }`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {frequency === 'monthly' && (
-        <div className="flex gap-2 mt-1 items-center">
-          <label className="text-white text-sm">Day of month:</label>
-          <input
-            type="number"
-            min={1}
-            max={31}
-            value={monthlyDay}
-            onChange={e => setMonthlyDay(parseInt(e.target.value))}
-            className="w-16 px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-          />
-        </div>
-      )}
-
-      {frequency === 'yearly' && (
-        <div className="flex gap-2 mt-1 flex-wrap items-center">
-          <label className="text-white text-sm">Month:</label>
-          <select
-            value={yearlyMonth}
-            onChange={e => setYearlyMonth(parseInt(e.target.value))}
-            className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-          >
-            {Array.from({ length: 12 }, (_, i) => i).map(i => (
-              <option key={i} value={i}>{i + 1}</option>
-            ))}
-          </select>
-          <label className="text-white text-sm">Day:</label>
-          <input
-            type="number"
-            min={1}
-            max={31}
-            value={yearlyDay}
-            onChange={e => setYearlyDay(parseInt(e.target.value))}
-            className="w-16 px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-          />
-        </div>
-      )}
-
-      {/* Start / End Dates */}
-      <div className="flex gap-2 flex-wrap mt-1 items-center">
-        {frequency === 'once' ? (
-          <>
-            <label className="text-white text-sm">Date:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
-            />
-          </>
-        ) : (
-          <>
-            <label className="text-white text-sm">Start:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
-            />
-            <label className="text-white text-sm">End (optional):</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-400 transition"
-            />
-          </>
-        )}
-      </div>
-
-      {/* Save Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={handleSave}
-        disabled={loading}
-        className="px-4 py-2 rounded-lg bg-gradient-to-r from-lime-400/40 to-amber-400/40 text-white font-semibold hover:shadow-md transition-all mt-2"
-      >
-        {loading ? 'Saving...' : 'Add Recurring Expense'}
-      </motion.button>
-
-      {/* Upload Receipt */}
-      <label className="w-full flex justify-center items-center px-4 py-2 bg-white/10 text-white rounded-lg cursor-pointer hover:bg-white/20 transition">
-        Upload Receipt
-        <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-      </label>
-
-      {uploadingFile && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 rounded-lg p-6 w-[90%] max-w-md text-white flex flex-col gap-4 border border-white/10 shadow-xl">
-            <h2 className="text-lg font-semibold">Label your receipt</h2>
-            <p className="text-sm text-gray-400">Leave blank to default to today`s date.</p>
+    <section className="panel">
+      <header className="panel-header">
+        <h3 className="panel-title">Add recurring expense</h3>
+      </header>
+      <div className="panel-body flex flex-col gap-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="field-label">Label</label>
             <input
               type="text"
-              value={receiptLabel}
-              onChange={e => setReceiptLabel(e.target.value)}
-              placeholder="Enter receipt label"
-              className="px-3 py-2 rounded-lg bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all w-full"
+              value={label}
+              onChange={e => setLabel(e.target.value)}
+              placeholder="Expense label"
+              className="field"
             />
-            <div className="flex justify-end gap-2">
+          </div>
+          <div>
+            <label className="field-label">Amount</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={e => {
+                const v = e.target.value
+                if (/^\d*\.?\d{0,2}$/.test(v)) setAmount(v)
+              }}
+              placeholder="Amount"
+              className="field tabular-nums"
+            />
+          </div>
+        </div>
+
+        {/* Frequency */}
+        <div>
+          <span className="field-label">Frequency</span>
+          <div className="segmented">
+            {['once', 'weekly', 'monthly', 'yearly'].map(freq => (
               <button
-                onClick={handleUploadCancel}
-                className="px-4 py-2 rounded-lg bg-red-600/70 hover:bg-red-600 transition"
+                key={freq}
+                type="button"
+                data-active={frequency === freq}
+                onClick={() => setFrequency(freq as Frequency)}
+                className="segmented-item"
               >
+                {freq.charAt(0).toUpperCase() + freq.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Recurrence Options */}
+        {frequency === 'weekly' && (
+          <div className="flex flex-wrap gap-1">
+            {DAYS.map(d => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => handleDayToggle(d)}
+                className={`h-8 rounded-md border px-2.5 text-xs font-medium transition-colors ${
+                  selectedDays.includes(d)
+                    ? 'border-sage/40 bg-sage/15 text-sage-bright'
+                    : 'border-white/[0.07] text-muted hover:text-ivory'
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {frequency === 'monthly' && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted">Day of month</label>
+            <input
+              type="number"
+              min={1}
+              max={31}
+              value={monthlyDay}
+              onChange={e => setMonthlyDay(parseInt(e.target.value))}
+              className="field !w-20 tabular-nums"
+            />
+          </div>
+        )}
+
+        {frequency === 'yearly' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm text-muted">Month</label>
+            <select
+              value={yearlyMonth}
+              onChange={e => setYearlyMonth(parseInt(e.target.value))}
+              className="field !w-20"
+            >
+              {Array.from({ length: 12 }, (_, i) => i).map(i => (
+                <option key={i} value={i}>{i + 1}</option>
+              ))}
+            </select>
+            <label className="text-sm text-muted">Day</label>
+            <input
+              type="number"
+              min={1}
+              max={31}
+              value={yearlyDay}
+              onChange={e => setYearlyDay(parseInt(e.target.value))}
+              className="field !w-20 tabular-nums"
+            />
+          </div>
+        )}
+
+        {/* Start / End Dates */}
+        <div className="flex flex-wrap items-end gap-3">
+          {frequency === 'once' ? (
+            <div>
+              <label className="field-label">Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="field !w-auto"
+              />
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="field-label">Start</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="field !w-auto"
+                />
+              </div>
+              <div>
+                <label className="field-label">End (optional)</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="field !w-auto"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="btn btn-primary btn-sm"
+        >
+          {loading ? 'Saving...' : 'Add recurring expense'}
+        </button>
+
+        {/* Upload Receipt */}
+        <label className="btn btn-glass btn-sm w-full cursor-pointer">
+          <Upload size={16} strokeWidth={1.75} />
+          Upload receipt
+          <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+        </label>
+      </div>
+
+      {/* Upload Modal */}
+      {uploadingFile && (
+        <div className="modal-backdrop flex items-center justify-center p-4">
+          <div className="modal-surface w-full max-w-md text-ivory">
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+              <h2 className="text-[15px] font-semibold">Label your receipt</h2>
+              <button onClick={handleUploadCancel} className="btn btn-ghost btn-sm !h-8 !px-2" aria-label="Close">
+                <X size={16} strokeWidth={1.75} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-3 px-5 py-4">
+              <p className="text-sm text-muted">Leave blank to default to today&apos;s date.</p>
+              <input
+                type="text"
+                value={receiptLabel}
+                onChange={e => setReceiptLabel(e.target.value)}
+                placeholder="Enter receipt label"
+                className="field"
+              />
+            </div>
+            <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              <button onClick={handleUploadCancel} className="btn btn-ghost btn-sm">
                 Cancel
               </button>
-              <button
-                onClick={handleUploadConfirm}
-                className="px-4 py-2 rounded-lg bg-green-600/70 hover:bg-green-600 transition"
-              >
+              <button onClick={handleUploadConfirm} className="btn btn-primary btn-sm">
                 Upload
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }

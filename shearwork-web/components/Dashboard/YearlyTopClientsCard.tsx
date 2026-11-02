@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { Users } from 'lucide-react'
+import { EmptyState } from '@/components/ui/AppKit'
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
 
@@ -59,51 +61,35 @@ export default function YearlyTopClientsCard({
     timeframe === 'year' ? `${year}` : `${timeframe} ${year}`
 
   return (
-    <div
-      className="top-clients-card flex-1 flex flex-col min-h-[320px] max-h-[480px]"
-    >
-      <h2 className="text-xl font-bold mb-3 flex items-center gap-2 text-white">
-        👑 Top Clients ({titleSuffix})
-      </h2>
+    <div className="top-clients-card flex min-h-[320px] max-h-[480px] flex-1 flex-col">
+      <h2 className="panel-title mb-3">Top Clients ({titleSuffix})</h2>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-[#5C615B]">
-          Loading...
-        </div>
+        <div className="flex flex-1 items-center justify-center text-sm text-gray-500">Loading…</div>
       ) : clients.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-[#5C615B] text-center">
-          No data available for {titleSuffix}
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState icon={Users} title="No clients yet">
+            No data available for {titleSuffix}
+          </EmptyState>
         </div>
       ) : (
-        <div className="overflow-y-auto flex-1">
-          <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0">
-              <tr className="text-left border-b border-white/[0.06]">
-                <th className="py-2 px-3 min-w-[30px] text-[#5C615B] text-xs font-medium">#</th>
-                <th className="py-2 px-3 min-w-[120px] text-[#5C615B] text-xs font-medium">Client</th>
-                <th className="py-2 px-3 min-w-[80px] text-[#5C615B] text-xs font-medium">Total</th>
-                <th className="py-2 px-3 min-w-[60px] text-[#5C615B] text-xs font-medium">Visits</th>
+        <div className="-mx-4 flex-1 overflow-y-auto sm:-mx-5">
+          <table className="table-clean">
+            <thead>
+              <tr>
+                <th className="w-10">#</th>
+                <th>Client</th>
+                <th className="text-right">Total</th>
+                <th className="text-right">Visits</th>
               </tr>
             </thead>
             <tbody>
               {clients.map((client, idx) => (
-                <tr
-                  key={client.client_id ?? idx}
-                  className={`border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors duration-150 ${
-                    idx % 2 === 0 ? 'bg-white/[0.02]' : ''
-                  }`}
-                  style={{ height: '45px' }}
-                >
-                  <td className="py-2 px-3 font-medium text-white/40">{idx + 1}</td>
-                  <td className="py-2 px-3 font-semibold truncate text-white">
-                    {client.client_name}
-                  </td>
-                  <td className="py-2 px-3 font-semibold text-[#A9C79A]">
-                    ${client.total_spent.toFixed(2)}
-                  </td>
-                  <td className="py-2 px-3 font-semibold text-[#a78bfa]">
-                    {client.num_visits}
-                  </td>
+                <tr key={client.client_id ?? idx}>
+                  <td className="tabular-nums text-gray-500">{idx + 1}</td>
+                  <td className="max-w-[180px] truncate font-medium text-ivory">{client.client_name}</td>
+                  <td className="text-right tabular-nums text-ivory">${client.total_spent.toFixed(2)}</td>
+                  <td className="text-right tabular-nums text-gray-400">{client.num_visits}</td>
                 </tr>
               ))}
             </tbody>
@@ -119,19 +105,6 @@ export default function YearlyTopClientsCard({
             height: auto;
             width: 100%;
             overflow-y: visible;
-          }
-
-          table {
-            display: block;
-            overflow-x: auto;
-            width: 100%;
-            font-size: 0.75rem;
-          }
-
-          th,
-          td {
-            white-space: nowrap;
-            padding: 0.25rem 0.5rem;
           }
         }
       `}</style>

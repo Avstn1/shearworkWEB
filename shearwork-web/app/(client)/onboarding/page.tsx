@@ -13,9 +13,9 @@ export default function OnboardingRedirectPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#111312] via-[#141614] to-[#1D201E] text-white px-4">
-      <div className="flex items-center gap-3 text-sm text-gray-300">
-        <Loader2 className="h-4 w-4 animate-spin" />
+    <div className="min-h-screen flex items-center justify-center bg-canvas text-ivory px-4">
+      <div className="flex items-center gap-3 text-sm text-muted">
+        <Loader2 className="h-4 w-4 animate-spin text-sage" />
         Redirecting to pricing…
       </div>
     </div>

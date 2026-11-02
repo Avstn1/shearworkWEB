@@ -6,7 +6,8 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import ConnectSquareButton from '../ConnectSquareButton'
 import Select from '@/components/UI/Select'
-import { ChevronDown, Database, RefreshCw, Store } from 'lucide-react'
+import { ChevronDown, Database, Loader2, RefreshCw, Store } from 'lucide-react'
+import { Panel } from '@/components/ui/AppKit'
 
 interface SquareLocation {
 	location_id: string
@@ -274,92 +275,100 @@ export default function SquareTab() {
 
 	if (loading)
 		return (
-			<div className="flex items-center justify-center py-12">
-				<div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
+			<div className="panel flex items-center justify-center py-16">
+				<Loader2 className="h-5 w-5 animate-spin text-sage" strokeWidth={1.75} />
 			</div>
 		)
 
 	return (
-		<div className="space-y-8">
-			<div>
-				<h2 className="text-2xl font-bold mb-2">Square Integration</h2>
-				<p className="text-sm text-gray-400">
-					Connect and sync your Square POS data
-				</p>
-			</div>
-
-			<div className="space-y-3">
-				{connected ? (
-					<button
-						onClick={handleDisconnect}
-						className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-					>
-						Disconnect Square
-					</button>
-				) : (
-					<div className="space-y-2">
-						<ConnectSquareButton onConnectSuccess={loadStatus} onBeforeConnect={handleBeforeConnect} />
-						{acuityConnected && (
-							<p className="text-xs text-amber-200">
+		<div className="space-y-4 md:space-y-5">
+			{/* Connection */}
+			<Panel
+				title="Square integration"
+				subtitle="Connect and sync your Square POS data"
+				actions={
+					connected
+						? <span className="badge badge-sage">Connected</span>
+						: <span className="badge">Not connected</span>
+				}
+			>
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div className="space-y-1 text-[13px]">
+						{connected ? (
+							<p className="text-muted">Your Square account is linked to Corva.</p>
+						) : acuityConnected ? (
+							<p className="text-amber-300">
 								Connecting Square will disconnect Acuity to keep one active provider.
 							</p>
+						) : (
+							<p className="text-muted">Connect Square to load your locations.</p>
 						)}
 					</div>
-				)}
-			</div>
+					<div className="flex shrink-0 justify-end">
+						{connected ? (
+							<button onClick={handleDisconnect} className="btn btn-glass btn-sm text-[#D99A8B]">
+								Disconnect Square
+							</button>
+						) : (
+							<ConnectSquareButton onConnectSuccess={loadStatus} onBeforeConnect={handleBeforeConnect} />
+						)}
+					</div>
+				</div>
+			</Panel>
 
-			<div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-				<h3 className="text-lg font-semibold flex items-center gap-2">
-					<Store className="w-5 h-5" />
-					Locations
-				</h3>
-
+			{/* Locations */}
+			<Panel
+				title={
+					<span className="flex items-center gap-2">
+						<Store className="h-4 w-4 text-gray-500" strokeWidth={1.75} />
+						Locations
+					</span>
+				}
+				subtitle="If no locations are selected, all active locations will sync."
+			>
 				{!connected ? (
-					<p className="text-sm text-gray-400">Connect Square to load locations.</p>
+					<p className="text-[13px] text-muted">Connect Square to load locations.</p>
 				) : loadingLocations ? (
 					<div className="flex items-center justify-center py-6">
-						<div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-lime-400"></div>
+						<Loader2 className="h-5 w-5 animate-spin text-sage" strokeWidth={1.75} />
 					</div>
 				) : (
-					<div className="space-y-4">
-						<div className="flex flex-col sm:flex-row gap-3">
+					<div>
+						<label className="field-label">Locations to sync</label>
+						<div className="flex flex-col gap-3 sm:flex-row">
 							<div className="relative flex-1" ref={locationDropdownRef}>
 								<button
 									type="button"
 									onClick={() =>
 										locations.length > 0 ? setLocationDropdownOpen((prev) => !prev) : null
 									}
-									className={`flex items-center justify-between p-3 rounded-xl border border-[var(--accent-2)] bg-black/90 text-white transition-all ${
-										locations.length > 0
-											? 'hover:bg-black/80'
-											: 'opacity-50 cursor-not-allowed'
-									}`}
+									className="field flex items-center justify-between text-left disabled:cursor-not-allowed disabled:opacity-50"
 									disabled={locations.length === 0}
 								>
-									<span>
+									<span className="truncate">
 										{locations.length === 0 ? 'No locations found' : locationLabel}
 									</span>
-									<ChevronDown className="w-4 h-4 ml-2" />
+									<ChevronDown className="ml-2 h-4 w-4 flex-shrink-0 text-gray-500" strokeWidth={1.75} />
 								</button>
 
 								{locationDropdownOpen && (
-									<div className="absolute left-0 right-0 mt-2 bg-black/95 border border-[var(--accent-2)] rounded-xl shadow-lg z-50 max-h-56 overflow-y-auto">
+									<div className="modal-surface absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto py-1">
 										{locations.length === 0 ? (
-											<p className="px-3 py-2 text-sm text-gray-400">No locations available.</p>
+											<p className="px-3 py-2 text-sm text-muted">No locations available.</p>
 										) : (
 											locations.map((location) => (
 												<label
 													key={location.location_id}
-													className="flex items-start gap-3 px-3 py-2 cursor-pointer hover:bg-white/10"
+													className="flex cursor-pointer items-start gap-3 px-3 py-2 hover:bg-white/[0.04]"
 												>
 													<input
 														type="checkbox"
 														checked={location.selected}
 														onChange={() => toggleLocation(location.location_id)}
-														className="mt-1 h-4 w-4 accent-lime-400"
+														className="mt-0.5 h-4 w-4"
 													/>
 													<div>
-														<p className="text-sm text-white font-medium">
+														<p className="text-sm font-medium text-ivory">
 															{location.name || location.location_id}
 														</p>
 														<p className="text-xs text-gray-500">
@@ -373,113 +382,89 @@ export default function SquareTab() {
 								)}
 							</div>
 
-							<div className="flex gap-2">
-								<button
-									onClick={saveLocations}
-									disabled={savingLocations}
-									className={`px-6 py-3 rounded-xl font-semibold transition-all ${
-										savingLocations
-											? 'bg-white/10 text-gray-400 cursor-not-allowed'
-											: 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
-									}`}
-								>
-									{savingLocations ? 'Saving...' : 'Save'}
-								</button>
+							<div className="flex justify-end gap-2">
 								<button
 									onClick={loadLocations}
 									disabled={loadingLocations}
-									className={`px-4 py-3 rounded-xl font-semibold transition-all ${
-										loadingLocations
-											? 'bg-white/10 text-gray-400 cursor-not-allowed'
-											: 'bg-white/10 text-white hover:bg-white/15'
-									}`}
+									className="btn btn-ghost btn-sm h-10"
 								>
 									Refresh
 								</button>
+								<button
+									onClick={saveLocations}
+									disabled={savingLocations}
+									className="btn btn-primary btn-sm h-10"
+								>
+									{savingLocations ? 'Saving...' : 'Save'}
+								</button>
 							</div>
-
 						</div>
-
-						<p className="text-xs text-gray-500">
-							If no locations are selected, all active locations will sync.
-						</p>
 					</div>
 				)}
 
 				{confirmingLocationChange && (
-					<div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-3">
-						<p className="text-sm text-amber-200">
+					<div className="mt-4 flex flex-col gap-3 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 sm:flex-row sm:items-center sm:justify-between">
+						<p className="text-[13px] text-amber-300">
 							Changing your locations will sync data for the new selection.
 						</p>
 
-						<div className="flex gap-3">
+						<div className="flex shrink-0 justify-end gap-2">
 							<button
 								onClick={() => {
 									resetLocationSelection()
 									setConfirmingLocationChange(false)
 									setLocationDropdownOpen(false)
 								}}
-								className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
+								className="btn btn-ghost btn-sm"
 							>
-
 								Cancel
 							</button>
 
 							<button
 								onClick={saveLocations}
 								disabled={savingLocations}
-								className={`px-6 py-2 rounded-xl font-semibold transition-all ${
-									savingLocations
-										? 'bg-white/10 text-gray-400 cursor-not-allowed'
-										: 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg'
-								}`}
+								className="btn btn-primary btn-sm"
 							>
 								{savingLocations ? 'Saving...' : 'Confirm Change'}
 							</button>
 						</div>
 					</div>
 				)}
-			</div>
+			</Panel>
 
-			<div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-				<h3 className="text-lg font-semibold flex items-center gap-2">
-					<Database className="w-5 h-5" />
-					Sync & Import
-				</h3>
-
-				<div className="space-y-4">
-					<div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-						<div className="w-full sm:w-32">
-							<Select
-								options={generateYearOptions()}
-								value={year}
-								onChange={(val) => setYear(val as string)}
-							/>
-						</div>
-
-						<div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-							<button
-								onClick={syncYear}
-								disabled={!connected || syncingAll}
-								className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
-									!connected || syncingAll
-										? 'bg-white/10 text-gray-400 cursor-not-allowed'
-										: 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
-								}`}
-							>
-								<RefreshCw
-									className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`}
-								/>
-								{syncingAll ? `Syncing ${year}...` : `Sync All Appointments`}
-							</button>
-						</div>
+			{/* Sync */}
+			<Panel
+				title={
+					<span className="flex items-center gap-2">
+						<Database className="h-4 w-4 text-gray-500" strokeWidth={1.75} />
+						Sync & import
+					</span>
+				}
+				subtitle="Sync appointments and payments to refresh revenue reporting."
+			>
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+					<div className="w-full sm:w-36">
+						<label className="field-label">Year</label>
+						<Select
+							options={generateYearOptions()}
+							value={year}
+							onChange={(val) => setYear(val as string)}
+						/>
 					</div>
 
-					<p className="text-xs text-gray-500">
-						Sync appointments and payments to refresh revenue reporting.
-					</p>
+					<button
+						onClick={syncYear}
+						disabled={!connected || syncingAll}
+						className="btn btn-primary btn-sm h-10 self-end"
+					>
+						<RefreshCw
+							className={`h-4 w-4 ${syncingAll ? 'animate-spin' : ''}`}
+							strokeWidth={1.75}
+						/>
+						{syncingAll ? `Syncing ${year}...` : `Sync All Appointments`}
+					</button>
 				</div>
-			</div>
+			</Panel>
 		</div>
 	)
 }

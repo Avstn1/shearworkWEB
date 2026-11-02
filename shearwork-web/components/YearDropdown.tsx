@@ -31,34 +31,27 @@ export default function YearDropdown({ years, selectedYear, setSelectedYear, dis
   };
 
   return (
-    <div className="relative w-32" ref={containerRef}>
+    <div className="relative w-24" ref={containerRef}>
       <button
         type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => !disabled && setOpen(!open)}
-        className={`
-          w-full flex justify-between items-center px-4 py-2 rounded-lg font-semibold text-sm border shadow-md
-          bg-gradient-to-r from-amber-500/30 to-lime-500/30 text-white
-          transition-all duration-200
-          ${disabled
-            ? 'cursor-not-allowed opacity-80 animate-pulse shadow-[0_0_8px_#fffb85]'
-            : 'hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1'
-          }
-        `}
+        className={`flex h-9 items-center justify-between gap-2 rounded-lg border border-white/[0.09] bg-canvas px-3 text-sm font-medium text-ivory transition-colors hover:border-white/[0.16] w-full tabular-nums ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
       >
         {selectedYear}
-        <ChevronDown className="ml-2 h-4 w-4" />
+        <ChevronDown strokeWidth={1.75} className="h-4 w-4 text-gray-400" />
       </button>
 
       {open && (
-        <ul className="absolute mt-1 w-full rounded-lg border border-white/20 bg-[#1a1e18] shadow-lg z-50">
+        <ul role="listbox" className="absolute z-50 mt-1 w-full rounded-lg border border-white/[0.12] bg-raised py-1 shadow-lg">
           {years.map((year) => (
             <li
               key={year}
+              role="option"
+              aria-selected={year === selectedYear}
               onClick={() => handleSelect(year)}
-              className={`
-                px-4 py-2 cursor-pointer select-none
-                ${year === selectedYear ? 'bg-amber-300 text-black font-semibold' : 'text-white hover:bg-white/20 hover:text-black'}
-              `}
+              className={`w-full cursor-pointer select-none px-3 py-1.5 text-left text-sm transition-colors tabular-nums ${year === selectedYear ? 'bg-sage/[0.12] text-sage-bright' : 'text-gray-300 hover:bg-white/[0.05] hover:text-ivory'}`}
             >
               {year}
             </li>

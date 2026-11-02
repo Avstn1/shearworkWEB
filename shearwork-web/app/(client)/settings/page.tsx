@@ -4,8 +4,9 @@ import React, { useState, useRef, useEffect, Suspense } from 'react'
 import { AnimatePresence, motion, Variants, easeInOut } from 'framer-motion'
 import { useSearchParams, useRouter } from 'next/navigation'
 
-import Navbar from '@/components/Navbar'
-import SidebarTabs from '@/components/Settings/SidebarTabs'
+import { Loader2, Menu, X } from 'lucide-react'
+import { AppPage, PageHeader } from '@/components/ui/AppKit'
+import SidebarTabs, { SETTINGS_TABS } from '@/components/Settings/SidebarTabs'
 import ProfileTab from '@/components/Settings/ProfileTab'
 import AcuityTab from '@/components/Settings/AcuityTab'
 import SecurityTab from '@/components/Settings/SecurityTab'
@@ -18,25 +19,25 @@ import TutorialInfoButton from '@/components/Tutorial/TutorialInfoButton'
 import { SETTINGS_TUTORIAL_STEPS } from '@/lib/tutorials/settings'
 
 const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 6 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: easeInOut },
+    transition: { duration: 0.2, ease: easeInOut },
   },
   exit: {
     opacity: 0,
-    y: -20,
-    transition: { duration: 0.3, ease: easeInOut },
+    y: -6,
+    transition: { duration: 0.15, ease: easeInOut },
   },
 }
 
 function SettingsPageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#111312] via-[#141614] to-[#1D201E]">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-300 mx-auto mb-4"></div>
-        <p className="text-gray-300">Loading settings...</p>
+    <div className="flex min-h-screen items-center justify-center bg-canvas">
+      <div className="flex items-center gap-3 text-sm text-muted">
+        <Loader2 className="h-4 w-4 animate-spin text-sage" strokeWidth={1.75} />
+        Loading settings...
       </div>
     </div>
   )
@@ -91,6 +92,8 @@ function SettingsPageContent() {
     }
   }
 
+  const activeLabel = SETTINGS_TABS.find(t => t.id === activeTab)?.label ?? 'Profile'
+
   return (
     <>
       {/* Mobile Sidebar Overlay */}
@@ -110,16 +113,17 @@ function SettingsPageContent() {
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'tween', duration: 0.3 }}
-              className="relative w-64 bg-[#141614] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
+              transition={{ type: 'tween', duration: 0.25 }}
+              className="relative z-50 flex min-h-full w-64 flex-col border-r border-white/[0.07] bg-[#141614] px-3 py-4"
             >
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-lime-300 text-2xl font-bold">Settings</span>
+              <div className="mb-4 flex items-center justify-between px-3">
+                <span className="text-[15px] font-semibold text-ivory">Settings</span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-gray-400 hover:text-white text-xl transition-colors"
+                  className="btn btn-ghost btn-sm h-8 w-8 p-0"
+                  aria-label="Close menu"
                 >
-                  ✕
+                  <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </button>
               </div>
               <SidebarTabs
@@ -134,40 +138,36 @@ function SettingsPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Page Content */}
-      <div
-        className="min-h-screen px-4 py-6 md:px-8 md:py-8 bg-gradient-to-br from-[#111312] via-[#141614] to-[#1D201E] text-white"
-        style={{ paddingTop: 'calc(80px + 1.5rem)' }}
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-white">Settings</h1>
-              <TutorialLauncher
-                pageKey="settings"
-                steps={SETTINGS_TUTORIAL_STEPS}
-                context={{ setActiveTab }}
-                renderTrigger={(openTutorial) => (
-                  <TutorialInfoButton onClick={openTutorial} label="Settings tutorial" />
-                )}
-              />
-            </div>
-            <p className="text-xs text-[#B8BCB5]">Manage your profile, billing, and integrations.</p>
-          </div>
+      <AppPage>
+        <div className="mx-auto max-w-6xl">
+          <PageHeader
+            title={
+              <span className="flex items-center gap-2">
+                Settings
+                <TutorialLauncher
+                  pageKey="settings"
+                  steps={SETTINGS_TUTORIAL_STEPS}
+                  context={{ setActiveTab }}
+                  renderTrigger={(openTutorial) => (
+                    <TutorialInfoButton onClick={openTutorial} label="Settings tutorial" />
+                  )}
+                />
+              </span>
+            }
+            subtitle="Manage your profile, billing, and integrations."
+          />
 
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Desktop Sidebar */}
-            <div data-tutorial-id="settings-tabs" className="hidden lg:flex w-64 flex-shrink-0">
+          <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+            {/* Desktop nav */}
+            <div data-tutorial-id="settings-tabs" className="hidden w-52 flex-shrink-0 lg:block">
               <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
 
-            {/* Mobile Menu Button */}
-            <div className="flex lg:hidden">
-              <button
-                onClick={() => setMobileMenuOpen(true)}
-                className="px-6 py-2.5 bg-gradient-to-r from-lime-400 to-emerald-400 text-black rounded-lg font-semibold shadow-lg hover:shadow-lime-400/20 transition-all"
-              >
-                Menu
+            {/* Mobile menu button */}
+            <div className="lg:hidden">
+              <button onClick={() => setMobileMenuOpen(true)} className="btn btn-glass btn-sm">
+                <Menu className="h-4 w-4" strokeWidth={1.75} />
+                {activeLabel}
               </button>
             </div>
 
@@ -179,13 +179,13 @@ function SettingsPageContent() {
               animate="visible"
               exit="exit"
               data-tutorial-id={`settings-tab-${activeTab}`}
-              className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-xl min-h-[600px]"
+              className="min-w-0 flex-1"
             >
               <AnimatePresence mode="wait">{renderTab()}</AnimatePresence>
             </motion.div>
           </div>
         </div>
-      </div>
+      </AppPage>
 
       {/* Credits Modal */}
       <CreditsModal

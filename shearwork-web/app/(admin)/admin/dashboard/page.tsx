@@ -18,6 +18,8 @@ import Navbar from '@/components/Navbar'
 import AdminServiceBreakdownEditor from '@/components/AdminComponents/AdminServiceBreakdownEditor'
 import AdminAverageTicketEditor from '@/components/AdminComponents/AdminAverageTicketEditor'
 import AdminMarketingFunnelsEditor from '@/components/AdminComponents/AdminMarketingFunnelsEditor'
+import { AppPage, PageHeader, Panel, Segmented, EmptyState } from '@/components/ui/AppKit'
+import { CalendarClock, ChevronLeft, ChevronRight, RefreshCw, Search, Users } from 'lucide-react'
 
 interface Barber {
   user_id: string
@@ -109,7 +111,7 @@ export default function AdminDashboardPage() {
 
       if (!response.ok || !data.success) throw new Error(data.error || 'Failed to generate report.')
 
-      toast.success('✅ Report generated and saved successfully!')
+      toast.success('Report generated and saved successfully!')
       setRefreshReports(prev => prev + 1)
 
     } catch (err: any) {
@@ -139,7 +141,7 @@ export default function AdminDashboardPage() {
         throw new Error(data.error || 'Failed to sync Acuity appointments.')
       }
 
-      toast.success('✅ Yearly appointments sync completed successfully!')
+      toast.success('Yearly appointments sync completed successfully!')
     } catch (err: any) {
       console.error(err)
       toast.dismiss()
@@ -167,7 +169,7 @@ export default function AdminDashboardPage() {
         throw new Error(data.error || 'Failed to sync Acuity clients.')
       }
 
-      toast.success('✅ Client sync completed successfully!')
+      toast.success('Client sync completed successfully!')
     } catch (err: any) {
       console.error(err)
       toast.dismiss()
@@ -264,7 +266,7 @@ export default function AdminDashboardPage() {
     const { error } = await supabase.from('reports').insert([payload])
     if (error) return toast.error(`Error adding report: ${error.message}`)
 
-    toast.success('✅ Report added successfully!')
+    toast.success('Report added successfully!')
     setReportData({
       user_id: '',
       type: 'weekly',
@@ -300,31 +302,34 @@ export default function AdminDashboardPage() {
     checkMonthlyReport()
   }, [selectedBarber, selectedMonth, reportData.year])
 
-  if (!userRole) return <p>Checking access...</p>
-  if (loading) return <p>Loading barbers...</p>
+  if (!userRole) return <AppPage><p className="text-sm text-muted">Checking access...</p></AppPage>
+  if (loading) return <AppPage><p className="text-sm text-muted">Loading barbers...</p></AppPage>
 
   const isAdmin = true
 
   return (
-    <>
-      <div className="flex flex-col gap-5 text-[var(--foreground)] bg-[var(--background)] min-h-screen p-3 sm:p-6 overflow-y-auto">
-        <div className="flex flex-wrap justify-between items-center gap-3">
-          <h1 className="text-2xl font-semibold text-[var(--highlight)] truncate flex-1 min-w-0">
-            Admin Dashboard
-          </h1>
-          {profile && <UserProfile />}
-        </div>
+    <AppPage>
+      <PageHeader
+        title="Admin dashboard"
+        subtitle="Pick a barber to manage reports and monthly figures."
+        actions={profile && <UserProfile />}
+      />
 
-        <div className="mt-2 flex flex-wrap gap-2 items-center">
-          <input
-            type="text"
-            placeholder="Search barbers..."
-            className="flex-shrink-0 w-full sm:w-64 h-10 bg-[#1D201E] border border-[#2C302D] text-[#ECEDEA] rounded-md px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <div className="flex flex-col gap-4">
+        {/* Filters & actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-64">
+            <Search size={16} strokeWidth={1.75} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search barbers..."
+              className="field !pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <select
-            className="h-10 px-3 rounded-md bg-[#1D201E] border border-[#2C302D] text-[#ECEDEA] text-sm"
+            className="field !w-auto"
             value={selectedMonth}
             onChange={(e) => {
               setSelectedMonth(e.target.value)
@@ -335,139 +340,133 @@ export default function AdminDashboardPage() {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
-          <button
-            onClick={handleYearlySync}
-            className="h-10 px-4 rounded-md bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] text-sm whitespace-nowrap"
-          >
-            Manual Yearly Acuity Sync (ALL)
-          </button>
-
-          <button
-            onClick={() => router.push('/admin/qstash')}
-            className="h-10 px-4 rounded-md bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] text-sm whitespace-nowrap"
-          >
-            QStash Schedules
-          </button>
+          <div className="flex flex-wrap gap-2 sm:ml-auto">
+            <button onClick={handleYearlySync} className="btn btn-glass btn-sm whitespace-nowrap">
+              <RefreshCw size={16} strokeWidth={1.75} />
+              Manual Yearly Acuity Sync (ALL)
+            </button>
+            <button onClick={() => router.push('/admin/qstash')} className="btn btn-glass btn-sm whitespace-nowrap">
+              <CalendarClock size={16} strokeWidth={1.75} />
+              QStash Schedules
+            </button>
+          </div>
         </div>
 
-        
-
         {/* --- Barbers List with Pagination --- */}
-        <section className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm overflow-x-auto">
-          <h2 className="text-base font-semibold mb-3">Barbers</h2>
-          <div className="flex gap-4 w-max min-w-full">
-            {paginatedBarbers.length === 0 && <p>No barbers found.</p>}
-            {paginatedBarbers.map((b) => (
-              <div
-                key={b.user_id}
-                onClick={() => setSelectedBarber(prev => prev?.user_id === b.user_id ? null : b)}
-                className={`cursor-pointer bg-[var(--accent-2)]/80 text-[var(--text-bright)] p-3 rounded-xl flex flex-col items-center justify-center transition-transform hover:scale-105 w-24 sm:w-32 ${
-                  selectedBarber?.user_id === b.user_id ? 'ring-2 ring-[var(--accent-3)]' : ''
-                }`}
-              >
-                {b.avatar_url ? (
-                  <img src={b.avatar_url} alt={b.full_name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-full mb-1 object-cover border border-[var(--accent-3)]" />
-                ) : (
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--accent-3)] mb-1 flex items-center justify-center font-bold text-lg">
-                    {b.full_name[0]}
-                  </div>
-                )}
-                <p className="text-xs sm:text-sm font-medium text-center leading-tight truncate w-full">{b.full_name}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-3">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded-md bg-[var(--accent-3)] text-[var(--text-bright)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--accent-4)]"
-              >
-                &larr;
-              </button>
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded-md bg-[var(--accent-3)] text-[var(--text-bright)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--accent-4)]"
-              >
-                &rarr;
-              </button>
+        <section className="panel">
+          <header className="panel-header">
+            <div className="min-w-0">
+              <h2 className="panel-title">Barbers</h2>
+              <p className="panel-subtitle">{filteredBarbers.length} total</p>
             </div>
-          )}
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex shrink-0 items-center gap-1 text-xs text-muted">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="btn btn-ghost btn-sm !h-8 !px-2"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={16} strokeWidth={1.75} />
+                </button>
+                <span className="tabular-nums">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="btn btn-ghost btn-sm !h-8 !px-2"
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={16} strokeWidth={1.75} />
+                </button>
+              </div>
+            )}
+          </header>
+          <div className="overflow-x-auto p-3">
+            <div className="flex w-max min-w-full gap-2">
+              {paginatedBarbers.length === 0 && <p className="px-2 py-4 text-sm text-muted">No barbers found.</p>}
+              {paginatedBarbers.map((b) => {
+                const active = selectedBarber?.user_id === b.user_id
+                return (
+                  <button
+                    type="button"
+                    key={b.user_id}
+                    onClick={() => setSelectedBarber(prev => prev?.user_id === b.user_id ? null : b)}
+                    className={`flex w-24 flex-col items-center justify-center gap-1.5 rounded-lg border p-3 transition-colors sm:w-32 ${
+                      active
+                        ? 'border-sage/50 bg-sage/10'
+                        : 'border-white/[0.07] bg-raised hover:border-white/[0.12]'
+                    }`}
+                  >
+                    {b.avatar_url ? (
+                      <img src={b.avatar_url} alt={b.full_name} className="h-11 w-11 rounded-full border border-white/[0.12] object-cover sm:h-12 sm:w-12" />
+                    ) : (
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-base font-semibold text-ivory sm:h-12 sm:w-12">
+                        {b.full_name[0]}
+                      </div>
+                    )}
+                    <p className={`w-full truncate text-center text-xs font-medium leading-tight sm:text-[13px] ${active ? 'text-sage-bright' : 'text-ivory'}`}>{b.full_name}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </section>
 
         {selectedBarber ? (
           <>
-            <div className="flex gap-3 border-b border-[var(--accent-2)]/50 pb-2 mb-3 flex-wrap">
-              {[
-                { key: 'addReport', label: 'Add Report' },
-                { key: 'revenue', label: 'Revenue' },
-                { key: 'clients', label: 'Top Clients' },
-                { key: 'ticket', label: 'Average Ticket' },
-                { key: 'breakdown', label: 'Service Breakdown' },
-                { key: 'funnels', label: 'Marketing Funnels' },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                  className={`px-3 py-1.5 rounded-md text-sm ${
-                    activeTab === tab.key
-                      ? 'bg-[var(--accent-3)] text-[var(--text-bright)]'
-                      : 'bg-transparent hover:bg-[var(--accent-1)]/30'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="overflow-x-auto">
+              <Segmented
+                value={activeTab}
+                onChange={setActiveTab}
+                options={[
+                  { value: 'addReport', label: 'Add Report' },
+                  { value: 'revenue', label: 'Revenue' },
+                  { value: 'clients', label: 'Top Clients' },
+                  { value: 'ticket', label: 'Average Ticket' },
+                  { value: 'breakdown', label: 'Service Breakdown' },
+                  { value: 'funnels', label: 'Marketing Funnels' },
+                ]}
+              />
             </div>
 
             {activeTab === 'addReport' && (
-              <div className="flex flex-col gap-6">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  <div className="bg-[var(--accent-4)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
-                    <h3 className="text-base font-semibold mb-2">Monthly Reports</h3>
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                  <Panel title="Monthly reports">
                     <MonthlyReports
                       userId={selectedBarber.user_id}
                       filterMonth={selectedMonth}
                       isAdmin={isAdmin}
                       refresh={refreshReports}
                     />
-                  </div>
+                  </Panel>
 
-                  <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
-                    <h3 className="text-base font-semibold mb-2">Weekly Reports</h3>
+                  <Panel title="Weekly reports">
                     <WeeklyReports
                       userId={selectedBarber.user_id}
                       filterMonth={selectedMonth}
                       isAdmin={isAdmin}
                       refresh={refreshReports}
                     />
-                  </div>
+                  </Panel>
 
-                  <div className="bg-[var(--accent-2)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
-                    <h3 className="text-base font-semibold mb-2">Weekly Comparison Reports</h3>
+                  <Panel title="Weekly comparison reports">
                     <WeeklyComparisonReports
                       userId={selectedBarber.user_id}
                       filterMonth={selectedMonth}
                       isAdmin={isAdmin}
                       refresh={refreshReports}
                     />
-                  </div>
+                  </Panel>
                 </div>
 
-                <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-4 shadow-sm">
-                  <h3 className="text-base font-semibold mb-3">
-                    Add Report for {selectedBarber.full_name}
-                  </h3>
-
-                  <div className="flex gap-2 flex-wrap w-full mb-4">
-                    <div className="flex-1">
-                      <label className="block mb-1 font-semibold">Report Type</label>
+                <Panel title={`Add report for ${selectedBarber.full_name}`} subtitle={`${selectedMonth} ${reportData.year}`}>
+                  <div className="mb-4 flex w-full flex-wrap gap-3">
+                    <div className="min-w-[180px] flex-1">
+                      <label className="field-label">Report type</label>
                       <select
                         value={reportData.type}
                         onChange={(e) => {
@@ -478,7 +477,7 @@ export default function AdminDashboardPage() {
                             week_number: newType === 'weekly_comparison' ? 2 : 1,
                           }))
                         }}
-                        className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+                        className="field"
                       >
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
@@ -487,14 +486,14 @@ export default function AdminDashboardPage() {
                     </div>
 
                     {(reportData.type === 'weekly' || reportData.type === 'weekly_comparison') && (
-                      <div>
-                        <label className="block mb-1 font-semibold">Week Number</label>
+                      <div className="w-32">
+                        <label className="field-label">Week number</label>
                         <select
                           value={reportData.week_number}
                           onChange={(e) =>
                             setReportData({ ...reportData, week_number: Number(e.target.value) })
                           }
-                          className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+                          className="field"
                         >
                           {(reportData.type === 'weekly'
                             ? [1, 2, 3, 4, 5]
@@ -508,12 +507,12 @@ export default function AdminDashboardPage() {
                       </div>
                     )}
 
-                    <div>
-                      <label className="block mb-1 font-semibold">Year</label>
+                    <div className="w-32">
+                      <label className="field-label">Year</label>
                       <select
                         value={reportData.year}
                         onChange={(e) => setReportData({ ...reportData, year: Number(e.target.value) })}
-                        className="w-full p-2 rounded bg-[var(--accent-3)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+                        className="field"
                       >
                         {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                           <option key={y} value={y}>
@@ -524,51 +523,54 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
-                  <Editor
-                    apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
-                    value={reportData.content}
-                    onEditorChange={(newValue) =>
-                      setReportData({ ...reportData, content: newValue })
-                    }
-                    init={{
-                      height: 300,
-                      menubar: false,
-                      plugins: [
-                        'advlist',
-                        'autolink',
-                        'lists',
-                        'link',
-                        'charmap',
-                        'preview',
-                        'anchor',
-                        'code',
-                        'fullscreen',
-                        'insertdatetime',
-                        'media',
-                        'table',
-                        'help',
-                        'wordcount',
-                      ],
-                      toolbar:
-                        'undo redo | formatselect | bold italic backcolor | ' +
-                        'alignleft aligncenter alignright alignjustify | ' +
-                        'bullist numlist outdent indent | removeformat | help',
-                      content_style: `
-                        body { font-family:Helvetica,Arial,sans-serif; font-size:14px; color:#ECEDEA; background-color:#171A18; }
-                        table { width:100%; border-collapse:collapse; }
-                        th, td { border:1px solid #444; padding:6px; }
-                        th { background:#2E322F; white-space:nowrap; }
-                      `,
-                    }}
-                  />
-                  <button
-                    onClick={handleAddReport}
-                    className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] px-4 py-2 rounded-md mt-2"
-                  >
-                    Add Report
-                  </button>
+                  <div className="overflow-hidden rounded-lg border border-white/[0.07]">
+                    <Editor
+                      apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                      value={reportData.content}
+                      onEditorChange={(newValue) =>
+                        setReportData({ ...reportData, content: newValue })
+                      }
+                      init={{
+                        height: 300,
+                        menubar: false,
+                        plugins: [
+                          'advlist',
+                          'autolink',
+                          'lists',
+                          'link',
+                          'charmap',
+                          'preview',
+                          'anchor',
+                          'code',
+                          'fullscreen',
+                          'insertdatetime',
+                          'media',
+                          'table',
+                          'help',
+                          'wordcount',
+                        ],
+                        toolbar:
+                          'undo redo | formatselect | bold italic backcolor | ' +
+                          'alignleft aligncenter alignright alignjustify | ' +
+                          'bullist numlist outdent indent | removeformat | help',
+                        content_style: `
+                          body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; font-size:14px; color:#ECEDEA; background-color:#171A18; }
+                          table { width:100%; border-collapse:collapse; }
+                          th, td { border:1px solid rgba(255,255,255,0.12); padding:6px; }
+                          th { background:#1D201E; white-space:nowrap; }
+                        `,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <button onClick={handleAddReport} className="btn btn-primary btn-sm">
+                      Add report
+                    </button>
+                  </div>
 
-                  <div className="flex flex-wrap gap-2 mt-4 border-t border-[var(--accent-2)]/50 pt-3">
+                  <div className="divider my-4" />
+                  <p className="field-label">Generate with AI</p>
+                  <div className="flex flex-wrap gap-2">
                     {[
                       { label: 'Monthly Report (Rental)', type: 'monthly/rental' },
                       { label: 'Monthly Report (Commission)', type: 'monthly/commission' },
@@ -580,15 +582,13 @@ export default function AdminDashboardPage() {
                       <button
                         key={btn.type}
                         onClick={() => handleGenerateReport(btn.type as any)}
-                        className="bg-[var(--accent-1)] hover:bg-[var(--accent-2)] text-[var(--text-bright)] px-4 py-2 rounded-md"
+                        className="btn btn-glass btn-sm"
                       >
                         {btn.label}
                       </button>
                     ))}
                   </div>
-
-
-                </div>
+                </Panel>
               </div>
             )}
 
@@ -609,9 +609,13 @@ export default function AdminDashboardPage() {
             )}
           </>
         ) : (
-          <p className="text-sm text-[#B8BCB5] mt-4">Select a barber to view reports and add new reports.</p>
+          <div className="panel">
+            <EmptyState icon={Users} title="No barber selected">
+              Select a barber to view reports and add new reports.
+            </EmptyState>
+          </div>
         )}
       </div>
-    </>
+    </AppPage>
   )
 }

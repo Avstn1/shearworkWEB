@@ -216,7 +216,7 @@ export default function ClientSheetsFilterDropdown({
   };
 
   const renderFilterInput = (row: FilterRow) => {
-    const inputClass = "flex-1 px-2 py-1.5 rounded-lg bg-[#0d0f0d] border border-white/10 text-xs text-white placeholder:text-[#5C615B] focus:outline-none focus:ring-2 focus:ring-lime-300/70";
+    const inputClass = "field !h-9 min-w-0 flex-1 !text-[13px]";
 
     if (!row.type) {
       return (
@@ -225,7 +225,7 @@ export default function ClientSheetsFilterDropdown({
           disabled
           value=""
           placeholder="Select a filter first"
-          className="flex-1 px-2 py-1.5 rounded-lg bg-[#0d0f0d]/50 border border-white/10 text-xs text-white/40 placeholder:text-[#5C615B] cursor-not-allowed"
+          className="field !h-9 min-w-0 flex-1 !text-[13px] cursor-not-allowed opacity-50"
         />
       );
     }
@@ -327,14 +327,14 @@ export default function ClientSheetsFilterDropdown({
   if (!isOpen) return null;
 
   return (
-    <div ref={dropdownRef} className="absolute top-full right-0 mt-2 w-[calc(100vw-2rem)] sm:w-[24rem] max-w-[24rem] rounded-xl bg-[#0a0c0a] border border-white/10 shadow-2xl z-50">
-      <div className="p-3 space-y-2">
+    <div ref={dropdownRef} className="modal-surface absolute top-full right-0 z-50 mt-2 w-[calc(100vw-2rem)] max-w-[26rem] sm:w-[26rem]">
+      <div className="space-y-2 p-3">
         {filterRows.map((row, index) => (
           <div key={row.id} className="flex items-center gap-2">
             <select
               value={row.type}
               onChange={(e) => handleFilterTypeChange(row.id, e.target.value as FilterType)}
-              className="w-36 px-2 py-1.5 rounded-lg bg-[#0d0f0d] border border-white/10 text-xs text-white focus:outline-none focus:ring-2 focus:ring-lime-300/70"
+              className="field !h-9 !w-36 shrink-0 !text-[13px]"
             >
               <option value="">Select filter</option>
               {FILTER_OPTIONS.map((option) => (
@@ -349,20 +349,21 @@ export default function ClientSheetsFilterDropdown({
             {filterRows.length > 1 && (
               <button
                 onClick={() => removeFilterRow(row.id)}
-                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                className="btn btn-ghost btn-sm !px-2"
+                aria-label="Remove filter row"
               >
-                <X size={14} />
+                <X size={14} strokeWidth={1.75} />
               </button>
             )}
           </div>
         ))}
 
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center justify-between gap-2 border-t border-white/[0.07] pt-3">
           <button
             onClick={addFilterRow}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white/5 text-white/70 hover:bg-white/10 transition-colors flex items-center gap-1"
+            className="btn btn-glass btn-sm"
           >
-            <Plus size={12} />
+            <Plus size={14} strokeWidth={1.75} />
             Add Filter
           </button>
 
@@ -372,7 +373,7 @@ export default function ClientSheetsFilterDropdown({
                 onFiltersChange([]);
                 setFilterRows([{ id: Date.now().toString(), type: '', value: '' }]);
               }}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-300 hover:bg-red-500/20 transition-colors"
+              className="btn btn-ghost btn-sm !text-[#D99A8B]"
             >
               Clear All
             </button>

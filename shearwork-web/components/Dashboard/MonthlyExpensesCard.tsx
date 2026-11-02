@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { Stat } from '@/components/ui/AppKit'
 
 interface MonthlyExpensesCardProps {
   userId?: string
@@ -127,17 +128,12 @@ export default function MonthlyExpensesCard({ userId, month, year }: MonthlyExpe
       variants={fadeInUp}
       initial="hidden"
       animate="visible"
-      className="w-full h-full flex flex-col justify-between"
+      className="flex h-full w-full flex-col"
     >
-      <h2 className="text-[#8e9480] text-base font-semibold mb-2">
-        🧾 Monthly Expenses
-      </h2>
-
-      <div className="flex-1 flex items-center justify-start">
-        <p className="text-2xl sm:text-3xl font-bold text-white truncate">
-          {loading ? 'Loading...' : formatCurrency(expenses)}
-        </p>
-      </div>
+      <Stat
+        label="Monthly Expenses"
+        value={loading ? <span className="text-base font-medium text-gray-500">Loading…</span> : formatCurrency(expenses)}
+      />
     </motion.div>
   )
 }

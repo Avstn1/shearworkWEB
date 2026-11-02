@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import { Stat } from '@/components/ui/AppKit'
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
 
@@ -92,23 +93,19 @@ export default function TimeframeAverageTicketCard({
     timeframe === 'year' ? 'YTD' : timeframe
 
   return (
-    <div
-      className="flex flex-col min-h-[140px]"
-    >
-      <h2 className="text-[#8e9480] text-base font-semibold mb-2">
-        💵 Avg Ticket ({titleSuffix})
-      </h2>
-
-      <div className="flex-1 flex items-center">
-        <p className="text-3xl font-bold text-white truncate">
-          {loading
-            ? 'Loading...'
-            : avgTicket !== null
-              ? formatCurrency(avgTicket)
-              : 'N/A'}
-        </p>
-      </div>
-
+    <div className="flex h-full w-full flex-col">
+      <Stat
+        label={`Avg Ticket (${titleSuffix})`}
+        value={
+          loading ? (
+            <span className="text-base font-medium text-gray-500">Loading…</span>
+          ) : avgTicket !== null ? (
+            <span className="block truncate">{formatCurrency(avgTicket)}</span>
+          ) : (
+            'N/A'
+          )
+        }
+      />
       {/* no percent-change footer for timeframe view */}
     </div>
   )

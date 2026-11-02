@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, X } from 'lucide-react'
 
 interface VersionIncrementWarningModalProps {
   isOpen: boolean
@@ -23,47 +23,46 @@ export default function VersionIncrementWarningModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="modal-backdrop flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 8 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#171A18] border border-[#2C302D]/50 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+        className="modal-surface w-full max-w-md"
       >
-        <div className="flex items-start gap-3 mb-4">
-          <AlertTriangle className="w-6 h-6 text-[#d4a574] flex-shrink-0 mt-1" />
-          <div>
-            <h3 className="text-lg font-bold text-[#ECEDEA] mb-2">
+        <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={18} strokeWidth={1.75} className="shrink-0 text-amber-300" />
+            <h3 className="text-[15px] font-semibold text-ivory">
               {type === 'major' ? 'Major' : 'Minor'} Version Increment
             </h3>
-            <p className="text-sm text-gray-300 mb-3">
-              You're about to increment the {type} version to <span className="font-mono font-bold text-[#d4a574]">{version}</span>.
+          </div>
+          <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !w-8 !p-0" aria-label="Close">
+            <X size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+        <div className="space-y-3 px-5 py-4">
+          <p className="text-sm text-gray-300">
+            You&apos;re about to increment the {type} version to <span className="font-mono font-semibold text-ivory">{version}</span>.
+          </p>
+          <div className="rounded-lg border border-white/[0.07] bg-raised p-3">
+            <p className="mb-1 text-xs font-semibold text-amber-300">Important</p>
+            <p className="text-xs text-gray-400">
+              Once you create this version, you cannot go back to create updates in the previous {type} version tier.
+              {type === 'major'
+                ? ' All future updates must be in this new major version or higher.'
+                : ' All future updates must be in this new minor version or higher within the same major version.'}
             </p>
-            <div className="bg-[#282b24] rounded-lg p-3 border border-[#2C302D]/30">
-              <p className="text-xs text-[#d4a574] font-semibold mb-1">⚠️ Important:</p>
-              <p className="text-xs text-gray-400">
-                Once you create this version, you cannot go back to create updates in the previous {type} version tier. 
-                {type === 'major' 
-                  ? ' All future updates must be in this new major version or higher.'
-                  : ' All future updates must be in this new minor version or higher within the same major version.'}
-              </p>
-            </div>
           </div>
         </div>
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#282b24] hover:bg-[#373a32] text-white transition-all duration-300"
-          >
+        <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+          <button onClick={onClose} className="btn btn-glass btn-sm">
             Cancel
           </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#2C302D]/60 hover:bg-[#8FB57A]/70 text-[#ECEDEA] font-semibold transition-all duration-300"
-          >
+          <button onClick={onConfirm} className="btn btn-primary btn-sm">
             I Understand
           </button>
         </div>

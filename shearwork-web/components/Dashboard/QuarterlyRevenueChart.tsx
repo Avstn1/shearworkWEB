@@ -106,16 +106,14 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
 
   const title =
     timeframe === 'year'
-      ? '📊 Revenue by Month (Year)'
-      : `📊 Revenue by Month (${timeframe})`
+      ? 'Revenue by Month (Year)'
+      : `Revenue by Month (${timeframe})`
 
   return (
-    <div className="h-[300px] flex flex-col">
-      <h2 className="text-[#E1E3DE] text-base font-semibold mb-3">
-        {title}
-      </h2>
+    <div className="flex h-[300px] flex-col">
+      <h2 className="panel-title mb-4">{title}</h2>
       {loading ? (
-        <div className="text-[#F5E6C5] text-sm">Loading chart...</div>
+        <div className="flex flex-1 items-center justify-center text-sm text-gray-500">Loading chart…</div>
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -123,26 +121,34 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
               label: d.month.slice(0, 3), // Jan, Feb, ...
               total_revenue: d.total_revenue,
             }))}
+            margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-            <XAxis dataKey="label" tick={{ fill: '#d1e2c5', fontSize: 12 }} />
+            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: '#7C817A', fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis
-              tick={{ fill: '#d1e2c5', fontSize: 12 }}
+              tick={{ fill: '#7C817A', fontSize: 11 }}
               tickFormatter={(val) => `$${val}`}
+              axisLine={false}
+              tickLine={false}
             />
             <Tooltip
               formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
+              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
               contentStyle={{
-                backgroundColor: '#141614',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: '#F5E6C5',
+                backgroundColor: '#1D201E',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 8,
+                color: '#ECEDEA',
+                fontSize: 12,
               }}
+              itemStyle={{ color: '#ECEDEA' }}
+              labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
             />
             <Bar
               dataKey="total_revenue"
               name="Revenue"
-              fill="#A9C79A"
-              radius={[6, 6, 0, 0]}
+              fill="#8FB57A"
+              radius={[3, 3, 0, 0]}
             />
           </BarChart>
         </ResponsiveContainer>

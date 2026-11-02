@@ -51,17 +51,12 @@ export default function ProfitMarginPieChart({
     fetchData()
   }, [userId, selectedMonth, selectedYear, refreshKey])
 
-  const COLORS = ['#aeea00', '#ff6d00']
+  const COLORS = ['#8FB57A', '#D99A8B']
 
   if (data.length === 0) {
     return (
-      <div className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[200px]"
-        style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
-        }}
-      >
-        <p className="text-[#E1E3DE] opacity-70 text-sm">
+      <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-white/[0.07]">
+        <p className="text-sm text-gray-500">
           No data yet for {selectedMonth}
         </p>
       </div>
@@ -70,7 +65,7 @@ export default function ProfitMarginPieChart({
 
   return (
     <div className="w-full h-64">
-      <h2 className="text-[#A9C79A] font-semibold mb-2 text-sm sm:text-lg">
+      <h2 className="panel-title mb-3">
         Profit vs Expenses
       </h2>
       <ResponsiveContainer width="100%" height="90%">
@@ -81,7 +76,9 @@ export default function ProfitMarginPieChart({
             cy="50%"
             labelLine={false}
             outerRadius={80}
-            fill="#8884d8"
+            innerRadius={50}
+            stroke="#171A18"
+            strokeWidth={2}
             dataKey="value"
           >
             {data.map((entry, index) => (
@@ -90,8 +87,17 @@ export default function ProfitMarginPieChart({
           </Pie>
           <Tooltip
             formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
+            contentStyle={{
+              backgroundColor: '#1D201E',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 8,
+              color: '#ECEDEA',
+              fontSize: 12,
+            }}
+            itemStyle={{ color: '#ECEDEA' }}
+            labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
           />
-          <Legend />
+          <Legend iconType="square" wrapperStyle={{ color: '#9EA39C', fontSize: 12 }} />
         </PieChart>
       </ResponsiveContainer>
     </div>

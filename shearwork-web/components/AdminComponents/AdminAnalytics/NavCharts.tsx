@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend
 } from 'recharts'
+import { Loader2 } from 'lucide-react'
 
 interface HourRow {
   hour: number
@@ -216,7 +217,6 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
       : 'Action Logs'
     : `Weekly Action Logs from ${monday} to ${sunday}`
 
-  const title = `${titleText} | Logs: ${totalLogs} | Mode: ${displayMode}`
 
   // -------------------- Tooltip --------------------
   const tooltipContent = ({ payload, label }: any) => {
@@ -224,15 +224,16 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
     return (
       <div
         style={{
-          backgroundColor: '#171A18',
-          border: '1px solid #2C302D',
-          borderRadius: '0.5rem',
-          padding: '8px',
-          color: '#A9C79A',
-          fontSize: '0.875rem',
+          backgroundColor: '#1D201E',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 8,
+          padding: '8px 10px',
+          color: '#ECEDEA',
+          fontSize: 12,
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+        <div style={{ fontWeight: 600, marginBottom: 4, color: '#9EA39C' }}>
           {viewMode === 'hourly' ? `${Number(label)%12||12}${Number(label)<12?'am':'pm'}` : label}
         </div>
         {payload.map((p: any) => (
@@ -247,27 +248,34 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
   // -------------------- Render --------------------
   return (
     <div className="w-full">
-      <div className="mb-2">
-        <h2 className="text-[#A9C79A] font-semibold text-sm sm:text-base">{title}</h2>
+      <div className="mb-3">
+        <h2 className="panel-title">{titleText}</h2>
+        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+          <span className="badge tabular-nums">Logs: {totalLogs}</span>
+          <span className="badge capitalize">Mode: {displayMode}</span>
+        </p>
       </div>
 
       <div className="w-full h-64 relative">
         {loading ? (
-          <div className="p-4 text-center text-[#E1E3DE] opacity-70 text-sm">
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted">
+            <Loader2 size={16} strokeWidth={1.75} className="animate-spin" />
             Loading {viewMode} data...
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2E322F" />
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
               <XAxis
                 dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
-                stroke="#C9CCC6"
+                stroke="rgba(255,255,255,0.06)"
+                tick={{ fill: '#7C817A', fontSize: 11 }}
+                tickLine={false}
                 tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
-              <YAxis stroke="#C9CCC6" />
-              <Tooltip content={tooltipContent} />
-              <Legend />
+              <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7C817A', fontSize: 11 }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
+              <Tooltip content={tooltipContent} cursor={{ stroke: 'rgba(255,255,255,0.12)' }} />
+              <Legend iconType="plainline" iconSize={12} wrapperStyle={{ fontSize: 12, color: '#9EA39C' }} />
               
               {displayMode === 'separate' ? (
                 <>
@@ -275,7 +283,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_expenses" 
                     name="Expenses"
-                    stroke="#00e676" 
+                    stroke="#8FB57A" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -283,7 +291,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_dashboard" 
                     name="Dashboard"
-                    stroke="#ff6d00" 
+                    stroke="#A9C0D2" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -291,7 +299,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clickedSMSAutoNudge" 
                     name="SMS Auto Nudge"
-                    stroke="#1e88e5" 
+                    stroke="#D8C59A" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -299,7 +307,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clickedSMSCampaigns" 
                     name="SMS Campaigns"
-                    stroke="#9c27b0" 
+                    stroke="#B8BCB5" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -307,7 +315,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_clientSheets" 
                     name="Client Sheets"
-                    stroke="#ffeb3b" 
+                    stroke="#D99A8B" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -315,7 +323,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_appointmentSheets" 
                     name="Appointment Sheets"
-                    stroke="#00bcd4" 
+                    stroke="#6F8F63" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -325,8 +333,8 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                   type="monotone" 
                   dataKey="total" 
                   name="Total Actions"
-                  stroke="#abf19aff"                   
-                  strokeWidth={3} 
+                  stroke="#8FB57A"                   
+                  strokeWidth={2} 
                   dot={false} 
                 />
               )}

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import Navbar from '@/components/Navbar'
+import { Inbox, RefreshCcw, Trash2 } from 'lucide-react'
+import { AppPage, EmptyState, PageHeader } from '@/components/ui/AppKit'
 
 interface QStashSchedule {
   scheduleId: string
@@ -219,128 +221,114 @@ export default function QStashPage() {
 
   if (loading) {
     return (
-      <>
-        <div className="min-h-screen bg-[var(--background)] p-6">
-          <div className="max-w-7xl mx-auto">
-            <p className="text-[var(--foreground)]">Loading schedules...</p>
-          </div>
+      <AppPage>
+        <div className="mx-auto max-w-7xl">
+          <PageHeader title="QStash schedules" subtitle="Loading schedules..." />
         </div>
-      </>
+      </AppPage>
     )
   }
 
-  return (
-    <>
-      <div className="min-h-screen bg-[var(--background)] p-3 sm:p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-6 gap-3">
-            <h1 className="text-2xl font-semibold text-[var(--highlight)]">
-              QStash Schedules
-            </h1>
-            <div className="flex gap-2 items-center">
-              {activeTab === 'events' && (
-                <select
-                  value={stateFilter}
-                  onChange={(e) => {
-                    setStateFilter(e.target.value)
-                    setCurrentPage(1)
-                  }}
-                  className="px-3 py-2 bg-[#1D201E] text-[#ECEDEA] border-2 border-[#a8d88e] rounded-md text-sm min-w-[150px]"
-                >
-                  <option value="all">All States</option>
-                  {uniqueStates.map(state => (
-                    <option key={state} value={state}>{state}</option>
-                  ))}
-                </select>
-              )}
-              <button
-                onClick={fetchSchedules}
-                className="px-4 py-2 bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-md"
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
+  const tabs = [
+    { id: 'events' as const, label: 'Events', count: events.length, onSelect: () => { setActiveTab('events'); setCurrentPage(1); setStateFilter('all'); } },
+    { id: 'schedules' as const, label: 'Schedules', count: schedules.length, onSelect: () => { setActiveTab('schedules'); setCurrentPage(1); } },
+    { id: 'dlq' as const, label: 'DLQ', count: dlqMessages.length, onSelect: () => { setActiveTab('dlq'); setCurrentPage(1); } },
+  ]
 
-          <div className="flex gap-2 mb-4 border-b border-[var(--accent-2)]/30 pb-2">
-            <button
-              onClick={() => { setActiveTab('events'); setCurrentPage(1); setStateFilter('all'); }}
-              className={`px-4 py-2 rounded-t-md transition-colors ${
-                activeTab === 'events'
-                  ? 'bg-[var(--accent-3)] text-[var(--text-bright)]'
-                  : 'bg-[var(--accent-1)]/20 text-[var(--foreground)] hover:bg-[var(--accent-1)]/30'
-              }`}
-            >
-              Events ({events.length})
+  const eventBadge = (state: string) =>
+    state === 'DELIVERED' ? 'badge-sage' : state === 'ERROR' ? 'badge-danger' : 'badge-info'
+
+  return (
+    <AppPage>
+      <div className="mx-auto max-w-7xl">
+        <PageHeader
+          title="QStash schedules"
+          subtitle="Scheduled jobs, delivery events and the dead-letter queue."
+          actions={
+            <button onClick={fetchSchedules} className="btn btn-glass btn-sm">
+              <RefreshCcw size={16} strokeWidth={1.75} />
+              Refresh
             </button>
-            <button
-              onClick={() => { setActiveTab('schedules'); setCurrentPage(1); }}
-              className={`px-4 py-2 rounded-t-md transition-colors ${
-                activeTab === 'schedules'
-                  ? 'bg-[var(--accent-3)] text-[var(--text-bright)]'
-                  : 'bg-[var(--accent-1)]/20 text-[var(--foreground)] hover:bg-[var(--accent-1)]/30'
-              }`}
-            >
-              Schedules ({schedules.length})
-            </button>
-            <button
-              onClick={() => { setActiveTab('dlq'); setCurrentPage(1); }}
-              className={`px-4 py-2 rounded-t-md transition-colors ${
-                activeTab === 'dlq'
-                  ? 'bg-[var(--accent-3)] text-[var(--text-bright)]'
-                  : 'bg-[var(--accent-1)]/20 text-[var(--foreground)] hover:bg-[var(--accent-1)]/30'
-              }`}
-            >
-              DLQ ({dlqMessages.length})
-            </button>
+          }
+        />
+
+        <section className="panel">
+          <div className="panel-header flex-wrap">
+            <div className="segmented max-w-full overflow-x-auto" role="tablist">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  data-active={activeTab === tab.id}
+                  onClick={tab.onSelect}
+                  className="segmented-item"
+                >
+                  {tab.label} <span className="tabular-nums text-gray-500">{tab.count}</span>
+                </button>
+              ))}
+            </div>
+            {activeTab === 'events' && (
+              <select
+                value={stateFilter}
+                onChange={(e) => {
+                  setStateFilter(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="field h-9 w-auto min-w-[150px]"
+              >
+                <option value="all">All States</option>
+                {uniqueStates.map(state => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Schedules Table */}
           {activeTab === 'schedules' && (
             paginatedData.length === 0 ? (
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-6">
-                <p className="text-[var(--foreground)]">No recurring schedules found.</p>
-              </div>
+              <EmptyState icon={Inbox} title="No recurring schedules found." />
             ) : (
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[var(--accent-2)]/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Schedule ID</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Cron</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Destination</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Created</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Actions</th>
+              <div className="overflow-x-auto">
+                <table className="table-clean">
+                  <thead>
+                    <tr>
+                      <th>Schedule ID</th>
+                      <th>Cron</th>
+                      <th>Destination</th>
+                      <th>Created</th>
+                      <th>Status</th>
+                      <th className="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(paginatedData as QStashSchedule[]).map((schedule) => (
+                      <tr key={schedule.scheduleId}>
+                        <td className="font-mono text-xs">{schedule.scheduleId}</td>
+                        <td>{formatCron(schedule.cron)}</td>
+                        <td className="max-w-xs truncate text-muted">{schedule.destination}</td>
+                        <td className="whitespace-nowrap tabular-nums text-muted">{formatDate(schedule.createdAt)}</td>
+                        <td>
+                          <span className={`badge ${schedule.isPaused ? 'badge-warn' : 'badge-sage'}`}>
+                            {schedule.isPaused ? 'Paused' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          <button
+                            onClick={() => handleDelete(schedule.scheduleId)}
+                            disabled={deleting === schedule.scheduleId}
+                            className="btn btn-ghost btn-sm h-8 text-[#D99A8B] hover:text-[#D99A8B]"
+                          >
+                            <Trash2 size={14} strokeWidth={1.75} />
+                            {deleting === schedule.scheduleId ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--accent-2)]/30">
-                      {(paginatedData as QStashSchedule[]).map((schedule) => (
-                        <tr key={schedule.scheduleId} className="hover:bg-[var(--accent-1)]/5">
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)] font-mono">{schedule.scheduleId}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)]">{formatCron(schedule.cron)}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)] max-w-xs truncate">{schedule.destination}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)]">{formatDate(schedule.createdAt)}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs ${schedule.isPaused ? 'bg-yellow-500/20 text-yellow-300' : 'bg-green-500/20 text-green-300'}`}>
-                              {schedule.isPaused ? 'Paused' : 'Active'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <button
-                              onClick={() => handleDelete(schedule.scheduleId)}
-                              disabled={deleting === schedule.scheduleId}
-                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md disabled:opacity-50"
-                            >
-                              {deleting === schedule.scheduleId ? 'Deleting...' : 'Delete'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )
           )}
@@ -348,43 +336,35 @@ export default function QStashPage() {
           {/* Events Table */}
           {activeTab === 'events' && (
             paginatedData.length === 0 ? (
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-6">
-                <p className="text-[var(--foreground)]">No events found.</p>
-              </div>
+              <EmptyState icon={Inbox} title="No events found." />
             ) : (
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[var(--accent-2)]/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Message ID</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">State</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">URL</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Created</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Next Delivery</th>
+              <div className="overflow-x-auto">
+                <table className="table-clean">
+                  <thead>
+                    <tr>
+                      <th>Message ID</th>
+                      <th>State</th>
+                      <th>URL</th>
+                      <th>Created</th>
+                      <th>Next Delivery</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(paginatedData as QStashEvent[]).map((event) => (
+                      <tr key={event.messageId}>
+                        <td className="font-mono text-xs">{event.messageId}</td>
+                        <td>
+                          <span className={`badge ${eventBadge(event.state)}`}>
+                            {event.state}
+                          </span>
+                        </td>
+                        <td className="max-w-xs truncate text-muted">{event.url}</td>
+                        <td className="whitespace-nowrap tabular-nums text-muted">{formatDate(event.createdAt)}</td>
+                        <td className="whitespace-nowrap tabular-nums text-muted">{formatDate(event.nextDeliveryTime)}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--accent-2)]/30">
-                      {(paginatedData as QStashEvent[]).map((event) => (
-                        <tr key={event.messageId} className="hover:bg-[var(--accent-1)]/5">
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)] font-mono">{event.messageId}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              event.state === 'DELIVERED' ? 'bg-green-500/20 text-green-300' :
-                              event.state === 'ERROR' ? 'bg-red-500/20 text-red-300' :
-                              'bg-blue-500/20 text-blue-300'
-                            }`}>
-                              {event.state}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)] max-w-xs truncate">{event.url}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)]">{formatDate(event.createdAt)}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)]">{formatDate(event.nextDeliveryTime)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )
           )}
@@ -392,72 +372,64 @@ export default function QStashPage() {
           {/* DLQ Table */}
           {activeTab === 'dlq' && (
             paginatedData.length === 0 ? (
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl p-6">
-                <p className="text-[var(--foreground)]">No failed messages in DLQ.</p>
-              </div>
+              <EmptyState icon={Inbox} title="No failed messages in DLQ." />
             ) : (
-              <div className="bg-[var(--accent-1)]/10 border border-[var(--accent-2)]/30 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[var(--accent-2)]/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Message ID</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">URL</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Method</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-[var(--text-bright)]">Created</th>
+              <div className="overflow-x-auto">
+                <table className="table-clean">
+                  <thead>
+                    <tr>
+                      <th>Message ID</th>
+                      <th>URL</th>
+                      <th>Method</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(paginatedData as QStashDLQMessage[]).map((msg) => (
+                      <tr key={msg.messageId}>
+                        <td className="font-mono text-xs">{msg.messageId}</td>
+                        <td className="max-w-xs truncate text-muted">{msg.url}</td>
+                        <td><span className="badge">{msg.method || 'POST'}</span></td>
+                        <td className="whitespace-nowrap tabular-nums text-muted">{formatDate(msg.createdAt)}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--accent-2)]/30">
-                      {(paginatedData as QStashDLQMessage[]).map((msg) => (
-                        <tr key={msg.messageId} className="hover:bg-[var(--accent-1)]/5">
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)] font-mono">{msg.messageId}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)] max-w-xs truncate">{msg.url}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)]">{msg.method || 'POST'}</td>
-                          <td className="px-4 py-3 text-sm text-[var(--foreground)]">{formatDate(msg.createdAt)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4">
-              <div className="text-sm text-[var(--foreground)]/70">
-                <p>Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, total)} of {total}</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="px-3 py-1 text-sm text-[var(--foreground)]">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
-          {totalPages <= 1 && (
-            <div className="mt-4 text-sm text-[var(--foreground)]/70">
-              <p>Total: {total}</p>
-            </div>
-          )}
-        </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] px-5 py-3 text-[13px] text-muted">
+            {totalPages > 1 ? (
+              <>
+                <p className="tabular-nums">Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, total)} of {total}</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="btn btn-glass btn-sm h-8"
+                  >
+                    Previous
+                  </button>
+                  <span className="tabular-nums">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="btn btn-glass btn-sm h-8"
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="tabular-nums">Total: {total}</p>
+            )}
+          </div>
+        </section>
       </div>
-    </>
+    </AppPage>
   )
 }

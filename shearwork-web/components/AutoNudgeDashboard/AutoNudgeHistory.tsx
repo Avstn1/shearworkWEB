@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Users, Clock } from 'lucide-react'
+import { Loader2, Users, Clock, Check, X, MessageSquare } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import ClientMessageHistory from '@/components/AutoNudgeDashboard/ClientMessageHistory'
+import { EmptyState } from '@/components/ui/AppKit'
 
 interface Props {
   user_id: string
@@ -25,10 +26,10 @@ interface SMSRecipient {
 }
 
 const STATUS_BADGE: Record<SMSRecipient['status'], { label: string; classes: string }> = {
-  booked:   { label: '✓ Booked',  classes: 'bg-lime-300/10 text-lime-300 border-lime-300/20' },
-  messaged: { label: 'Messaged',  classes: 'bg-sky-300/10 text-sky-300 border-sky-300/20' },
-  pending:  { label: 'Pending',   classes: 'bg-amber-300/10 text-amber-300 border-amber-300/20' },
-  failed:   { label: '✗ Failed',  classes: 'bg-red-400/10 text-red-400 border-red-400/20' },
+  booked:   { label: 'Booked',   classes: 'badge-sage' },
+  messaged: { label: 'Messaged', classes: 'badge-info' },
+  pending:  { label: 'Pending',  classes: 'badge-warn' },
+  failed:   { label: 'Failed',   classes: 'badge-danger' },
 }
 
 const DAY_OFFSET: Record<string, number> = {
@@ -243,130 +244,129 @@ export default function AutoNudgeHistory({ user_id }: Props) {
 
   return (
     <>
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between mb-1 flex-shrink-0">
-          <h2 className="text-[#d1e2c5] font-semibold text-sm sm:text-base">AutoNudge History</h2>
+      <div className="flex h-full flex-col">
+        <div className="mb-3 flex flex-shrink-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="panel-title">AutoNudge history</h2>
+            <p className="panel-subtitle">This week&apos;s campaign</p>
+          </div>
           {!loading && recipients.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-[#B8BCB5]">
-              <span className="text-lime-300 font-semibold">{clientsBooked} booked</span>
-              <span>·</span>
+            <div className="flex flex-shrink-0 items-center gap-2 pt-0.5 text-xs tabular-nums text-muted">
+              <span className="font-semibold text-sage-bright">{clientsBooked} booked</span>
+              <span aria-hidden="true">&middot;</span>
               <span>{totalClients} sent</span>
             </div>
           )}
         </div>
-        <p className="text-xs text-[#B8BCB5] mb-3 flex-shrink-0">This week's campaign</p>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-5 h-5 text-[#B8BCB5] animate-spin" />
+          <div className="flex flex-1 items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-500" strokeWidth={1.75} />
           </div>
         ) : recipients.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-            <Users className="w-12 h-12 text-white/20" />
-            <p className="text-xl font-semibold text-white/70 leading-relaxed">No campaign this week yet.</p>
-            <p className="text-sm text-white/40 leading-relaxed">Activate your auto-nudge by replying to our SMS or clicking the <span className="text-white/60 font-semibold">Nudge Clients</span> button.</p>
+          <div className="flex flex-1 items-center justify-center">
+            <EmptyState icon={Users} title="No campaign this week yet">
+              Activate your auto-nudge by replying to our SMS or clicking{' '}
+              <span className="font-medium text-ivory">Nudge clients</span>.
+            </EmptyState>
           </div>
         ) : (
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-2 min-h-0 overflow-y-auto auto-rows-min">
+          <ul className="min-h-0 flex-1 divide-y divide-white/[0.06] overflow-y-auto border-t border-white/[0.07] pr-1.5">
             {recipients.map((recipient, index) => {
               const badge = STATUS_BADGE[recipient.status]
               const isBooked = recipient.status === 'booked'
 
               return (
-                <div
+                <li
                   key={`${recipient.client_id ?? recipient.phone}-${index}`}
-                  className={`rounded-xl border p-3 flex flex-col justify-between ${
-                    isBooked
-                      ? 'bg-lime-300/5 border-lime-300/15'
-                      : recipient.status === 'messaged'
-                      ? 'bg-sky-300/5 border-sky-300/15'
-                      : recipient.status === 'failed'
-                      ? 'bg-red-400/5 border-red-400/15'
-                      : 'bg-white/[0.03] border-white/8'
-                  }`}
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-4"
                 >
-                  {/* Top: name + badges */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 flex-wrap">
-                      <p className="text-sm font-semibold text-white leading-snug">
-                        {recipient.full_name ? capitalizeName(recipient.full_name) : <span className="text-white/30 font-normal">Unknown</span>}
-                      </p>
-                      <div className="flex items-center flex-wrap gap-1 flex-shrink-0 min-w-0">
-                        <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.classes}`}>
-                          {badge.label}
-                        </span>
-                        {recipient.has_replied && (
-                          <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#8FB57A]/10 text-[#8FB57A] border-[#8FB57A]/20">
-                            Replied
-                          </span>
-                        )}
-                        {recipient.phone && (
-                          <button
-                            onClick={() => openThread(
-                              recipient.phone!,
-                              recipient.full_name ? capitalizeName(recipient.full_name) : recipient.phone!,
-                            )}
-                            className="relative px-2 py-0.5 rounded-full text-[10px] font-semibold border border-violet-400/40 text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 hover:border-violet-400/70 transition-colors cursor-pointer whitespace-nowrap"
-                          >
-                            {recipient.has_unread && (
-                              <span className="absolute -top-1 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
-                            )}
-                            <span className="hidden sm:inline">Click to view message history</span>
-                            <span className="sm:hidden">Message History</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-white/35">{formatPhoneNumber(recipient.phone)}</p>
+                  {/* Name + phone */}
+                  <div className="min-w-0 sm:w-[28%] sm:flex-shrink-0">
+                    <p className="truncate text-sm font-medium text-ivory">
+                      {recipient.full_name ? capitalizeName(recipient.full_name) : <span className="font-normal text-gray-500">Unknown</span>}
+                    </p>
+                    <p className="mt-0.5 text-xs tabular-nums text-gray-500">{formatPhoneNumber(recipient.phone)}</p>
+                  </div>
 
-                    {/* Booking details */}
+                  {/* Status */}
+                  <div className="flex flex-wrap items-center gap-1.5 sm:w-36 sm:flex-shrink-0">
+                    <span className={`badge ${badge.classes}`}>
+                      {recipient.status === 'booked' && <Check className="h-3 w-3" strokeWidth={2} />}
+                      {recipient.status === 'failed' && <X className="h-3 w-3" strokeWidth={2} />}
+                      {badge.label}
+                    </span>
+                    {recipient.has_replied && <span className="badge">Replied</span>}
+                  </div>
+
+                  {/* Detail */}
+                  <div className="min-w-0 flex-1 text-xs text-muted">
                     {isBooked && (recipient.service || recipient.appointment_date) && (
-                      <div className="pt-2 border-t border-white/8 flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          {recipient.service && <p className="text-xs text-lime-300 font-semibold truncate">{recipient.service}</p>}
+                          {recipient.service && <p className="truncate font-medium text-ivory">{recipient.service}</p>}
                           {recipient.appointment_date && (
-                            <p className="text-xs text-white/35 mt-0.5">{new Date(recipient.appointment_date).toLocaleDateString('en-US', {
+                            <p className="mt-0.5 tabular-nums text-gray-500">{new Date(recipient.appointment_date).toLocaleDateString('en-US', {
                               month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
                             })}</p>
                           )}
                         </div>
-                        {recipient.price && <p className="text-sm font-bold text-lime-300 flex-shrink-0">${recipient.price}</p>}
+                        {recipient.price && <p className="flex-shrink-0 text-sm font-semibold tabular-nums text-sage-bright">${recipient.price}</p>}
                       </div>
                     )}
 
-                    {/* Failure reason */}
                     {recipient.status === 'failed' && recipient.failure_reason && (
-                      <p className="text-xs text-red-400/70">{recipient.failure_reason}</p>
+                      <p className="text-[#D99A8B]">{recipient.failure_reason}</p>
+                    )}
+
+                    {recipient.status === 'messaged' && recipient.messaged_at && (
+                      <p className="flex items-center gap-1.5 tabular-nums">
+                        <Clock className="h-3 w-3 flex-shrink-0 text-gray-500" strokeWidth={1.75} />
+                        <span>Messaged {new Date(recipient.messaged_at).toLocaleDateString('en-US', {
+                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                        })}</span>
+                      </p>
+                    )}
+                    {recipient.status === 'pending' && recipient.scheduled_send && (
+                      <p className="flex items-center gap-1.5 tabular-nums">
+                        <Clock className="h-3 w-3 flex-shrink-0 text-gray-500" strokeWidth={1.75} />
+                        <span>Will be messaged {recipient.scheduled_send.toLocaleDateString('en-US', {
+                          weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+                        })}</span>
+                      </p>
                     )}
                   </div>
 
-                  {/* Bottom: timestamp */}
-                  {recipient.status === 'messaged' && recipient.messaged_at && (
-                    <div className="flex items-center gap-1.5 text-xs text-white/35 mt-2">
-                      <Clock className="w-3 h-3 flex-shrink-0" />
-                      <span>Messaged {new Date(recipient.messaged_at).toLocaleDateString('en-US', {
-                        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                      })}</span>
-                    </div>
+                  {/* Message history */}
+                  {recipient.phone && (
+                    <button
+                      type="button"
+                      onClick={() => openThread(
+                        recipient.phone!,
+                        recipient.full_name ? capitalizeName(recipient.full_name) : recipient.phone!,
+                      )}
+                      title="View message history"
+                      className="btn btn-glass btn-sm h-8 flex-shrink-0 self-start px-2.5 text-xs sm:self-center"
+                    >
+                      <span className="relative">
+                        <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.75} />
+                        {recipient.has_unread && (
+                          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-sage" />
+                        )}
+                      </span>
+                      <span>Messages</span>
+                    </button>
                   )}
-                  {recipient.status === 'pending' && recipient.scheduled_send && (
-                    <div className="flex items-center gap-1.5 text-xs text-white/35 mt-2">
-                      <Clock className="w-3 h-3 flex-shrink-0" />
-                      <span>Will be messaged {recipient.scheduled_send.toLocaleDateString('en-US', {
-                        weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                      })}</span>
-                    </div>
-                  )}
-                </div>
+                </li>
               )
             })}
-          </div>
+          </ul>
         )}
 
         {/* See all weeks — always visible regardless of campaign state */}
         <a
           href="/client-manager?view=sms"
-          className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold text-center text-white border border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25 transition-colors flex-shrink-0 block"
+          className="btn btn-glass btn-sm mt-3 w-full flex-shrink-0"
         >
           See all weeks
         </a>

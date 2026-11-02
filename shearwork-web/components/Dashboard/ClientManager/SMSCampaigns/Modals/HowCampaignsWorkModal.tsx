@@ -1,9 +1,30 @@
+import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Info, Plus, FileText, Sparkles, Shield, Send, Users, Zap, Phone, AlertCircle } from 'lucide-react';
 
 interface HowCampaignsWorkModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+/** Non-interactive sample of a control, shown inline next to a step title. */
+const sampleChip = 'inline-flex items-center gap-1.5 h-6 px-2 rounded-md text-[11px] font-semibold pointer-events-none select-none';
+
+function Step({ marker, title, chip, children }: { marker: ReactNode; title: ReactNode; chip?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-raised border border-white/[0.07] rounded-lg">
+      <div className="flex-shrink-0 w-7 h-7 rounded-md bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-[13px] font-semibold text-sage tabular-nums">
+        {marker}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-semibold text-ivory text-sm mb-1.5 flex items-center gap-2 flex-wrap">
+          {title}
+          {chip}
+        </h4>
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsWorkModalProps) {
@@ -14,298 +35,248 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 min-h-screen"
+          className="modal-backdrop z-[70] flex items-center justify-center p-2 sm:p-4 min-h-screen"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ y: 8, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#181B19] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[75vh] sm:max-h-[90vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
+            className="modal-surface w-full max-w-3xl max-h-[75vh] sm:max-h-[90vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             {/* Modal Header */}
-            <div className="flex items-start justify-between p-3 sm:p-6 border-b border-white/10">
-              <div className="flex-1 min-w-0 pr-2">
-                <h3 className="text-base sm:text-2xl font-bold text-white flex items-center gap-1.5 sm:gap-2">
-                  <Info className="w-4 h-4 sm:w-6 sm:h-6 text-sky-300 flex-shrink-0" />
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-white/[0.07]">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-[15px] font-semibold text-ivory flex items-center gap-2">
+                  <Info className="w-[18px] h-[18px] text-gray-500 flex-shrink-0" strokeWidth={1.75} />
                   <span className="truncate">How SMS Campaigns Work</span>
                 </h3>
-                <p className="text-xs sm:text-sm text-[#B8BCB5] mt-1 hidden sm:block">
+                <p className="text-[13px] text-muted mt-0.5 hidden sm:block">
                   Follow these steps to create and launch your automated SMS campaign
                 </p>
               </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#B8BCB5]" />
+              <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Close">
+                <X className="w-4 h-4" strokeWidth={1.75} />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="overflow-y-auto flex-1 p-3 sm:p-6">
-              <div className="space-y-3 sm:space-y-6">
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
-                      <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white mb-2 text-sm sm:text-base">
-                        Register Your Phone Number
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5]">
-                        Before you can use schedule your Campaigns, you need to register your phone number. Click your profile icon in the top right corner, select <span className="text-white font-semibold">Settings</span>, and update your phone number in the Profile tab. This is required to receive test messages.
-                      </p>
-                    </div>
+            <div className="overflow-y-auto flex-1 p-3 sm:p-5">
+              <div className="space-y-2.5 sm:space-y-3">
+                <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20 rounded-lg">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-md bg-[#D8C59A]/[0.12] flex items-center justify-center">
+                    <Phone className="w-4 h-4 text-[#D8C59A]" strokeWidth={1.75} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-ivory mb-1.5 text-sm">
+                      Register Your Phone Number
+                    </h4>
+                    <p className="text-[13px] text-muted">
+                      Before you can use schedule your Campaigns, you need to register your phone number. Click your profile icon in the top right corner, select <span className="text-ivory font-semibold">Settings</span>, and update your phone number in the Profile tab. This is required to receive test messages.
+                    </p>
                   </div>
                 </div>
 
                 {/* Step 1 */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-sky-300/20 rounded-full flex items-center justify-center">
-                      <span className="text-sky-300 font-bold text-sm sm:text-base">1</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span>Create Your Campaign</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-sky-300 text-black rounded-lg font-semibold text-[10px] sm:text-xs pointer-events-none opacity-80">
-                          <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="hidden xs:inline">Create Message</span>
-                          <span className="xs:hidden">Create</span>
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5]">
-                        Start by creating a new campaign. You can schedule up to 3 campaigns at once to keep your clients engaged throughout the week or month.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <Step
+                  marker="1"
+                  title={<span>Create Your Campaign</span>}
+                  chip={
+                    <span className={`${sampleChip} bg-ivory text-ink`}>
+                      <Plus className="w-3 h-3" strokeWidth={2} />
+                      <span className="hidden xs:inline">Create Message</span>
+                      <span className="xs:hidden">Create</span>
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted">
+                    Start by creating a new campaign. You can schedule up to 3 campaigns at once to keep your clients engaged throughout the week or month.
+                  </p>
+                </Step>
 
                 {/* Step 2 */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-amber-300/20 rounded-full flex items-center justify-center">
-                      <span className="text-amber-300 font-bold text-sm sm:text-base">2</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span>Save as Draft</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-amber-300/20 text-amber-300 border border-amber-300/30 rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs pointer-events-none">
-                          <FileText className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="hidden xs:inline">Save Draft</span>
-                          <span className="xs:hidden">Draft</span>
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5] mb-2 sm:mb-3">
-                        Save your message as a draft once it's between 100-240 characters. This preserves your work as unsaved messages disappear when you leave the page.
-                      </p>
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="text-[10px] sm:text-xs text-[#B8BCB5]">You'll see:</span>
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20">
-                          Draft
-                        </span>
-                        <span className="text-[10px] sm:text-xs text-[#B8BCB5]">→</span>
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-lime-300/10 text-lime-300 border border-lime-300/20">
-                          Saved
-                        </span>
-                      </div>
-                    </div>
+                <Step
+                  marker="2"
+                  title={<span>Save as Draft</span>}
+                  chip={
+                    <span className={`${sampleChip} text-ivory shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]`}>
+                      <FileText className="w-3 h-3" strokeWidth={1.75} />
+                      <span className="hidden xs:inline">Save Draft</span>
+                      <span className="xs:hidden">Draft</span>
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted mb-2">
+                    Save your message as a draft once it's between 100-240 characters. This preserves your work as unsaved messages disappear when you leave the page.
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-500">You'll see:</span>
+                    <span className="badge badge-warn">Draft</span>
+                    <span className="text-xs text-gray-500">→</span>
+                    <span className="badge badge-sage">Saved</span>
                   </div>
-                </div>
+                </Step>
 
                 {/* Step 3 */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-purple-300/20 rounded-full flex items-center justify-center">
-                      <span className="text-purple-300 font-bold text-sm sm:text-base">3</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="hidden sm:inline">Generate AI Template (Optional)</span>
-                        <span className="sm:hidden">AI Template (Optional)</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs pointer-events-none">
-                          <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="hidden xs:inline">Generate</span>
-                          <span className="xs:hidden">Gen</span>
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5]">
-                        Let AI create a professional message template for you. Use it as a starting point or keep it as-is if it perfectly fits your needs.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <Step
+                  marker="3"
+                  title={
+                    <>
+                      <span className="hidden sm:inline">Generate AI Template (Optional)</span>
+                      <span className="sm:hidden">AI Template (Optional)</span>
+                    </>
+                  }
+                  chip={
+                    <span className={`${sampleChip} text-ivory shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]`}>
+                      <Sparkles className="w-3 h-3" strokeWidth={1.75} />
+                      <span className="hidden xs:inline">Generate</span>
+                      <span className="xs:hidden">Gen</span>
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted">
+                    Let AI create a professional message template for you. Use it as a starting point or keep it as-is if it perfectly fits your needs.
+                  </p>
+                </Step>
 
                 {/* Step 4 */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-blue-300/20 rounded-full flex items-center justify-center">
-                      <span className="text-blue-300 font-bold text-sm sm:text-base">4</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="hidden sm:inline">Verify Message Compliance</span>
-                        <span className="sm:hidden">Verify Compliance</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-white/5 border border-white/10 text-white rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs pointer-events-none">
-                          <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="hidden xs:inline">Validate</span>
-                          <span className="xs:hidden">Val</span>
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5] mb-2 sm:mb-3">
-                        Ensures your message meets SMS marketing guidelines. Note: Emojis are prohibited as they double the cost per message.
-                      </p>
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="text-[10px] sm:text-xs text-[#B8BCB5]">Status changes to:</span>
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-sky-300/10 text-sky-300 border border-sky-300/20">
-                          Verified
-                        </span>
-                      </div>
-                    </div>
+                <Step
+                  marker="4"
+                  title={
+                    <>
+                      <span className="hidden sm:inline">Verify Message Compliance</span>
+                      <span className="sm:hidden">Verify Compliance</span>
+                    </>
+                  }
+                  chip={
+                    <span className={`${sampleChip} text-ivory shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]`}>
+                      <Shield className="w-3 h-3" strokeWidth={1.75} />
+                      <span className="hidden xs:inline">Validate</span>
+                      <span className="xs:hidden">Val</span>
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted mb-2">
+                    Ensures your message meets SMS marketing guidelines. Note: Emojis are prohibited as they double the cost per message.
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-500">Status changes to:</span>
+                    <span className="badge badge-info">Verified</span>
                   </div>
-                </div>
+                </Step>
 
                 {/* Step 5 */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-cyan-300/20 rounded-full flex items-center justify-center">
-                      <span className="text-cyan-300 font-bold text-sm sm:text-base">5</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span>Test Your Message</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs pointer-events-none">
-                          <Send className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          Test
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5]">
-                        <span className="font-semibold text-cyan-300">Crucial step!</span> Preview exactly how your message will appear to clients. Test messages cost 1 credit each once your free tests are used up.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <Step
+                  marker="5"
+                  title={<span>Test Your Message</span>}
+                  chip={
+                    <span className={`${sampleChip} text-ivory shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]`}>
+                      <Send className="w-3 h-3" strokeWidth={1.75} />
+                      Test
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted">
+                    <span className="font-semibold text-ivory">Crucial step!</span> Preview exactly how your message will appear to clients. Test messages cost 1 credit each once your free tests are used up.
+                  </p>
+                </Step>
 
                 {/* Step 6 */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-indigo-300/20 rounded-full flex items-center justify-center">
-                      <span className="text-indigo-300 font-bold text-sm sm:text-base">6</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="hidden sm:inline">Preview Recipients</span>
-                        <span className="sm:hidden">Recipients</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#B8BCB5] border border-white/10 pointer-events-none">
-                          <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="hidden sm:inline">Who will receive this message?</span>
-                          <span className="sm:hidden">Who?</span>
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5]">
-                        View the projected recipient list based on our smart targeting algorithm. This list updates daily to always give you the optimal audience. The final confirmed list is provided after all messages are sent.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <Step
+                  marker="6"
+                  title={
+                    <>
+                      <span className="hidden sm:inline">Preview Recipients</span>
+                      <span className="sm:hidden">Recipients</span>
+                    </>
+                  }
+                  chip={
+                    <span className={`${sampleChip} text-muted bg-white/[0.04] border border-white/[0.07]`}>
+                      <Users className="w-3 h-3" strokeWidth={1.75} />
+                      <span className="hidden sm:inline">Who will receive this message?</span>
+                      <span className="sm:hidden">Who?</span>
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted">
+                    View the projected recipient list based on our smart targeting algorithm. This list updates daily to always give you the optimal audience. The final confirmed list is provided after all messages are sent.
+                  </p>
+                </Step>
 
                 {/* Step 7 */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-lime-500/10 to-lime-500/5 border border-lime-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-lime-300/20 rounded-full flex items-center justify-center">
-                      <span className="text-lime-300 font-bold text-sm sm:text-base">7</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span>Activate Campaign</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs bg-gradient-to-r from-sky-300 to-lime-300 text-black pointer-events-none">
-                          <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                          <span className="hidden xs:inline">Activate</span>
-                          <span className="xs:hidden">Activate</span>
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5] mb-2 sm:mb-3">
-                        <span className="font-semibold text-lime-300">Final step!</span> Activate to schedule your message for sending at your chosen time. Messages are ONLY sent when you see the "Active" status.
-                      </p>
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1.5 sm:mb-2">
-                        <span className="text-[10px] sm:text-xs text-[#B8BCB5]">Active status:</span>
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-lime-300/20 text-lime-300 border border-lime-300/30 whitespace-nowrap">
-                          <span className="hidden sm:inline">Active - Click to toggle</span>
-                          <span className="sm:hidden">Active</span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span className="text-[10px] sm:text-xs text-[#B8BCB5]">Inactive status:</span>
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-gray-500/10 text-gray-400 border border-gray-500/20">
-                          Inactive
-                        </span>
-                        <span className="text-[10px] sm:text-xs text-rose-300">← No messages will be sent</span>
-                      </div>
-                    </div>
+                <Step
+                  marker="7"
+                  title={<span>Activate Campaign</span>}
+                  chip={
+                    <span className={`${sampleChip} bg-sage text-ink`}>
+                      <Zap className="w-3 h-3" strokeWidth={2} />
+                      <span className="hidden xs:inline">Activate</span>
+                      <span className="xs:hidden">Activate</span>
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted mb-2">
+                    <span className="font-semibold text-sage-bright">Final step!</span> Activate to schedule your message for sending at your chosen time. Messages are ONLY sent when you see the "Active" status.
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                    <span className="text-xs text-gray-500">Active status:</span>
+                    <span className="badge badge-sage">
+                      <span className="hidden sm:inline">Active - Click to toggle</span>
+                      <span className="sm:hidden">Active</span>
+                    </span>
                   </div>
-                </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-500">Inactive status:</span>
+                    <span className="badge">Inactive</span>
+                    <span className="text-xs text-[#D99A8B]">← No messages will be sent</span>
+                  </div>
+                </Step>
 
                 {/* One-time sms recipient */}
-                <div className="p-3 sm:p-5 bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-4">
-                    <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 bg-purple-300/20 rounded-full flex items-center justify-center">
-                      <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-purple-300" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm sm:text-base mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <span>One-time Recipients</span>
-                        <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-semibold text-[10px] sm:text-xs bg-lime-300/20 text-lime-300 border border-lime-300/30 pointer-events-none">
-                          <span className="hidden xs:inline">Add One-time sms recipient</span>
-                          <span className="xs:hidden">Add One-time sms recipient</span>
-                        </button>
-                      </h4>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5] mb-2 sm:mb-3">
-                        Add clients who should receive this specific message, regardless of the algorithm. These recipients count toward your max clients limit.
+                <Step
+                  marker={<Users className="w-3.5 h-3.5" strokeWidth={1.75} />}
+                  title={<span>One-time Recipients</span>}
+                  chip={
+                    <span className={`${sampleChip} text-ivory shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]`}>
+                      <span className="hidden xs:inline">Add One-time sms recipient</span>
+                      <span className="xs:hidden">Add One-time sms recipient</span>
+                    </span>
+                  }
+                >
+                  <p className="text-[13px] text-muted mb-2">
+                    Add clients who should receive this specific message, regardless of the algorithm. These recipients count toward your max clients limit.
+                  </p>
+                  <div className="p-2.5 bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20 rounded-md mb-2">
+                    <div className="flex items-start gap-2 text-xs text-[#D8C59A]">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+                      <p>
+                        <span className="font-semibold">Important:</span> Your max clients setting determines how many people you're willing to message. If max is set to 0, you won't be able to see one-time recipients in your client list.
                       </p>
-                      <div className="p-2 sm:p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-2 sm:mb-3">
-                        <div className="flex items-start gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-amber-300">
-                          <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 mt-0.5" />
-                          <p>
-                            <span className="font-semibold">Important:</span> Your max clients setting determines how many people you're willing to message. If max is set to 0, you won't be able to see one-time recipients in your client list.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5 sm:space-y-2">
-                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                          <span className="text-[10px] sm:text-xs text-[#B8BCB5]">Example:</span>
-                          <span className="text-[10px] sm:text-xs text-white">Max = 50 → See up to 50 total clients (algorithm + one-time)</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                          <span className="text-[10px] sm:text-xs text-[#B8BCB5]">Example:</span>
-                          <span className="text-[10px] sm:text-xs text-rose-300">Max = 0 → No clients visible, no messages sent</span>
-                        </div>
-                      </div>
                     </div>
                   </div>
-                </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-500">Example:</span>
+                      <span className="text-xs text-ivory">Max = 50 → See up to 50 total clients (algorithm + one-time)</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-500">Example:</span>
+                      <span className="text-xs text-[#D99A8B]">Max = 0 → No clients visible, no messages sent</span>
+                    </div>
+                  </div>
+                </Step>
 
                 {/* Important Note */}
-                <div className="p-3 sm:p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg sm:rounded-xl">
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    <Info className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 flex-shrink-0 mt-0.5" />
+                <div className="p-3 sm:p-4 bg-white/[0.03] border border-white/[0.07] rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-4 h-4 text-[#D8C59A] flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-amber-300 mb-1 text-sm sm:text-base">Important Reminders</h4>
-                      <ul className="space-y-1 text-xs sm:text-sm text-amber-200/80">
-                        <li className="flex gap-2">
-                          <span className="flex-shrink-0">•</span>
-                          <span>Always test your message before activating to see exactly what clients receive</span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="flex-shrink-0">•</span>
-                          <span>Double-check the "Active" status before your scheduled time</span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="flex-shrink-0">•</span>
-                          <span>Credits are reserved when you activate and refunded if you deactivate</span>
-                        </li>
+                      <h4 className="font-semibold text-ivory mb-1.5 text-sm">Important Reminders</h4>
+                      <ul className="space-y-1 text-[13px] text-muted list-disc pl-4 marker:text-gray-500">
+                        <li>Always test your message before activating to see exactly what clients receive</li>
+                        <li>Double-check the "Active" status before your scheduled time</li>
+                        <li>Credits are reserved when you activate and refunded if you deactivate</li>
                       </ul>
                     </div>
                   </div>
@@ -314,11 +285,8 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-white/10 px-3 sm:px-6 py-3 sm:py-4 bg-white/5">
-              <button
-                onClick={onClose}
-                className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)] transition-all"
-              >
+            <div className="flex justify-end border-t border-white/[0.07] px-4 sm:px-5 py-3">
+              <button onClick={onClose} className="btn btn-primary btn-sm">
                 <span className="hidden sm:inline">Got it! Let's create a campaign</span>
                 <span className="sm:hidden">Got it!</span>
               </button>

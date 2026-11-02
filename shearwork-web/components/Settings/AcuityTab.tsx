@@ -5,7 +5,8 @@ import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import ConnectAcuityButton from '../ConnectAcuityButton'
 import Select from '@/components/UI/Select'
-import { Calendar, RefreshCw, Database } from 'lucide-react'
+import { Calendar, RefreshCw, Database, Loader2, AlertTriangle } from 'lucide-react'
+import { Panel } from '@/components/ui/AppKit'
 
 interface CalendarItem {
   id: number | string
@@ -223,159 +224,150 @@ export default function AcuityTab() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
+      <div className="panel flex items-center justify-center py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-sage" strokeWidth={1.75} />
       </div>
     )
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Acuity Integration</h2>
-        <p className="text-sm text-gray-400">
-          Connect and sync your Acuity Scheduling data
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <ConnectAcuityButton onConnectSuccess={loadData} onBeforeConnect={handleBeforeConnect} />
-        {squareConnected && (
-          <p className="text-xs text-amber-200">
-            Connecting Acuity will disconnect Square to keep one active provider.
-          </p>
-        )}
-        {!acuityConnected && (
-          <p className="text-xs text-gray-400">
-            Connect Acuity to load your calendars.
-          </p>
-        )}
-      </div>
+    <div className="space-y-4 md:space-y-5">
+      {/* Connection */}
+      <Panel
+        title="Acuity integration"
+        subtitle="Connect and sync your Acuity Scheduling data"
+        actions={
+          acuityConnected
+            ? <span className="badge badge-sage">Connected</span>
+            : <span className="badge">Not connected</span>
+        }
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1 text-[13px]">
+            {squareConnected && (
+              <p className="text-amber-300">
+                Connecting Acuity will disconnect Square to keep one active provider.
+              </p>
+            )}
+            {!acuityConnected && (
+              <p className="text-muted">Connect Acuity to load your calendars.</p>
+            )}
+            {acuityConnected && !squareConnected && (
+              <p className="text-muted">Your Acuity account is linked to Corva.</p>
+            )}
+          </div>
+          <div className="flex shrink-0 justify-end">
+            <ConnectAcuityButton onConnectSuccess={loadData} onBeforeConnect={handleBeforeConnect} />
+          </div>
+        </div>
+      </Panel>
 
       {/* Calendar Selection */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Calendar className="w-5 h-5" />
-          Calendar
-        </h3>
-
+      <Panel
+        title={
+          <span className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" strokeWidth={1.75} />
+            Calendar
+          </span>
+        }
+      >
         {calendarLocked ? (
           // Calendar is locked - show read-only display
           <div className="space-y-3">
-            <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
-              <p className="text-sm text-gray-400 mb-1">Active Calendar</p>
-              <p className="text-lg font-semibold">{profile.calendar}</p>
+            <div>
+              <p className="field-label">Active calendar</p>
+              <p className="text-[15px] font-semibold text-ivory">{profile.calendar}</p>
             </div>
-            
-            <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3">
-              <p className="text-xs text-amber-200">
-                <strong>Note:</strong> Calendar is locked after selection. Contact support if you need to switch calendars.
-              </p>
-            </div>
+            <p className="text-[13px] text-muted">
+              Calendar is locked after selection. Contact support if you need to switch calendars.
+            </p>
           </div>
         ) : (
           // Calendar not yet selected - allow selection
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                <Select
-                  options={[
-                    { value: '', label: 'Select calendar' },
-                    ...calendars.map((c) => ({ value: c.name, label: c.name })),
-                  ]}
-                  value={selectedCalendar}
-                  onChange={(val) => handleCalendarChangeRequest(val as string)}
-                  disabled={!acuityConnected || calendars.length === 0}
-                />
-              </div>
-
-              {hasCalendarChange && selectedCalendar && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedCalendar(profile?.calendar || '')
-                    }}
-                    className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 transition-all font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => saveCalendar(selectedCalendar)}
-                    className="px-6 py-3 bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-lime-400/20 transition-all"
-                  >
-                    Save
-                  </button>
+          <div className="space-y-4">
+            <div>
+              <label className="field-label">Calendar</label>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex-1">
+                  <Select
+                    options={[
+                      { value: '', label: 'Select calendar' },
+                      ...calendars.map((c) => ({ value: c.name, label: c.name })),
+                    ]}
+                    value={selectedCalendar}
+                    onChange={(val) => handleCalendarChangeRequest(val as string)}
+                    disabled={!acuityConnected || calendars.length === 0}
+                  />
                 </div>
-              )}
+
+                {hasCalendarChange && selectedCalendar && (
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedCalendar(profile?.calendar || '')
+                      }}
+                      className="btn btn-ghost btn-sm h-10"
+                    >
+                      Cancel
+                    </button>
+                    <button onClick={() => saveCalendar(selectedCalendar)} className="btn btn-primary btn-sm h-10">
+                      Save
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-3">
-              <p className="text-xs text-rose-200 font-semibold">
-                ⚠️ WARNING: You cannot change your calendar after selecting one.
-              </p>
-              <p className="text-xs text-rose-200 mt-1">
-                If you need to change calendars later, you will need to create a new account.
-              </p>
+            <div className="flex gap-2.5 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-300" strokeWidth={1.75} />
+              <div className="text-[13px]">
+                <p className="font-semibold text-amber-300">You cannot change your calendar after selecting one.</p>
+                <p className="mt-0.5 text-muted">
+                  If you need to change calendars later, you will need to create a new account.
+                </p>
+              </div>
             </div>
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* Sync Section */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Database className="w-5 h-5" />
-          Sync & Import
-        </h3>
-
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <div className="w-full sm:w-32">
-              <Select
-                options={generateYearOptions()}
-                value={year}
-                onChange={(val) => setYear(val as string)}
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <button
-                onClick={syncYear}
-                disabled={syncingAppointments}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
-                  syncingClients
-                    ? 'bg-white/10 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
-                }`}
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${syncingAppointments ? 'animate-spin' : ''}`}
-                />
-                {syncingAppointments ? `Syncing ${year}...` : `Sync All Appointments`}
-              </button>
-
-              {/* <button
-                onClick={syncYear}
-                disabled={syncingClients}
-                className={`px-6 py-3 rounded-xl font-semibold transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
-                  syncingClients
-                    ? 'bg-white/10 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
-                }`}
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${syncingClients ? 'animate-spin' : ''}`}
-                />
-                {syncingClients ? `Syncing ${year}...` : `Sync Clients`}
-              </button> */}
-            </div>
+      <Panel
+        title={
+          <span className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-gray-500" strokeWidth={1.75} />
+            Sync & import
+          </span>
+        }
+        subtitle="Sync all appointments for comprehensive revenue reports."
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="w-full sm:w-36">
+            <label className="field-label">Year</label>
+            <Select
+              options={generateYearOptions()}
+              value={year}
+              onChange={(val) => setYear(val as string)}
+            />
           </div>
 
-          <p className="text-xs text-gray-500">
-            Sync clients to update customer data and appointment history. Sync all
-            appointments for comprehensive revenue reports.
-          </p>
+          <button
+            onClick={syncYear}
+            disabled={syncingAppointments}
+            className={`btn btn-primary btn-sm h-10 self-end ${syncingClients ? 'opacity-50' : ''}`}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${syncingAppointments ? 'animate-spin' : ''}`}
+              strokeWidth={1.75}
+            />
+            {syncingAppointments ? `Syncing ${year}...` : `Sync All Appointments`}
+          </button>
         </div>
-      </div>
+
+        <p className="mt-4 text-xs text-gray-500">
+          Sync clients to update customer data and appointment history. Sync all
+          appointments for comprehensive revenue reports.
+        </p>
+      </Panel>
     </div>
   )
 }

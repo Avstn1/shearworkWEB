@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { Search, Route } from "lucide-react";
+import { EmptyState } from "@/components/ui/AppKit";
 import { DocSection, DocTabShell, DocEntry, JumpHandler } from "./DocCard";
 
 // ─── API route entries ────────────────────────────────────────────────────────
@@ -324,7 +326,7 @@ export default function ApiDocs({
 
   return (
     <DocTabShell
-      icon="⬡"
+      icon={Route}
       title="API Routes"
       subtitle="Vercel serverless route handlers under /app/api"
       searchPlaceholder="Search routes..."
@@ -332,7 +334,7 @@ export default function ApiDocs({
       onSearchChange={setSearch}
     >
       {Object.keys(groups).length === 0 ? (
-        <p className="text-sm text-[#9EA39C] text-center py-12">No routes match your search.</p>
+        <EmptyState icon={Search} title="No routes match your search." />
       ) : (
         Object.entries(groups).map(([folder, entries]) => (
           <DocSection

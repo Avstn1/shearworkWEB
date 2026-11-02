@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import { MoreVertical, Edit, Trash2, FileText } from 'lucide-react';
 import ReportModal from './ReportModal';
+import { EmptyState } from '@/components/ui/AppKit';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { useApp } from '@/contexts/AppContext';
@@ -141,7 +142,7 @@ export default function WeeklyComparisonReports({
     setReports((prev) =>
       prev.map((r) => (r.id === selectedReport.id ? { ...r, content: updatedContent } : r))
     );
-    toast.success('✅ Report updated!');
+    toast.success('Report updated!');
     setIsEditing(false);
     setSelectedReport(null);
   };
@@ -170,35 +171,30 @@ export default function WeeklyComparisonReports({
 
   return (
     <>
-      {/* single-column grid */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="flex flex-col gap-2">
         {filteredReports.length > 0 ? (
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative rounded-xl p-4 border transition-all duration-300 transform cursor-pointer
-                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(110,231,183,0.08)] hover:bg-[rgba(110,231,183,0.08)]"
-              style={{
-                background: 'rgba(110,231,183,0.04)',
-                borderColor: 'rgba(110,231,183,0.1)',
-                color: '#e8f0eb',
-              }}
+              className="group relative w-full cursor-pointer rounded-lg border border-white/[0.07] bg-white/[0.015] p-3 transition-colors hover:border-white/[0.12] hover:bg-white/[0.03]"
             >
-              <div className="flex justify-between items-start gap-2">
+              <div className="flex items-start gap-3">
                 <div
                   onClick={() => {
                     setSelectedReport(r);
                     logWeeklyComparisonReportOpen(userId, r, role);
                     setIsEditing(false);
                   }}
-                  className="flex-1 flex flex-col gap-1"
+                  className="flex min-w-0 flex-1 items-start gap-3"
                 >
-                  <div className="flex items-center gap-1 text-sm font-semibold text-[#A9C79A]">
-                    <FileText size={16} /> Weekly Comparison - {r.month} {r.year}
-                  </div>
-                  <div className="text-xs text-[#7a9485] max-h-20 overflow-hidden relative">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.05] text-gray-400 group-hover:text-sage-bright"><FileText size={15} strokeWidth={1.75} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-ivory">
+                      Weekly Comparison <span className="text-gray-500">·</span>{' '}
+                      <span className="font-normal text-gray-400">{r.month} {r.year}</span>
+                    </p>
                     <div
-                      className="prose prose-sm"
+                      className="prose prose-sm mt-1 max-h-10 overflow-hidden text-xs leading-5 text-gray-400"
                       dangerouslySetInnerHTML={{
                         __html: r.content
                           ? r.content.length > 150
@@ -207,43 +203,41 @@ export default function WeeklyComparisonReports({
                           : '<em>No content available.</em>',
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-[rgba(110,231,183,0.04)] to-transparent" />
                   </div>
                 </div>
 
                 {isAdmin && (
                   <div className="relative">
                     <button
+                      type="button"
+                      aria-label="Report actions"
                       onClick={(e) => {
                         e.stopPropagation();
                         setMenuOpenId(menuOpenId === r.id ? null : r.id);
                       }}
-                      className="p-1 rounded-md hover:bg-white/[0.08] transition"
+                      className="btn btn-ghost btn-sm px-1.5"
                     >
-                      <MoreVertical size={18} />
+                      <MoreVertical size={16} strokeWidth={1.75} />
                     </button>
 
                     {menuOpenId === r.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-0 mt-1 rounded-md shadow-lg z-50 w-28"
-                        style={{
-                          background: '#151c18',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          color: '#e8f0eb',
-                        }}
+                        className="absolute right-0 z-50 mt-1 w-32 overflow-hidden rounded-lg border border-white/[0.12] bg-raised py-1 text-ivory shadow-lg"
                       >
                         <button
+                          type="button"
                           onClick={() => handleEdit(r)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-white/[0.06]"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-white/[0.05]"
                         >
-                          <Edit size={14} /> Edit
+                          <Edit size={14} strokeWidth={1.75} /> Edit
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDelete(r.id)}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#fbbf24] hover:bg-[rgba(251,191,36,0.08)]"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#D99A8B] hover:bg-[#D99A8B]/[0.08]"
                         >
-                          <Trash2 size={14} /> Delete
+                          <Trash2 size={14} strokeWidth={1.75} /> Delete
                         </button>
                       </div>
                     )}
@@ -253,9 +247,9 @@ export default function WeeklyComparisonReports({
             </div>
           ))
         ) : (
-          <div className="text-[#7a9485] text-sm mt-2 col-span-1 text-center">
+          <EmptyState icon={FileText} title="No comparison reports">
             No weekly comparison reports for this month/year.
-          </div>
+          </EmptyState>
         )}
       </div>
 

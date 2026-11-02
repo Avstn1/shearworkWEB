@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
+import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
 
 interface TopClient {
   id?: string
@@ -157,180 +158,203 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
   const handlePrevPage = () => page > 1 && setPage(page - 1)
   const handleNextPage = () => page < totalPages && setPage(page + 1)
 
-  if (loading) return <p className="text-gray-400">Loading top clients...</p>
+  if (loading) return <p className="text-sm text-muted">Loading top clients...</p>
 
   return (
-    <div className="bg-zinc-900/60 border border-zinc-700/60 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(255,255,255,0.05)]">
-      <h3 className="text-lg font-semibold mb-4 text-white/90">Top Clients</h3>
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h3 className="panel-title">Top clients</h3>
+          <p className="panel-subtitle">{month} {year}</p>
+        </div>
+        <button onClick={handleAddClient} className="btn btn-glass btn-sm shrink-0">
+          <Plus size={16} strokeWidth={1.75} />
+          Add client
+        </button>
+      </header>
 
       {/* Client List */}
-      <div className="flex flex-col gap-3">
-        {currentClients.map((client, idx) => (
-          <div
-            key={client.id || idx}
-            className="grid grid-cols-11 gap-2 items-center bg-zinc-800/70 rounded-xl p-3 border border-zinc-700/50 hover:border-amber-300/30 hover:shadow-[0_0_10px_rgba(255,200,100,0.2)] transition-all"
-          >
-            <div className="col-span-1 text-xs text-gray-400 text-center">
-              {startIdx + idx + 1}
-            </div>
+      <div className="overflow-x-auto">
+        <table className="table-clean min-w-[720px]">
+          <thead>
+            <tr>
+              <th className="w-10 text-center">#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th className="w-28">Paid</th>
+              <th className="w-24">Visits</th>
+              <th>Notes</th>
+              <th className="w-12" />
+            </tr>
+          </thead>
+          <tbody>
+            {currentClients.length === 0 && (
+              <tr>
+                <td colSpan={7} className="!py-6 text-center text-muted">No top clients for this month yet.</td>
+              </tr>
+            )}
+            {currentClients.map((client, idx) => (
+              <tr key={client.id || idx}>
+                <td className="text-center text-xs tabular-nums text-gray-500">{startIdx + idx + 1}</td>
+                <td className="!py-2">
+                  <input
+                    className="field !h-8 !px-2 text-[13px]"
+                    value={client.client_name}
+                    onChange={e => handleChange(startIdx + idx, 'client_name', e.target.value)}
+                    placeholder="Name"
+                  />
+                </td>
+                <td className="!py-2">
+                  <input
+                    className="field !h-8 !px-2 text-[13px]"
+                    value={client.email}
+                    onChange={e => handleChange(startIdx + idx, 'email', e.target.value)}
+                    placeholder="Email"
+                  />
+                </td>
+                <td className="!py-2">
+                  <input
+                    className="field !h-8 !px-2 text-[13px] tabular-nums"
+                    value={client.total_paid}
+                    onChange={e =>
+                      handleNumericChange(e, val => handleChange(startIdx + idx, 'total_paid', val))
+                    }
+                    placeholder="$ Paid"
+                  />
+                </td>
+                <td className="!py-2">
+                  <input
+                    className="field !h-8 !px-2 text-[13px] tabular-nums"
+                    value={client.num_visits}
+                    onChange={e =>
+                      handleNumericChange(e, val => handleChange(startIdx + idx, 'num_visits', val))
+                    }
+                    placeholder="Visits"
+                  />
+                </td>
+                <td className="!py-2">
+                  <input
+                    className="field !h-8 !px-2 text-[13px]"
+                    value={client.notes}
+                    onChange={e => handleChange(startIdx + idx, 'notes', e.target.value)}
+                    placeholder="Notes"
+                  />
+                </td>
+                <td className="!py-2 text-right">
+                  <button
+                    onClick={() => handleRemoveClient(startIdx + idx)}
+                    className="btn btn-ghost btn-sm !h-8 !px-2 hover:!text-[#D99A8B]"
+                    aria-label="Remove client"
+                  >
+                    <X size={16} strokeWidth={1.75} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-            <input
-              className="col-span-2 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
-              value={client.client_name}
-              onChange={e => handleChange(startIdx + idx, 'client_name', e.target.value)}
-              placeholder="Name"
-            />
-            <input
-              className="col-span-3 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
-              value={client.email}
-              onChange={e => handleChange(startIdx + idx, 'email', e.target.value)}
-              placeholder="Email"
-            />
-            <input
-              className="col-span-1.5 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
-              value={client.total_paid}
-              onChange={e =>
-                handleNumericChange(e, val => handleChange(startIdx + idx, 'total_paid', val))
-              }
-              placeholder="$ Paid"
-            />
-            <input
-              className="col-span-1.5 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
-              value={client.num_visits}
-              onChange={e =>
-                handleNumericChange(e, val => handleChange(startIdx + idx, 'num_visits', val))
-              }
-              placeholder="Visits"
-            />
-            <input
-              className="col-span-2 bg-zinc-900/90 border border-zinc-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
-              value={client.notes}
-              onChange={e => handleChange(startIdx + idx, 'notes', e.target.value)}
-              placeholder="Notes"
-            />
-            <button
-              onClick={() => handleRemoveClient(startIdx + idx)}
-              className="col-span-0.5 bg-red-600/90 hover:bg-red-700 text-white rounded-md px-2 py-1 text-xs transition"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] px-5 py-3">
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-between items-center mt-3 text-xs text-gray-400">
+        {totalPages > 1 ? (
+          <div className="flex items-center gap-2 text-xs text-muted">
             <button
               onClick={handlePrevPage}
               disabled={page === 1}
-              className={`px-3 py-1 rounded-md transition-all ${
-                page === 1
-                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                  : 'bg-zinc-800 hover:bg-zinc-700 text-white hover:border-amber-300/40'
-              }`}
+              className="btn btn-ghost btn-sm !h-8 !px-2"
+              aria-label="Previous page"
             >
-              ← Prev
+              <ChevronLeft size={16} strokeWidth={1.75} />
             </button>
-            <span>
+            <span className="tabular-nums">
               Page {page} of {totalPages}
             </span>
             <button
               onClick={handleNextPage}
               disabled={page === totalPages}
-              className={`px-3 py-1 rounded-md transition-all ${
-                page === totalPages
-                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
-                  : 'bg-zinc-800 hover:bg-zinc-700 text-white hover:border-amber-300/40'
-              }`}
+              className="btn btn-ghost btn-sm !h-8 !px-2"
+              aria-label="Next page"
             >
-              Next →
+              <ChevronRight size={16} strokeWidth={1.75} />
             </button>
           </div>
-        )}
+        ) : <span />}
 
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-4">
-          <button
-            onClick={handleAddClient}
-            className="bg-amber-400/90 hover:bg-amber-300 text-black rounded-md px-4 py-2 text-sm font-semibold shadow-[0_0_10px_rgba(255,200,100,0.3)] transition"
-          >
-            + Add Client
-          </button>
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-amber-400/90 hover:bg-amber-300 text-black rounded-md px-4 py-2 text-sm font-semibold shadow-[0_0_10px_rgba(255,200,100,0.3)] transition"
-          >
-            {saving ? 'Saving...' : 'Save Top Clients'}
-          </button>
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn btn-primary btn-sm"
+        >
+          {saving ? 'Saving...' : 'Save top clients'}
+        </button>
       </div>
 
       {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-zinc-900/95 border border-zinc-700/60 rounded-2xl p-6 w-[90%] max-w-md text-white shadow-[0_0_30px_rgba(255,200,100,0.15)]">
-            <h4 className="text-lg font-semibold mb-4">Add New Client</h4>
-
-            <div className="flex flex-col gap-3 text-sm">
-              {['Name', 'Email', '$ Paid', 'Visits', 'Notes'].map((label, idx) => (
-                <input
-                  key={label}
-                  placeholder={label}
-                  value={
-                    idx === 0
-                      ? newClient.client_name
-                      : idx === 1
-                      ? newClient.email
-                      : idx === 2
-                      ? newClient.total_paid
-                      : idx === 3
-                      ? newClient.num_visits
-                      : newClient.notes
-                  }
-                  onChange={e => {
-                    const val = e.target.value
-                    if (label === '$ Paid' || label === 'Visits') {
-                      handleNumericChange(e, v =>
-                        setNewClient({
-                          ...newClient,
-                          [label === '$ Paid' ? 'total_paid' : 'num_visits']: v,
-                        })
-                      )
-                    } else {
-                      setNewClient({
-                        ...newClient,
-                        [label === 'Name'
-                          ? 'client_name'
-                          : label === 'Email'
-                          ? 'email'
-                          : 'notes']: val,
-                      })
-                    }
-                  }}
-                  className="bg-zinc-800/90 border border-zinc-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-amber-300"
-                />
-              ))}
+        <div className="modal-backdrop flex items-center justify-center p-4">
+          <div className="modal-surface w-full max-w-md text-ivory">
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+              <h4 className="text-[15px] font-semibold">Add new client</h4>
+              <button onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm !h-8 !px-2" aria-label="Close">
+                <X size={16} strokeWidth={1.75} />
+              </button>
             </div>
 
-            <div className="flex justify-end gap-3 mt-5">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-md bg-zinc-700/70 hover:bg-zinc-600 text-sm transition"
-              >
+            <div className="px-5 py-4">
+              <div className="flex flex-col gap-3 text-sm">
+                {['Name', 'Email', '$ Paid', 'Visits', 'Notes'].map((label, idx) => (
+                  <input
+                    key={label}
+                    placeholder={label}
+                    value={
+                      idx === 0
+                        ? newClient.client_name
+                        : idx === 1
+                        ? newClient.email
+                        : idx === 2
+                        ? newClient.total_paid
+                        : idx === 3
+                        ? newClient.num_visits
+                        : newClient.notes
+                    }
+                    onChange={e => {
+                      const val = e.target.value
+                      if (label === '$ Paid' || label === 'Visits') {
+                        handleNumericChange(e, v =>
+                          setNewClient({
+                            ...newClient,
+                            [label === '$ Paid' ? 'total_paid' : 'num_visits']: v,
+                          })
+                        )
+                      } else {
+                        setNewClient({
+                          ...newClient,
+                          [label === 'Name'
+                            ? 'client_name'
+                            : label === 'Email'
+                            ? 'email'
+                            : 'notes']: val,
+                        })
+                      }
+                    }}
+                    className="field"
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              <button onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">
                 Cancel
               </button>
-              <button
-                onClick={handleSaveNewClient}
-                className="px-4 py-2 rounded-md bg-amber-400/90 hover:bg-amber-300 text-black font-semibold text-sm transition"
-              >
-                Add Client
+              <button onClick={handleSaveNewClient} className="btn btn-primary btn-sm">
+                Add client
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }

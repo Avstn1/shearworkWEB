@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { EyeOff, CheckCircle } from 'lucide-react'
+import { EyeOff, CheckCircle, X } from 'lucide-react'
 
 interface PublishConfirmationModalProps {
   isOpen: boolean
@@ -21,44 +21,43 @@ export default function PublishConfirmationModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="modal-backdrop flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 8 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#171A18] border border-[#2C302D]/50 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+        className="modal-surface w-full max-w-md"
       >
-        <div className="flex items-start gap-3 mb-4">
-          {currentStatus ? (
-            <EyeOff className="w-6 h-6 text-[#d4a574] flex-shrink-0 mt-1" />
-          ) : (
-            <CheckCircle className="w-6 h-6 text-[#a8d5ba] flex-shrink-0 mt-1" />
-          )}
-          <div>
-            <h3 className="text-lg font-bold text-[#ECEDEA] mb-2">
+        <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            {currentStatus ? (
+              <EyeOff size={18} strokeWidth={1.75} className="shrink-0 text-amber-300" />
+            ) : (
+              <CheckCircle size={18} strokeWidth={1.75} className="shrink-0 text-sage" />
+            )}
+            <h3 className="text-[15px] font-semibold text-ivory">
               {currentStatus ? 'Unpublish Feature Update?' : 'Publish Feature Update?'}
             </h3>
-            <p className="text-sm text-gray-300">
-              {currentStatus 
-                ? 'This update will no longer be visible to users. You can re-publish it anytime.'
-                : 'This update will be immediately visible to all users in the feature updates modal.'}
-            </p>
           </div>
+          <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !w-8 !p-0" aria-label="Close">
+            <X size={16} strokeWidth={1.75} />
+          </button>
         </div>
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#282b24] hover:bg-[#373a32] text-white transition-all duration-300"
-          >
+        <div className="px-5 py-4">
+          <p className="text-sm text-gray-300">
+            {currentStatus
+              ? 'This update will no longer be visible to users. You can re-publish it anytime.'
+              : 'This update will be immediately visible to all users in the feature updates modal.'}
+          </p>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+          <button onClick={onClose} className="btn btn-glass btn-sm">
             Cancel
           </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#2C302D]/60 hover:bg-[#8FB57A]/70 text-[#ECEDEA] font-semibold transition-all duration-300"
-          >
+          <button onClick={onConfirm} className="btn btn-primary btn-sm">
             {currentStatus ? 'Unpublish' : 'Publish'}
           </button>
         </div>

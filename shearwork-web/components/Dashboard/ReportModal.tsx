@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react'
 import type { Editor as TinyMCEEditorType } from 'tinymce'
+import { X } from 'lucide-react'
 
 const TinyMCEEditor = React.lazy(async () => {
   const mod = await import('@tinymce/tinymce-react')
@@ -41,26 +42,31 @@ export default function ReportModal({
   }, [report])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fadeUp">
+    <div className="modal-backdrop flex items-center justify-center p-3 sm:p-6">
       <div
-        className="bg-white text-black rounded-2xl shadow-2xl 
-                   w-[95%] max-w-5xl h-[95vh] flex flex-col border border-gray-200"
+        role="dialog"
+        aria-modal="true"
+        aria-label={headerTitle}
+        className="modal-surface flex h-[95vh] w-full max-w-5xl flex-col text-ivory"
       >
         {/* Header */}
-        <div className="shrink-0 p-4 sm:p-6 border-b border-gray-200">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-1 text-gray-900 truncate">
-            {headerTitle}
-          </h2>
-          <p className="text-sm text-gray-500 truncate">
-            {reportType
-              ? `${report.month} ${report.year || ''}`
-              : `Summary for ${report.month} ${report.year || ''}`}
-          </p>
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.07] px-4 py-4 sm:px-6">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold text-ivory">{headerTitle}</h2>
+            <p className="mt-0.5 truncate text-sm text-muted">
+              {reportType
+                ? `${report.month} ${report.year || ''}`
+                : `Summary for ${report.month} ${report.year || ''}`}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="btn btn-ghost btn-sm px-1.5">
+            <X size={18} strokeWidth={1.75} />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-auto p-2 sm:p-4">
-          <Suspense fallback={<p>Loading editor...</p>}>
+        <div className="min-h-0 flex-1 overflow-auto p-2 sm:p-4">
+          <Suspense fallback={<p className="p-4 text-sm text-gray-500">Loading editor…</p>}>
             <TinyMCEEditor
               apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
               tinymceScriptSrc="/tinymce/tinymce.min.js"
@@ -68,6 +74,8 @@ export default function ReportModal({
               onEditorChange={!readonly ? (newValue: string) => setEditedContent(newValue) : undefined}
               init={{
                 license_key: 'gpl',
+                skin: 'oxide-dark',
+                content_css: 'dark',
                 height: '100%',
                 min_height: 400,
                 resize: 'vertical',
@@ -99,9 +107,12 @@ export default function ReportModal({
                     width: 100%;
                     overflow-x: auto;
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    font-size: clamp(9px, 2vw, 16px);
+                    font-size: clamp(9px, 2vw, 15px);
                     line-height: 1.6;
+                    background: #171A18;
+                    color: #ECEDEA;
                   }
+                  h1, h2, h3, h4 { font-weight: 600; color: #ECEDEA; }
 
                   p, li { margin-bottom: 0.75rem; }
                   img { max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
@@ -123,7 +134,7 @@ export default function ReportModal({
                   }
 
                   td, th {
-                    border: 1px solid #ddd;
+                    border: 1px solid rgba(255,255,255,0.1);
                     padding: 0.5rem;
                     text-align: left;
                     word-break: break-word;
@@ -131,11 +142,12 @@ export default function ReportModal({
                   }
                   th {
                     font-weight: 600;
-                    background: #f9f9f9;
+                    background: #1D201E;
+                    color: #9EA39C;
                     text-overflow: ellipsis;
                   }
 
-                  a { color: #007bff; text-decoration: underline; word-break: break-all; }
+                  a { color: #A9C79A; text-decoration: underline; word-break: break-all; }
 
                   @media (max-width: 768px) {
                     body { font-size: 13px; padding: 0.5rem; }
@@ -148,27 +160,18 @@ export default function ReportModal({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 p-4 sm:p-6 flex justify-end gap-2 border-t border-gray-200">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-white/[0.07] px-4 py-3 sm:px-6">
           {!readonly ? (
             <>
-              <button
-                onClick={() => onSave && onSave(editedContent)}
-                className="bg-black hover:bg-gray-800 text-white rounded-lg px-4 py-2 transition"
-              >
-                Save
-              </button>
-              <button
-                onClick={onClose}
-                className="border border-gray-400 text-gray-700 rounded-lg px-4 py-2 hover:bg-gray-100 transition"
-              >
+              <button type="button" onClick={onClose} className="btn btn-glass">
                 Cancel
+              </button>
+              <button type="button" onClick={() => onSave && onSave(editedContent)} className="btn btn-primary">
+                Save
               </button>
             </>
           ) : (
-            <button
-              onClick={onClose}
-              className="bg-black hover:bg-gray-800 text-white rounded-lg px-4 py-2 transition"
-            >
+            <button type="button" onClick={onClose} className="btn btn-primary">
               Close
             </button>
           )}

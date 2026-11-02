@@ -17,22 +17,23 @@ export default function UploadForm() {
   };
 
   return (
-    <div className="p-6">
+    <div className="panel panel-body">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <textarea
-          className="border p-2"
+          rows={5}
+          className="field"
           placeholder="Paste barber info or text..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
+        <button type="submit" className="btn btn-primary btn-sm self-end">
           Summarize
         </button>
       </form>
       {summary && (
-        <div className="mt-4 p-3 border rounded bg-gray-50">
-          <h3 className="font-semibold mb-2">Summary:</h3>
-          <p>{summary}</p>
+        <div className="mt-4 rounded-lg border border-white/[0.07] bg-raised p-4">
+          <h3 className="mb-2 text-[15px] font-semibold text-ivory">Summary</h3>
+          <p className="text-sm text-gray-300">{summary}</p>
         </div>
       )}
     </div>

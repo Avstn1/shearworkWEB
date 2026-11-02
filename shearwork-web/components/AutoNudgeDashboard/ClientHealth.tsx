@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Search } from 'lucide-react'
+import { Search, X, UserCheck, SearchX, PartyPopper } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
+import { EmptyState, Segmented } from '@/components/ui/AppKit'
 
 interface Props {
   user_id: string
@@ -25,12 +26,12 @@ interface Client {
   expected_visit_interval_days: number
 }
 
-const visitingTypeStyles: Record<string, string> = {
-  consistent: 'bg-green-500/20 text-green-400',
-  'semi-consistent': 'bg-blue-500/20 text-blue-400',
-  'easy-going': 'bg-yellow-500/20 text-yellow-400',
-  rare: 'bg-red-500/20 text-red-400',
-  new: 'bg-gray-500/20 text-gray-400',
+const VISITING_TYPE_BADGE: Record<string, string> = {
+  consistent: 'badge-sage',
+  'semi-consistent': 'badge-info',
+  'easy-going': 'badge-warn',
+  rare: 'badge-danger',
+  new: '',
 }
 
 function toTitleCase(str: string | null) {
@@ -131,42 +132,30 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
     client.phone_normalized
 
   return (
-    <div className={`p-4 border rounded-xl ${
-      showMessaged
-        ? 'bg-sky-300/5 border-sky-300/15'
-        : 'bg-white/5 border-white/10'
-    }`}>
+    <li className="py-3 first:pt-0 last:pb-0">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-white text-sm font-semibold truncate">{name}</span>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-              visitingTypeStyles[client.visiting_type ?? ''] ?? 'bg-gray-500/20 text-gray-400'
-            }`}
-          >
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-sm font-medium text-ivory">{name}</span>
+          <span className={`badge flex-shrink-0 ${VISITING_TYPE_BADGE[client.visiting_type ?? ''] ?? ''}`}>
             {client.visiting_type ?? 'unknown'}
           </span>
-          {showMessaged && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-400/10 text-sky-400 border border-sky-400/20 flex-shrink-0">
-              Messaged
-            </span>
-          )}
+          {showMessaged && <span className="badge flex-shrink-0">Messaged</span>}
         </div>
-        <span className="text-xs font-semibold text-sky-300 flex-shrink-0">Score: {Math.round(client.score)}</span>
-      </div>
-      <div className="flex items-end justify-between mt-1.5 gap-2">
-        <div className="flex gap-2 text-xs text-[#B8BCB5] flex-wrap">
-          <span>{client.phone_normalized}</span>
-          <span>•</span>
-          <span className="text-orange-400">{client.days_overdue}d overdue</span>
-          <span>•</span>
-          <span>{client.days_since_last_visit}d since visit</span>
-        </div>
-        <span className="text-xs text-white/30 flex-shrink-0">
-          Normally visits every {client.expected_visit_interval_days}d
+        <span className="flex-shrink-0 text-xs tabular-nums text-muted">
+          Score <span className="font-semibold text-ivory">{Math.round(client.score)}</span>
         </span>
       </div>
-    </div>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs tabular-nums text-gray-500">
+        <div className="flex flex-wrap gap-x-1.5">
+          <span>{client.phone_normalized}</span>
+          <span aria-hidden="true">&middot;</span>
+          <span className="text-[#D99A8B]">{client.days_overdue}d overdue</span>
+          <span aria-hidden="true">&middot;</span>
+          <span>{client.days_since_last_visit}d since visit</span>
+        </div>
+        <span className="flex-shrink-0">Usually every {client.expected_visit_interval_days}d</span>
+      </div>
+    </li>
   )
 }
 
@@ -365,96 +354,79 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
     return name.includes(q) || c.phone_normalized.includes(q)
   })
 
+  const nudgeDisabled = isNudgeButtonDisabled()
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-1 flex-shrink-0">
-        <h2 className="text-[#d1e2c5] font-semibold text-sm sm:text-base">Clients at Risk</h2>
+      <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-2">
+        <h2 className="panel-title">Clients at risk</h2>
         {!loading && (
-          <span className="text-xs text-[#B8BCB5]">{activeList.length} clients</span>
+          <span className="text-xs tabular-nums text-muted">{activeList.length} clients</span>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-3 bg-white/5 rounded-xl p-1 flex-shrink-0">
-        <button
-          onClick={() => { setTab('prospects'); setSearch('') }}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            tab === 'prospects' ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white/60'
-          }`}
-        >
-          Prospects
-        </button>
-        <button
-          onClick={() => { setTab('unbooked'); setSearch('') }}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            tab === 'unbooked' ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white/60'
-          }`}
-        >
-          Pending Follow-up
-        </button>
-      </div>
+      <Segmented
+        className="mb-3 w-full flex-shrink-0"
+        value={tab}
+        onChange={(v) => { setTab(v); setSearch('') }}
+        options={[
+          { value: 'prospects', label: 'Prospects' },
+          { value: 'unbooked', label: 'Pending follow-up' },
+        ]}
+      />
 
       {/* Search */}
       <div className="relative mb-3 flex-shrink-0">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
+          strokeWidth={1.75}
+        />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or number..."
-          className="w-full bg-[#1e2420] border border-white/15 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-lime-400/30 transition-colors"
+          placeholder="Search by name or number"
+          className="field pl-9"
         />
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-[#B8BCB5] text-sm animate-pulse">Loading...</span>
+        <div className="flex flex-1 items-center justify-center">
+          <span className="text-sm text-muted">Loading&hellip;</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-          <p className="text-xl font-semibold text-white/70 leading-relaxed">
-            {search
-              ? 'No results found'
-              : tab === 'prospects'
-              ? 'No clients due for a nudge'
-              : 'Everyone messaged has booked 🎉'}
-          </p>
-          {!search && tab === 'prospects' && (
-            <p className="text-sm text-white/40 leading-relaxed">
-              Activate your auto-nudge by replying to our SMS or clicking the{' '}
-              <span className="text-white/60 font-semibold">Nudge Clients</span> button.
-            </p>
+        <div className="flex flex-1 items-center justify-center">
+          {search ? (
+            <EmptyState icon={SearchX} title="No results found" />
+          ) : tab === 'prospects' ? (
+            <EmptyState icon={UserCheck} title="No clients due for a nudge">
+              Activate your auto-nudge by replying to our SMS or clicking{' '}
+              <span className="font-medium text-ivory">Nudge clients</span>.
+            </EmptyState>
+          ) : (
+            <EmptyState icon={PartyPopper} title="Everyone messaged has booked" />
           )}
         </div>
       ) : (
-        <div
-          className="flex-1 overflow-y-auto space-y-2 min-h-0"
-          style={{
-            paddingRight: '6px',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255,255,255,0.15) transparent',
-          }}
-        >
+        <ul className="min-h-0 flex-1 divide-y divide-white/[0.06] overflow-y-auto pr-1.5">
           {filtered.map((client) => (
             <ClientRow key={client.client_id} client={client} showMessaged={tab === 'unbooked'} />
           ))}
-        </div>
+        </ul>
       )}
 
       {/* Nudge Clients Button */}
       <button
+        type="button"
         onClick={() => setShowConfirm(true)}
-        disabled={isNudgeButtonDisabled()}
-        className={`mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all flex-shrink-0 ${
-          isNudgeButtonDisabled()
-            ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
-            : 'bg-lime-400/10 border border-lime-400/20 text-lime-400 hover:bg-lime-400/20 hover:border-lime-400/40'
-        }`}
+        disabled={nudgeDisabled}
+        className="btn btn-primary btn-sm mt-3 w-full flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Nudge Clients
+        Nudge clients
       </button>
 
       {/* Confirmation Modal */}
@@ -465,37 +437,50 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="modal-backdrop flex items-center justify-center p-4"
             onClick={() => setShowConfirm(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#141614] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="nudge-confirm-title"
+              className="modal-surface flex w-full max-w-sm flex-col"
             >
-              <div>
-                <h3 className="text-white font-bold text-lg">Start this week's nudge?</h3>
-                <p className="text-white/50 text-sm mt-2 leading-relaxed">
-                  We'll reach out to your top{' '}
-                  <span className="text-white font-semibold">{clientCount} clients</span> who are
-                  overdue for a visit — prioritizing your most consistent ones first. You'll get your
-                  results on{' '}
-                  <span className="text-white font-semibold">{reportDateLabel}</span>.
-                </p>
-              </div>
-              <div className="flex gap-3">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+                <h3 id="nudge-confirm-title" className="panel-title">Start this week&apos;s nudge?</h3>
                 <button
+                  type="button"
                   onClick={() => setShowConfirm(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white/40 border border-white/10 hover:border-white/20 hover:text-white/60 transition-colors"
+                  aria-label="Close"
+                  className="btn btn-ghost btn-sm h-8 w-8 px-0"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.75} />
+                </button>
+              </div>
+              <p className="px-5 py-4 text-sm leading-relaxed text-muted">
+                We&apos;ll reach out to your top{' '}
+                <span className="font-medium text-ivory">{clientCount} clients</span> who are
+                overdue for a visit, prioritizing your most consistent ones first. You&apos;ll get your
+                results on{' '}
+                <span className="font-medium text-ivory">{reportDateLabel}</span>.
+              </p>
+              <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(false)}
+                  className="btn btn-glass btn-sm"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setShowConfirm(false); handleNudge() }}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-lime-400/10 border border-lime-400/20 text-lime-400 hover:bg-lime-400/20 hover:border-lime-400/40 transition-colors"
+                  className="btn btn-primary btn-sm"
                 >
                   Confirm
                 </button>

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, AlertCircle } from 'lucide-react';
+import { Send, AlertCircle, X } from 'lucide-react';
 
 interface TestMessageConfirmModalProps {
   isOpen: boolean;
@@ -25,61 +25,58 @@ export default function TestMessageConfirmModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 min-h-screen"
+          className="modal-backdrop flex items-center justify-center p-4 min-h-screen"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ y: 8, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#181B19] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+            className="modal-surface max-w-md w-full"
           >
-            <div className="flex items-start gap-3 md:gap-4 mb-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-amber-300/20 text-amber-300">
-                <Send className="w-5 h-5 md:w-6 md:h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg md:text-xl font-bold text-white mb-2">
-                  <span className="hidden sm:inline">Send Test Message</span>
-                  <span className="sm:hidden">Test Message</span>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.07]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Send className="w-[18px] h-[18px] text-sage flex-shrink-0" strokeWidth={1.75} />
+                <h3 className="text-[15px] font-semibold text-ivory">
+                  <span className="hidden sm:inline">Send test message</span>
+                  <span className="sm:hidden">Test message</span>
                 </h3>
-                <p className="text-xs md:text-sm text-[#B8BCB5]">
-                  Each test message costs <span className="text-amber-300 font-semibold">1 credit</span>.
-                </p>
               </div>
+              <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2" aria-label="Close">
+                <X className="w-4 h-4" strokeWidth={1.75} />
+              </button>
             </div>
 
-            <div className="p-2.5 md:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-4">
-              <div className="flex items-center gap-2 text-xs md:text-sm text-amber-300">
-                <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-muted">
+                Each test message costs <span className="text-ivory font-semibold">1 credit</span>.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2 p-3 bg-white/[0.03] border border-white/[0.07] rounded-lg text-[13px] text-gray-300">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-gray-500" strokeWidth={1.75} />
                 <p>
-                  Available credits: <span className="font-semibold">{availableCredits}</span>
+                  Available credits: <span className="font-semibold text-ivory tabular-nums">{availableCredits}</span>
                 </p>
                 {hasInsufficientCredits && (
-                  <span className="text-rose-300">• Insufficient credits</span>
+                  <span className="badge badge-danger">Insufficient credits</span>
                 )}
+              </div>
+
+              <div className="p-3 bg-white/[0.03] border border-white/[0.07] rounded-lg">
+                <p className="text-xs text-muted mb-1">Test message will be sent to</p>
+                <p className="text-sm text-ivory break-all tabular-nums">{profilePhone || 'Your registered phone number'}</p>
               </div>
             </div>
 
-            <div className="p-3 md:p-4 bg-white/5 border border-white/10 rounded-lg mb-4 md:mb-6">
-              <p className="text-xs md:text-sm text-white mb-1.5 md:mb-2">
-                <span className="font-semibold">Test message will be sent to:</span>
-              </p>
-              <p className="text-xs md:text-sm text-sky-300 break-all">{profilePhone || 'Your registered phone number'}</p>
-            </div>
-
-            <div className="flex gap-2 md:gap-3">
-              <button
-                onClick={onClose}
-                className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#B8BCB5] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
-              >
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-white/[0.07]">
+              <button onClick={onClose} className="btn btn-ghost btn-sm">
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
                 disabled={hasInsufficientCredits}
-                className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-primary btn-sm"
               >
                 <span className="hidden sm:inline">Send (1 Credit)</span>
                 <span className="sm:hidden">Send</span>

@@ -8,17 +8,6 @@ interface AppInstallPromptModalProps {
   onDismiss: () => void
 }
 
-const COLORS = {
-  background: '#161917',
-  cardBg: '#181B19',
-  surface: 'rgba(236, 237, 234, 0.05)',
-  glassBorder: 'rgba(236, 237, 234, 0.09)',
-  text: '#ECEDEA',
-  textMuted: 'rgba(236, 237, 234, 0.62)',
-  green: '#8FB57A',
-  greenGlow: 'rgba(143, 181, 122, 0.4)',
-}
-
 // TODO: Replace with real App Store ID when available
 const APP_STORE_URL = 'https://apps.apple.com/app/id000000000'
 
@@ -43,89 +32,51 @@ export default function AppInstallPromptModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(4px)' }}
+          className="modal-backdrop z-50 flex items-center justify-center p-4 overflow-y-auto"
           onClick={handleBackdropClick}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            className="relative w-full max-w-md rounded-2xl shadow-2xl"
-            style={{
-              backgroundColor: COLORS.cardBg,
-              border: `1px solid ${COLORS.glassBorder}`,
-            }}
+            className="modal-surface relative w-full max-w-md"
+            role="dialog"
+            aria-modal="true"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
-            <button
-              onClick={onDismiss}
-              className="absolute top-4 right-4 p-1 rounded-full transition-colors hover:bg-white/10"
-              style={{ color: COLORS.textMuted }}
-            >
-              <X size={20} />
-            </button>
-
-            <div className="p-6 sm:p-8">
-              {/* Icon */}
-              <div className="flex justify-center mb-6">
-                <div
-                  className="p-4 rounded-2xl"
-                  style={{
-                    backgroundColor: COLORS.surface,
-                    boxShadow: `0 0 40px ${COLORS.greenGlow}`,
-                  }}
-                >
-                  <Smartphone size={32} style={{ color: COLORS.green }} />
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sage/[0.12]">
+                  <Smartphone className="h-4 w-4 text-sage-bright" strokeWidth={1.75} />
                 </div>
+                <h2 className="panel-title">Don&apos;t miss bookings.</h2>
               </div>
-
-              {/* Title */}
-              <h2
-                className="text-2xl sm:text-3xl font-bold text-center mb-4"
-                style={{ color: COLORS.text }}
-              >
-                Don&apos;t miss bookings.
-              </h2>
-
-              {/* Body */}
-              <p
-                className="text-center mb-8 leading-relaxed"
-                style={{ color: COLORS.textMuted }}
-              >
-                Corva is now filling your open spots. When someone books from a Corva reminder, you&apos;ll get an instant alert — so you can stay on top of your schedule.
-              </p>
-
-              {/* Primary Button */}
-              <button
-                onClick={handleAppStoreClick}
-                className="w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  backgroundColor: COLORS.green,
-                  color: '#FFFFFF',
-                  boxShadow: `0 4px 20px ${COLORS.greenGlow}`,
-                }}
-              >
-                Enable Booking Alerts
-              </button>
-
-              {/* Subtext */}
-              <p
-                className="text-center mt-3 text-sm"
-                style={{ color: COLORS.textMuted }}
-              >
-                Takes 30 seconds
-              </p>
-
-              {/* Secondary Option */}
               <button
                 onClick={onDismiss}
-                className="w-full mt-6 py-3 px-6 text-sm transition-colors hover:underline"
-                style={{ color: COLORS.textMuted }}
+                className="btn btn-ghost btn-sm !h-8 !w-8 !p-0"
+                aria-label="Close"
               >
+                <X className="h-4 w-4" strokeWidth={1.75} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-5">
+              <p className="text-sm leading-relaxed text-gray-300">
+                Corva is now filling your open spots. When someone books from a Corva reminder, you&apos;ll get an instant alert — so you can stay on top of your schedule.
+              </p>
+              <p className="mt-3 text-xs text-gray-500">Takes 30 seconds</p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col-reverse gap-2 border-t border-white/[0.07] px-5 py-4 sm:flex-row sm:justify-end">
+              <button onClick={onDismiss} className="btn btn-ghost btn-sm">
                 Continue without alerts
+              </button>
+              <button onClick={handleAppStoreClick} className="btn btn-primary btn-sm">
+                Enable Booking Alerts
               </button>
             </div>
           </motion.div>

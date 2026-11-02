@@ -16,9 +16,9 @@ interface TrialStatusHubProps {
 type AutoNudgeStatus = 'loading' | 'not_active' | 'active'
 
 function getUrgencyColor(daysRemaining: number) {
-  if (daysRemaining <= 3) return 'bg-red-500'
-  if (daysRemaining <= 7) return 'bg-amber-500'
-  return 'bg-lime-300'
+  if (daysRemaining <= 3) return 'bg-[#D99A8B]'
+  if (daysRemaining <= 7) return 'bg-[#D8C59A]'
+  return 'bg-sage'
 }
 
 
@@ -189,7 +189,7 @@ export default function TrialStatusHub({
       transition={{ duration: 0.3 }}
       className="mb-4"
     >
-      <div className="bg-[#0d0f0e] border border-white/10 rounded-2xl shadow-lg">
+      <div className="panel">
         
         {/* ============================================ */}
         {/* MOBILE LAYOUT - Collapsible (visible < md)  */}
@@ -204,24 +204,24 @@ export default function TrialStatusHub({
             <div className={`w-2 h-2 rounded-full shrink-0 ${getUrgencyColor(daysRemaining)}`} />
             
             {/* Days remaining */}
-            <span className="text-sm text-[#9EA39C] shrink-0">
+            <span className="text-sm text-muted tabular-nums shrink-0">
               {daysRemaining} days left
             </span>
             
             {/* Auto-Nudge status */}
             <div className="flex items-center gap-1 shrink-0">
               {autoNudgeStatus === 'loading' ? (
-                <Loader2 className="w-3 h-3 text-[#9EA39C] animate-spin" />
+                <Loader2 className="w-3 h-3 text-muted animate-spin" />
               ) : (
-                <Zap className={`w-3 h-3 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`} />
+                <Zap className={`w-3 h-3 ${autoNudgeStatus === 'active' ? 'text-sage-bright' : 'text-muted'}`} strokeWidth={1.75} />
               )}
-              <span className={`text-xs font-medium ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`}>
+              <span className={`text-xs font-medium ${autoNudgeStatus === 'active' ? 'text-sage-bright' : 'text-muted'}`}>
                 {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Auto-Nudge: Active' : 'Auto-Nudge: Inactive'}
               </span>
             </div>
             
             {/* Progress bar */}
-            <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden mx-2">
+            <div className="flex-1 h-1 bg-white/[0.06] rounded-full overflow-hidden mx-2">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
@@ -232,7 +232,7 @@ export default function TrialStatusHub({
             
             {/* Chevron */}
             <ChevronDown 
-              className={`w-4 h-4 text-[#9EA39C] shrink-0 transition-transform duration-200 ${
+              className={`w-4 h-4 text-muted shrink-0 transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : ''
               }`} 
             />
@@ -248,17 +248,17 @@ export default function TrialStatusHub({
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
+                <div className="px-4 pb-4 space-y-3 border-t border-white/[0.07] pt-3">
                   {/* Auto-Nudge status */}
                   <div className="flex items-center gap-2">
                     {autoNudgeStatus === 'loading' ? (
-                      <Loader2 className="w-4 h-4 text-[#9EA39C] animate-spin" />
+                      <Loader2 className="w-4 h-4 text-muted animate-spin" />
                     ) : (
-                      <Zap className={`w-4 h-4 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`} />
+                      <Zap className={`w-4 h-4 ${autoNudgeStatus === 'active' ? 'text-sage-bright' : 'text-muted'}`} strokeWidth={1.75} />
                     )}
                     <span className="text-sm">
-                      <span className="text-[#9EA39C]">Auto-Nudge: </span>
-                      <span className={autoNudgeStatus === 'active' ? 'text-lime-300 font-medium' : 'text-[#9EA39C]'}>
+                      <span className="text-muted">Auto-Nudge: </span>
+                      <span className={autoNudgeStatus === 'active' ? 'text-sage-bright font-medium' : 'text-muted'}>
                         {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </span>
@@ -267,10 +267,10 @@ export default function TrialStatusHub({
                   {/* Next nudge date - only when active */}
                   {autoNudgeStatus === 'active' && nextNudgeDate && (
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-sky-400" />
+                      <Clock className="w-4 h-4 text-[#A9C0D2]" strokeWidth={1.75} />
                       <span className="text-sm">
-                        <span className="text-[#9EA39C]">Next: </span>
-                        <span className="text-sky-400 font-medium">{nextNudgeDate}</span>
+                        <span className="text-muted">Next: </span>
+                        <span className="text-[#A9C0D2] font-medium">{nextNudgeDate}</span>
                       </span>
                     </div>
                   )}
@@ -278,16 +278,16 @@ export default function TrialStatusHub({
                   {/* Revenue - only when active */}
                   {autoNudgeStatus === 'active' && (
                     <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-[#9EA39C]" />
+                      <DollarSign className="w-4 h-4 text-muted" strokeWidth={1.75} />
                       {isLoadingRevenue ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-lime-300" />
+                        <Loader2 className="w-4 h-4 animate-spin text-sage-bright" />
                       ) : revenueRecovered && revenueRecovered > 0 ? (
                         <span className="text-sm">
-                          <span className="text-lime-300 font-bold">${revenueRecovered}</span>
-                          <span className="text-[#9EA39C] ml-1">recovered this week</span>
+                          <span className="text-sage-bright font-semibold tabular-nums">${revenueRecovered}</span>
+                          <span className="text-muted ml-1">recovered this week</span>
                         </span>
                       ) : (
-                        <span className="text-sm text-[#9EA39C]">No recoveries yet</span>
+                        <span className="text-sm text-muted">No recoveries yet</span>
                       )}
                     </div>
                   )}
@@ -298,10 +298,10 @@ export default function TrialStatusHub({
                       e.stopPropagation()
                       onNavigateToAutoNudge()
                     }}
-                    className="flex items-center gap-1 text-sm text-lime-300 hover:text-lime-200 font-medium transition-colors pt-1"
+                    className="flex items-center gap-1 text-sm text-sage-bright hover:text-ivory font-medium transition-colors pt-1"
                   >
                     See more
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                 </div>
               </motion.div>
@@ -317,28 +317,28 @@ export default function TrialStatusHub({
           <div className="flex items-center gap-4 mb-3 overflow-x-auto">
             {/* Days remaining */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="w-7 h-7 rounded-lg bg-lime-300/20 flex items-center justify-center shrink-0">
-                <Calendar className="w-3.5 h-3.5 text-lime-300" />
+              <div className="w-7 h-7 rounded-lg bg-sage/[0.12] flex items-center justify-center shrink-0">
+                <Calendar className="w-3.5 h-3.5 text-sage-bright" strokeWidth={1.75} />
               </div>
               <span className="text-sm whitespace-nowrap">
-                <span className="text-base font-bold text-lime-300">{daysRemaining}</span>
-                <span className="text-[#B8BCB5] ml-1">days of trial left</span>
+                <span className="text-base font-semibold tabular-nums text-ivory">{daysRemaining}</span>
+                <span className="text-gray-300 ml-1">days of trial left</span>
               </span>
             </div>
             
             {/* Auto-Nudge status */}
             <div className="flex items-center gap-2 shrink-0">
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                autoNudgeStatus === 'active' ? 'bg-lime-300/20' : 'bg-white/10'
+                autoNudgeStatus === 'active' ? 'bg-sage/[0.12]' : 'bg-white/10'
               }`}>
                 {autoNudgeStatus === 'loading' ? (
-                  <Loader2 className="w-3.5 h-3.5 text-[#9EA39C] animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 text-muted animate-spin" />
                 ) : (
-                  <Zap className={`w-3.5 h-3.5 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`} />
+                  <Zap className={`w-3.5 h-3.5 ${autoNudgeStatus === 'active' ? 'text-sage-bright' : 'text-muted'}`} strokeWidth={1.75} />
                 )}
               </div>
               <span className="text-sm whitespace-nowrap">
-                <span className={`font-semibold ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`}>
+                <span className={`font-semibold ${autoNudgeStatus === 'active' ? 'text-sage-bright' : 'text-muted'}`}>
                   {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Auto-Nudge: Active' : 'Auto-Nudge: Inactive'}
                 </span>
               </span>
@@ -347,9 +347,9 @@ export default function TrialStatusHub({
             {/* Next nudge date - only when active */}
             {autoNudgeStatus === 'active' && nextNudgeDate && (
               <div className="flex items-center gap-2 shrink-0">
-                <Clock className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <Clock className="w-3.5 h-3.5 text-[#A9C0D2] shrink-0" strokeWidth={1.75} />
                 <span className="text-sm whitespace-nowrap">
-                  <span className="font-medium text-sky-400">{nextNudgeDate}</span>
+                  <span className="font-medium text-[#A9C0D2]">{nextNudgeDate}</span>
                 </span>
               </div>
             )}
@@ -358,14 +358,14 @@ export default function TrialStatusHub({
             {autoNudgeStatus === 'active' && (
               <div className="flex items-center gap-2 shrink-0">
                 {isLoadingRevenue ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-300" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-sage-bright" />
                 ) : revenueRecovered && revenueRecovered > 0 ? (
                   <span className="text-sm whitespace-nowrap">
-                    <span className="text-base font-bold text-lime-300">${revenueRecovered}</span>
-                    <span className="text-[#9EA39C] ml-1">this week</span>
+                    <span className="text-base font-semibold tabular-nums text-sage-bright">${revenueRecovered}</span>
+                    <span className="text-muted ml-1">this week</span>
                   </span>
                 ) : (
-                  <span className="text-sm text-[#9EA39C] whitespace-nowrap">No recoveries yet</span>
+                  <span className="text-sm text-muted whitespace-nowrap">No recoveries yet</span>
                 )}
               </div>
             )}
@@ -374,16 +374,16 @@ export default function TrialStatusHub({
             <div className="flex-1 min-w-0" />
             <button
               onClick={onNavigateToAutoNudge}
-              className="flex items-center gap-1 text-sm text-lime-300 hover:text-lime-200 font-medium transition-colors shrink-0"
+              className="flex items-center gap-1 text-sm text-sage-bright hover:text-ivory font-medium transition-colors shrink-0"
             >
               See more
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
             </button>
           </div>
 
           {/* Progress bar with percentage */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
@@ -391,7 +391,7 @@ export default function TrialStatusHub({
                 className={`h-full ${getUrgencyColor(daysRemaining)} rounded-full`}
               />
             </div>
-            <span className="text-xs font-medium text-[#B8BCB5] tabular-nums shrink-0">{Math.round(progressPercent)}%</span>
+            <span className="text-xs font-medium text-gray-300 tabular-nums shrink-0">{Math.round(progressPercent)}%</span>
           </div>
         </div>
       </div>

@@ -143,15 +143,15 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 min-h-screen"
+          className="modal-backdrop z-[70] flex items-center justify-center p-2 sm:p-4 min-h-screen"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ y: 8, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#181B19] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
+            className="modal-surface w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden mb-16 sm:mb-0"
           >
             <AnimatePresence mode="wait">
               {view === 'list' && (
@@ -164,76 +164,71 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                   className="flex flex-col h-full"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-3 sm:p-6 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-pink-500/10 flex-shrink-0">
-                    <div className="flex-1 min-w-0 pr-2">
-                      <h3 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2">
-                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300 flex-shrink-0" />
+                  <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-white/[0.07] flex-shrink-0">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[15px] font-semibold text-ivory flex items-center gap-2">
+                        <Clock className="w-[18px] h-[18px] text-gray-500 flex-shrink-0" strokeWidth={1.75} />
                         <span className="truncate">Campaign History</span>
                       </h3>
-                      <p className="text-xs sm:text-sm text-[#B8BCB5] mt-1 hidden sm:block">
+                      <p className="text-[13px] text-muted mt-0.5 hidden sm:block">
                         View your past SMS campaigns and their performance
                       </p>
                     </div>
-                    <button
-                      onClick={onClose}
-                      className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-                    >
-                      <X className="w-4 h-4 sm:w-5 sm:h-5 text-[#B8BCB5]" />
+                    <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Close">
+                      <X className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   </div>
 
                   {/* Campaigns List */}
-                  <div className="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0">
+                  <div className="flex-1 overflow-y-auto p-3 sm:p-5 min-h-0">
                     {isLoading ? (
-                      <div className="text-center py-12">
-                        <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-300 animate-spin mx-auto mb-4" />
-                        <p className="text-sm sm:text-base text-[#B8BCB5]">Loading campaigns...</p>
+                      <div className="empty-state">
+                        <Loader2 className="animate-spin" strokeWidth={1.75} />
+                        <p>Loading campaigns...</p>
                       </div>
                     ) : campaigns.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-[#B8BCB5] mx-auto mb-4 opacity-50" />
-                        <p className="text-sm sm:text-base text-[#B8BCB5]">No completed campaigns yet</p>
-                        <p className="text-xs text-[#B8BCB5] mt-2">
-                          Completed campaigns will appear here
-                        </p>
+                      <div className="empty-state">
+                        <Clock strokeWidth={1.75} />
+                        <strong>No completed campaigns yet</strong>
+                        <p className="text-[13px]">Completed campaigns will appear here</p>
                       </div>
                     ) : (
-                      <div className="space-y-2 sm:space-y-3">
+                      <div className="space-y-2">
                         {campaigns.map((campaign) => (
                           <button
                             key={campaign.id}
                             onClick={() => handleCampaignClick(campaign)}
-                            className="w-full p-3 sm:p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-purple-300/30 transition-all duration-300 text-left group"
+                            className="w-full p-3 sm:p-4 bg-raised border border-white/[0.07] rounded-lg hover:border-white/[0.12] hover:bg-white/[0.04] transition-colors text-left group"
                           >
                             <div className="flex items-center justify-between mb-2 gap-2">
-                              <h4 className="font-semibold text-white group-hover:text-purple-300 transition-colors text-sm sm:text-base truncate flex-1">
+                              <h4 className="font-semibold text-ivory text-sm truncate flex-1">
                                 {campaign.title}
                               </h4>
-                              <span className="px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-lime-300/10 text-lime-300 border border-lime-300/20 flex-shrink-0">
+                              <span className="badge badge-sage flex-shrink-0">
                                 Completed
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-[#B8BCB5] flex-wrap">
+                            <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted flex-wrap tabular-nums">
                               <span className="flex items-center gap-1">
-                                <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                                <Calendar className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />
                                 {formatDate(campaign.cron)}
                               </span>
-                              <span className="hidden sm:inline">•</span>
+                              <span className="hidden sm:inline text-gray-500">·</span>
                               <span>{campaign.final_clients_to_message || 0} recipients</span>
-                              <span className="hidden sm:inline">•</span>
-                              <span className="text-lime-300">{campaign.success} sent</span>
-                              <span className="hidden xs:inline">•</span>
-                              <span className="text-rose-300 hidden xs:inline">{campaign.fail || 0} failed</span>
+                              <span className="hidden sm:inline text-gray-500">·</span>
+                              <span className="text-sage">{campaign.success} sent</span>
+                              <span className="hidden xs:inline text-gray-500">·</span>
+                              <span className="text-[#D99A8B] hidden xs:inline">{campaign.fail || 0} failed</span>
                               {((campaign.success / (campaign.success + (campaign.fail || 0))) * 100) > 0 && (
                                 <>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="text-sky-300 hidden sm:inline">
+                                  <span className="hidden sm:inline text-gray-500">·</span>
+                                  <span className="text-[#A9C0D2] hidden sm:inline">
                                     {((campaign.success / (campaign.success + (campaign.fail || 0))) * 100).toFixed(1)}% rate
                                   </span>
                                 </>
                               )}
                             </div>
-                            <div className="mt-2 text-[10px] sm:text-xs text-[#B8BCB5] line-clamp-2 sm:line-clamp-1">
+                            <div className="mt-2 text-xs text-gray-500 line-clamp-2 sm:line-clamp-1">
                               {campaign.message}
                             </div>
                           </button>
@@ -243,11 +238,8 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-3 sm:px-6 py-3 sm:py-4 bg-white/5 flex-shrink-0">
-                    <button
-                      onClick={onClose}
-                      className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base bg-white/10 text-white hover:bg-white/20 transition-all"
-                    >
+                  <div className="flex justify-end border-t border-white/[0.07] px-4 sm:px-5 py-3 flex-shrink-0">
+                    <button onClick={onClose} className="btn btn-glass btn-sm">
                       Close
                     </button>
                   </div>
@@ -264,55 +256,49 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                   className="flex flex-col h-full"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10 flex-shrink-0">
-                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                      <button
-                        onClick={handleBack}
-                        className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#B8BCB5]" />
+                  <div className="flex items-center justify-between gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-white/[0.07] flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <button onClick={handleBack} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Back">
+                        <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
                       </button>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm sm:text-lg font-bold text-white truncate">{selectedCampaign.title}</h3>
-                        <p className="text-[10px] sm:text-xs text-[#B8BCB5] mt-0.5 truncate">
+                        <h3 className="text-[15px] font-semibold text-ivory truncate">{selectedCampaign.title}</h3>
+                        <p className="text-xs text-muted mt-0.5 truncate">
                           {formatDate(selectedCampaign.cron)}
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={onClose}
-                      className="p-1.5 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-                    >
-                      <X className="w-4 h-4 text-[#B8BCB5]" />
+                    <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Close">
+                      <X className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   </div>
 
                   {/* Stats Bar */}
                   {recipientsStats && (
-                    <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5 flex-shrink-0">
-                      <div className="flex gap-3 sm:gap-4 text-[10px] sm:text-xs mb-2">
+                    <div className="px-3 sm:px-5 py-3 border-b border-white/[0.07] flex-shrink-0">
+                      <div className="flex gap-5 sm:gap-8 mb-3">
                         <div>
-                          <p className="text-[#B8BCB5] mb-0.5">Total</p>
-                          <p className="text-sm sm:text-base font-bold text-white">{recipientsStats.total}</p>
+                          <p className="stat-label mb-1">Total</p>
+                          <p className="text-lg font-semibold text-ivory tabular-nums">{recipientsStats.total}</p>
                         </div>
                         <div>
-                          <p className="text-[#B8BCB5] mb-0.5">Successful</p>
-                          <p className="text-sm sm:text-base font-bold text-lime-300">{recipientsStats.successful}</p>
+                          <p className="stat-label mb-1">Successful</p>
+                          <p className="text-lg font-semibold text-sage tabular-nums">{recipientsStats.successful}</p>
                         </div>
                         <div>
-                          <p className="text-[#B8BCB5] mb-0.5">Failed</p>
-                          <p className="text-sm sm:text-base font-bold text-rose-300">{recipientsStats.failed || 0}</p>
+                          <p className="stat-label mb-1">Failed</p>
+                          <p className="text-lg font-semibold text-[#D99A8B] tabular-nums">{recipientsStats.failed || 0}</p>
                         </div>
                         {((recipientsStats.successful / (recipientsStats.successful + (recipientsStats.failed || 0))) * 100) > 0 && (
                           <div className="hidden xs:block">
-                            <p className="text-[#B8BCB5] mb-0.5">Success Rate</p>
-                            <p className="text-sm sm:text-base font-bold text-sky-300">
+                            <p className="stat-label mb-1">Success Rate</p>
+                            <p className="text-lg font-semibold text-ivory tabular-nums">
                               {((recipientsStats.successful / (recipientsStats.successful + (recipientsStats.failed || 0))) * 100).toFixed(1)}%
                             </p>
                           </div>
                         )}
                       </div>
-                      <p className="text-[10px] sm:text-xs text-white/60 border-t border-white/10 pt-2 line-clamp-2">
+                      <p className="text-xs text-muted border-t border-white/[0.07] pt-2 line-clamp-2">
                         {selectedCampaign.message}
                       </p>
                     </div>
@@ -321,59 +307,55 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                   {/* Recipients List */}
                   <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
                     {loadingRecipients ? (
-                      <div className="text-center py-12">
-                        <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 text-sky-300 animate-spin mx-auto mb-4" />
-                        <p className="text-sm sm:text-base text-[#B8BCB5]">Loading recipients...</p>
+                      <div className="empty-state">
+                        <Loader2 className="animate-spin" strokeWidth={1.75} />
+                        <p>Loading recipients...</p>
                       </div>
                     ) : recipients.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Users className="w-8 h-8 sm:w-10 sm:h-10 text-[#B8BCB5] mx-auto mb-2 opacity-50" />
-                        <p className="text-xs sm:text-sm text-[#B8BCB5]">No recipients found</p>
+                      <div className="empty-state">
+                        <Users strokeWidth={1.75} />
+                        <p>No recipients found</p>
                       </div>
                     ) : (
                       <div className="space-y-1.5">
                         {recipients.map((recipient, index) => (
                           <div
                             key={index}
-                            className={`p-2 sm:p-2.5 rounded-lg border transition-colors ${
-                              recipient.is_sent
-                                ? 'bg-lime-300/5 border-lime-300/20 hover:bg-lime-300/10'
-                                : 'bg-rose-300/5 border-rose-300/20 hover:bg-rose-300/10'
-                            }`}
+                            className="p-2.5 rounded-lg border border-white/[0.07] bg-raised hover:border-white/[0.12] transition-colors"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   {recipient.first_name && recipient.last_name ? (
-                                    <h4 className="font-semibold text-white text-xs sm:text-sm truncate">
+                                    <h4 className="font-semibold text-ivory text-[13px] truncate">
                                       {recipient.first_name} {recipient.last_name}
                                     </h4>
                                   ) : (
-                                    <h4 className="font-semibold text-[#B8BCB5] text-xs sm:text-sm">Unknown Client</h4>
+                                    <h4 className="font-semibold text-muted text-[13px]">Unknown Client</h4>
                                   )}
-                                  <span className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold flex-shrink-0 ${
+                                  <span className={`badge flex-shrink-0 ${
                                     recipient.is_sent
-                                      ? 'bg-lime-300/20 text-lime-300'
-                                      : 'bg-rose-300/20 text-rose-300'
+                                      ? 'badge-sage'
+                                      : 'badge-danger'
                                   }`}>
                                     {recipient.is_sent ? 'Sent' : 'Failed'}
                                   </span>
                                   {!recipient.is_sent && recipient.reason && (
-                                    <span className="flex items-center gap-1 text-[9px] sm:text-[10px] text-rose-300">
-                                      <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                                    <span className="flex items-center gap-1 text-[11px] text-[#D99A8B] min-w-0">
+                                      <AlertCircle className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />
                                       <span className="truncate">{recipient.reason}</span>
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-[10px] sm:text-[11px] text-[#B8BCB5] mt-0.5">
+                                <p className="text-xs text-gray-500 mt-0.5 tabular-nums">
                                   {recipient.phone_normalized}
                                 </p>
                               </div>
                               <div className="flex-shrink-0">
                                 {recipient.is_sent ? (
-                                  <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-lime-300" />
+                                  <CheckCircle className="w-4 h-4 text-sage" strokeWidth={1.75} />
                                 ) : (
-                                  <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-300" />
+                                  <XCircle className="w-4 h-4 text-[#D99A8B]" strokeWidth={1.75} />
                                 )}
                               </div>
                             </div>
@@ -384,11 +366,8 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/5 flex-shrink-0">
-                    <button
-                      onClick={handleBack}
-                      className="w-full px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
-                    >
+                  <div className="flex justify-end border-t border-white/[0.07] px-3 sm:px-5 py-3 flex-shrink-0">
+                    <button onClick={handleBack} className="btn btn-glass btn-sm">
                       Back to History
                     </button>
                   </div>

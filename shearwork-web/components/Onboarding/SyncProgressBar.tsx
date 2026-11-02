@@ -134,19 +134,19 @@ export default function SyncProgressBar({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-white font-medium">
+        <span className="text-ivory font-medium">
           {isComplete 
             ? `${syncPhase === 'priority' ? 'Priority' : 'Background'} sync complete!` 
             : `Syncing ${syncPhase === 'priority' ? 'priority' : 'background'} data...`}
         </span>
-        <span className="text-emerald-300 font-bold">
+        <span className="text-sage-bright font-semibold tabular-nums">
           {Math.round(displayProgress)}%
         </span>
       </div>
       
-      <div className="w-full bg-black/40 rounded-full h-3 overflow-hidden border border-white/10">
+      <div className="w-full bg-white/[0.06] rounded-sm h-1.5 overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#8FB57A]"
+          className="h-full rounded-sm transition-all duration-500 bg-sage"
           style={{ width: `${displayProgress}%` }}
         />
       </div>

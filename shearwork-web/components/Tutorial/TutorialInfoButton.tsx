@@ -20,9 +20,9 @@ export default function TutorialInfoButton({
         type="button"
         onClick={onClick}
         aria-label={label}
-        className={`tutorial-info-button inline-flex items-center justify-center h-9 w-9 rounded-full border border-white/10 bg-black/30 text-[#cbd5f5] transition hover:border-white/20 hover:text-white ${className}`}
+        className={`tutorial-info-button btn btn-ghost btn-sm h-9 w-9 !px-0 ${className}`}
       >
-        <Info className="h-4 w-4" />
+        <Info className="h-[18px] w-[18px]" strokeWidth={1.75} />
       </button>
     </Tooltip>
   )

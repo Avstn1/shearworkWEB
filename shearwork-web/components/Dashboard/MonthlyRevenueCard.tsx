@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useBarberLabel } from '@/hooks/useBarberLabel'
+import { Stat } from '@/components/ui/AppKit'
 
 interface MonthlyRevenueCardProps {
   userId: string
@@ -137,25 +138,24 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
   const change = calculateChange()
 
   return (
-    <div className="relative flex flex-col flex-1">
-      <h2 className="text-[#8e9480] text-base font-semibold mb-2">🏆 Monthly {label}</h2>
-      <div className="flex-1 flex flex-col justify-center">
-        <p className="text-3xl font-bold text-white">
-          {loading ? 'Loading...' : revenue !== null ? formatCurrency(revenue) : 'N/A'}
-        </p>
-        {!loading && tips !== null && tips > 0 && (
-          <p className="text-sm text-white/30 mt-1">
-            (includes {formatCurrency(tips)} in tips)
-          </p>
-        )}
-      </div>
-      <div className="mt-auto">
-        {change !== null ? (
-          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#A9C79A]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#5C615B]'}`}>
-            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#5C615B]">(vs. prior month)</span>
-          </p>
-        ) : <p className="text-sm text-[#5C615B]">—</p>}
-      </div>
+    <div className="flex h-full w-full flex-col">
+      <Stat
+        label={`Monthly ${label}`}
+        value={
+          loading ? (
+            <span className="text-base font-medium text-gray-500">Loading…</span>
+          ) : revenue !== null ? (
+            formatCurrency(revenue)
+          ) : (
+            'N/A'
+          )
+        }
+        delta={change}
+        hint={<span>{change !== null ? 'vs. prior month' : 'No prior month data'}</span>}
+      />
+      {!loading && tips !== null && tips > 0 && (
+        <p className="mt-1 text-xs tabular-nums text-gray-500">Includes {formatCurrency(tips)} in tips</p>
+      )}
     </div>
   )
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { Search, Library } from "lucide-react";
+import { EmptyState } from "@/components/ui/AppKit";
 import { DocSection, DocTabShell, DocEntry, JumpHandler } from "./DocCard";
 
 // ─── Lib entries ──────────────────────────────────────────────────────────────
@@ -198,7 +200,7 @@ export default function LibDocs({
 
   return (
     <DocTabShell
-      icon="◈"
+      icon={Library}
       title="Lib"
       subtitle="Utility functions, helpers, and shared logic"
       searchPlaceholder="Search lib files..."
@@ -206,9 +208,9 @@ export default function LibDocs({
       onSearchChange={setSearch}
     >
       {LIB_ENTRIES.length === 0 ? (
-        <p className="text-sm text-[#9EA39C] text-center py-12">No lib files documented yet.</p>
+        <EmptyState title="No lib files documented yet." />
       ) : Object.keys(groups).length === 0 ? (
-        <p className="text-sm text-[#9EA39C] text-center py-12">No lib files match your search.</p>
+        <EmptyState icon={Search} title="No lib files match your search." />
       ) : (
         Object.entries(groups).map(([category, entries]) => (
           <DocSection
