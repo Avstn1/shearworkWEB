@@ -63,6 +63,14 @@
   --color-neutral-600: #5C615B; --color-neutral-700: #3F433F; --color-neutral-800: #282B29;
   --color-neutral-900: #1A1D1B; --color-neutral-950: #111312;
 
+
+  /* Amber (warnings, highlights) muted to a soft sand so it reads calm on charcoal */
+  --color-amber-50: #FAF6EC;  --color-amber-100: #F2EAD6; --color-amber-200: #E6D8B8;
+  --color-amber-300: #D8C59A; --color-amber-400: #C8AF7C; --color-amber-500: #B39663;
+  --color-amber-600: #957A4E; --color-amber-700: #75603E; --color-amber-800: #57482F;
+  --color-amber-900: #3B3121; --color-amber-950: #241E15;
+  --color-yellow-300: #D8C59A; --color-yellow-400: #C8AF7C; --color-yellow-500: #B39663;
+
   /* Tighter corners site-wide: crisp, not bubbly */
   --radius-xl: 0.625rem;
   --radius-2xl: 0.75rem;
@@ -408,6 +416,89 @@ html {
     .btn, .btn-cap svg, .link-arrow, .link-arrow svg, .glass-card-hover { transition: none; }
     .btn:hover .btn-cap svg:first-child { transform: none; }
   }
+}
+
+/* =======================
+   ◼ App kit (logged-in product UI). Use these instead of ad-hoc card/table styles.
+   Page:    .app-page > .page-header (.page-title, .page-subtitle, .page-actions)
+   Panels:  .panel > .panel-header (.panel-title, .panel-subtitle) + .panel-body
+   Numbers: .stat-label, .stat-value, .stat-delta-up / .stat-delta-down
+   Bits:    .badge (+ -sage | -warn | -danger | -info), .segmented > .segmented-item[data-active],
+            .field (inputs/selects/textarea), .field-label, .table-clean, .empty-state, .divider
+   ======================= */
+@layer components {
+  .app-page {
+    margin-top: var(--navbar-height, 72px);
+    min-height: calc(100dvh - var(--navbar-height, 72px));
+    padding: 1.25rem 1rem 2rem;
+    background: var(--color-canvas);
+    color: var(--color-ivory);
+  }
+  @media (min-width: 768px) { .app-page { padding: 1.75rem 1.75rem 2.5rem; } }
+  @media (min-width: 1280px) { .app-page { padding: 2rem 2.5rem 3rem; } }
+
+  .page-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+  .page-title { font-size: 1.375rem; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; color: var(--color-ivory); }
+  .page-subtitle { margin-top: 0.25rem; font-size: 0.875rem; color: var(--color-muted); }
+  .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+  .panel {
+    position: relative;
+    background: var(--color-surface);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 0.75rem;
+  }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-glass-border); }
+  .panel-title { font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.01em; color: var(--color-ivory); }
+  .panel-subtitle { font-size: 0.8125rem; color: var(--color-muted); margin-top: 0.125rem; }
+  .panel-body { padding: 1.25rem; }
+
+  .stat-label { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-muted); }
+  .stat-value { font-size: 1.75rem; line-height: 1.1; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--color-ivory); }
+  .stat-delta-up { font-size: 0.75rem; font-weight: 600; color: var(--color-sage-bright); }
+  .stat-delta-down { font-size: 0.75rem; font-weight: 600; color: #D99A8B; }
+
+  .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.4rem; border-radius: 0.3125rem; font-size: 0.6875rem; font-weight: 600; line-height: 1.4; white-space: nowrap; background: rgb(255 255 255 / 0.06); color: var(--color-gray-300); }
+  .badge-sage { background: rgb(143 181 122 / 0.14); color: var(--color-sage-bright); }
+  .badge-warn { background: rgb(216 197 154 / 0.14); color: #D8C59A; }
+  .badge-danger { background: rgb(217 154 139 / 0.14); color: #D99A8B; }
+  .badge-info { background: rgb(150 176 196 / 0.14); color: #A9C0D2; }
+
+  .segmented { display: inline-flex; gap: 0.25rem; padding: 0.25rem; border-radius: 0.5rem; background: var(--color-canvas); border: 1px solid var(--color-glass-border); }
+  .segmented-item { flex: 1; padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.8125rem; font-weight: 500; color: var(--color-muted); white-space: nowrap; transition: background-color 0.15s ease, color 0.15s ease; }
+  .segmented-item:hover { color: var(--color-ivory); }
+  .segmented-item[data-active='true'] { background: var(--color-raised); color: var(--color-ivory); box-shadow: inset 0 0 0 1px var(--color-glass-border-strong); }
+
+  .field {
+    width: 100%;
+    height: 2.5rem;
+    padding: 0 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--color-canvas);
+    border: 1px solid rgb(255 255 255 / 0.09);
+    color: var(--color-ivory);
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  textarea.field { height: auto; padding: 0.625rem 0.75rem; }
+  .field::placeholder { color: var(--color-gray-500); }
+  .field:focus { outline: none; border-color: rgb(143 181 122 / 0.6); box-shadow: 0 0 0 3px rgb(143 181 122 / 0.15); }
+  .field-label { display: block; margin-bottom: 0.375rem; font-size: 0.75rem; font-weight: 500; color: var(--color-muted); }
+
+  .table-clean { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
+  .table-clean thead th { position: sticky; top: 0; z-index: 1; background: var(--color-surface); padding: 0.625rem 0.875rem; text-align: left; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-muted); border-bottom: 1px solid var(--color-glass-border); white-space: nowrap; }
+  .table-clean tbody td { padding: 0.75rem 0.875rem; border-bottom: 1px solid rgb(255 255 255 / 0.05); color: var(--color-gray-200); }
+  .table-clean tbody tr:hover td { background: rgb(255 255 255 / 0.02); }
+  .table-clean tbody tr:last-child td { border-bottom: 0; }
+
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; padding: 2.5rem 1rem; text-align: center; color: var(--color-muted); font-size: 0.875rem; }
+  .empty-state svg { width: 1.75rem; height: 1.75rem; color: var(--color-gray-500); }
+  .empty-state strong { color: var(--color-ivory); font-weight: 600; }
+
+  .divider { height: 1px; background: var(--color-glass-border); border: 0; }
+
+  .modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / 0.6); backdrop-filter: blur(4px); }
+  .modal-surface { background: var(--color-surface); border: 1px solid var(--color-glass-border-strong); border-radius: 0.875rem; box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.8); }
 }
 
 /* Subtle film grain for dark brand surfaces */

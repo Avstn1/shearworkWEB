@@ -16,13 +16,6 @@ import {
 } from 'lucide-react'
 import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 
-const COLORS = {
-  green: '#8FB57A',
-  surfaceSolid: 'rgba(255, 255, 255, 0.1)',
-  text: '#e5e5e5',
-  navBg: '#161917',
-}
-
 export default function Sidebar() {
   const { user, profile } = useAuth()
   const [hasSession, setHasSession] = useState(false)
@@ -43,12 +36,13 @@ export default function Sidebar() {
       setHasUnreadFeatures(false)
     }
 
-    // Set CSS variable for main content offset
+    // Set CSS variable for main content offset: hidden on mobile, icon rail on
+    // tablets, labelled sidebar on desktop
     const updateSidebarWidth = () => {
-      const isMobile = window.innerWidth < 768 // md breakpoint
+      const w = window.innerWidth
       document.documentElement.style.setProperty(
         '--sidebar-width',
-        isMobile ? '0px' : '80px'
+        w < 768 ? '0px' : w < 1024 ? '72px' : '224px'
       )
     }
     
@@ -103,171 +97,60 @@ export default function Sidebar() {
     { href: '/expenses', icon: CreditCard, label: 'Expenses' },
   ]
 
-  const isActive = (href: string) => pathname === href
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
 
   return (
     <>
-      <div
-        className="fixed left-0 top-0 h-screen z-40 hidden md:block group"
-        onMouseEnter={(e) => {
-          e.currentTarget.style.width = '240px'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.width = '80px'
-        }}
-        style={{
-          width: '80px',
-          background: 'linear-gradient(180deg, rgba(27, 29, 27, 0.98) 0%, rgba(24, 24, 24, 0.98) 100%)',
-          backdropFilter: 'blur(20px)',
-          borderRight: '1px solid rgba(143, 181, 122, 0.15)',
-          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.2)',
-          paddingTop: '80px', // Offset for navbar
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
+      <aside
+        className="fixed left-0 z-40 hidden w-[var(--sidebar-width,224px)] flex-col border-r border-white/[0.07] bg-[#141614] md:flex"
+        style={{ top: 'var(--navbar-height, 72px)', height: 'calc(100dvh - var(--navbar-height, 72px))' }}
       >
-        {/* Content */}
-        <div className="flex flex-col h-full py-6">
-          {/* Feature Updates (Gavin only) */}
-          <div className="px-3 mb-6 flex justify-center">
-            <button
-              onClick={() => {
-                setShowFeaturesModal(true)
-                setHasUnreadFeatures(false)
-              }}
-              className="relative w-full rounded-lg font-semibold text-sm transition-all overflow-hidden"
-              style={{
-                background: hasUnreadFeatures 
-                  ? 'linear-gradient(135deg, #8FB57A 0%, #8FB57A 100%)'
-                  : 'rgba(143, 181, 122, 0.15)',
-                color: hasUnreadFeatures ? '#000000' : COLORS.green,
-                border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
-                boxShadow: hasUnreadFeatures ? '0 0 20px rgba(143, 181, 122, 0.4)' : 'none',
-                padding: '12px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.02)'
-                e.currentTarget.style.boxShadow = hasUnreadFeatures 
-                  ? '0 0 25px rgba(143, 181, 122, 0.6)' 
-                  : '0 0 10px rgba(143, 181, 122, 0.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)'
-                e.currentTarget.style.boxShadow = hasUnreadFeatures 
-                  ? '0 0 20px rgba(143, 181, 122, 0.4)' 
-                  : 'none'
-              }}
-            >
-              {hasUnreadFeatures && (
-                <span 
-                  className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse"
-                  style={{ backgroundColor: '#ff4444' }}
-                />
-              )}
-              <div className="group-hover:hidden flex justify-center">
-                <Megaphone className="w-5 h-5" />
-              </div>
-              <div 
-                className="hidden group-hover:flex items-center gap-2"
-                style={{
-                  transition: 'opacity 0.15s ease-in-out 0.15s',
-                }}
+        <nav className="flex-1 space-y-0.5 px-3 py-4" aria-label="Main">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const active = isActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={item.label}
+                aria-current={active ? 'page' : undefined}
+                className={`relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors md:justify-center lg:justify-start ${
+                  active ? 'bg-white/[0.06] text-ivory' : 'text-gray-400 hover:bg-white/[0.04] hover:text-ivory'
+                }`}
               >
-                <Megaphone className="w-5 h-5 flex-shrink-0" />
-                <span className="whitespace-nowrap">Feature Updates</span>
-              </div>
-            </button>
-          </div>
+                {active && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded-r bg-sage" />}
+                <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? 'text-sage-bright' : ''}`} strokeWidth={1.75} />
+                <span className="hidden truncate lg:inline">{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
 
-          {/* Navigation Items */}
-          <nav className="flex-1 px-3 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const active = isActive(item.href)
-              
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="block"
-                >
-                  <div
-                    className="relative flex items-center gap-3 rounded-lg transition-all duration-200"
-                    style={{
-                      padding: '12px',
-                      backgroundColor: active 
-                        ? 'rgba(143, 181, 122, 0.15)' 
-                        : 'transparent',
-                      color: active ? COLORS.green : COLORS.text,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!active) {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }
-                    }}
-                  >
-                    {/* Active indicator */}
-                    {active && (
-                      <div
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full"
-                        style={{ backgroundColor: COLORS.green }}
-                      />
-                    )}
-                    
-                    <div className="group-hover:hidden flex justify-center w-full">
-                      <Icon 
-                        className="w-5 h-5 transition-transform hover:scale-110"
-                        style={{ 
-                          color: active ? COLORS.green : COLORS.text,
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="hidden group-hover:flex items-center gap-3 w-full">
-                      <Icon 
-                        className="w-5 h-5 transition-transform hover:scale-110 flex-shrink-0"
-                        style={{ 
-                          color: active ? COLORS.green : COLORS.text,
-                        }}
-                      />
-                      <span 
-                        className="font-medium text-sm whitespace-nowrap overflow-hidden"
-                        style={{
-                          transition: 'opacity 0.15s ease-in-out 0.15s',
-                        }}
-                      >
-                        {item.label}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
-          </nav>
-
-          {/* Footer */}
-          <div className="px-3 pt-4 border-t border-white/10 flex justify-center">
-            <div className="text-xs text-white/40 text-center group-hover:hidden">
-              ©
-            </div>
-            <div className="text-xs text-white/40 text-center hidden group-hover:block">
-              © {new Date().getFullYear()} Corva ·{" "}
-              <a
-                href="/privacy-policy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:opacity-80"
-              >
-                Privacy Policy
-              </a>
-            </div>
-          </div>
+        <div className="space-y-3 border-t border-white/[0.07] px-3 py-4">
+          <button
+            type="button"
+            title="Feature updates"
+            onClick={() => {
+              setShowFeaturesModal(true)
+              setHasUnreadFeatures(false)
+            }}
+            className="relative flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-gray-400 transition-colors hover:bg-white/[0.04] hover:text-ivory md:justify-center lg:justify-start"
+          >
+            <Megaphone className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+            <span className="hidden lg:inline">Feature updates</span>
+            {hasUnreadFeatures && (
+              <span className="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-sage md:right-2 md:top-2 md:translate-y-0 lg:right-3 lg:top-1/2 lg:-translate-y-1/2" />
+            )}
+          </button>
+          <p className="hidden px-3 text-[11px] text-gray-500 lg:block">
+            © {new Date().getFullYear()} Corva ·{' '}
+            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-300">
+              Privacy
+            </a>
+          </p>
         </div>
-      </div>
+      </aside>
 
       <NewFeaturesModal
         isOpen={showFeaturesModal}
