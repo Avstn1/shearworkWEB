@@ -4,6 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const BATCH_SIZE = 100;
+const SYNC_COMPLETED_TYPE = 'sync_completed';
+const SYNC_COMPLETED_HEADER = 'Acuity data fully synced';
 
 interface NotificationPayload {
   type: 'INSERT';
@@ -62,6 +64,25 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // "Acuity data fully synced" is only pushed once per user (the initial sync after
+    // onboarding). Later re-syncs may still record the notification, but never push it.
+    if (reference_type === SYNC_COMPLETED_TYPE || header === SYNC_COMPLETED_HEADER) {
+      const { count, error: countError } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user_id)
+        .or(`reference_type.eq.${SYNC_COMPLETED_TYPE},header.eq."${SYNC_COMPLETED_HEADER}"`);
+
+      // count includes this row; on a lookup error, err on the side of not pushing
+      if (countError || (count ?? 0) > 1) {
+        console.log(`Skipping repeat sync-complete push for user ${user_id}`, countError ?? '');
+        return new Response(JSON.stringify({ skipped: 'Sync-complete push already sent' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+    }
 
     // Get ALL push tokens for this user
     const { data: tokens, error: tokenError } = await supabase
