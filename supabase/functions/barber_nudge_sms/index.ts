@@ -3,6 +3,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import twilio from 'npm:twilio'
+import { SMS_SENDS_PAUSED, smsPausedResponse } from '../_shared/smsPause.ts'
 
 const supabase = createClient(
   Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? '', 
@@ -252,6 +253,8 @@ async function getBarberAvailability(userId: string): Promise<{ slots: number; r
 }
 
 Deno.serve(async (req) => {
+  if (SMS_SENDS_PAUSED) return smsPausedResponse('barber_nudge_sms')
+
   try {
     const dayOfWeek = getCurrentDayOfWeek()
     // 0 = Sunday, 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday

@@ -2,6 +2,7 @@
 
 import twilio from 'twilio'
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
+import { SMS_SENDS_PAUSED } from '@/lib/smsPause'
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -162,6 +163,11 @@ export async function ClientSMSFromBarberNudge(
     username: string
   }
 ) {
+  if (SMS_SENDS_PAUSED) {
+    console.warn(`⏸️ [ClientSMSFromBarberNudge] SMS sending is paused; skipping ${user_id}`)
+    return
+  }
+
   // Runs from webhooks / background jobs (no user session)
   const supabase = createSupabaseAdminClient()
 
