@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, Suspense } from 'react'
 import { AnimatePresence, motion, Variants, easeInOut } from 'framer-motion'
 import { useSearchParams, useRouter } from 'next/navigation'
 
-import { Loader2, Menu, X } from 'lucide-react'
+import { Loader2, Menu, X, Settings } from 'lucide-react'
 import { AppPage, PageHeader } from '@/components/ui/AppKit'
 import SidebarTabs, { SETTINGS_TABS } from '@/components/Settings/SidebarTabs'
 import ProfileTab from '@/components/Settings/ProfileTab'
@@ -140,7 +140,7 @@ function SettingsPageContent() {
 
       <AppPage>
         <div className="mx-auto max-w-6xl">
-          <PageHeader
+          <PageHeader icon={Settings} tone="sky"
             title={
               <span className="flex items-center gap-2">
                 Settings

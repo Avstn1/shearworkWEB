@@ -78,7 +78,7 @@ export default function OpenBookings({ user_id }: Props) {
   }, [fetchOpenings, user_id])
 
   return (
-    <div className="flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
+    <div className="tone-sky flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
       <div className="min-w-0">
         <p className="stat-label">Open bookings</p>
         <p className="stat-value mt-1.5 text-lg md:mt-2 md:text-[1.75rem]">
@@ -94,13 +94,13 @@ export default function OpenBookings({ user_id }: Props) {
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
           {!loading && (
-            <circle cx="50" cy="50" r="42" fill="none" stroke="#8FB57A" strokeWidth="8"
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#96B0C4" strokeWidth="8"
               strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={0}
               className="transition-all duration-700" />
           )}
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <CalendarDays className="h-4 w-4 text-sage md:h-5 md:w-5" strokeWidth={1.75} />
+          <CalendarDays className="h-4 w-4 text-tone md:h-5 md:w-5" strokeWidth={1.75} />
         </div>
       </div>
     </div>

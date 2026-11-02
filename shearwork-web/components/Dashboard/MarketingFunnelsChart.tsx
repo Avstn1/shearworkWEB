@@ -16,8 +16,8 @@ import { supabase } from '@/utils/supabaseClient'
 
 import UnderConstructionWrapper from '@/components/Wrappers/UnderConstructionWrapper';
 import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal';
-import { Megaphone } from 'lucide-react'
-import { EmptyState } from '@/components/ui/AppKit'
+import { Megaphone, Filter } from 'lucide-react'
+import { EmptyState, PanelHeading } from '@/components/ui/AppKit'
 
 // Graphite chart palette, indexed to keep series mapping: [1] new, [3] retained, [2] retention
 const COLORS = ['#B8BCB5', '#8FB57A', '#D8C59A', '#A9C0D2', '#D99A8B']
@@ -180,8 +180,8 @@ export default function MarketingFunnelsChart({
 
   if (data.length === 0)
     return (
-      <div className="flex min-h-[400px] flex-col">
-        <h2 className="panel-title">Marketing Funnels</h2>
+      <div className="flex min-h-[400px] flex-col lg:h-full lg:min-h-0">
+        <PanelHeading icon={Filter} tone="sky">Marketing funnels</PanelHeading>
         <div className="flex flex-1 items-center justify-center">
           <EmptyState icon={Megaphone} title="No data to see here yet" />
         </div>
@@ -195,17 +195,9 @@ export default function MarketingFunnelsChart({
 
   return (
     <>
-      <div
-        className="flex flex-col flex-1"
-        style={{
-          minHeight: '400px',
-          maxHeight: '500px',
-        }}
-      >
+      <div className="flex min-h-[400px] max-h-[500px] flex-1 flex-col lg:h-full lg:max-h-none lg:min-h-0">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="panel-title">
-            Marketing Funnels
-          </h2>
+          <PanelHeading icon={Filter} tone="sky">Marketing funnels</PanelHeading>
           <button
             onClick={() => setIsModalOpen(true)}
             type="button"
@@ -215,8 +207,8 @@ export default function MarketingFunnelsChart({
           </button>
         </div>
 
-        <div className="flex-1 flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
             <BarChart
               layout="vertical"
               data={filteredData}

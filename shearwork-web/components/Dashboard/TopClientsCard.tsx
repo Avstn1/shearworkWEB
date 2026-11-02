@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Users } from 'lucide-react'
-import { EmptyState } from '@/components/ui/AppKit'
+import { Crown, Users } from 'lucide-react'
+import { EmptyState, PanelHeading } from '@/components/ui/AppKit'
 
 interface TopClientsCardProps {
   userId?: string
@@ -65,9 +65,9 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
     `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   return (
-    <div className="top-clients-card flex min-h-[320px] max-h-[480px] flex-1 flex-col">
+    <div className="top-clients-card flex min-h-[320px] max-h-[480px] flex-1 flex-col lg:h-full lg:max-h-none lg:min-h-0">
       <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h2 className="panel-title">Top Clients</h2>
+        <PanelHeading icon={Crown} tone="sand">Top clients</PanelHeading>
         {selectedMonth && (
           <span className="text-xs text-gray-500">
             {selectedMonth} {selectedYear ?? ''}

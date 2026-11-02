@@ -1,5 +1,6 @@
 'use client'
 
+import { Receipt } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { motion } from 'framer-motion'
@@ -130,7 +131,7 @@ export default function MonthlyExpensesCard({ userId, month, year }: MonthlyExpe
       animate="visible"
       className="flex h-full w-full flex-col"
     >
-      <Stat
+      <Stat icon={Receipt} tone="sand"
         label="Monthly Expenses"
         value={loading ? <span className="text-base font-medium text-gray-500">Loading…</span> : formatCurrency(expenses)}
       />

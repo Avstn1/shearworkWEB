@@ -1,5 +1,6 @@
 'use client'
 
+import { CalendarDays } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useBarberLabel } from '@/hooks/useBarberLabel'
@@ -123,7 +124,7 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat
+      <Stat icon={CalendarDays} tone="sage"
         label={`Daily ${label}`}
         value={
           loading ? (

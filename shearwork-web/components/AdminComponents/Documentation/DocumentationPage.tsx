@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen } from 'lucide-react'
 import { useState, useCallback, useEffect } from "react";
 import ApiDocs from "./ApiDocs";
 import LibDocs from "./LibDocs";
@@ -43,7 +44,7 @@ export default function DocumentationPage() {
   return (
     <AppPage>
       <div className="mx-auto max-w-7xl">
-        <PageHeader
+        <PageHeader icon={BookOpen} tone="sky"
           title="Codebase documentation"
           subtitle="Reference for API routes, utility libraries, and edge functions: their purpose, inputs, outputs, and relationships."
         />

@@ -19,7 +19,7 @@ import AdminServiceBreakdownEditor from '@/components/AdminComponents/AdminServi
 import AdminAverageTicketEditor from '@/components/AdminComponents/AdminAverageTicketEditor'
 import AdminMarketingFunnelsEditor from '@/components/AdminComponents/AdminMarketingFunnelsEditor'
 import { AppPage, PageHeader, Panel, Segmented, EmptyState } from '@/components/ui/AppKit'
-import { CalendarClock, ChevronLeft, ChevronRight, RefreshCw, Search, Users } from 'lucide-react'
+import { CalendarClock, ChevronLeft, ChevronRight, RefreshCw, Search, Users, LayoutGrid } from 'lucide-react'
 
 interface Barber {
   user_id: string
@@ -309,7 +309,7 @@ export default function AdminDashboardPage() {
 
   return (
     <AppPage>
-      <PageHeader
+      <PageHeader icon={LayoutGrid} tone="sage"
         title="Admin dashboard"
         subtitle="Pick a barber to manage reports and monthly figures."
         actions={profile && <UserProfile />}

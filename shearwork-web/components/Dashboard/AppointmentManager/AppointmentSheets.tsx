@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import { Calendar, CalendarX, ChevronDown, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, CalendarX, ChevronDown, ChevronLeft, ChevronRight, Loader2, AlertCircle, CalendarDays } from 'lucide-react';
 import { PageHeader, EmptyState } from '@/components/ui/AppKit';
 import AppointmentEditModal from './AppointmentEditModal';
 import { supabase } from '@/utils/supabaseClient';
@@ -256,7 +256,7 @@ export default function AppointmentSheets() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader
+      <PageHeader icon={CalendarDays} tone="sand"
         title="Appointment Manager"
         subtitle="View daily appointments, manage tips, and track revenue"
         actions={

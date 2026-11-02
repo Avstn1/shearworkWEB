@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, CalendarDays, X } from 'lucide-react'
+import { Loader2, CalendarDays, X, BarChart3 } from 'lucide-react'
 import { AppPage, PageHeader, Segmented } from '@/components/ui/AppKit'
 import Navbar from '@/components/Navbar'
 import 'react-day-picker/dist/style.css'
@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
     <AppPage>
       {/* Header */}
       <motion.div variants={fadeInUp} initial="hidden" animate="visible">
-        <PageHeader title="Analytics" subtitle="Logins, navigation, reports and finance activity across the app." />
+        <PageHeader icon={BarChart3} tone="sky" title="Analytics" subtitle="Logins, navigation, reports and finance activity across the app." />
       </motion.div>
 
       {/* Filter bar */}

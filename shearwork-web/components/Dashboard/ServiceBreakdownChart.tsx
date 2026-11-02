@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { PieChart as PieIcon } from 'lucide-react'
-import { EmptyState } from '@/components/ui/AppKit'
+import { EmptyState, PanelHeading } from '@/components/ui/AppKit'
 
 // Graphite chart palette (series order); "Others" falls back to a neutral grey.
 const COLORS = ['#8FB57A', '#A9C0D2', '#D8C59A', '#B8BCB5', '#D99A8B', '#6F8F63']
@@ -55,8 +55,8 @@ export default function ServiceBreakdownChart({
 
   if (!data.length)
     return (
-      <div className="flex min-h-[360px] flex-col">
-        <h2 className="panel-title">Service Breakdown</h2>
+      <div className="flex min-h-[360px] flex-col lg:h-full lg:min-h-0">
+        <PanelHeading icon={PieIcon} tone="sage">Service breakdown</PanelHeading>
         <div className="flex flex-1 items-center justify-center">
           <EmptyState icon={PieIcon} title="No data to see here yet" />
         </div>
@@ -90,13 +90,13 @@ export default function ServiceBreakdownChart({
     name === 'Others' && otherServices.length > 0 ? OTHERS_COLOR : COLORS[index % COLORS.length]
 
   return (
-    <div className="flex min-h-[360px] flex-1 flex-col">
-      <h2 className="panel-title mb-4">Service Breakdown</h2>
+    <div className="flex min-h-[360px] flex-1 flex-col lg:h-full lg:min-h-0">
+      <PanelHeading icon={PieIcon} tone="sage" className="mb-4">Service breakdown</PanelHeading>
 
       <div className="flex flex-1 flex-col gap-4 overflow-hidden md:flex-row md:items-center">
         {/* Chart */}
-        <div className="flex min-h-[280px] flex-1 items-center justify-center md:min-h-[320px]">
-          <ResponsiveContainer width="100%" height={320}>
+        <div className="flex min-h-[280px] flex-1 items-center justify-center md:min-h-[320px] lg:min-h-0">
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
             <PieChart>
               <Pie
                 data={finalData}

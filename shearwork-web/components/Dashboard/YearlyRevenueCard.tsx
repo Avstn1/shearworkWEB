@@ -1,5 +1,6 @@
 'use client'
 
+import { BarChart3 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useBarberLabel } from '@/hooks/useBarberLabel'
@@ -146,7 +147,7 @@ export default function YearlyRevenueCard({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat
+      <Stat icon={BarChart3} tone="sage"
         label={`Total ${label} (${titleSuffix})`}
         value={
           loading ? (

@@ -5,7 +5,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Loader2, RefreshCw, X } from 'lucide-react'
+import { Loader2, RefreshCw, X, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 import SignOutButton from '@/components/SignOutButton'
@@ -39,7 +39,8 @@ import { supabase } from '@/utils/supabaseClient'
 import { isTrialActive } from '@/utils/trial'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { DASHBOARD_TUTORIAL_STEPS } from '@/lib/tutorials/dashboard'
-import { PageHeader, Segmented } from '@/components/ui/AppKit'
+import { PageHeader, PanelHeading, Segmented } from '@/components/ui/AppKit'
+import { CalendarRange, FileText, GitCompareArrows } from 'lucide-react'
 
 const MONTHS = [
   'January','February','March','April','May','June',
@@ -121,8 +122,8 @@ export default function DashboardPage() {
   }, [trialPromptMode])
 
   /* Graphite panels: stat tiles and content panels share one surface. */
-  const statClass = 'panel flex flex-col p-4 sm:p-5'
-  const cardClass = 'panel flex flex-1 flex-col p-4 sm:p-5'
+  const statClass = 'panel flex flex-col justify-center p-4'
+  const cardClass = 'panel flex min-h-0 flex-1 flex-col p-4 sm:p-5'
 
   useEffect(() => {
     if (!user?.id) return
@@ -266,7 +267,7 @@ export default function DashboardPage() {
   }
 
   const DashboardHeader = () => (
-    <PageHeader
+    <PageHeader icon={TrendingUp} tone="sage"
       title="Analytics"
       subtitle={VIEW_SUBTITLES[dashboardView]}
       actions={
@@ -341,57 +342,59 @@ export default function DashboardPage() {
   const selectedDateStr = `${selectedYear}-${String(MONTHS.indexOf(selectedMonth) + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
 
   // -------------------- MAIN DASHBOARD --------------------
+  // Desktop: three columns that fill the viewport (no page scroll); each panel
+  // scrolls inside itself if its content is taller. Mobile/tablet: stacked.
   const MainDashboard = () => (
-    <motion.div className="flex flex-col gap-4">
-      {/* STAT ROW */}
-      <motion.div variants={fadeInUp} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        <motion.div className={statClass}>
-          <DailyRevenueCard
-            key={`daily-${refreshKey}`}
-            userId={user.id}
-            selectedDate={selectedDateStr}
-          />
+    <motion.div className="grid grid-cols-1 gap-4 lg:h-full lg:grid-cols-[minmax(0,3fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
+      {/* LEFT: stats + service breakdown */}
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <motion.div variants={fadeInUp} className="grid flex-shrink-0 grid-cols-1 gap-4 sm:grid-cols-3">
+          <motion.div className={statClass}>
+            <DailyRevenueCard
+              key={`daily-${refreshKey}`}
+              userId={user.id}
+              selectedDate={selectedDateStr}
+            />
+          </motion.div>
+          <motion.div className={statClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
+          <motion.div className={statClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
+          <motion.div className={statClass}>
+            <WeeklyRevenueCard
+              key={`weekly-${refreshKey}`}
+              userId={user.id}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+            />
+          </motion.div>
+          <motion.div className={statClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} timeframe={'YTD'} /></motion.div>
+          <motion.div className={statClass}><AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
         </motion.div>
-        <motion.div className={statClass}>
-          <WeeklyRevenueCard
-            key={`weekly-${refreshKey}`}
-            userId={user.id}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-          />
-        </motion.div>
-        <motion.div className={statClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
-        <motion.div className={statClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
-        <motion.div className={statClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} timeframe={'YTD'} /></motion.div>
-        <motion.div className={statClass}><AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
-      </motion.div>
-
-      {/* CHARTS + TOP CLIENTS */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
-          <motion.div variants={fadeInUp} className={cardClass}><ServiceBreakdownChart key={`services-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
-          <motion.div variants={fadeInUp} className={cardClass}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
-        </div>
-        <motion.div variants={fadeInUp} className={`${cardClass} min-w-0 self-start w-full`}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></motion.div>
+        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[320px] lg:min-h-0`}><ServiceBreakdownChart key={`services-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
       </div>
 
-      {/* REPORTS */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <motion.section data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className="panel flex flex-col">
-          <header className="panel-header"><h2 className="panel-title">Monthly Reports</h2></header>
-          <div className="panel-body flex-1">
+      {/* MIDDLE: top clients + funnels */}
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[280px] lg:min-h-0 lg:overflow-y-auto`}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></motion.div>
+        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[320px] lg:min-h-0`}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
+      </div>
+
+      {/* RIGHT: reports */}
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <motion.section data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
+          <header className="panel-header py-3"><PanelHeading icon={FileText} tone="sage">Monthly reports</PanelHeading></header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </div>
         </motion.section>
-        <motion.section id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className="panel flex flex-col">
-          <header className="panel-header"><h2 className="panel-title">Weekly Reports</h2></header>
-          <div className="panel-body flex-1">
+        <motion.section id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
+          <header className="panel-header py-3"><PanelHeading icon={CalendarRange} tone="sky">Weekly reports</PanelHeading></header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </div>
         </motion.section>
-        <motion.section data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className="panel flex flex-col">
-          <header className="panel-header"><h2 className="panel-title">Weekly Comparison</h2></header>
-          <div className="panel-body flex-1">
+        <motion.section data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
+          <header className="panel-header py-3"><PanelHeading icon={GitCompareArrows} tone="sand">Weekly comparison</PanelHeading></header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </div>
         </motion.section>
@@ -401,7 +404,7 @@ export default function DashboardPage() {
 
   // -------------------- PAGE CONTENT --------------------
   const content = (
-    <div className="app-page flex flex-col">
+    <div className={`app-page flex flex-col ${dashboardView === 'monthly' ? 'lg:h-[calc(100dvh-var(--navbar-height,72px))] lg:min-h-0 lg:overflow-hidden lg:pb-6 xl:pb-6' : ''}`}>
       <DashboardHeader />
       {showTrialNote && (
         <div className="panel mb-4 px-4 py-3 text-sm text-muted">
@@ -420,6 +423,7 @@ export default function DashboardPage() {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={dashboardView}
+          className={dashboardView === 'monthly' ? 'lg:min-h-0 lg:flex-1' : undefined}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}

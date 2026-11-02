@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Loader2 } from 'lucide-react'
+import { Loader2, CalendarDays } from 'lucide-react'
 import { AppPage, PageHeader, Panel } from '@/components/ui/AppKit'
 
 export default function AppointmentsList() {
@@ -27,7 +27,7 @@ export default function AppointmentsList() {
 
   return (
     <AppPage>
-      <PageHeader title="Appointments" />
+      <PageHeader icon={CalendarDays} tone="sand" title="Appointments" />
       <Panel bodyClassName="">
         {isLoading && loading ? (
           <div className="empty-state">

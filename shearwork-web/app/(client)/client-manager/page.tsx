@@ -7,7 +7,7 @@ import SMSAutoNudge from '@/components/Dashboard/ClientManager/SMSAutoNudge/SMSA
 import SMSAutoNudge_SmartBucket from '@/components/Dashboard/ClientManager/SMSAutoNudge/SMSAutoNudge_SmartBucket'
 import SMSCampaigns from '@/components/Dashboard/ClientManager/SMSCampaigns/SMSCampaigns';
 import ClientSheets from '@/components/Dashboard/ClientManager/ClientSheets';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Users } from 'lucide-react';
 import { AppPage, PageHeader, Segmented } from '@/components/ui/AppKit';
 import FAQModal from '@/components/Dashboard/ClientManager/FAQModal';
 import TutorialLauncher from '@/components/Tutorial/TutorialLauncher'
@@ -47,7 +47,7 @@ export default function ClientManagerPage() {
 
   return (
     <AppPage className="flex flex-col">
-      <PageHeader
+      <PageHeader icon={Users} tone="sky"
         title="Client Manager"
         subtitle="Manage your clients, appointments, and communications"
         actions={

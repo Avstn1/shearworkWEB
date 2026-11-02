@@ -435,7 +435,11 @@ html {
     margin-top: var(--navbar-height, 72px);
     min-height: calc(100dvh - var(--navbar-height, 72px));
     padding: 1.25rem 1rem 2rem;
-    background: var(--color-canvas);
+    /* Soft static light at the top so pages don't read as one flat slab */
+    background:
+      radial-gradient(70% 320px at 15% 0%, rgb(143 181 122 / 0.07), transparent 70%),
+      radial-gradient(50% 280px at 95% 0%, rgb(169 192 210 / 0.05), transparent 70%),
+      var(--color-canvas);
     color: var(--color-ivory);
   }
   @media (min-width: 768px) { .app-page { padding: 1.75rem 1.75rem 2.5rem; } }
@@ -500,6 +504,55 @@ html {
   .empty-state strong { color: var(--color-ivory); font-weight: 600; }
 
   .divider { height: 1px; background: var(--color-glass-border); border: 0; }
+
+  /* ---- Accents: four muted tones for categories, icons and key panels ----
+     sage = growth / primary · sky = clients / info · sand = time / money out · coral = risk */
+  .tone-sage  { --tone: 143 181 122; --tone-fg: #A9C79A; }
+  .tone-sky   { --tone: 150 176 196; --tone-fg: #B4CADB; }
+  .tone-sand  { --tone: 216 197 154; --tone-fg: #DDCBA3; }
+  .tone-coral { --tone: 217 154 139; --tone-fg: #E0AA9C; }
+
+  /* Tinted icon tile: <span class="icon-tile tone-sky"><Icon/></span> */
+  .icon-tile {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background: rgb(var(--tone, 143 181 122) / 0.12);
+    color: var(--tone-fg, #A9C79A);
+    box-shadow: inset 0 0 0 1px rgb(var(--tone, 143 181 122) / 0.18);
+  }
+  .icon-tile svg { width: 1rem; height: 1rem; }
+  .icon-tile-sm { width: 1.625rem; height: 1.625rem; border-radius: 0.4375rem; }
+  .icon-tile-sm svg { width: 0.875rem; height: 0.875rem; }
+
+  /* Accent line along the top of a key panel: <section class="panel panel-accent tone-sage"> */
+  .panel-accent { overflow: hidden; }
+  .panel-accent::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: rgb(var(--tone, 143 181 122) / 0.85);
+    pointer-events: none;
+  }
+  /* Faint tone wash for hero panels */
+  .panel-tint { background: linear-gradient(180deg, rgb(var(--tone, 143 181 122) / 0.07), transparent 55%), var(--color-surface); }
+
+  /* Panels lift their border on hover when interactive */
+  a.panel:hover, button.panel:hover, .panel-hover:hover { border-color: var(--color-glass-border-strong); }
+
+  /* Tone text + progress bar */
+  .text-tone { color: var(--tone-fg, #A9C79A); }
+  .bar-track { height: 0.375rem; border-radius: 999px; background: rgb(255 255 255 / 0.06); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: inherit; background: rgb(var(--tone, 143 181 122)); }
+
+  /* In the product UI the primary action is sage so key actions stand out */
+  .app-page .btn-primary, .modal-surface .btn-primary { color: var(--color-ink); background: var(--color-sage-bright); box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.12); }
+  .app-page .btn-primary:hover, .modal-surface .btn-primary:hover { background: #BCD3AF; }
+
 
   .modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / 0.6); backdrop-filter: blur(4px); }
   .modal-surface { background: var(--color-surface); border: 1px solid var(--color-glass-border-strong); border-radius: 0.875rem; box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.8); }

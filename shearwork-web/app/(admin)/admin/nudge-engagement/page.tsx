@@ -6,7 +6,7 @@ import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import { format, getISOWeek, getYear, startOfISOWeek, endOfISOWeek, addWeeks, subWeeks } from 'date-fns'
 import { DayPicker } from 'react-day-picker'
-import { ChevronLeft, ChevronRight, Calendar, MessageSquare, CheckCircle, XCircle, Inbox, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, MessageSquare, CheckCircle, XCircle, Inbox, X, Activity } from 'lucide-react'
 import { AppPage, PageHeader, EmptyState } from '@/components/ui/AppKit'
 import 'react-day-picker/dist/style.css'
 
@@ -464,7 +464,7 @@ export default function NudgeEngagementPage() {
 
   return (
     <AppPage>
-      <PageHeader
+      <PageHeader icon={Activity} tone="coral"
         title="Nudge Dashboard"
         subtitle="Weekly overview of barber engagement, approvals, and update messages"
         actions={

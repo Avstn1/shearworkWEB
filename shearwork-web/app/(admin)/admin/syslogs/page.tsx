@@ -169,7 +169,7 @@ export default function SystemLogsPage() {
 
   return (
     <AppPage>
-      <PageHeader
+      <PageHeader icon={ScrollText} tone="sand"
         title="System logs"
         subtitle={loading ? 'Loading…' : `${logs.length} entries in range`}
         actions={

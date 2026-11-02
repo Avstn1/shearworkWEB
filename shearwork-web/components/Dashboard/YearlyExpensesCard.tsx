@@ -1,5 +1,6 @@
 'use client'
 
+import { Receipt } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { Stat } from '@/components/ui/AppKit'
@@ -148,7 +149,7 @@ export default function YearlyExpensesCard({ userId, year, timeframe }: Props) {
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat
+      <Stat icon={Receipt} tone="sand"
         label={`Total Expenses (${titleSuffix})`}
         value={
           loading ? (

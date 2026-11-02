@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import Navbar from '@/components/Navbar'
-import { Inbox, RefreshCcw, Trash2 } from 'lucide-react'
+import { Inbox, RefreshCcw, Trash2, Timer } from 'lucide-react'
 import { AppPage, EmptyState, PageHeader } from '@/components/ui/AppKit'
 
 interface QStashSchedule {
@@ -223,7 +223,7 @@ export default function QStashPage() {
     return (
       <AppPage>
         <div className="mx-auto max-w-7xl">
-          <PageHeader title="QStash schedules" subtitle="Loading schedules..." />
+          <PageHeader icon={Timer} tone="sky" title="QStash schedules" subtitle="Loading schedules..." />
         </div>
       </AppPage>
     )
@@ -241,7 +241,7 @@ export default function QStashPage() {
   return (
     <AppPage>
       <div className="mx-auto max-w-7xl">
-        <PageHeader
+        <PageHeader icon={Timer} tone="sky"
           title="QStash schedules"
           subtitle="Scheduled jobs, delivery events and the dead-letter queue."
           actions={

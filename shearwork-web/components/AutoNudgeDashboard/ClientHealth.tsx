@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Search, X, UserCheck, SearchX, PartyPopper } from 'lucide-react'
+import { Search, X, UserCheck, SearchX, PartyPopper, HeartPulse } from 'lucide-react'
+import { IconTile } from '@/components/ui/AppKit'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
 import { EmptyState, Segmented } from '@/components/ui/AppKit'
@@ -361,7 +362,10 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
 
       {/* Header */}
       <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-2">
-        <h2 className="panel-title">Clients at risk</h2>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <IconTile icon={HeartPulse} tone="coral" size="sm" />
+          <h2 className="panel-title">Clients at risk</h2>
+        </div>
         {!loading && (
           <span className="text-xs tabular-nums text-muted">{activeList.length} clients</span>
         )}

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import { LayoutGrid } from 'lucide-react'
+import { IconTile } from '@/components/ui/AppKit'
 import AutoNudgeStatus from '@/components/AutoNudgeDashboard/AutoNudgeStatus'
 import OpenBookings from '@/components/AutoNudgeDashboard/OpenBookings'
 import BookingCapacity from '@/components/AutoNudgeDashboard/BookingCapacity'
@@ -50,9 +52,12 @@ export default function DashboardPage() {
         marginTop: 'var(--navbar-height, 72px)',
       }}
     >
-      <div className="hidden flex-shrink-0 md:block">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">This week&apos;s Auto-Nudge activity and the clients worth reaching out to.</p>
+      <div className="hidden flex-shrink-0 items-center gap-3 md:flex">
+        <IconTile icon={LayoutGrid} tone="sage" />
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">This week&apos;s Auto-Nudge activity and the clients worth reaching out to.</p>
+        </div>
       </div>
 
       {/* ── TOP ROW ── */}
@@ -70,7 +75,7 @@ export default function DashboardPage() {
             <BookingCapacity user_id={user_id!} />
           </div>
         </div>
-        <div className="panel" style={{ height: 100 }}>
+        <div className="panel panel-tint panel-accent tone-sage" style={{ height: 100 }}>
           <AutoNudgeImpact user_id={user_id!} />
         </div>
       </div>
@@ -87,7 +92,7 @@ export default function DashboardPage() {
           <div className="panel">
             <BookingCapacity user_id={user_id!} />
           </div>
-          <div className="panel">
+          <div className="panel panel-tint panel-accent tone-sage">
             <AutoNudgeImpact user_id={user_id!} />
           </div>
         </div>

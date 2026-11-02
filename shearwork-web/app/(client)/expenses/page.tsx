@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MoreVertical, ReceiptText, X } from 'lucide-react'
+import { MoreVertical, ReceiptText, X, Receipt } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
@@ -181,7 +181,7 @@ export default function UserExpensesPage() {
 
   return (
     <AppPage>
-      <PageHeader
+      <PageHeader icon={Receipt} tone="sand"
         title="Expenses"
         subtitle="Track your one-off and recurring expenses per month."
         actions={
@@ -207,7 +207,7 @@ export default function UserExpensesPage() {
       <div className="flex flex-col gap-4 md:gap-5">
         {/* Total to date */}
         <section className="panel panel-body">
-          <Stat
+          <Stat icon={Receipt} tone="sand"
             label="Total expenses to date"
             value={`$${currentExpense.toFixed(2)}`}
             hint={rangeLabel}

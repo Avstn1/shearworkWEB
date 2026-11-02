@@ -1,5 +1,6 @@
 'use client'
 
+import { Scissors } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { Stat } from '@/components/ui/AppKit'
@@ -94,7 +95,7 @@ export default function TimeframeAverageTicketCard({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat
+      <Stat icon={Scissors} tone="sky"
         label={`Avg Ticket (${titleSuffix})`}
         value={
           loading ? (

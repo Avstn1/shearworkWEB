@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Users, Clock, Check, X, MessageSquare } from 'lucide-react'
+import { Loader2, Users, Clock, Check, X, MessageSquare, History } from 'lucide-react'
+import { IconTile } from '@/components/ui/AppKit'
 import { supabase } from '@/utils/supabaseClient'
 import ClientMessageHistory from '@/components/AutoNudgeDashboard/ClientMessageHistory'
 import { EmptyState } from '@/components/ui/AppKit'
@@ -246,9 +247,12 @@ export default function AutoNudgeHistory({ user_id }: Props) {
     <>
       <div className="flex h-full flex-col">
         <div className="mb-3 flex flex-shrink-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="panel-title">AutoNudge history</h2>
-            <p className="panel-subtitle">This week&apos;s campaign</p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <IconTile icon={History} tone="sky" size="sm" />
+            <div className="min-w-0">
+              <h2 className="panel-title">AutoNudge history</h2>
+              <p className="panel-subtitle">This week&apos;s campaign</p>
+            </div>
           </div>
           {!loading && recipients.length > 0 && (
             <div className="flex flex-shrink-0 items-center gap-2 pt-0.5 text-xs tabular-nums text-muted">
