@@ -190,7 +190,7 @@ async function notifyIfHistoryComplete(userId: string) {
     .from('notifications')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .eq('reference_type', 'sync_completed')
+    .or('reference_type.eq.sync_completed,header.eq."Acuity data fully synced"')
 
   if (lookupError) {
     console.error('[pull] failed to check for an earlier sync notification:', lookupError)
