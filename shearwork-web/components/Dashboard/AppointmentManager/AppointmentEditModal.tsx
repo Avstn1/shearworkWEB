@@ -139,7 +139,7 @@ export default function AppointmentEditModal({
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div
-              className="w-full max-w-md bg-gradient-to-br from-[#0E110F] to-[#252b26] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+              className="w-full max-w-md bg-gradient-to-br from-[#141614] to-[#252b26] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -150,7 +150,7 @@ export default function AppointmentEditModal({
                   </h3>
                   <button
                     onClick={onClose}
-                    className="p-1 rounded-lg hover:bg-white/10 transition text-[#BAC0B8] hover:text-white"
+                    className="p-1 rounded-lg hover:bg-white/10 transition text-[#B8BCB5] hover:text-white"
                   >
                     <svg
                       className="w-5 h-5"
@@ -233,7 +233,7 @@ export default function AppointmentEditModal({
                       value={revenue}
                       onChange={(e) => setRevenue(e.target.value)}
                       disabled={saving}
-                      className="w-full pl-7 pr-4 py-3 rounded-lg bg-black/30 border border-white/15 text-white text-lg font-medium placeholder:text-[#565C57] focus:outline-none focus:ring-2 focus:ring-green-300/70 disabled:opacity-50"
+                      className="w-full pl-7 pr-4 py-3 rounded-lg bg-black/30 border border-white/15 text-white text-lg font-medium placeholder:text-[#5C615B] focus:outline-none focus:ring-2 focus:ring-green-300/70 disabled:opacity-50"
                       placeholder="0.00"
                     />
                   </div>
@@ -255,7 +255,7 @@ export default function AppointmentEditModal({
                       value={tip}
                       onChange={(e) => setTip(e.target.value)}
                       disabled={saving}
-                      className="w-full pl-7 pr-4 py-3 rounded-lg bg-black/30 border border-white/15 text-white text-lg font-medium placeholder:text-[#565C57] focus:outline-none focus:ring-2 focus:ring-amber-300/70 disabled:opacity-50"
+                      className="w-full pl-7 pr-4 py-3 rounded-lg bg-black/30 border border-white/15 text-white text-lg font-medium placeholder:text-[#5C615B] focus:outline-none focus:ring-2 focus:ring-amber-300/70 disabled:opacity-50"
                       placeholder="0.00"
                     />
                   </div>
@@ -292,7 +292,7 @@ export default function AppointmentEditModal({
                 <button
                   onClick={onClose}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#BAC0B8] hover:text-white hover:bg-white/10 transition disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#B8BCB5] hover:text-white hover:bg-white/10 transition disabled:opacity-50"
                 >
                   Cancel
                 </button>

@@ -158,8 +158,8 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8 bg-[#161616] flex-shrink-0">
             {/* Avatar */}
-            <div className="w-9 h-9 rounded-full bg-[#C5F27A]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-bold text-[#C5F27A]">{initials}</span>
+            <div className="w-9 h-9 rounded-full bg-[#8FB57A]/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-[#8FB57A]">{initials}</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{client_name}</p>
@@ -241,7 +241,7 @@ export default function ClientMessageHistory({ user_id, client_phone, client_nam
                           <div
                             className={`max-w-[78%] px-3.5 py-2 text-sm leading-relaxed ${
                               isOutbound
-                                ? 'bg-[#C5F27A] text-white'
+                                ? 'bg-[#8FB57A] text-white'
                                 : 'bg-[#282b24] text-white/90'
                             }`}
                             style={{ borderRadius: isOutbound ? outboundRadius : inboundRadius }}

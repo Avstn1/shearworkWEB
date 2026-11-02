@@ -4,7 +4,7 @@ type Size = 'sm' | 'md'
 function MarkTile({ size }: { size: Size }) {
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-md bg-white/[0.06] ring-1 ring-inset ring-white/10 shadow-[0_0_18px_-6px_rgb(197_242_122/0.6)] ${
+      className={`grid shrink-0 place-items-center rounded-md bg-white/[0.06] ring-1 ring-inset ring-white/10 ${
         size === 'sm' ? 'h-6 w-6' : 'h-8 w-8'
       }`}
     >
@@ -15,8 +15,8 @@ function MarkTile({ size }: { size: Size }) {
 }
 
 const SHELL =
-  'rounded-xl border border-white/[0.09] bg-[linear-gradient(180deg,rgb(24_28_26/0.72),rgb(12_14_13/0.72))] ' +
-  'shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_20px_44px_-20px_rgb(0_0_0/0.85)] backdrop-blur-xl backdrop-saturate-150'
+  'rounded-xl border border-white/[0.08] bg-[#1A1D1B]/95 ' +
+  'shadow-[0_20px_40px_-24px_rgb(0_0_0/0.8)] backdrop-blur-md'
 
 /** Corva's Auto-Nudge text asking the barber before it reaches out to clients. */
 export function SmsNotice({ size = 'md', compact = false }: { size?: Size; compact?: boolean }) {
@@ -45,7 +45,7 @@ export function BookingToast({ size = 'md' }: { size?: Size }) {
   const sm = size === 'sm'
   return (
     <div
-      className={`${SHELL} flex items-start ${sm ? 'gap-2 p-2.5' : 'gap-3 p-3.5'} shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_0_0_1px_rgb(197_242_122/0.22),0_20px_44px_-20px_rgb(0_0_0/0.85),0_0_36px_-14px_rgb(197_242_122/0.45)]`}
+      className={`${SHELL} flex items-start ${sm ? 'gap-2 p-2.5' : 'gap-3 p-3.5'} shadow-[inset_0_0_0_1px_rgb(143_181_122/0.25),0_20px_40px_-24px_rgb(0_0_0/0.8)]`}
     >
       <MarkTile size={size} />
       <span className="min-w-0 flex-1">

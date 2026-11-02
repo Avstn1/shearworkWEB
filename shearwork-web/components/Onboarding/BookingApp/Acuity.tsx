@@ -245,7 +245,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
 
             <div className="w-full bg-black/40 rounded-full h-3 overflow-hidden border border-white/10">
               <div
-                className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#C5F27A]"
+                className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-400 to-[#8FB57A]"
                 style={{ width: '100%' }}
               />
             </div>
@@ -333,7 +333,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
           className={`w-full py-3 font-semibold rounded-xl transition-all ${
             syncing || !firstAppointment
               ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-emerald-400 to-[#C5F27A] text-black hover:shadow-lg'
+              : 'bg-gradient-to-r from-emerald-400 to-[#8FB57A] text-black hover:shadow-lg'
           }`}
         >
           {syncing ? (

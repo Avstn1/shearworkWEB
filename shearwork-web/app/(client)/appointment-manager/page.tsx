@@ -17,7 +17,7 @@ const fadeInUp = {
 export default function AppointmentManagerPage() {
   return (
     <>
-      <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#0A0C0B] via-[#0E110F] to-[#161A18]">
+      <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#111312] via-[#141614] to-[#1D201E]">
         {/* Header */}
         <motion.div
           variants={fadeInUp}
@@ -28,7 +28,7 @@ export default function AppointmentManagerPage() {
           <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-amber-200 to-orange-300 bg-clip-text text-transparent animate-gradient">
             Appointment Manager
           </h1>
-          <p className="text-[10px] sm:text-xs text-[#BAC0B8] mt-0.5">
+          <p className="text-[10px] sm:text-xs text-[#B8BCB5] mt-0.5">
             View daily appointments, manage tips, and track revenue
           </p>
         </motion.div>

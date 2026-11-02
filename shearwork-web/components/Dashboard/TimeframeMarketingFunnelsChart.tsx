@@ -16,7 +16,7 @@ import { supabase } from '@/utils/supabaseClient'
 
 import MarketingFunnelsDetailsModal from './MarketingFunnelsDetailsModal'
 
-const COLORS = ['#8e9480', '#D8FA9C', '#a78bfa', '#67e8f9', '#fbbf24']
+const COLORS = ['#8e9480', '#A9C79A', '#a78bfa', '#67e8f9', '#fbbf24']
 
 export interface MarketingFunnel {
   source: string
@@ -245,7 +245,7 @@ export default function TimeframeMarketingFunnelsChart({
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-[#565C57]">Loading marketing funnels...</p>
+        <p className="text-[#5C615B]">Loading marketing funnels...</p>
       </div>
     )
   }
@@ -253,7 +253,7 @@ export default function TimeframeMarketingFunnelsChart({
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-[#565C57]">No data to see here yet!</p>
+        <p className="text-[#5C615B]">No data to see here yet!</p>
       </div>
     )
   }

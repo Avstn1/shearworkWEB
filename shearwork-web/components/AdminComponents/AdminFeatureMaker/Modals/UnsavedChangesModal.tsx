@@ -23,7 +23,7 @@ export default function UnsavedChangesModal({ isOpen, onClose, onConfirm }: Unsa
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-gradient-to-br from-[#0E110F] to-[#161A18] border border-amber-500/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-gradient-to-br from-[#141614] to-[#1D201E] border border-amber-500/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-amber-500/30">
@@ -31,7 +31,7 @@ export default function UnsavedChangesModal({ isOpen, onClose, onConfirm }: Unsa
             <div className="p-2 bg-amber-500/20 rounded-xl">
               <AlertTriangle className="w-6 h-6 text-amber-400" />
             </div>
-            <h2 className="text-xl font-bold text-[#F2F5EF]">
+            <h2 className="text-xl font-bold text-[#ECEDEA]">
               Unsaved Changes
             </h2>
           </div>
@@ -54,7 +54,7 @@ export default function UnsavedChangesModal({ isOpen, onClose, onConfirm }: Unsa
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 p-6 bg-[#0E110F]/50 border-t border-[#2A302C]/30">
+        <div className="flex gap-3 p-6 bg-[#141614]/50 border-t border-[#2C302D]/30">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2.5 rounded-xl font-semibold bg-[#282b24] text-white/80 hover:text-white hover:bg-[#373a32] transition-all duration-300"

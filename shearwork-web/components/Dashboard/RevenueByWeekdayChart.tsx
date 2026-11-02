@@ -108,7 +108,7 @@ export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-[#565C57]">Loading chart...</p>
+          <p className="text-[#5C615B]">Loading chart...</p>
         </div>
       ) : (
         <div className="flex-1">
@@ -144,7 +144,7 @@ export default function RevenueByWeekdayChart({ userId, year, timeframe }: Props
               <Bar
                 dataKey="total_revenue"
                 name="Revenue"
-                fill="#D8FA9C"
+                fill="#A9C79A"
                 radius={[8, 8, 0, 0]}
               />
             </BarChart>

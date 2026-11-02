@@ -125,7 +125,7 @@ export function MessageContent({
 
       {/* Message Textarea */}
       <div className="flex-1">
-        <label className="block text-xs sm:text-sm font-medium text-[#BAC0B8] mb-1.5 sm:mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-[#B8BCB5] mb-1.5 sm:mb-2">
           Message Content (SMS limits: 100-240 characters)
         </label>
         <div className="relative">
@@ -137,7 +137,7 @@ export function MessageContent({
             placeholder="Type your marketing message here or generate a template..."
             rows={11}
             disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-3 sm:px-4 pb-12 sm:pb-15 -mb-3 py-2.5 sm:py-3 pr-16 sm:pr-20 text-sm sm:text-base text-white placeholder-[#BAC0B8]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 ${
+            className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-3 sm:px-4 pb-12 sm:pb-15 -mb-3 py-2.5 sm:py-3 pr-16 sm:pr-20 text-sm sm:text-base text-white placeholder-[#B8BCB5]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 ${
               !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
             }`}
             style={{ scrollbarWidth: 'thin' }}
@@ -215,10 +215,10 @@ export function MessageContent({
               )}
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-              <div className="bg-[#08090A] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+              <div className="bg-[#0F1110] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                 AI-generate a message template
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                  <div className="border-4 border-transparent border-t-[#08090A]" />
+                  <div className="border-4 border-transparent border-t-[#0F1110]" />
                 </div>
               </div>
             </div>
@@ -251,10 +251,10 @@ export function MessageContent({
               )}
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-              <div className="bg-[#08090A] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+              <div className="bg-[#0F1110] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                 Check message for compliance issues
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                  <div className="border-4 border-transparent border-t-[#08090A]" />
+                  <div className="border-4 border-transparent border-t-[#0F1110]" />
                 </div>
               </div>
             </div>
@@ -308,10 +308,10 @@ export function MessageContent({
               )}
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-              <div className="bg-[#08090A] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+              <div className="bg-[#0F1110] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                 Send test to your phone (1 credit)
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                  <div className="border-4 border-transparent border-t-[#08090A]" />
+                  <div className="border-4 border-transparent border-t-[#0F1110]" />
                 </div>
               </div>
             </div>

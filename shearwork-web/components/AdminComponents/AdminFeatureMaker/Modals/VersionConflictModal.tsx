@@ -31,12 +31,12 @@ export default function VersionConflictModal({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#111412] border border-[#2A302C]/50 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+        className="bg-[#171A18] border border-[#2C302D]/50 rounded-2xl p-6 max-w-md w-full shadow-2xl"
       >
         <div className="flex items-start gap-3 mb-4">
           <AlertTriangle className="w-6 h-6 text-[#d4a574] flex-shrink-0 mt-1" />
           <div>
-            <h3 className="text-lg font-bold text-[#F2F5EF] mb-2">Version Change Detected</h3>
+            <h3 className="text-lg font-bold text-[#ECEDEA] mb-2">Version Change Detected</h3>
             {isEditingToNew ? (
               <p className="text-sm text-gray-300">
                 You're currently editing an existing update, but version <span className="font-mono font-bold text-[#d4a574]">{version}</span> doesn't exist yet.
@@ -61,7 +61,7 @@ export default function VersionConflictModal({
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#2A302C]/60 hover:bg-[#A9DB5C]/70 text-[#F2F5EF] font-semibold transition-all duration-300 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-[#2C302D]/60 hover:bg-[#8FB57A]/70 text-[#ECEDEA] font-semibold transition-all duration-300 flex items-center justify-center gap-2"
           >
             {isEditingToNew ? 'Switch to Create' : 'Switch to Edit'}
             <ArrowRight className="w-4 h-4" />

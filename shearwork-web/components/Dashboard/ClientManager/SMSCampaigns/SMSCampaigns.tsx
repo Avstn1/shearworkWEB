@@ -709,7 +709,7 @@ export default function SMSCampaigns() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <Loader2 className="w-8 h-8 text-sky-300 animate-spin mx-auto mb-4" />
-          <p className="text-[#BAC0B8]">Loading your messages...</p>
+          <p className="text-[#B8BCB5]">Loading your messages...</p>
         </div>
       </div>
     );
@@ -718,7 +718,7 @@ export default function SMSCampaigns() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {isTrialUser && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#BAC0B8]">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#B8BCB5]">
           <p className="text-white font-semibold mb-1">Trial credits unlocked</p>
           <p>
             You have 10 credits to test SMS campaigns during your trial.
@@ -754,7 +754,7 @@ export default function SMSCampaigns() {
               </button>
             </div>
             
-            <p className="text-[#BAC0B8] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
+            <p className="text-[#B8BCB5] text-xs sm:text-sm mt-2 sm:mt-3 hidden sm:block">
               Schedule targeted SMS campaigns to stay connected with your clients
             </p>
           </div>
@@ -794,7 +794,7 @@ export default function SMSCampaigns() {
         </div>
 
         {/* Usage indicator */}
-        <div className="flex items-center gap-2 text-[10px] sm:text-xs text-[#BAC0B8]">
+        <div className="flex items-center gap-2 text-[10px] sm:text-xs text-[#B8BCB5]">
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <div
@@ -899,7 +899,7 @@ export default function SMSCampaigns() {
             <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
               No messages scheduled
             </h3>
-            <p className="text-[#BAC0B8] text-sm sm:text-base mb-6 max-w-md mx-auto">
+            <p className="text-[#B8BCB5] text-sm sm:text-base mb-6 max-w-md mx-auto">
               Create your first automated SMS message to stay connected with your clients
             </p>
             <button

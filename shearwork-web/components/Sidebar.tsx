@@ -17,10 +17,10 @@ import {
 import NewFeaturesModal from '@/components/Dashboard/NewFeaturesModal'
 
 const COLORS = {
-  green: '#C5F27A',
+  green: '#8FB57A',
   surfaceSolid: 'rgba(255, 255, 255, 0.1)',
   text: '#e5e5e5',
-  navBg: '#121513',
+  navBg: '#161917',
 }
 
 export default function Sidebar() {
@@ -119,7 +119,7 @@ export default function Sidebar() {
           width: '80px',
           background: 'linear-gradient(180deg, rgba(27, 29, 27, 0.98) 0%, rgba(24, 24, 24, 0.98) 100%)',
           backdropFilter: 'blur(20px)',
-          borderRight: '1px solid rgba(197, 242, 122, 0.15)',
+          borderRight: '1px solid rgba(143, 181, 122, 0.15)',
           boxShadow: '4px 0 24px rgba(0, 0, 0, 0.2)',
           paddingTop: '80px', // Offset for navbar
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -137,23 +137,23 @@ export default function Sidebar() {
               className="relative w-full rounded-lg font-semibold text-sm transition-all overflow-hidden"
               style={{
                 background: hasUnreadFeatures 
-                  ? 'linear-gradient(135deg, #C5F27A 0%, #A9DB5C 100%)'
-                  : 'rgba(197, 242, 122, 0.15)',
+                  ? 'linear-gradient(135deg, #8FB57A 0%, #8FB57A 100%)'
+                  : 'rgba(143, 181, 122, 0.15)',
                 color: hasUnreadFeatures ? '#000000' : COLORS.green,
                 border: `1.5px solid ${hasUnreadFeatures ? 'transparent' : COLORS.green}`,
-                boxShadow: hasUnreadFeatures ? '0 0 20px rgba(197, 242, 122, 0.4)' : 'none',
+                boxShadow: hasUnreadFeatures ? '0 0 20px rgba(143, 181, 122, 0.4)' : 'none',
                 padding: '12px',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'scale(1.02)'
                 e.currentTarget.style.boxShadow = hasUnreadFeatures 
-                  ? '0 0 25px rgba(197, 242, 122, 0.6)' 
-                  : '0 0 10px rgba(197, 242, 122, 0.3)'
+                  ? '0 0 25px rgba(143, 181, 122, 0.6)' 
+                  : '0 0 10px rgba(143, 181, 122, 0.3)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)'
                 e.currentTarget.style.boxShadow = hasUnreadFeatures 
-                  ? '0 0 20px rgba(197, 242, 122, 0.4)' 
+                  ? '0 0 20px rgba(143, 181, 122, 0.4)' 
                   : 'none'
               }}
             >
@@ -195,7 +195,7 @@ export default function Sidebar() {
                     style={{
                       padding: '12px',
                       backgroundColor: active 
-                        ? 'rgba(197, 242, 122, 0.15)' 
+                        ? 'rgba(143, 181, 122, 0.15)' 
                         : 'transparent',
                       color: active ? COLORS.green : COLORS.text,
                     }}

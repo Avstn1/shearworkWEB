@@ -56,7 +56,7 @@ export default function ClientManagerPage() {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#0A0C0B] via-[#0E110F] to-[#161A18]">
+      <div className="min-h-screen flex flex-col px-3 sm:px-4 md:px-6 text-[var(--foreground)] pt-[80px] sm:pt-[100px] pb-6 bg-gradient-to-br from-[#111312] via-[#141614] to-[#1D201E]">
         {/* Header */}
         <motion.div
           variants={fadeInUp}
@@ -71,19 +71,19 @@ export default function ClientManagerPage() {
               <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent animate-gradient">
                 Client Manager
               </h1>
-              <p className="text-[10px] sm:text-xs text-[#BAC0B8] mt-0.5">
+              <p className="text-[10px] sm:text-xs text-[#B8BCB5] mt-0.5">
                 Manage your clients, appointments, and communications
               </p>
             </div>
 
             {/* View Switcher */}
-            <div data-tutorial-id="client-manager-tabs" className="flex gap-1 bg-[#141716] rounded-full p-1">
+            <div data-tutorial-id="client-manager-tabs" className="flex gap-1 bg-[#181B19] rounded-full p-1">
               <button
                 onClick={() => handleSetView('sheets')}
                 className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sheets'
-                    ? 'bg-lime-300 text-black shadow-[0_0_8px_#D8FA9C]'
-                    : 'text-[#BAC0B8] hover:text-white hover:bg-[#282b24]'
+                    ? 'bg-lime-300 text-black shadow-[0_0_8px_#A9C79A]'
+                    : 'text-[#B8BCB5] hover:text-white hover:bg-[#282b24]'
                 }`}
               >
                 <span className="hidden xs:inline">Client Sheets</span>
@@ -94,7 +94,7 @@ export default function ClientManagerPage() {
                 className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
-                    : 'text-[#BAC0B8] hover:text-white hover:bg-[#282b24]'
+                    : 'text-[#B8BCB5] hover:text-white hover:bg-[#282b24]'
                 }`}
               >
                 <span className="hidden xs:inline">SMS Auto Nudge</span>
@@ -105,7 +105,7 @@ export default function ClientManagerPage() {
                 className={`flex-1 lg:flex-none px-3 sm:px-5 py-2 sm:py-3 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                   activeView === 'sms-campaign'
                     ? 'bg-sky-300 text-black shadow-[0_0_8px_#7fd9ff]'
-                    : 'text-[#BAC0B8] hover:text-white hover:bg-[#282b24]'
+                    : 'text-[#B8BCB5] hover:text-white hover:bg-[#282b24]'
                 }`}
               >
                 <span className="hidden xs:inline">SMS Campaigns</span>

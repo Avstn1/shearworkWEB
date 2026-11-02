@@ -582,7 +582,7 @@ export default function SMSAutoNudge() {
                                 {badge.label}
                               </span>
                               {recipient.has_replied && (
-                                <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#C5F27A]/10 text-[#C5F27A] border-[#C5F27A]/20">
+                                <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#8FB57A]/10 text-[#8FB57A] border-[#8FB57A]/20">
                                   Replied
                                 </span>
                               )}

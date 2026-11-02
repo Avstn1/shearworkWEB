@@ -206,7 +206,7 @@ export default function AutoNudgeActivationStep({
           <div className="py-8 space-y-6">
             {/* Success Badge */}
             <div className="flex justify-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400/20 to-[#C5F27A]/20 border-2 border-emerald-400/40">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400/20 to-[#8FB57A]/20 border-2 border-emerald-400/40">
                 <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -267,7 +267,7 @@ export default function AutoNudgeActivationStep({
           <div className="space-y-6">
             {/* Openings Display */}
             <div className="text-center py-8">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400/20 to-[#C5F27A]/20 border-2 border-emerald-400/40 mb-4">
+              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400/20 to-[#8FB57A]/20 border-2 border-emerald-400/40 mb-4">
                 <span className="text-4xl font-bold text-emerald-300">
                   {openingsCount !== null ? openingsCount : '—'}
                 </span>
@@ -288,7 +288,7 @@ export default function AutoNudgeActivationStep({
               className={`w-full py-4 font-semibold text-lg rounded-xl transition-all ${
                 activating
                   ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-b from-[#E6FFB8] to-[#C5F27A] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg hover:scale-[1.02]'
+                  : 'bg-gradient-to-b from-[#BCD3AF] to-[#8FB57A] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg hover:scale-[1.02]'
               }`}
             >
               {activating ? (
@@ -332,7 +332,7 @@ export default function AutoNudgeActivationStep({
             className={`px-8 py-3 font-semibold rounded-xl transition-all ${
               profileLoading || !alreadyEnabled
                 ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-b from-[#E6FFB8] to-[#C5F27A] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg'
+                : 'bg-gradient-to-b from-[#BCD3AF] to-[#8FB57A] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.5)] btn-fx hover:shadow-lg'
             }`}
           >
             {profileLoading ? (

@@ -350,7 +350,7 @@ export default function ClientSheets() {
       <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between flex-shrink-0">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-white">Client Sheets</h2>
-          <p className="text-xs text-[#BAC0B8]">
+          <p className="text-xs text-[#B8BCB5]">
             View and manage detailed client information, visit history, and preferences.
           </p>
         </div>
@@ -411,7 +411,7 @@ export default function ClientSheets() {
       {/* Pagination bar with summary chips */}
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between flex-shrink-0">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="text-xs text-[#BAC0B8]">
+          <div className="text-xs text-[#B8BCB5]">
             {total > 0 ? (
               <>
                 Showing <span className="text-white">{pageStart}</span>–
@@ -506,12 +506,12 @@ export default function ClientSheets() {
       {/* Table - Scrollable */}
       <div className="flex-1 min-h-0 overflow-auto rounded-xl border border-white/10 bg-black/20 backdrop-blur-md">
         {loading ? (
-          <div className="py-16 text-center text-sm text-[#BAC0B8]">Loading clients. Please refresh the site</div>
+          <div className="py-16 text-center text-sm text-[#B8BCB5]">Loading clients. Please refresh the site</div>
         ) : error ? (
           <div className="py-16 text-center text-sm text-red-300">{error}</div>
         ) : displayClients.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-sm text-[#BAC0B8]">
+            <p className="text-sm text-[#B8BCB5]">
               {activeFilters.length > 0
                 ? 'No clients match your current filters.'
                 : 'No clients found.'}
@@ -530,7 +530,7 @@ export default function ClientSheets() {
           </div>
         ) : (
           <table className="min-w-full text-sm">
-            <thead className="sticky top-0 bg-[#121613] border-b border-white/10 text-[10px] sm:text-xs uppercase tracking-wide text-[#BAC0B8]">
+            <thead className="sticky top-0 bg-[#121613] border-b border-white/10 text-[10px] sm:text-xs uppercase tracking-wide text-[#B8BCB5]">
               <tr>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Name</th>
                 <th className="px-2 sm:px-4 py-2 sm:py-3 text-left">Email</th>

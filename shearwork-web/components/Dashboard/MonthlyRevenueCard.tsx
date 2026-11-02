@@ -151,10 +151,10 @@ export default function MonthlyRevenueCard({ userId, selectedMonth, year }: Mont
       </div>
       <div className="mt-auto">
         {change !== null ? (
-          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#D8FA9C]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#565C57]'}`}>
-            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#565C57]">(vs. prior month)</span>
+          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#A9C79A]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#5C615B]'}`}>
+            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#5C615B]">(vs. prior month)</span>
           </p>
-        ) : <p className="text-sm text-[#565C57]">—</p>}
+        ) : <p className="text-sm text-[#5C615B]">—</p>}
       </div>
     </div>
   )

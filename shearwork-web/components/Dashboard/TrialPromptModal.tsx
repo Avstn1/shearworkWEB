@@ -26,14 +26,14 @@ interface TrialPromptModalProps {
 }
 
 const COLORS = {
-  background: '#121513',
-  cardBg: '#141716',
-  surface: 'rgba(242, 245, 239, 0.05)',
-  glassBorder: 'rgba(242, 245, 239, 0.09)',
-  text: '#F2F5EF',
-  textMuted: 'rgba(242, 245, 239, 0.62)',
-  green: '#C5F27A',
-  greenGlow: 'rgba(197, 242, 122, 0.4)',
+  background: '#161917',
+  cardBg: '#181B19',
+  surface: 'rgba(236, 237, 234, 0.05)',
+  glassBorder: 'rgba(236, 237, 234, 0.09)',
+  text: '#ECEDEA',
+  textMuted: 'rgba(236, 237, 234, 0.62)',
+  green: '#8FB57A',
+  greenGlow: 'rgba(143, 181, 122, 0.4)',
   yellow: '#f5e29a',
   yellowGlow: 'rgba(245, 226, 154, 0.4)',
   red: '#ef4444',
@@ -153,7 +153,7 @@ export default function TrialPromptModal({
             transition={{ duration: 0.2 }}
             className="relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[90vh] overflow-y-auto"
             style={{
-              background: `linear-gradient(180deg, rgba(242, 245, 239, 0.06) 0%, rgba(242, 245, 239, 0.02) 100%)`,
+              background: `linear-gradient(180deg, rgba(236, 237, 234, 0.06) 0%, rgba(236, 237, 234, 0.02) 100%)`,
               border: `1px solid ${COLORS.glassBorder}`,
             }}
             onClick={(e) => e.stopPropagation()}
@@ -261,7 +261,7 @@ export default function TrialPromptModal({
                       disabled={loading}
                       className="w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       style={{
-                        background: `linear-gradient(135deg, ${COLORS.green} 0%, #A9DB5C 100%)`,
+                        background: `linear-gradient(135deg, ${COLORS.green} 0%, #8FB57A 100%)`,
                         color: '#000',
                         boxShadow: `0 4px 16px ${COLORS.greenGlow}`,
                       }}

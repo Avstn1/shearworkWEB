@@ -13,17 +13,17 @@ import Link from "next/link";
 
 // Color palette
 const COLORS = {
-  background: '#121513',
-  cardBg: '#141716',
-  navBg: '#121513', 
-  surface: 'rgba(242, 245, 239, 0.05)',
-  surfaceSolid: '#111412',
-  glassBorder: 'rgba(242, 245, 239, 0.09)',
-  text: '#F2F5EF',
-  textMuted: 'rgba(242, 245, 239, 0.62)',
-  green: '#C5F27A',
-  greenLight: '#A9DB5C',
-  greenGlow: 'rgba(197, 242, 122, 0.4)',
+  background: '#161917',
+  cardBg: '#181B19',
+  navBg: '#161917', 
+  surface: 'rgba(236, 237, 234, 0.05)',
+  surfaceSolid: '#171A18',
+  glassBorder: 'rgba(236, 237, 234, 0.09)',
+  text: '#ECEDEA',
+  textMuted: 'rgba(236, 237, 234, 0.62)',
+  green: '#8FB57A',
+  greenLight: '#8FB57A',
+  greenGlow: 'rgba(143, 181, 122, 0.4)',
 }
 
 export default function SignUpPage() {
@@ -100,7 +100,7 @@ export default function SignUpPage() {
             }}
             className="w-2 h-2 rounded-full transition-all duration-200"
             style={{
-              backgroundColor: index === 2 ? '#C5F27A' : 'rgba(255, 255, 255, 0.3)',
+              backgroundColor: index === 2 ? '#8FB57A' : 'rgba(255, 255, 255, 0.3)',
               transform: index === 2 ? 'scale(1.5)' : 'scale(1)',
               cursor: index === 2 ? 'default' : 'pointer',
             }}
@@ -112,7 +112,7 @@ export default function SignUpPage() {
       <section 
         className="h-screen flex items-center overflow-auto lg:overflow-hidden px-4 sm:px-5 lg:px-8 py-4 lg:py-0 relative"
         style={{
-          background: `linear-gradient(135deg, #121513 0%, #141716 30%, #1b1e18 70%, #121513 100%)`,
+          background: `linear-gradient(135deg, #161917 0%, #181B19 30%, #1b1e18 70%, #161917 100%)`,
           color: COLORS.text,
         }}
         onWheel={(e) => {
@@ -143,7 +143,7 @@ export default function SignUpPage() {
               transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
               className="rounded-lg lg:rounded-xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
               style={{
-                background: `linear-gradient(180deg, rgba(242, 245, 239, 0.06) 0%, rgba(242, 245, 239, 0.02) 100%)`,
+                background: `linear-gradient(180deg, rgba(236, 237, 234, 0.06) 0%, rgba(236, 237, 234, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}
@@ -387,7 +387,7 @@ export default function SignUpPage() {
                       transition={{ duration: 0.4, delay: 0.3 + idx * 0.1, ease: 'easeOut' }}
                       className="flex items-center gap-1.5 lg:gap-2 p-1 lg:p-2 rounded-md lg:rounded-lg transition-all duration-300 hover:-translate-x-1"
                       style={{
-                        backgroundColor: 'rgba(197, 242, 122, 0.1)',
+                        backgroundColor: 'rgba(143, 181, 122, 0.1)',
                       }}
                     >
                       <div 
@@ -417,7 +417,7 @@ export default function SignUpPage() {
               transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
               className="rounded-lg lg:rounded-xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl text-center"
               style={{
-                background: `linear-gradient(180deg, rgba(242, 245, 239, 0.06) 0%, rgba(242, 245, 239, 0.02) 100%)`,
+                background: `linear-gradient(180deg, rgba(236, 237, 234, 0.06) 0%, rgba(236, 237, 234, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}

@@ -17,7 +17,7 @@ const planFeatures = ['Auto-Fill your empty slots', 'Smart booking reminders', '
 
 function IconTile({ Icon }: { Icon: LucideIcon }) {
   return (
-    <span className="relative mb-2 md:mb-4 grid h-8 w-8 md:h-11 md:w-11 place-items-center rounded-lg bg-gradient-to-br from-sage/20 to-sage/5 text-sage ring-1 ring-inset ring-sage/25 shadow-[0_0_24px_-8px_rgb(197_242_122/0.6)] transition duration-300 group-hover:shadow-[0_0_30px_-6px_rgb(197_242_122/0.85)]">
+    <span className="relative mb-2 md:mb-4 grid h-8 w-8 md:h-11 md:w-11 place-items-center rounded-lg bg-white/[0.04] text-sage-bright ring-1 ring-inset ring-white/[0.08]">
       <Icon className="h-4 w-4 md:h-5 md:w-5" strokeWidth={1.75} aria-hidden="true" />
     </span>
   )
@@ -31,7 +31,6 @@ export default function FeaturesAndPricing() {
     >
       <div className="aurora-bg" />
       {/* Olive light behind the pricing card */}
-      <div className="pointer-events-none absolute right-[-10%] top-1/2 h-[700px] w-[700px] -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(98_138_42/0.35),transparent)] blur-2xl" />
 
       <div className="relative max-w-7xl mx-auto w-full flex flex-col md:flex-row gap-4 md:gap-8 lg:gap-12 items-center justify-center">
 
@@ -84,10 +83,7 @@ export default function FeaturesAndPricing() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="glass-panel relative overflow-hidden p-3 md:p-6 lg:p-8 flex flex-col shadow-[0_40px_80px_-40px_rgb(0_0_0/0.9),0_0_90px_-30px_rgb(197_242_122/0.45)]">
-              {/* top sheen */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sage-bright/60 to-transparent" />
-              <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-[radial-gradient(closest-side,rgb(197_242_122/0.22),transparent)]" />
+            <div className="glass-panel relative overflow-hidden p-3 md:p-6 lg:p-8 flex flex-col">
 
               <div className="relative flex items-center justify-between mb-1 md:mb-4">
                 <h3 className="text-sm md:text-lg lg:text-xl font-semibold">Corva Pro</h3>

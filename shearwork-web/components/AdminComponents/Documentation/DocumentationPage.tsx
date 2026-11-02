@@ -40,12 +40,12 @@ export default function DocumentationPage() {
   }, [highlightedId]);
 
   return (
-    <div className="min-h-screen bg-[#111412] text-[#F2F5EF]">
+    <div className="min-h-screen bg-[#171A18] text-[#ECEDEA]">
       {/* Header */}
-      <div className="border-b border-[#2A302C] bg-[#242924]">
+      <div className="border-b border-[#2C302D] bg-[#242924]">
         <div className="max-w-7xl mx-auto px-6 pt-25 pb-0">
           <div className="flex items-end gap-3 mb-1">
-            <span className="text-[10px] font-mono tracking-[0.3em] text-[#A3AAA2] uppercase">
+            <span className="text-[10px] font-mono tracking-[0.3em] text-[#9EA39C] uppercase">
               Admin / Internal Docs
             </span>
           </div>
@@ -53,7 +53,7 @@ export default function DocumentationPage() {
               style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
             Codebase Documentation
           </h1>
-          <p className="text-sm text-[#A3AAA2] mb-6">
+          <p className="text-sm text-[#9EA39C] mb-6">
             Reference for API routes, utility libraries, and edge functions — their purpose, inputs, outputs, and relationships.
           </p>
 
@@ -67,17 +67,17 @@ export default function DocumentationPage() {
                   group relative flex items-center gap-2.5 px-5 py-3 text-sm font-medium
                   border-t border-l border-r transition-all duration-150
                   ${activeTab === tab.id
-                    ? "bg-[#111412] border-[#2A302C] border-b-[#111412] text-[var(--highlight)] z-10"
-                    : "bg-transparent border-transparent text-[#A3AAA2] hover:text-[#F2F5EF]"
+                    ? "bg-[#171A18] border-[#2C302D] border-b-[#171A18] text-[var(--highlight)] z-10"
+                    : "bg-transparent border-transparent text-[#9EA39C] hover:text-[#ECEDEA]"
                   }
                 `}
               >
-                <span className={`text-base leading-none transition-colors ${activeTab === tab.id ? "text-green-400" : "text-[#2A302C]"}`}>
+                <span className={`text-base leading-none transition-colors ${activeTab === tab.id ? "text-green-400" : "text-[#2C302D]"}`}>
                   {tab.icon}
                 </span>
                 <span>{tab.label}</span>
                 {activeTab !== tab.id && (
-                  <span className="hidden group-hover:block absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-[#A3AAA2] whitespace-nowrap">
+                  <span className="hidden group-hover:block absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-[#9EA39C] whitespace-nowrap">
                     {tab.description}
                   </span>
                 )}

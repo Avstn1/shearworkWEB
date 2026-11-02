@@ -89,7 +89,7 @@ export default function AdminAverageTicketEditor({ barberId, month }: Props) {
 
   return (
     <div className="bg-[#1f1f1a] p-4 rounded-lg shadow-md">
-      <h3 className="text-[#E6EAE3] font-semibold mb-3 text-lg">💵 Average Ticket Editor</h3>
+      <h3 className="text-[#E1E3DE] font-semibold mb-3 text-lg">💵 Average Ticket Editor</h3>
       <div className="flex items-center gap-3 mb-3">
         <input
           type="text"

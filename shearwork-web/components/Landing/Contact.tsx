@@ -11,13 +11,12 @@ export default function Contact() {
     >
       <div className="aurora-bg" />
       {/* Halo */}
-      <div className="pointer-events-none absolute left-1/2 top-[38%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(98_138_42/0.4),transparent)] blur-2xl" />
 
       <motion.span
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative mb-8 grid h-16 w-16 place-items-center rounded-xl bg-white/[0.05] ring-1 ring-inset ring-white/10 backdrop-blur-md shadow-[0_0_48px_-10px_rgb(197_242_122/0.7)]"
+        className="relative mb-8 grid h-16 w-16 place-items-center rounded-xl bg-white/[0.05] ring-1 ring-inset ring-white/10"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/images/corvalogo.png" alt="" className="h-11 w-auto" />

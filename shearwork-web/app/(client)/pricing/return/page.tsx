@@ -574,7 +574,7 @@ function PricingReturnContent() {
   // })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A0C0B] via-[#0E110F] to-[#161A18]">
+    <div className="min-h-screen bg-gradient-to-br from-[#111312] via-[#141614] to-[#1D201E]">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
@@ -595,7 +595,7 @@ function PricingReturnContent() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.3 }}
-              className="relative w-72 bg-[#0E110F] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
+              className="relative w-72 bg-[#141614] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
             >
               <div className="flex justify-between items-center mb-6">
                 <span className="text-emerald-300 text-2xl font-bold">Onboarding</span>
@@ -723,7 +723,7 @@ function PricingReturnContent() {
             <div className="flex lg:hidden">
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="px-6 py-2.5 bg-gradient-to-r from-emerald-400 to-[#C5F27A] text-black rounded-lg font-semibold shadow-lg hover:shadow-emerald-400/20 transition-all"
+                className="px-6 py-2.5 bg-gradient-to-r from-emerald-400 to-[#8FB57A] text-black rounded-lg font-semibold shadow-lg hover:shadow-emerald-400/20 transition-all"
               >
                 Menu
               </button>

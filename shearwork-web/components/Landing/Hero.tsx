@@ -27,7 +27,7 @@ function ScheduleCard({ compact = false }: { compact?: boolean }) {
     <div className={`glass-card ${compact ? 'p-4' : 'p-5 sm:p-6'}`}>
       <div className="flex items-center justify-between">
         <span className={`font-semibold text-ivory ${compact ? 'text-[13px]' : 'text-[15px]'}`}>This week</span>
-        <span className="rounded-md bg-sage/15 px-2 py-1 text-[11px] font-semibold text-sage">Auto-filling</span>
+        <span className="rounded-md bg-sage/10 px-2 py-1 text-[11px] font-semibold text-sage">Auto-filling</span>
       </div>
       <div className={`grid grid-cols-6 gap-2 ${compact ? 'mt-3 mb-2' : 'mt-5 mb-3'}`}>
         {DAYS.map(d => (
@@ -41,7 +41,7 @@ function ScheduleCard({ compact = false }: { compact?: boolean }) {
           ) : (
             <span
               key={i}
-              className={`${compact ? 'h-5' : 'h-7'} rounded-[5px] border-[1.5px] border-dashed border-sage/80 shadow-[inset_0_0_12px_rgb(197_242_122/0.18)]`}
+              className={`${compact ? 'h-5' : 'h-7'} rounded-[5px] border-[1.5px] border-dashed border-sage/60 bg-sage/[0.04]`}
             />
           ),
         )}
@@ -54,7 +54,6 @@ function ScheduleCard({ compact = false }: { compact?: boolean }) {
 function HeroVisual() {
   return (
     <div className="relative mx-auto h-[520px] w-full max-w-[520px]">
-      <div className="absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(197_242_122/0.18),transparent)] blur-2xl" />
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -69,7 +68,7 @@ function HeroVisual() {
         initial={{ opacity: 0, y: 12, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.6, ease: 'easeOut' }}
-        className="absolute right-[-12px] top-0 w-[320px] animate-float"
+        className="absolute right-[-12px] top-0 w-[320px]"
       >
         <SmsNotice />
       </motion.div>
@@ -95,7 +94,6 @@ function MobileHeroVisual() {
       transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
       className="relative mx-auto w-full max-w-[340px]"
     >
-      <div className="absolute inset-x-6 top-10 -z-10 h-48 rounded-full bg-sage/15 blur-3xl" />
       <div className="relative z-10 -mb-3 px-3">
         <SmsNotice size="sm" compact />
       </div>

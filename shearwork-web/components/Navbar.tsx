@@ -17,17 +17,17 @@ import { ButtonLink } from '@/components/ui/Button'
 
 // Color palette matching React Native app
 const COLORS = {
-  background: '#121513',
-  cardBg: '#141716',
-  navBg: '#121513', 
-  surface: 'rgba(242, 245, 239, 0.05)',
-  surfaceSolid: '#111412',
-  glassBorder: 'rgba(242, 245, 239, 0.09)',
-  text: '#F2F5EF',
-  textMuted: 'rgba(242, 245, 239, 0.62)',
-  green: '#C5F27A',
-  greenLight: '#A9DB5C',
-  greenGlow: 'rgba(197, 242, 122, 0.4)',
+  background: '#161917',
+  cardBg: '#181B19',
+  navBg: '#161917', 
+  surface: 'rgba(236, 237, 234, 0.05)',
+  surfaceSolid: '#171A18',
+  glassBorder: 'rgba(236, 237, 234, 0.09)',
+  text: '#ECEDEA',
+  textMuted: 'rgba(236, 237, 234, 0.62)',
+  green: '#8FB57A',
+  greenLight: '#8FB57A',
+  greenGlow: 'rgba(143, 181, 122, 0.4)',
 }
 
 type HoverEvent = React.MouseEvent<HTMLElement>
@@ -36,7 +36,7 @@ type HoverEvent = React.MouseEvent<HTMLElement>
 const hoverHighlight = {
   onMouseEnter: (e: HoverEvent) => {
     e.currentTarget.style.color = COLORS.green
-    e.currentTarget.style.backgroundColor = 'rgba(197, 242, 122, 0.1)'
+    e.currentTarget.style.backgroundColor = 'rgba(143, 181, 122, 0.1)'
   },
   onMouseLeave: (e: HoverEvent) => {
     e.currentTarget.style.color = COLORS.text
@@ -418,7 +418,7 @@ export default function Navbar() {
         ref={navRef}
         className="fixed top-0 w-full z-50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_rgb(255_255_255/0.06),0_12px_32px_-20px_rgb(0_0_0/0.8)]"
         style={{
-          backgroundColor: 'rgba(7, 9, 10, 0.68)',
+          backgroundColor: 'rgba(17, 19, 18, 0.85)',
         }}
       >
         <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
@@ -483,7 +483,7 @@ export default function Navbar() {
               className="md:hidden fixed left-0 top-0 h-screen w-64 z-50 shadow-2xl"
               style={{
                 backgroundColor: COLORS.navBg,
-                borderRight: `1px solid rgba(197, 242, 122, 0.2)`,
+                borderRight: `1px solid rgba(143, 181, 122, 0.2)`,
                 animation: 'slideInLeft 0.3s ease-out',
               }}
             >

@@ -48,7 +48,7 @@ export default function YearlyDashboard({
       <div className="flex flex-col gap-4 pr-1">
         {/* Timeframe selector */}
         <div className="flex justify-end">
-          <label className="text-sm text-[#BAC0B8] flex items-center gap-2">
+          <label className="text-sm text-[#B8BCB5] flex items-center gap-2">
             <span>Timeline:</span>
             <select
               value={timeframe}

@@ -88,7 +88,7 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
         value={revenue}
         onChange={handleChange}
         placeholder="Enter revenue..."
-        className="w-full bg-[#161A18] text-[#F2F5EF] border border-[#2A302C] rounded-md p-2 mb-3 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-full bg-[#1D201E] text-[#ECEDEA] border border-[#2C302D] rounded-md p-2 mb-3 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <button
         onClick={handleUpdate}

@@ -4,17 +4,17 @@ import { motion } from 'framer-motion'
 
 // Color palette
 const COLORS = {
-  background: '#121513',
-  cardBg: '#141716',
-  navBg: '#121513', 
-  surface: 'rgba(242, 245, 239, 0.05)',
-  surfaceSolid: '#111412',
-  glassBorder: 'rgba(242, 245, 239, 0.09)',
-  text: '#F2F5EF',
-  textMuted: 'rgba(242, 245, 239, 0.62)',
-  green: '#C5F27A',
-  greenLight: '#A9DB5C',
-  greenGlow: 'rgba(197, 242, 122, 0.4)',
+  background: '#161917',
+  cardBg: '#181B19',
+  navBg: '#161917', 
+  surface: 'rgba(236, 237, 234, 0.05)',
+  surfaceSolid: '#171A18',
+  glassBorder: 'rgba(236, 237, 234, 0.09)',
+  text: '#ECEDEA',
+  textMuted: 'rgba(236, 237, 234, 0.62)',
+  green: '#8FB57A',
+  greenLight: '#8FB57A',
+  greenGlow: 'rgba(143, 181, 122, 0.4)',
 }
 
 export default function Pricing() {
@@ -29,7 +29,7 @@ export default function Pricing() {
       id="pricing"
       className="py-24 text-center flex flex-col items-center"
       style={{
-        background: `linear-gradient(180deg, #141716 0%, #1b1e18 50%, #141716 100%)`,
+        background: `linear-gradient(180deg, #181B19 0%, #1b1e18 50%, #181B19 100%)`,
       }}
     >
       <motion.h2

@@ -218,7 +218,7 @@ export function MessageSchedule({
     <div className="space-y-3 sm:space-y-4">
       {/* Campaign Type Selection */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium text-[#BAC0B8] mb-1.5 sm:mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-[#B8BCB5] mb-1.5 sm:mb-2">
           <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
           Algorithm Type
         </label>
@@ -232,20 +232,20 @@ export function MessageSchedule({
                 className={`w-full px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${
                   msg.purpose === type.value
                     ? 'bg-sky-300/20 text-sky-300 border-2 border-sky-300/50 shadow-[0_0_12px_rgba(125,211,252,0.3)]'
-                    : 'bg-white/5 text-[#BAC0B8] border-2 border-white/10 hover:border-white/20'
+                    : 'bg-white/5 text-[#B8BCB5] border-2 border-white/10 hover:border-white/20'
                 } ${!msg.isEditing ? 'cursor-not-allowed opacity-70' : ''}`}
               >
                 {type.label}
                 <div className="relative">
                   <Info className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block z-10 pointer-events-none w-64 sm:w-72">
-                    <div className="bg-[#08090A] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                    <div className="bg-[#0F1110] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
                       <p className="whitespace-normal break-words">{type.description}</p>
                       <div className="mt-1 text-amber-300 font-semibold">
                         Max: {availableCredits.toLocaleString()} credits (available credits)
                       </div>
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1">
-                        <div className="border-4 border-transparent border-b-[#08090A]" />
+                        <div className="border-4 border-transparent border-b-[#0F1110]" />
                       </div>
                     </div>
                   </div>
@@ -259,7 +259,7 @@ export function MessageSchedule({
       {/* Client Limit Selection */}
       <div>
         <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-          <label className="block text-xs sm:text-sm font-medium text-[#BAC0B8]">
+          <label className="block text-xs sm:text-sm font-medium text-[#B8BCB5]">
             <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
             Maximum Number of Clients to Message.
           </label>
@@ -284,20 +284,20 @@ export function MessageSchedule({
             if (limit > effectiveMax) return null;
             
             return (
-              <option key={limit} value={limit} className="bg-[#141716]">
+              <option key={limit} value={limit} className="bg-[#181B19]">
                 {limit.toLocaleString()} clients
               </option>
             );
           })}
 
-          <option value={-2} className="bg-[#141716]">
+          <option value={-2} className="bg-[#181B19]">
             Max (
             {Math.min(getMaxLimit(), maxClients).toLocaleString()}{' '}
             {getMaxLimit() < maxClients ? 'credits' : 'clients'}
             )
           </option>
 
-          <option value={-1} className="bg-[#141716]">
+          <option value={-1} className="bg-[#181B19]">
             Custom
           </option>
         </select>
@@ -305,7 +305,7 @@ export function MessageSchedule({
         {showCustomInput && (
           <div className="mt-2">
             <div className="relative">
-              <Hash className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#BAC0B8]" />
+              <Hash className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#B8BCB5]" />
               <input
                 type="number"
                 min="0"
@@ -322,13 +322,13 @@ export function MessageSchedule({
                 }}
                 disabled={!msg.isEditing}
                 placeholder={`Enter custom limit (Min: 0, Max: ${getMaxLimit().toLocaleString()})`}
-                className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-[#BAC0B8]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
+                className={`w-full bg-white/5 border border-white/10 rounded-lg sm:rounded-xl pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 text-sm sm:text-base text-white placeholder-[#B8BCB5]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all ${
                   !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
                 }`}
               />
             </div>
             {previewCount >= 0 && (
-              <p className="text-[10px] sm:text-xs text-[#BAC0B8] mt-2">
+              <p className="text-[10px] sm:text-xs text-[#B8BCB5] mt-2">
                 {msg.clientLimit === 0 
                   ? 0 
                   : Math.min(previewCount, availableCredits, msg.clientLimit)
@@ -346,7 +346,7 @@ export function MessageSchedule({
         )}
 
         {!showCustomInput && previewCount >= 0 && (
-          <p className="text-[10px] sm:text-xs text-[#BAC0B8] mt-2">
+          <p className="text-[10px] sm:text-xs text-[#B8BCB5] mt-2">
             {msg.clientLimit === 0 
               ? 0 
               : Math.min(previewCount, availableCredits, msg.clientLimit)
@@ -371,7 +371,7 @@ export function MessageSchedule({
       {/* Schedule Date */}
       <div>
         <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
-          <label className="block text-xs sm:text-sm font-medium text-[#BAC0B8]">
+          <label className="block text-xs sm:text-sm font-medium text-[#B8BCB5]">
             <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
             Send Date
           </label>
@@ -388,12 +388,12 @@ export function MessageSchedule({
             <div className={`absolute bottom-full mb-2 z-20 w-56 sm:w-64 
               -right-30 sm:left-1/2 sm:-translate-x-1/2
               ${showTooltip ? 'block' : 'hidden group-hover:block'}`}>
-              <div className="bg-[#08090A] border border-amber-300/30 rounded-lg px-3 py-2 text-xs text-amber-200 shadow-xl">
+              <div className="bg-[#0F1110] border border-amber-300/30 rounded-lg px-3 py-2 text-xs text-amber-200 shadow-xl">
                 <p className="whitespace-normal break-words">
                   Messages can only be scheduled up to 7 days from now with at least 5 minutes buffer (15-min intervals)
                 </p>
                 <div className="absolute top-full sm:left-1/2 sm:-translate-x-1/2 -mt-1">
-                  <div className="border-4 border-transparent border-t-[#08090A]" />
+                  <div className="border-4 border-transparent border-t-[#0F1110]" />
                 </div>
               </div>
             </div>
@@ -422,7 +422,7 @@ export function MessageSchedule({
 
       {/* Time - 12hr format with AM/PM */}
       <div>
-        <label className="block text-xs sm:text-sm font-medium text-[#BAC0B8] mb-1.5 sm:mb-2">
+        <label className="block text-xs sm:text-sm font-medium text-[#B8BCB5] mb-1.5 sm:mb-2">
           <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
           Send Time
         </label>
@@ -443,7 +443,7 @@ export function MessageSchedule({
               <option
                 key={hour.value}
                 value={hour.value}
-                className="bg-[#141716]"
+                className="bg-[#181B19]"
               >
                 {hour.label}
               </option>
@@ -467,7 +467,7 @@ export function MessageSchedule({
               <option
                 key={minute.value}
                 value={minute.value}
-                className="bg-[#141716]"
+                className="bg-[#181B19]"
               >
                 {minute.label}
               </option>
@@ -491,7 +491,7 @@ export function MessageSchedule({
               <option
                 key={period.value}
                 value={period.value}
-                className="bg-[#141716]"
+                className="bg-[#181B19]"
               >
                 {period.label}
               </option>
@@ -574,7 +574,7 @@ export function MessageSchedule({
           {msg.isSaved && (
             <button
               onClick={() => onCancelEdit(msg.id)}
-              className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+              className="w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold bg-white/5 text-[#B8BCB5] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
             >
               Cancel
             </button>
@@ -591,7 +591,7 @@ export function MessageSchedule({
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#141716] border border-white/20 rounded-xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-[#181B19] border border-white/20 rounded-xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -601,13 +601,13 @@ export function MessageSchedule({
               </h3>
               <button
                 onClick={() => setShowLimitModal(false)}
-                className="text-[#BAC0B8] hover:text-white transition-colors"
+                className="text-[#B8BCB5] hover:text-white transition-colors"
               >
                 <span className="text-2xl">×</span>
               </button>
             </div>
             
-            <div className="space-y-3 sm:space-y-4 text-xs sm:text-sm text-[#BAC0B8]">
+            <div className="space-y-3 sm:space-y-4 text-xs sm:text-sm text-[#B8BCB5]">
               <p>
                 You might see that your client list is less than what you&apos;re expecting, and that&apos;s normal.
               </p>

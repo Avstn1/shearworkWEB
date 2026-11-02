@@ -12,13 +12,13 @@ export default function PlatformSwitcher({ currentPlatform, onPlatformChange }: 
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex gap-3 bg-[#111412]/95 backdrop-blur-md p-2 rounded-2xl border border-[#2A302C]/50"
+      className="flex gap-3 bg-[#171A18]/95 backdrop-blur-md p-2 rounded-2xl border border-[#2C302D]/50"
     >
       <button
         onClick={() => onPlatformChange('web')}
         className={`flex-1 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
           currentPlatform === 'web'
-            ? 'bg-[#2A302C]/40 text-[#d4e7c5] shadow-lg'
+            ? 'bg-[#2C302D]/40 text-[#d4e7c5] shadow-lg'
             : 'bg-transparent text-white/60 hover:text-white/80 hover:bg-white/5'
         }`}
       >
@@ -30,7 +30,7 @@ export default function PlatformSwitcher({ currentPlatform, onPlatformChange }: 
         onClick={() => onPlatformChange('mobile')}
         className={`flex-1 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
           currentPlatform === 'mobile'
-            ? 'bg-[#2A302C]/40 text-[#d4e7c5] shadow-lg'
+            ? 'bg-[#2C302D]/40 text-[#d4e7c5] shadow-lg'
             : 'bg-transparent text-white/60 hover:text-white/80 hover:bg-white/5'
         }`}
       >
@@ -42,7 +42,7 @@ export default function PlatformSwitcher({ currentPlatform, onPlatformChange }: 
         onClick={() => onPlatformChange('both')}
         className={`flex-1 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
           currentPlatform === 'both'
-            ? 'bg-[#2A302C]/40 text-[#d4e7c5] shadow-lg'
+            ? 'bg-[#2C302D]/40 text-[#d4e7c5] shadow-lg'
             : 'bg-transparent text-white/60 hover:text-white/80 hover:bg-white/5'
         }`}
       >

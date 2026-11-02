@@ -180,7 +180,7 @@ export default function TutorialOverlay({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#A3AAA2]">Tutorial</p>
+            <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#9EA39C]">Tutorial</p>
             <h2 id={titleId} className="mt-1 text-lg font-semibold text-white">
               {step.title}
             </h2>
@@ -195,11 +195,11 @@ export default function TutorialOverlay({
           </button>
         </div>
 
-        <p id={descriptionId} className="mt-3 text-sm text-[#BAC0B8]">
+        <p id={descriptionId} className="mt-3 text-sm text-[#B8BCB5]">
           {step.description}
         </p>
 
-        <div className="mt-5 flex items-center justify-between text-xs text-[#A3AAA2]">
+        <div className="mt-5 flex items-center justify-between text-xs text-[#9EA39C]">
           <span>
             Step {stepIndex + 1} of {totalSteps}
           </span>

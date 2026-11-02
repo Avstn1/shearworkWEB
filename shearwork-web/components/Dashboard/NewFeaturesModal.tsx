@@ -212,7 +212,7 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
 
   const getCategoryColor = (category: string) => {
     const colors = {
-      feature: 'bg-[#84B53B]/20 text-[#a8d5ba] border-[#84B53B]/40',
+      feature: 'bg-[#76995F]/20 text-[#a8d5ba] border-[#76995F]/40',
       improvement: 'bg-[#5a7c9a]/20 text-[#a8c5d5] border-[#5a7c9a]/40',
       bugfix: 'bg-[#7a4444]/20 text-[#d49999] border-[#7a4444]/40',
       announcement: 'bg-[#6b5a7c]/20 text-[#c5a8d5] border-[#6b5a7c]/40',
@@ -257,12 +257,12 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className={`bg-gradient-to-br from-[#0E110F] to-[#161A18] border border-[#2A302C]/50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden mb-16 sm:mb-0 ${
+        className={`bg-gradient-to-br from-[#141614] to-[#1D201E] border border-[#2C302D]/50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden mb-16 sm:mb-0 ${
           !userId ? 'max-w-4xl h-[75vh]' : 'max-w-5xl h-[85vh]'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#2A302C]/30 flex-shrink-0">
+        <div className="flex items-center justify-between p-6 border-b border-[#2C302D]/30 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-amber-400/20 to-lime-400/20 rounded-xl">
               <Bell className="w-6 h-6 text-lime-300" />
@@ -282,7 +282,7 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                   onClick={() => setViewMode('barberView')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center gap-1.5 ${
                     viewMode === 'barberView'
-                      ? 'bg-[#84B53B]/40 text-[#a8d5ba]'
+                      ? 'bg-[#76995F]/40 text-[#a8d5ba]'
                       : 'text-white/60 hover:text-white/80'
                   }`}
                 >
@@ -327,7 +327,7 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="w-12 h-12 border-4 border-[#2A302C]/30 border-t-[#A9DB5C] rounded-full animate-spin mx-auto mb-4" />
+                <div className="w-12 h-12 border-4 border-[#2C302D]/30 border-t-[#8FB57A] rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-gray-400">Loading features...</p>
               </div>
             </div>
@@ -348,17 +348,17 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                   const isExpanded = expandedMinorVersion === key
                   
                   return (
-                    <div key={key} className="border border-[#2A302C]/30 rounded-2xl overflow-hidden">
+                    <div key={key} className="border border-[#2C302D]/30 rounded-2xl overflow-hidden">
                       {/* Minor Version Header */}
                       <button
                         onClick={() => toggleMinorVersion(currentGroup.majorVersion, minorGroup.minorVersion)}
-                        className="w-full flex items-center justify-between p-4 bg-[#2A302C]/10 hover:bg-[#2A302C]/20 transition-colors"
+                        className="w-full flex items-center justify-between p-4 bg-[#2C302D]/10 hover:bg-[#2C302D]/20 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-[#F2F5EF]">
+                          <span className="text-lg font-bold text-[#ECEDEA]">
                             Version {currentGroup.majorVersion}.{minorGroup.minorVersion}
                           </span>
-                          <span className="px-2 py-0.5 bg-[#2A302C]/40 text-[#d4e7c5] text-xs font-semibold rounded-full">
+                          <span className="px-2 py-0.5 bg-[#2C302D]/40 text-[#d4e7c5] text-xs font-semibold rounded-full">
                             {minorGroup.features.length} {minorGroup.features.length === 1 ? 'update' : 'updates'}
                           </span>
                           {minorGroup.isLatest && (
@@ -388,13 +388,13 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                               {minorGroup.features.map((feature, index) => (
                                 <div
                                   key={feature.id}
-                                  className="bg-white/5 backdrop-blur-sm border border-[#2A302C]/30 rounded-xl p-4"
+                                  className="bg-white/5 backdrop-blur-sm border border-[#2C302D]/30 rounded-xl p-4"
                                 >
                                   {/* Feature Header - Single Row */}
                                   <div className="flex items-start justify-between mb-2">
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                        <span className="px-2 py-0.5 bg-[#2A302C]/40 text-lime-300 text-[10px] font-mono rounded">
+                                        <span className="px-2 py-0.5 bg-[#2C302D]/40 text-lime-300 text-[10px] font-mono rounded">
                                           v{feature.version}
                                         </span>
                                         <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg border ${getCategoryColor(feature.category)}`}>
@@ -406,7 +406,7 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                           </span>
                                         )}
                                       </div>
-                                      <h4 className="text-sm font-bold text-[#F2F5EF] leading-tight">
+                                      <h4 className="text-sm font-bold text-[#ECEDEA] leading-tight">
                                         {feature.title}
                                       </h4>
                                     </div>
@@ -431,14 +431,14 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                     <ReactMarkdown 
                                       remarkPlugins={[remarkGfm]}
                                       components={{
-                                        h1: ({node, ...props}) => <h1 className="text-lg font-bold text-[#F2F5EF] mt-4 mb-2 first:mt-0" {...props} />,
-                                        h2: ({node, ...props}) => <h2 className="text-base font-bold text-[#F2F5EF] mt-3 mb-2 first:mt-0" {...props} />,
-                                        h3: ({node, ...props}) => <h3 className="text-sm font-bold text-[#F2F5EF] mt-3 mb-1.5 first:mt-0" {...props} />,
+                                        h1: ({node, ...props}) => <h1 className="text-lg font-bold text-[#ECEDEA] mt-4 mb-2 first:mt-0" {...props} />,
+                                        h2: ({node, ...props}) => <h2 className="text-base font-bold text-[#ECEDEA] mt-3 mb-2 first:mt-0" {...props} />,
+                                        h3: ({node, ...props}) => <h3 className="text-sm font-bold text-[#ECEDEA] mt-3 mb-1.5 first:mt-0" {...props} />,
                                         ul: ({node, ...props}) => <ul className="list-disc pl-4 my-2 space-y-1" {...props} />,
                                         ol: ({node, ...props}) => <ol className="list-decimal pl-4 my-2 space-y-1" {...props} />,
                                         li: ({node, ...props}) => <li className="text-gray-300 leading-relaxed" {...props} />,
                                         p: ({node, ...props}) => <p className="my-2 text-gray-300 leading-relaxed" {...props} />,
-                                        strong: ({node, ...props}) => <strong className="font-semibold text-[#F2F5EF]" {...props} />,
+                                        strong: ({node, ...props}) => <strong className="font-semibold text-[#ECEDEA]" {...props} />,
                                         em: ({node, ...props}) => <em className="italic text-gray-200" {...props} />,
                                         a: ({node, ...props}) => <a className="text-lime-400 hover:underline" {...props} />,
                                         code: ({node, ...props}) => {
@@ -457,7 +457,7 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                   {(feature.image_url || feature.video_url) && (
                                     <div className="space-y-3 mt-3">
                                       {feature.image_url && (
-                                        <div className="rounded-xl overflow-hidden border border-[#2A302C]/30">
+                                        <div className="rounded-xl overflow-hidden border border-[#2C302D]/30">
                                           <img 
                                             src={feature.image_url} 
                                             alt={feature.title}
@@ -466,7 +466,7 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
                                         </div>
                                       )}
                                       {feature.video_url && (
-                                        <div className="rounded-xl overflow-hidden border border-[#2A302C]/30">
+                                        <div className="rounded-xl overflow-hidden border border-[#2C302D]/30">
                                           <video 
                                             src={feature.video_url}
                                             controls

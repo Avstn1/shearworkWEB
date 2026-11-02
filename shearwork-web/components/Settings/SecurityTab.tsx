@@ -409,7 +409,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
       {/* Subscription Block Modal */}
       {mounted && showSubscriptionBlockModal && ReactDOM.createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#141716] border border-white/10 rounded-2xl p-6 max-w-md w-full">
+          <div className="bg-[#181B19] border border-white/10 rounded-2xl p-6 max-w-md w-full">
             {/* Header */}
             <div className="flex items-center gap-3 mb-5">
               <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
@@ -462,7 +462,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
       {/* Logout Others Modal */}
       {mounted && showDeleteAllConfirm && ReactDOM.createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#141716] border border-white/10 rounded-2xl p-6 max-w-md w-full">
+          <div className="bg-[#181B19] border border-white/10 rounded-2xl p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-2">Logout All Other Devices?</h3>
             <p className="text-sm text-gray-400 mb-6">
               This will <span className="text-white font-medium">immediately log out</span> all devices except your current one.
@@ -490,7 +490,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
       {/* Logout Everywhere Modal */}
       {mounted && showLogoutEverywhereConfirm && ReactDOM.createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#141716] border border-white/10 rounded-2xl p-6 max-w-md w-full">
+          <div className="bg-[#181B19] border border-white/10 rounded-2xl p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-2">Logout From All Devices?</h3>
             <p className="text-sm text-gray-400 mb-6">
               This will <span className="text-white font-medium">immediately log you out</span> from all devices, including this one.
@@ -518,7 +518,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
       {/* Delete Account Modal */}
       {mounted && showDeleteAccountConfirm && ReactDOM.createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#141716] border border-red-500/30 rounded-2xl p-6 max-w-md w-full">
+          <div className="bg-[#181B19] border border-red-500/30 rounded-2xl p-6 max-w-md w-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 bg-red-500/10 rounded-xl">
                 <AlertTriangle className="w-5 h-5 text-red-400" />

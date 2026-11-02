@@ -2,17 +2,17 @@ import React from 'react'
 
 // Color palette
 const COLORS = {
-  background: '#121513',
-  cardBg: '#141716',
-  navBg: '#121513', 
-  surface: 'rgba(242, 245, 239, 0.05)',
-  surfaceSolid: '#111412',
-  glassBorder: 'rgba(242, 245, 239, 0.09)',
-  text: '#F2F5EF',
-  textMuted: 'rgba(242, 245, 239, 0.62)',
-  green: '#C5F27A',
-  greenLight: '#A9DB5C',
-  greenGlow: 'rgba(197, 242, 122, 0.4)',
+  background: '#161917',
+  cardBg: '#181B19',
+  navBg: '#161917', 
+  surface: 'rgba(236, 237, 234, 0.05)',
+  surfaceSolid: '#171A18',
+  glassBorder: 'rgba(236, 237, 234, 0.09)',
+  text: '#ECEDEA',
+  textMuted: 'rgba(236, 237, 234, 0.62)',
+  green: '#8FB57A',
+  greenLight: '#8FB57A',
+  greenGlow: 'rgba(143, 181, 122, 0.4)',
 }
 
 interface Props {

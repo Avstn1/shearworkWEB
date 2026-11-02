@@ -111,7 +111,7 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
 
   return (
     <div className="h-[300px] flex flex-col">
-      <h2 className="text-[#E6EAE3] text-base font-semibold mb-3">
+      <h2 className="text-[#E1E3DE] text-base font-semibold mb-3">
         {title}
       </h2>
       {loading ? (
@@ -133,7 +133,7 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
             <Tooltip
               formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
               contentStyle={{
-                backgroundColor: '#0E110F',
+                backgroundColor: '#141614',
                 border: '1px solid rgba(255,255,255,0.1)',
                 color: '#F5E6C5',
               }}
@@ -141,7 +141,7 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
             <Bar
               dataKey="total_revenue"
               name="Revenue"
-              fill="#D8FA9C"
+              fill="#A9C79A"
               radius={[6, 6, 0, 0]}
             />
           </BarChart>

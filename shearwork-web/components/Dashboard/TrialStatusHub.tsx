@@ -204,18 +204,18 @@ export default function TrialStatusHub({
             <div className={`w-2 h-2 rounded-full shrink-0 ${getUrgencyColor(daysRemaining)}`} />
             
             {/* Days remaining */}
-            <span className="text-sm text-[#A3AAA2] shrink-0">
+            <span className="text-sm text-[#9EA39C] shrink-0">
               {daysRemaining} days left
             </span>
             
             {/* Auto-Nudge status */}
             <div className="flex items-center gap-1 shrink-0">
               {autoNudgeStatus === 'loading' ? (
-                <Loader2 className="w-3 h-3 text-[#A3AAA2] animate-spin" />
+                <Loader2 className="w-3 h-3 text-[#9EA39C] animate-spin" />
               ) : (
-                <Zap className={`w-3 h-3 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#A3AAA2]'}`} />
+                <Zap className={`w-3 h-3 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`} />
               )}
-              <span className={`text-xs font-medium ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#A3AAA2]'}`}>
+              <span className={`text-xs font-medium ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`}>
                 {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Auto-Nudge: Active' : 'Auto-Nudge: Inactive'}
               </span>
             </div>
@@ -232,7 +232,7 @@ export default function TrialStatusHub({
             
             {/* Chevron */}
             <ChevronDown 
-              className={`w-4 h-4 text-[#A3AAA2] shrink-0 transition-transform duration-200 ${
+              className={`w-4 h-4 text-[#9EA39C] shrink-0 transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : ''
               }`} 
             />
@@ -252,13 +252,13 @@ export default function TrialStatusHub({
                   {/* Auto-Nudge status */}
                   <div className="flex items-center gap-2">
                     {autoNudgeStatus === 'loading' ? (
-                      <Loader2 className="w-4 h-4 text-[#A3AAA2] animate-spin" />
+                      <Loader2 className="w-4 h-4 text-[#9EA39C] animate-spin" />
                     ) : (
-                      <Zap className={`w-4 h-4 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#A3AAA2]'}`} />
+                      <Zap className={`w-4 h-4 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`} />
                     )}
                     <span className="text-sm">
-                      <span className="text-[#A3AAA2]">Auto-Nudge: </span>
-                      <span className={autoNudgeStatus === 'active' ? 'text-lime-300 font-medium' : 'text-[#A3AAA2]'}>
+                      <span className="text-[#9EA39C]">Auto-Nudge: </span>
+                      <span className={autoNudgeStatus === 'active' ? 'text-lime-300 font-medium' : 'text-[#9EA39C]'}>
                         {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </span>
@@ -269,7 +269,7 @@ export default function TrialStatusHub({
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-sky-400" />
                       <span className="text-sm">
-                        <span className="text-[#A3AAA2]">Next: </span>
+                        <span className="text-[#9EA39C]">Next: </span>
                         <span className="text-sky-400 font-medium">{nextNudgeDate}</span>
                       </span>
                     </div>
@@ -278,16 +278,16 @@ export default function TrialStatusHub({
                   {/* Revenue - only when active */}
                   {autoNudgeStatus === 'active' && (
                     <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-[#A3AAA2]" />
+                      <DollarSign className="w-4 h-4 text-[#9EA39C]" />
                       {isLoadingRevenue ? (
                         <Loader2 className="w-4 h-4 animate-spin text-lime-300" />
                       ) : revenueRecovered && revenueRecovered > 0 ? (
                         <span className="text-sm">
                           <span className="text-lime-300 font-bold">${revenueRecovered}</span>
-                          <span className="text-[#A3AAA2] ml-1">recovered this week</span>
+                          <span className="text-[#9EA39C] ml-1">recovered this week</span>
                         </span>
                       ) : (
-                        <span className="text-sm text-[#A3AAA2]">No recoveries yet</span>
+                        <span className="text-sm text-[#9EA39C]">No recoveries yet</span>
                       )}
                     </div>
                   )}
@@ -322,7 +322,7 @@ export default function TrialStatusHub({
               </div>
               <span className="text-sm whitespace-nowrap">
                 <span className="text-base font-bold text-lime-300">{daysRemaining}</span>
-                <span className="text-[#BAC0B8] ml-1">days of trial left</span>
+                <span className="text-[#B8BCB5] ml-1">days of trial left</span>
               </span>
             </div>
             
@@ -332,13 +332,13 @@ export default function TrialStatusHub({
                 autoNudgeStatus === 'active' ? 'bg-lime-300/20' : 'bg-white/10'
               }`}>
                 {autoNudgeStatus === 'loading' ? (
-                  <Loader2 className="w-3.5 h-3.5 text-[#A3AAA2] animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 text-[#9EA39C] animate-spin" />
                 ) : (
-                  <Zap className={`w-3.5 h-3.5 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#A3AAA2]'}`} />
+                  <Zap className={`w-3.5 h-3.5 ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`} />
                 )}
               </div>
               <span className="text-sm whitespace-nowrap">
-                <span className={`font-semibold ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#A3AAA2]'}`}>
+                <span className={`font-semibold ${autoNudgeStatus === 'active' ? 'text-lime-300' : 'text-[#9EA39C]'}`}>
                   {autoNudgeStatus === 'loading' ? '...' : autoNudgeStatus === 'active' ? 'Auto-Nudge: Active' : 'Auto-Nudge: Inactive'}
                 </span>
               </span>
@@ -362,10 +362,10 @@ export default function TrialStatusHub({
                 ) : revenueRecovered && revenueRecovered > 0 ? (
                   <span className="text-sm whitespace-nowrap">
                     <span className="text-base font-bold text-lime-300">${revenueRecovered}</span>
-                    <span className="text-[#A3AAA2] ml-1">this week</span>
+                    <span className="text-[#9EA39C] ml-1">this week</span>
                   </span>
                 ) : (
-                  <span className="text-sm text-[#A3AAA2] whitespace-nowrap">No recoveries yet</span>
+                  <span className="text-sm text-[#9EA39C] whitespace-nowrap">No recoveries yet</span>
                 )}
               </div>
             )}
@@ -391,7 +391,7 @@ export default function TrialStatusHub({
                 className={`h-full ${getUrgencyColor(daysRemaining)} rounded-full`}
               />
             </div>
-            <span className="text-xs font-medium text-[#BAC0B8] tabular-nums shrink-0">{Math.round(progressPercent)}%</span>
+            <span className="text-xs font-medium text-[#B8BCB5] tabular-nums shrink-0">{Math.round(progressPercent)}%</span>
           </div>
         </div>
       </div>

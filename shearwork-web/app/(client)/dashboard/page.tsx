@@ -44,7 +44,7 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="flex flex-col bg-gradient-to-br from-[#0A0C0B] via-[#0E110F] to-[#161A18] p-3 pt-4 gap-3"
+      className="flex flex-col bg-gradient-to-br from-[#111312] via-[#141614] to-[#1D201E] p-3 pt-4 gap-3"
       style={{
         height: 'calc(100dvh - var(--navbar-height, 72px))',
         marginTop: 'var(--navbar-height, 72px)',

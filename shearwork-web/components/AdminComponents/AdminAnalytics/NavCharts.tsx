@@ -224,11 +224,11 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
     return (
       <div
         style={{
-          backgroundColor: '#111412',
-          border: '1px solid #2A302C',
+          backgroundColor: '#171A18',
+          border: '1px solid #2C302D',
           borderRadius: '0.5rem',
           padding: '8px',
-          color: '#D8FA9C',
+          color: '#A9C79A',
           fontSize: '0.875rem',
         }}
       >
@@ -248,24 +248,24 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
   return (
     <div className="w-full">
       <div className="mb-2">
-        <h2 className="text-[#D8FA9C] font-semibold text-sm sm:text-base">{title}</h2>
+        <h2 className="text-[#A9C79A] font-semibold text-sm sm:text-base">{title}</h2>
       </div>
 
       <div className="w-full h-64 relative">
         {loading ? (
-          <div className="p-4 text-center text-[#E6EAE3] opacity-70 text-sm">
+          <div className="p-4 text-center text-[#E1E3DE] opacity-70 text-sm">
             Loading {viewMode} data...
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2E3330" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2E322F" />
               <XAxis
                 dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
-                stroke="#CDD2CB"
+                stroke="#C9CCC6"
                 tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
-              <YAxis stroke="#CDD2CB" />
+              <YAxis stroke="#C9CCC6" />
               <Tooltip content={tooltipContent} />
               <Legend />
               

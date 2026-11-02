@@ -56,10 +56,10 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
   // Show loading only for protected routes
   if ((isLoading || (user && profileStatus === 'loading')) && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#151A16_0%,#0A0C0B_55%,#07090A_100%)]">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#1A1D1B_0%,#111312_55%,#111312_100%)]">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#C5F27A] mb-4"></div>
-          <p className="text-sm text-[#BAC0B8]">Loading profile...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#8FB57A] mb-4"></div>
+          <p className="text-sm text-[#B8BCB5]">Loading profile...</p>
         </div>
       </div>
     )
@@ -67,10 +67,10 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
   if (user && profileStatus === 'error' && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#151A16_0%,#0A0C0B_55%,#07090A_100%)]">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#1A1D1B_0%,#111312_55%,#111312_100%)]">
         <div className="text-center max-w-md px-6">
           <h2 className="text-lg font-semibold text-white">We couldn&apos;t load your profile</h2>
-          <p className="mt-2 text-sm text-[#BAC0B8]">
+          <p className="mt-2 text-sm text-[#B8BCB5]">
             Please refresh the page. If this keeps happening, try logging out and back in.
           </p>
           <button
@@ -88,10 +88,10 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
   if (!user && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#151A16_0%,#0A0C0B_55%,#07090A_100%)]">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#1A1D1B_0%,#111312_55%,#111312_100%)]">
         <div className="text-center max-w-md px-6">
           <h2 className="text-lg font-semibold text-white">Session expired</h2>
-          <p className="mt-2 text-sm text-[#BAC0B8]">
+          <p className="mt-2 text-sm text-[#B8BCB5]">
             Please log in again to continue.
           </p>
           <button

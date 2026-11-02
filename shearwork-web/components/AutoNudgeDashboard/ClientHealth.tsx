@@ -155,7 +155,7 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
         <span className="text-xs font-semibold text-sky-300 flex-shrink-0">Score: {Math.round(client.score)}</span>
       </div>
       <div className="flex items-end justify-between mt-1.5 gap-2">
-        <div className="flex gap-2 text-xs text-[#BAC0B8] flex-wrap">
+        <div className="flex gap-2 text-xs text-[#B8BCB5] flex-wrap">
           <span>{client.phone_normalized}</span>
           <span>•</span>
           <span className="text-orange-400">{client.days_overdue}d overdue</span>
@@ -372,7 +372,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
       <div className="flex items-center justify-between mb-1 flex-shrink-0">
         <h2 className="text-[#d1e2c5] font-semibold text-sm sm:text-base">Clients at Risk</h2>
         {!loading && (
-          <span className="text-xs text-[#BAC0B8]">{activeList.length} clients</span>
+          <span className="text-xs text-[#B8BCB5]">{activeList.length} clients</span>
         )}
       </div>
 
@@ -411,7 +411,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
       {/* List */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-[#BAC0B8] text-sm animate-pulse">Loading...</span>
+          <span className="text-[#B8BCB5] text-sm animate-pulse">Loading...</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -474,7 +474,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0E110F] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
+              className="bg-[#141614] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
             >
               <div>
                 <h3 className="text-white font-bold text-lg">Start this week's nudge?</h3>

@@ -32,7 +32,7 @@ export default function MonthPicker({ selectedMonth, onSelect }: MonthPickerProp
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           onClick={() => setExpanded(prev => !prev)}
           className="px-4 py-2 rounded-lg bg-[#C8B653]/20 border border-[#C8B653]/40 
-                     text-[#E6EAE3] font-medium backdrop-blur-md hover:bg-[#C8B653]/30
+                     text-[#E1E3DE] font-medium backdrop-blur-md hover:bg-[#C8B653]/30
                      transition-all duration-200"
         >
           {selectedMonth}
@@ -58,7 +58,7 @@ export default function MonthPicker({ selectedMonth, onSelect }: MonthPickerProp
                   transition={{ type: 'spring', stiffness: 250, damping: 20 }}
                   onClick={() => handleSelect(month)}
                   className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 
-                             text-[#E6EAE3]/90 hover:bg-white/20 backdrop-blur-md
+                             text-[#E1E3DE]/90 hover:bg-white/20 backdrop-blur-md
                              transition-all duration-200"
                 >
                   {month}

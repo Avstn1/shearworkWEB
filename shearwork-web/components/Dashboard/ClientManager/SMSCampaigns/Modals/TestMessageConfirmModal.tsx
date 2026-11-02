@@ -33,7 +33,7 @@ export default function TestMessageConfirmModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#141716] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
+            className="bg-[#181B19] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-4 md:p-6"
           >
             <div className="flex items-start gap-3 md:gap-4 mb-4">
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-amber-300/20 text-amber-300">
@@ -44,7 +44,7 @@ export default function TestMessageConfirmModal({
                   <span className="hidden sm:inline">Send Test Message</span>
                   <span className="sm:hidden">Test Message</span>
                 </h3>
-                <p className="text-xs md:text-sm text-[#BAC0B8]">
+                <p className="text-xs md:text-sm text-[#B8BCB5]">
                   Each test message costs <span className="text-amber-300 font-semibold">1 credit</span>.
                 </p>
               </div>
@@ -72,7 +72,7 @@ export default function TestMessageConfirmModal({
             <div className="flex gap-2 md:gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#BAC0B8] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
+                className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-sm md:text-base font-bold bg-white/5 text-[#B8BCB5] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10"
               >
                 Cancel
               </button>
