@@ -46,7 +46,7 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="flex flex-col gap-3 bg-canvas p-3 pt-4 md:gap-4 md:p-6 xl:px-8"
+      className="app-surface flex flex-col gap-3 p-3 pt-4 md:gap-4 md:p-6 xl:px-8"
       style={{
         height: 'calc(100dvh - var(--navbar-height, 72px))',
         marginTop: 'var(--navbar-height, 72px)',

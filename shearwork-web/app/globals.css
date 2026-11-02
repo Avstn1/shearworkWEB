@@ -431,6 +431,13 @@ html {
             .field (inputs/selects/textarea), .field-label, .table-clean, .empty-state, .divider
    ======================= */
 @layer components {
+  /* Pages with their own fixed-height layout use .app-surface for the same backdrop */
+  .app-surface {
+    background:
+      radial-gradient(70% 320px at 15% 0%, rgb(143 181 122 / 0.07), transparent 70%),
+      radial-gradient(50% 280px at 95% 0%, rgb(169 192 210 / 0.05), transparent 70%),
+      var(--color-canvas);
+  }
   .app-page {
     margin-top: var(--navbar-height, 72px);
     min-height: calc(100dvh - var(--navbar-height, 72px));
@@ -550,8 +557,8 @@ html {
   .bar-fill { height: 100%; border-radius: inherit; background: rgb(var(--tone, 143 181 122)); }
 
   /* In the product UI the primary action is sage so key actions stand out */
-  .app-page .btn-primary, .modal-surface .btn-primary { color: var(--color-ink); background: var(--color-sage-bright); box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.12); }
-  .app-page .btn-primary:hover, .modal-surface .btn-primary:hover { background: #BCD3AF; }
+  .app-page .btn-primary, .app-surface .btn-primary, .modal-surface .btn-primary { color: var(--color-ink); background: var(--color-sage-bright); box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.12); }
+  .app-page .btn-primary:hover, .app-surface .btn-primary:hover, .modal-surface .btn-primary:hover { background: #BCD3AF; }
 
 
   .modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / 0.6); backdrop-filter: blur(4px); }
