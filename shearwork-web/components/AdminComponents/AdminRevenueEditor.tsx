@@ -77,25 +77,32 @@ export default function AdminRevenueEditor({ barberId, month, year }: AdminReven
     }
   }
 
-  if (loading) return <p>Loading revenue...</p>
+  if (loading) return <p className="text-sm text-muted">Loading revenue...</p>
 
   return (
-    <div className="bg-[#1f1f1a] text-white rounded-xl p-4 shadow-md">
-      <h3 className="text-lg font-semibold mb-2">Edit Monthly Revenue</h3>
-      <input
-        type="text" // ← text instead of number
-        inputMode="decimal" // shows numeric keyboard on mobile
-        value={revenue}
-        onChange={handleChange}
-        placeholder="Enter revenue..."
-        className="w-full bg-[#2f3a2d] text-[#F1F5E9] border border-[#55694b] rounded-md p-2 mb-3 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      />
-      <button
-        onClick={handleUpdate}
-        className="bg-[var(--accent-3)] hover:bg-[var(--accent-4)] text-[var(--text-bright)] px-4 py-2 rounded-md text-sm font-semibold"
-      >
-        Update Revenue
-      </button>
-    </div>
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h3 className="panel-title">Monthly revenue</h3>
+          <p className="panel-subtitle">{month} {year}</p>
+        </div>
+      </header>
+      <div className="panel-body flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="w-full sm:max-w-xs">
+          <label className="field-label">Total revenue</label>
+          <input
+            type="text" // ← text instead of number
+            inputMode="decimal" // shows numeric keyboard on mobile
+            value={revenue}
+            onChange={handleChange}
+            placeholder="Enter revenue..."
+            className="field tabular-nums appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        </div>
+        <button onClick={handleUpdate} className="btn btn-primary btn-sm">
+          Update revenue
+        </button>
+      </div>
+    </section>
   )
 }

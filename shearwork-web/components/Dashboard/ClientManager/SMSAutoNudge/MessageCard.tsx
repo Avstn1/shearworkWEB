@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 import { MessageClientList } from './MessageClientList'
+import { EmptyState } from '@/components/ui/AppKit'
 
 interface Recipient {
   phone_normalized: string;
@@ -210,19 +211,19 @@ export function MessageCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
-      className={`bg-white/5 backdrop-blur-lg border rounded-xl sm:rounded-2xl shadow-xl overflow-visible ${
-        isFullLock ? 'border-rose-300/30' : isPartialLock ? 'border-amber-300/30' : 'border-white/10'
+      className={`panel overflow-visible ${
+        isFullLock ? '!border-[#D99A8B]/30' : isPartialLock ? '!border-amber-300/25' : ''
       }`}
     >
       {/* Full Lock Banner - Campaign in progress */}
       {isFullLock && (
-        <div className="px-3 sm:px-6 py-2 sm:py-3 flex items-center gap-2 bg-rose-300/10 border-b border-rose-300/20">
-          <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-rose-300 flex-shrink-0" />
-          <p className="text-xs sm:text-sm font-semibold text-rose-300">
+        <div className="px-3 sm:px-5 py-2.5 flex items-center gap-2 rounded-t-xl bg-[#D99A8B]/[0.07] border-b border-[#D99A8B]/20">
+          <Lock className="w-4 h-4 text-[#D99A8B] flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-[13px] font-medium text-[#D99A8B]">
             Campaign in progress - Locked until messaging completes
           </p>
         </div>
@@ -230,9 +231,9 @@ export function MessageCard({
 
       {/* Partial Lock Banner - Campaign finished, can edit but not activate */}
       {isPartialLock && !isFullLock && (
-        <div className="px-3 sm:px-6 py-2 sm:py-3 flex items-start gap-2 bg-amber-300/10 border-b border-amber-300/20">
-          <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300 flex-shrink-0 mt-0.5" />
-          <p className="text-xs sm:text-sm font-semibold text-amber-300">
+        <div className="px-3 sm:px-5 py-2.5 flex items-start gap-2 rounded-t-xl bg-amber-300/[0.06] border-b border-amber-300/15">
+          <Lock className="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+          <p className="text-[13px] font-medium text-amber-300">
             <span className="hidden sm:inline">Campaign sent this month - You can edit and save as draft, but cannot activate until {getUnlockDate()}</span>
             <span className="sm:hidden">Sent this month - Can edit, unlocks {getUnlockDate()}</span>
           </p>
@@ -241,42 +242,42 @@ export function MessageCard({
 
       {/* Legacy Lock Banner - Fallback for old lock system */}
       {isLocked && !isFullLock && !isPartialLock && (
-        <div className="px-3 sm:px-6 py-2 sm:py-3 flex items-center gap-2 bg-amber-300/10 border-b border-amber-300/20">
-          <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300 flex-shrink-0" />
-          <p className="text-xs sm:text-sm font-semibold text-amber-300">
+        <div className="px-3 sm:px-5 py-2.5 flex items-center gap-2 rounded-t-xl bg-amber-300/[0.06] border-b border-amber-300/15">
+          <Lock className="w-4 h-4 text-amber-300 flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-[13px] font-medium text-amber-300">
             <span className="hidden sm:inline">Already sent this month - Message will unlock on {getUnlockDate()}</span>
             <span className="sm:hidden">Sent - Unlocks {getUnlockDate()}</span>
           </p>
         </div>
       )}
 
-      <div className="p-3 sm:p-6">
+      <div>
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+        <div className="panel-header !px-3 sm:!px-5 flex-col !items-stretch sm:flex-row sm:!items-center">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className={`w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0 ${
               msg.validationStatus === 'ACCEPTED' && msg.enabled
-                ? 'bg-lime-300/20 text-lime-300'
+                ? 'bg-sage/10 border-sage/20 text-sage-bright'
                 : isFullLock
-                  ? 'bg-rose-300/20 text-rose-300'
+                  ? 'bg-[#D99A8B]/[0.08] border-[#D99A8B]/20 text-[#D99A8B]'
                   : isPartialLock
-                    ? 'bg-amber-300/20 text-amber-300'
-                    : 'bg-sky-300/20 text-sky-300'
+                    ? 'bg-amber-300/[0.08] border-amber-300/20 text-amber-300'
+                    : 'bg-raised border-white/[0.07] text-ivory'
             }`}>
               {msg.validationStatus === 'ACCEPTED' && msg.enabled ? (
-                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                <CheckCircle className="w-4 h-4" strokeWidth={1.75} />
               ) : isFullLock || isPartialLock ? (
-                <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Lock className="w-4 h-4" strokeWidth={1.75} />
               ) : (
-                <span className="font-bold text-sm sm:text-base">{index + 1}</span>
+                <span className="font-semibold text-[13px] tabular-nums">{index + 1}</span>
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-white font-semibold text-sm sm:text-base truncate">
+              <h3 className="panel-title truncate">
                 {msg.title}
               </h3>
-              <p className="text-[10px] sm:text-xs text-[#bdbdbd] flex items-center gap-1 mt-0.5">
-                <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+              <p className="panel-subtitle flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.75} />
                 <span className="truncate">{getSchedulePreview()}</span>
                 {msg.validationStatus !== 'ACCEPTED' || !msg.enabled ? ' | Inactive' : ''}
               </p>
@@ -291,20 +292,20 @@ export function MessageCard({
                 <button
                   onClick={fetchRecipients}
                   disabled={loadingRecipients}
-                  className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-sky-300 transition-all duration-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-glass btn-sm !h-8 !px-2.5 !gap-1.5 text-xs"
                 >
                   {loadingRecipients ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
                   ) : (
-                    <Users className="w-3 h-3" />
+                    <Users className="w-3.5 h-3.5" strokeWidth={1.75} />
                   )}
                   <span className="hidden sm:inline">Last Campaign</span>
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                    View last month's recipients
+                  <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
+                    View last month&apos;s recipients
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      <div className="border-4 border-transparent border-t-raised" />
                     </div>
                   </div>
                 </div>
@@ -316,16 +317,16 @@ export function MessageCard({
               <div className="relative group">
                 <button
                   onClick={() => onEnableEdit?.(msg.id)}
-                  className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/5 text-[#bdbdbd] border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-300 flex items-center gap-1"
+                  className="btn btn-glass btn-sm !h-8 !px-2.5 !gap-1.5 text-xs"
                 >
-                  <Edit className="w-3 h-3" />
+                  <Edit className="w-3.5 h-3.5" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Edit</span>
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
                     Edit this message
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      <div className="border-4 border-transparent border-t-raised" />
                     </div>
                   </div>
                 </div>
@@ -342,10 +343,10 @@ export function MessageCard({
                     toast.error('Please use the Activate button to schedule this message');
                   }
                 }}
-                className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold transition-all ${
+                className={`badge !py-1 transition-colors ${
                   msg.validationStatus === 'ACCEPTED' && msg.enabled
-                    ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30 hover:bg-lime-300/30'
-                    : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                    ? 'badge-sage hover:bg-sage/20'
+                    : ''
                 }`}
               >
                 <span className="hidden sm:inline">{msg.validationStatus === 'ACCEPTED' && msg.enabled ? 'Active - Click to toggle' : 'Inactive'}</span>
@@ -355,19 +356,19 @@ export function MessageCard({
 
             <div className="flex items-center gap-1.5 sm:gap-2">
               {/* Saved/Draft Badge */}
-              <span className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${
+              <span className={`badge !py-1 ${
                 msg.isSaved 
-                  ? 'bg-lime-300/10 text-lime-300 border border-lime-300/20'
-                  : 'bg-amber-300/10 text-amber-300 border border-amber-300/20'
+                  ? 'badge-sage'
+                  : 'badge-warn'
               }`}>
                 {msg.isSaved ? 'Saved' : 'Draft'}
               </span>
 
               {/* Verified Badge */}
-              <span className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold ${
+              <span className={`badge !py-1 ${
                 msg.isValidated
-                  ? 'bg-sky-300/10 text-sky-300 border border-sky-300/20'
-                  : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                  ? 'badge-info'
+                  : ''
               }`}>
                 {msg.isValidated ? 'Verified' : 'Unverified'}
               </span>
@@ -376,15 +377,15 @@ export function MessageCard({
             {/* Lock indicators */}
             {isFullLock && (
               <div className="relative group">
-                <div className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-rose-300/10 text-rose-300 border border-rose-300/20 flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
+                <div className="badge badge-danger !py-1">
+                  <Lock className="w-3 h-3" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Sending</span>
                 </div>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
                     Campaign is currently sending messages
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      <div className="border-4 border-transparent border-t-raised" />
                     </div>
                   </div>
                 </div>
@@ -393,15 +394,15 @@ export function MessageCard({
 
             {isPartialLock && !isFullLock && (
               <div className="relative group">
-                <div className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-amber-300/10 text-amber-300 border border-amber-300/20 flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
+                <div className="badge badge-warn !py-1">
+                  <Lock className="w-3 h-3" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Partial Lock</span>
                 </div>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+                  <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
                     Can edit and save as draft - unlocks {getUnlockDate()}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      <div className="border-4 border-transparent border-t-raised" />
                     </div>
                   </div>
                 </div>
@@ -410,13 +411,14 @@ export function MessageCard({
           </div>
         </div>
 
+        <div className="p-3 sm:p-5">
         {/* Last Sent Info */}
         {lastSentDate && (
-          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white/5 border border-white/10 rounded-xl">
+          <div className="mb-4 sm:mb-5 p-3 bg-white/[0.02] border border-white/[0.07] rounded-lg">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-lime-300 flex-shrink-0" />
-                <span className="text-xs sm:text-sm font-semibold text-white">
+                <CheckCircle className="w-4 h-4 text-sage flex-shrink-0" strokeWidth={1.75} />
+                <span className="text-[13px] font-medium text-ivory tabular-nums">
                   Last sent: {new Date(lastSentDate).toLocaleDateString('en-US', { 
                     month: 'short', 
                     day: 'numeric', 
@@ -427,10 +429,10 @@ export function MessageCard({
                 </span>
               </div>
               {recipientsStats && (
-                <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs">
-                  <span className="text-lime-300">{recipientsStats.successful} sent</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="badge badge-sage tabular-nums">{recipientsStats.successful} sent</span>
                   {recipientsStats.failed > 0 && (
-                    <span className="text-rose-300">{recipientsStats.failed} failed</span>
+                    <span className="badge badge-danger tabular-nums">{recipientsStats.failed} failed</span>
                   )}
                 </div>
               )}
@@ -438,65 +440,65 @@ export function MessageCard({
           </div>
         )}
 
-{/* Mobile: Separate collapsible sections */}
-<div className="sm:hidden space-y-3">
-  {/* Message Content Section */}
-  <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-    <button
-      onClick={() => setShowMessageContent(!showMessageContent)}
-      className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors"
-    >
-      <div className="flex items-center gap-2">
-        <MessageSquare className="w-4 h-4 text-sky-300" />
-        <span className="font-semibold text-white text-sm">Message Content</span>
-      </div>
-      {showMessageContent ? (
-        <ChevronUp className="w-4 h-4 text-[#bdbdbd]" />
-      ) : (
-        <ChevronDown className="w-4 h-4 text-[#bdbdbd]" />
-      )}
-    </button>
-    <AnimatePresence>
-      {showMessageContent && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="overflow-hidden"
-        >
-          <div className="p-3 border-t border-white/10">
-              <MessageContent
-                message={msg}
-                validatingId={validatingId}
-                profile={profile}
-                onUpdate={onUpdate}
-                onValidate={onValidate}
-                onRequestTest={onRequestTest}
-                isTrialPreview={isTrialPreview}
-                isFullLock={isFullLock}
-                isPartialLock={isPartialLock}
-              />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  </div>
-
-          {/* Recipients Section */}
-          <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        {/* Mobile: Separate collapsible sections */}
+        <div className="sm:hidden space-y-3">
+          {/* Message Content Section */}
+          <div className="border border-white/[0.07] rounded-lg overflow-hidden">
             <button
-              onClick={() => setShowRecipients(!showRecipients)}
-              className="w-full p-3 flex items-center justify-between hover:bg-white/5 transition-colors"
+              onClick={() => setShowMessageContent(!showMessageContent)}
+              className="w-full p-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-lime-300" />
-                <span className="font-semibold text-white text-sm">Recipients ({phoneNumbers.length})</span>
+                <MessageSquare className="w-4 h-4 text-sage" strokeWidth={1.75} />
+                <span className="font-semibold text-ivory text-sm">Message Content</span>
+              </div>
+              {showMessageContent ? (
+                <ChevronUp className="w-4 h-4 text-gray-500" strokeWidth={1.75} />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-500" strokeWidth={1.75} />
+              )}
+            </button>
+            <AnimatePresence>
+              {showMessageContent && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-3 border-t border-white/[0.07]">
+                    <MessageContent
+                      message={msg}
+                      validatingId={validatingId}
+                      profile={profile}
+                      onUpdate={onUpdate}
+                      onValidate={onValidate}
+                      onRequestTest={onRequestTest}
+                      isTrialPreview={isTrialPreview}
+                      isFullLock={isFullLock}
+                      isPartialLock={isPartialLock}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Recipients Section */}
+          <div className="border border-white/[0.07] rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowRecipients(!showRecipients)}
+              className="w-full p-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-sage" strokeWidth={1.75} />
+                <span className="font-semibold text-ivory text-sm">Recipients <span className="text-muted font-normal tabular-nums">({phoneNumbers.length})</span></span>
               </div>
               {showRecipients ? (
-                <ChevronUp className="w-4 h-4 text-[#bdbdbd]" />
+                <ChevronUp className="w-4 h-4 text-gray-500" strokeWidth={1.75} />
               ) : (
-                <ChevronDown className="w-4 h-4 text-[#bdbdbd]" />
+                <ChevronDown className="w-4 h-4 text-gray-500" strokeWidth={1.75} />
               )}
             </button>
             <AnimatePresence>
@@ -508,7 +510,7 @@ export function MessageCard({
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-3 border-t border-white/10">
+                  <div className="p-3 border-t border-white/[0.07]">
                     <MessageClientList
                       message={msg}
                       phoneNumbers={phoneNumbers}
@@ -529,18 +531,18 @@ export function MessageCard({
 
         {/* Desktop: Single collapsible with grid inside */}
         <div className="hidden sm:block">
-          <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+          <div className="border border-white/[0.07] rounded-lg overflow-hidden">
             <button
               onClick={() => setShowContent(!showContent)}
-              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+              className="w-full p-3 sm:p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
             >
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-white">Message Details</span>
+                <span className="font-semibold text-ivory text-sm">Message Details</span>
               </div>
               {showContent ? (
-                <ChevronUp className="w-5 h-5 text-[#bdbdbd]" />
+                <ChevronUp className="w-4 h-4 text-gray-500" strokeWidth={1.75} />
               ) : (
-                <ChevronDown className="w-5 h-5 text-[#bdbdbd]" />
+                <ChevronDown className="w-4 h-4 text-gray-500" strokeWidth={1.75} />
               )}
             </button>
             <AnimatePresence>
@@ -552,7 +554,7 @@ export function MessageCard({
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 sm:p-6 border-t border-white/10">
+                  <div className="p-4 sm:p-5 border-t border-white/[0.07]">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                       {/* LEFT: Message Content (50%) */}
                       <MessageContent
@@ -573,18 +575,19 @@ export function MessageCard({
                         phoneNumbers={phoneNumbers}
                         isSaving={isSaving}
                         savingMode={savingMode}
-                      onSave={onSave}
-                      onCancelEdit={onCancelEdit}
-                      isFullLock={isFullLock}
-                      isPartialLock={isPartialLock}
-                      isTrialPreview={isTrialPreview}
-                    />
+                        onSave={onSave}
+                        onCancelEdit={onCancelEdit}
+                        isFullLock={isFullLock}
+                        isPartialLock={isPartialLock}
+                        isTrialPreview={isTrialPreview}
+                      />
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
+        </div>
         </div>
       </div>
 
@@ -595,108 +598,104 @@ export function MessageCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4"
+            className="modal-backdrop !z-[70] flex items-center justify-center p-2 sm:p-4"
             onClick={() => setShowRecipientsModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ y: 8, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 8, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#1a1a1a] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+              className="modal-surface max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/10">
+              <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-white/[0.07] flex-shrink-0">
                 <div className="min-w-0 flex-1 pr-2">
-                  <h3 className="text-sm sm:text-lg font-bold text-white flex items-center gap-2 truncate">
-                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-300 flex-shrink-0" />
+                  <h3 className="text-[15px] font-semibold text-ivory flex items-center gap-2 truncate">
+                    <Users className="w-4 h-4 text-sage flex-shrink-0" strokeWidth={1.75} />
                     <span className="truncate">Last Campaign Recipients - {msg.title}</span>
                   </h3>
                   {recipientsStats && (
-                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mt-0.5">
+                    <p className="text-xs text-muted mt-0.5 tabular-nums">
                       {recipientsStats.total} total • {recipientsStats.successful} successful • {recipientsStats.failed} failed
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => setShowRecipientsModal(false)}
-                  className="p-1.5 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                  className="btn btn-ghost btn-sm !h-8 !w-8 !p-0 flex-shrink-0"
+                  aria-label="Close"
                 >
-                  <X className="w-4 h-4 text-[#bdbdbd]" />
+                  <X className="w-4 h-4" strokeWidth={1.75} />
                 </button>
               </div>
 
               {/* Stats Bar */}
               {recipientsStats && (
-                <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5 flex gap-3 sm:gap-4 text-[10px] sm:text-xs">
+                <div className="px-4 sm:px-5 py-3 border-b border-white/[0.07] flex gap-6 flex-shrink-0">
                   <div>
-                    <p className="text-[#bdbdbd] mb-0.5">Total</p>
-                    <p className="text-sm sm:text-base font-bold text-white">{recipientsStats.total}</p>
+                    <p className="stat-label mb-1">Total</p>
+                    <p className="text-base font-semibold text-ivory tabular-nums">{recipientsStats.total}</p>
                   </div>
                   <div>
-                    <p className="text-[#bdbdbd] mb-0.5">Successful</p>
-                    <p className="text-sm sm:text-base font-bold text-lime-300">{recipientsStats.successful}</p>
+                    <p className="stat-label mb-1">Successful</p>
+                    <p className="text-base font-semibold text-sage-bright tabular-nums">{recipientsStats.successful}</p>
                   </div>
                   {recipientsStats.failed > 0 && (
                     <div>
-                      <p className="text-[#bdbdbd] mb-0.5">Failed</p>
-                      <p className="text-sm sm:text-base font-bold text-rose-300">{recipientsStats.failed}</p>
+                      <p className="stat-label mb-1">Failed</p>
+                      <p className="text-base font-semibold text-[#D99A8B] tabular-nums">{recipientsStats.failed}</p>
                     </div>
                   )}
                 </div>
               )}
 
               {/* Recipients List */}
-              <div className="overflow-y-auto max-h-[calc(90vh-200px)] p-3 sm:p-4">
+              <div className="overflow-y-auto flex-1 min-h-0 p-3 sm:p-4">
                 {recipients.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-8 h-8 sm:w-10 sm:h-10 text-[#bdbdbd] mx-auto mb-2 opacity-50" />
-                    <p className="text-xs sm:text-sm text-[#bdbdbd]">No recipients found</p>
-                  </div>
+                  <EmptyState icon={Users} title="No recipients found" />
                 ) : (
                   <div className="space-y-1.5">
                     {recipients.map((recipient, index) => (
                       <div
                         key={index}
-                        className={`p-2 sm:p-2.5 rounded-lg border transition-colors ${
+                        className={`p-2.5 rounded-lg border transition-colors ${
                           recipient.is_sent
-                            ? 'bg-lime-300/5 border-lime-300/20 hover:bg-lime-300/10'
-                            : 'bg-rose-300/5 border-rose-300/20 hover:bg-rose-300/10'
+                            ? 'bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04]'
+                            : 'bg-[#D99A8B]/[0.04] border-[#D99A8B]/15 hover:bg-[#D99A8B]/[0.07]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                               {recipient.first_name && recipient.last_name ? (
-                                <h4 className="font-semibold text-white text-xs sm:text-sm truncate">
+                                <h4 className="font-medium text-ivory text-[13px] truncate">
                                   {recipient.first_name} {recipient.last_name}
                                 </h4>
                               ) : (
-                                <h4 className="font-semibold text-[#bdbdbd] text-xs sm:text-sm">Unknown Client</h4>
+                                <h4 className="font-medium text-muted text-[13px]">Unknown Client</h4>
                               )}
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold flex-shrink-0 ${
-                                recipient.is_sent
-                                  ? 'bg-lime-300/20 text-lime-300'
-                                  : 'bg-rose-300/20 text-rose-300'
+                              <span className={`badge flex-shrink-0 ${
+                                recipient.is_sent ? 'badge-sage' : 'badge-danger'
                               }`}>
                                 {recipient.is_sent ? 'Sent' : 'Failed'}
                               </span>
                               {!recipient.is_sent && recipient.reason && (
-                                <span className="flex items-center gap-1 text-[9px] sm:text-[10px] text-rose-300">
-                                  <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                                <span className="flex items-center gap-1 text-[11px] text-[#D99A8B] min-w-0">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />
                                   <span className="truncate">{recipient.reason}</span>
                                 </span>
                               )}
                             </div>
-                            <p className="text-[10px] sm:text-[11px] text-[#bdbdbd] mt-0.5">
+                            <p className="text-[11px] text-muted mt-0.5 tabular-nums">
                               {recipient.phone_normalized}
                             </p>
                           </div>
                           <div className="flex-shrink-0">
                             {recipient.is_sent ? (
-                              <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-lime-300" />
+                              <CheckCircle className="w-4 h-4 text-sage" strokeWidth={1.75} />
                             ) : (
-                              <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-300" />
+                              <XCircle className="w-4 h-4 text-[#D99A8B]" strokeWidth={1.75} />
                             )}
                           </div>
                         </div>
@@ -707,10 +706,10 @@ export function MessageCard({
               </div>
 
               {/* Footer */}
-              <div className="border-t border-white/10 px-3 sm:px-4 py-2.5 sm:py-3 bg-white/5">
+              <div className="flex justify-end border-t border-white/[0.07] px-4 sm:px-5 py-3 flex-shrink-0">
                 <button
                   onClick={() => setShowRecipientsModal(false)}
-                  className="w-full px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
+                  className="btn btn-glass btn-sm w-full sm:w-auto"
                 >
                   Close
                 </button>
@@ -722,11 +721,11 @@ export function MessageCard({
 
       {/* Next Send Banner - Only show if ACTIVE and not locked */}
       {msg.validationStatus === 'ACCEPTED' && msg.enabled && !isAnyLock && (
-        <div className="bg-sky-300/10 border-t border-sky-300/20 px-3 sm:px-6 py-2 sm:py-3">
-          <p className="text-[10px] sm:text-xs text-sky-300 flex items-center gap-1.5 sm:gap-2">
-            <Send className="w-3 h-3 flex-shrink-0" />
-            <span className="font-medium">Next send:</span>
-            <span className="text-sky-200 truncate">{getNextSendDate()} at {msg.hour}:{msg.minute.toString().padStart(2, '0')} {msg.period}</span>
+        <div className="border-t border-white/[0.07] px-3 sm:px-5 py-2.5">
+          <p className="text-xs text-muted flex items-center gap-2">
+            <Send className="w-3.5 h-3.5 flex-shrink-0 text-sage" strokeWidth={1.75} />
+            <span className="font-medium text-ivory">Next send:</span>
+            <span className="truncate tabular-nums">{getNextSendDate()} at {msg.hour}:{msg.minute.toString().padStart(2, '0')} {msg.period}</span>
           </p>
         </div>
       )}

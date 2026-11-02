@@ -16,27 +16,27 @@ export default function RevenueProgressCard({ actual, projected, className }: Pr
 
   return (
     <motion.div
-      className={`bg-[var(--accent-1)]/10 backdrop-blur-sm rounded-2xl p-6 shadow-md border border-[var(--accent-2)]/30 flex flex-col items-center justify-center ${className}`}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
+      className={`panel flex flex-col items-center justify-center p-6 ${className ?? ''}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ delay: 0.3, duration: 0.6 }}
     >
-      <h2 className="text-xl font-semibold mb-4 text-[var(--accent-2)]">Revenue Progress</h2>
+      <h2 className="panel-title mb-4 self-start">Revenue Progress</h2>
 
       <div className="w-48 h-48">
         <CircularProgressbar
           value={percentage}
           text={`${Math.round(percentage)}%`}
           styles={buildStyles({
-            textColor: 'var(--foreground)',
-            pathColor: 'var(--accent-2)',
-            trailColor: 'var(--accent-3)',
+            textColor: '#ECEDEA',
+            pathColor: '#8FB57A',
+            trailColor: 'rgba(255,255,255,0.06)',
             textSize: '14px',
           })}
         />
       </div>
 
-      <p className="mt-4 text-sm text-[var(--text-subtle)]">
+      <p className="mt-4 text-sm tabular-nums text-muted">
         ${actual.toLocaleString()} / ${projected.toLocaleString()}
       </p>
     </motion.div>

@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { MoreVertical, Edit, Trash2, FileText } from 'lucide-react'
 import ReportModal from './ReportModal'
+import { EmptyState } from '@/components/ui/AppKit'
 import toast from 'react-hot-toast'
 import { createPortal } from 'react-dom'
 import { useApp } from '@/contexts/AppContext'
@@ -125,7 +126,7 @@ export default function MonthlyReports({
         r.id === selectedReport.id ? { ...r, content: updatedContent } : r
       )
     )
-    toast.success('✅ Report updated!')
+    toast.success('Report updated!')
     setIsEditing(false)
     setSelectedReport(null)
   }
@@ -154,30 +155,25 @@ export default function MonthlyReports({
 
   return (
     <>
-      <div className="flex flex-col gap-4 w-full h-full">
+      <div className="flex w-full flex-col gap-2">
         {filteredReports.length > 0 ? (
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative w-full h-full flex-1 rounded-xl p-4 border transition-all duration-300 transform cursor-pointer
-                hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(167,139,250,0.1)] hover:bg-[rgba(167,139,250,0.08)]"
-              style={{
-                background: 'rgba(167,139,250,0.04)',
-                borderColor: 'rgba(167,139,250,0.1)',
-                color: '#e8f0eb',
-              }}
+              className="group relative w-full cursor-pointer rounded-lg border border-white/[0.07] bg-white/[0.015] p-3 transition-colors hover:border-white/[0.12] hover:bg-white/[0.03]"
               onClick={() => {
                 setSelectedReport(r)
                 logMonthlyReportOpen(userId, r, role)
                 setIsEditing(false)
               }}
             >
-              <div className="flex justify-between items-start h-full">
-                <div className="flex-1 flex flex-col justify-center gap-2">
-                  <div className="flex items-center justify-center gap-1 text-sm font-semibold text-[#a78bfa]">
-                    <FileText size={16} /> {r.month} {r.year}
-                  </div>
-                  <div className="text-xs text-[#555] max-h-20 overflow-hidden relative prose prose-sm">
+              <div className="flex items-start gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.05] text-gray-400 group-hover:text-sage-bright"><FileText size={15} strokeWidth={1.75} /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ivory">
+                    {r.month} {r.year}
+                  </p>
+                  <div className="prose prose-sm mt-1 max-h-10 overflow-hidden text-xs leading-5 text-gray-400">
                     <div
                       dangerouslySetInnerHTML={{
                         __html: r.content
@@ -187,20 +183,21 @@ export default function MonthlyReports({
                           : '<em>No content available.</em>',
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-[rgba(167,139,250,0.04)] to-transparent" />
                   </div>
                 </div>
 
               {isAdmin && (
-                <div className="relative ml-2">
+                <div className="relative">
                   <button
+                    type="button"
+                    aria-label="Report actions"
                     onClick={(e) => {
                       e.stopPropagation()
                       setMenuOpenId(menuOpenId === r.id ? null : r.id)
                     }}
-                    className="p-1 rounded-md hover:bg-white/[0.08] transition"
+                    className="btn btn-ghost btn-sm px-1.5"
                   >
-                    <MoreVertical size={18} />
+                    <MoreVertical size={16} strokeWidth={1.75} />
                   </button>
 
                   {menuOpenId === r.id && (
@@ -208,25 +205,22 @@ export default function MonthlyReports({
                       ref={(el) => {
                         if (el) menuRef.current = el
                       }}
-                      className="absolute right-0 mt-1 rounded-md shadow-lg z-50 w-28"
-                      style={{
-                        background: '#151c18',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        color: '#e8f0eb',
-                      }}
+                      className="absolute right-0 z-50 mt-1 w-32 overflow-hidden rounded-lg border border-white/[0.12] bg-raised py-1 text-ivory shadow-lg"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
+                        type="button"
                         onClick={() => handleEdit(r)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-white/[0.06]"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-white/[0.05]"
                       >
-                        <Edit size={14} /> Edit
+                        <Edit size={14} strokeWidth={1.75} /> Edit
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDelete(r.id)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-[#fbbf24] hover:bg-[rgba(251,191,36,0.08)]"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#D99A8B] hover:bg-[#D99A8B]/[0.08]"
                       >
-                        <Trash2 size={14} /> Delete
+                        <Trash2 size={14} strokeWidth={1.75} /> Delete
                       </button>
                     </div>
                   )}
@@ -237,9 +231,9 @@ export default function MonthlyReports({
             </div>
           ))
         ) : (
-          <div className="text-[#555] text-sm mt-2 text-center w-full">
+          <EmptyState icon={FileText} title="No monthly reports">
             No monthly reports for this month/year.
-          </div>
+          </EmptyState>
         )}
       </div>
 

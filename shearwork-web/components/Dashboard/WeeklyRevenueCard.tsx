@@ -213,87 +213,82 @@ export default function WeeklyRevenueCard({ userId, selectedMonth, selectedYear 
       : null
 
   // ── Render ─────────────────────────────────────────────────────────
-  return (
-    <div className="w-full h-full flex flex-col">
-      {/* Header row: title + chevron navigator */}
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="text-[#8a9b90] text-base font-semibold">📅 Weekly {label}</h2>
+  const navBtn =
+    'inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-ivory disabled:opacity-30 disabled:hover:bg-transparent'
 
-        <div className="flex items-center gap-1">
+  return (
+    <div className="stat-root tone-sky flex h-full w-full flex-col" data-tone="sky">
+      {/* Header row: label + week navigator */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="stat-label truncate">Weekly {label}</p>
+        <div className="flex shrink-0 items-center gap-0.5">
           <button
+            type="button"
             onClick={() => setWeekIndex(i => Math.max(0, i - 1))}
             disabled={weekIndex <= 0}
-            className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+            className={navBtn}
             aria-label="Previous week"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={16} strokeWidth={1.75} />
           </button>
-
-          <span className="text-xs text-white/40 min-w-[120px] text-center select-none">
-            {currentWeek ? formatWeekLabel(currentWeek.weekStart, currentWeek.weekEnd) : '—'}
-          </span>
-
           <button
+            type="button"
             onClick={() => setWeekIndex(i => Math.min(weeks.length - 1, i + 1))}
             disabled={weekIndex >= weeks.length - 1}
-            className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+            className={navBtn}
             aria-label="Next week"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={16} strokeWidth={1.75} />
           </button>
         </div>
       </div>
 
-      {/* Week indicator dots */}
-      <div className="flex items-center gap-1 mb-2">
-        {weeks.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => setWeekIndex(idx)}
-            className={`h-1.5 rounded-full transition-all duration-200 ${
-              idx === weekIndex
-                ? 'w-4 bg-[#6ee7b7]'
-                : 'w-1.5 bg-white/10 hover:bg-white/20'
-            }`}
-            aria-label={`Week ${idx + 1}`}
-          />
-        ))}
-      </div>
-
       {/* Revenue display */}
-      <div className="flex-1 flex flex-col justify-center">
-        <p className="text-3xl font-bold text-white">
-          {loading
-            ? 'Loading...'
-            : revenue !== null
-              ? formatCurrency(revenue)
-              : 'No revenue this week!'}
-        </p>
-        {!loading && tips !== null && tips > 0 && (
-          <p className="text-sm text-white/30 mt-1">
-            (includes {formatCurrency(tips)} in tips)
-          </p>
-        )}
-      </div>
-
-      {/* Comparison footer */}
-      <div className="mt-auto">
-        {change !== null ? (
-          <p
-            className={`text-sm font-semibold ${
-              change > 0
-                ? 'text-[#6ee7b7]'
-                : change < 0
-                  ? 'text-[#fbbf24]'
-                  : 'text-[#555]'
-            }`}
-          >
-            {change > 0 ? `+${change}%` : `${change}%`}{' '}
-            <span className="text-[#555]">(vs. {formatWeekLabel(prevWeek.weekStart, prevWeek.weekEnd)})</span>
-          </p>
+      <p className="stat-value mt-2">
+        {loading ? (
+          <span className="text-base font-medium text-gray-500">Loading…</span>
+        ) : revenue !== null ? (
+          formatCurrency(revenue)
         ) : (
-          <p className="text-sm text-[#555]">—</p>
+          <span className="text-base font-medium text-gray-500">No revenue this week</span>
         )}
+      </p>
+
+      {/* Comparison */}
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+        {change !== null ? (
+          <>
+            <span className={change >= 0 ? 'stat-delta-up' : 'stat-delta-down'}>
+              {change >= 0 ? "+" : ""}{change.toFixed(1)}%
+            </span>
+            <span>vs. {formatWeekLabel(prevWeek.weekStart, prevWeek.weekEnd)}</span>
+          </>
+        ) : (
+          <span>No prior week data</span>
+        )}
+      </p>
+      {!loading && tips !== null && tips > 0 && (
+        <p className="mt-1 text-xs tabular-nums text-gray-500">Includes {formatCurrency(tips)} in tips</p>
+      )}
+
+      {/* Week range + position */}
+      <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+        <span className="text-xs tabular-nums text-gray-400 select-none">
+          {currentWeek ? formatWeekLabel(currentWeek.weekStart, currentWeek.weekEnd) : '—'}
+        </span>
+        <div className="flex items-center gap-1">
+          {weeks.map((_, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setWeekIndex(idx)}
+              className={`h-1 rounded-sm transition-colors ${
+                idx === weekIndex ? 'w-3 bg-sage' : 'w-1.5 bg-white/[0.12] hover:bg-white/25'
+              }`}
+              aria-label={`Week ${idx + 1}`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -1,8 +1,10 @@
 'use client'
 
+import { CalendarDays } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useBarberLabel } from '@/hooks/useBarberLabel'
+import { Stat } from '@/components/ui/AppKit'
 
 interface DailyRevenueCardProps {
   userId: string
@@ -121,25 +123,24 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
       : null
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">💰 Daily {label}</h2>
-      <div className="flex-1 flex flex-col justify-center">
-        <p className="text-3xl font-bold text-white">
-          {loading ? 'Loading...' : revenue !== null ? formatCurrency(revenue) : 'No revenue this day!'}
-        </p>
-        {!loading && tips !== null && tips > 0 && (
-          <p className="text-sm text-white/30 mt-1">
-            (includes {formatCurrency(tips)} in tips)
-          </p>
-        )}
-      </div>
-      <div className="mt-auto">
-        {change !== null ? (
-          <p className={`text-sm font-semibold ${change > 0 ? 'text-[#6ee7b7]' : change < 0 ? 'text-[#fbbf24]' : 'text-[#555]'}`}>
-            {change > 0 ? `+${change}%` : `${change}%`} <span className="text-[#555]">(vs. last record: {prevDataDate})</span>
-          </p>
-        ) : <p className="text-sm text-[#555]">—</p>}
-      </div>
+    <div className="flex h-full w-full flex-col">
+      <Stat icon={CalendarDays} tone="sand"
+        label={`Daily ${label}`}
+        value={
+          loading ? (
+            <span className="text-base font-medium text-gray-500">Loading…</span>
+          ) : revenue !== null ? (
+            formatCurrency(revenue)
+          ) : (
+            <span className="text-base font-medium text-gray-500">No revenue this day</span>
+          )
+        }
+        delta={change}
+        hint={change !== null ? <span>vs. last record ({prevDataDate})</span> : <span>No prior record</span>}
+      />
+      {!loading && tips !== null && tips > 0 && (
+        <p className="mt-1 text-xs tabular-nums text-gray-500">Includes {formatCurrency(tips)} in tips</p>
+      )}
     </div>
   )
 }

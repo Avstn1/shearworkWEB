@@ -1,8 +1,10 @@
 'use client'
 
+import { BarChart3 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { useBarberLabel } from '@/hooks/useBarberLabel'
+import { Stat } from '@/components/ui/AppKit'
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'YTD'
 
@@ -144,30 +146,22 @@ export default function YearlyRevenueCard({
       : timeframe
 
   return (
-    <div
-      className="flex flex-col justify-between"
-      style={{
-        height: '100%',
-      }}
-    >
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">
-        💰 Total {label} ({titleSuffix})
-      </h2>
-
-      <div className="flex-1 flex flex-col justify-center">
-        <p className="text-3xl font-bold text-white truncate">
-          {loading
-            ? 'Loading...'
-            : total !== null
-            ? formatCurrency(total)
-            : 'N/A'}
-        </p>
-        {!loading && tips !== null && tips > 0 && (
-          <p className="text-sm text-white/30 mt-1">
-            (includes {formatCurrency(tips)} in tips)
-          </p>
-        )}
-      </div>
+    <div className="flex h-full w-full flex-col">
+      <Stat icon={BarChart3} tone="violet"
+        label={`Total ${label} (${titleSuffix})`}
+        value={
+          loading ? (
+            <span className="text-base font-medium text-gray-500">Loading…</span>
+          ) : total !== null ? (
+            <span className="block truncate">{formatCurrency(total)}</span>
+          ) : (
+            'N/A'
+          )
+        }
+      />
+      {!loading && tips !== null && tips > 0 && (
+        <p className="mt-1.5 text-xs tabular-nums text-gray-500">Includes {formatCurrency(tips)} in tips</p>
+      )}
     </div>
   )
 }

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
-import { Lock, Key, Smartphone, Monitor, Clock, MapPin, Trash2, AlertTriangle, CreditCard, ArrowRight } from 'lucide-react'
+import { Lock, Key, Smartphone, Monitor, Clock, MapPin, Trash2, AlertTriangle, CreditCard, ArrowRight, Loader2, X } from 'lucide-react'
+import { EmptyState, Panel } from '@/components/ui/AppKit'
 
 interface UserDevice {
   id: string
@@ -250,196 +251,159 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
   const deleteConfirmValid = deleteConfirmText === requiredDeletePhrase
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-1">Security</h2>
-        <p className="text-sm text-gray-400">Manage your password and active sessions</p>
-      </div>
-
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
+    <div className="space-y-4 md:space-y-5">
+      <div className="grid grid-cols-1 gap-4 md:gap-5 lg:grid-cols-2">
         {/* Active Sessions */}
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between mb-4 flex-shrink-0">
-            <div>
-              <h3 className="text-base font-semibold">Active Sessions</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Devices active in the last 24 hours</p>
-            </div>
-            <div className="flex gap-2">
-              {devices.length > 1 && (
-                <button
-                  onClick={() => setShowDeleteAllConfirm(true)}
-                  className="px-3 py-1.5 text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg hover:bg-orange-500/20 transition-all whitespace-nowrap"
-                >
-                  Logout Others
-                </button>
-              )}
-              <button
-                onClick={() => setShowLogoutEverywhereConfirm(true)}
-                className="px-3 py-1.5 text-xs bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-all whitespace-nowrap"
-              >
-                Logout All
-              </button>
-            </div>
-          </div>
-
+        <Panel
+          title="Active sessions"
+          subtitle="Devices active in the last 24 hours"
+          className="flex flex-col lg:max-h-[520px]"
+          bodyClassName="flex min-h-0 flex-1 flex-col"
+        >
           {loadingDevices ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-lime-400"></div>
+            <div className="flex flex-1 items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-sage" strokeWidth={1.75} />
             </div>
           ) : devices.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
-              <p className="text-sm">No active sessions</p>
-            </div>
+            <EmptyState icon={Monitor} title="No active sessions" />
           ) : (
-            <div className="overflow-y-auto space-y-2 pr-1 flex-1 min-h-0">
+            <ul className="min-h-0 flex-1 divide-y divide-white/[0.06] overflow-y-auto">
               {devices.map((device) => {
                 const isCurrentDevice = device.device_id === currentDeviceId
+                const DeviceIcon = device.device_type === 'mobile' ? Smartphone : Monitor
                 return (
-                  <div
-                    key={device.device_id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
-                      isCurrentDevice
-                        ? 'bg-lime-400/5 border-lime-400/20'
-                        : 'bg-white/5 border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-lg flex-shrink-0 ${isCurrentDevice ? 'bg-lime-400/10' : 'bg-white/5'}`}>
-                      {device.device_type === 'mobile' ? (
-                        <Smartphone className={`w-4 h-4 ${isCurrentDevice ? 'text-lime-400' : 'text-gray-400'}`} />
-                      ) : (
-                        <Monitor className={`w-4 h-4 ${isCurrentDevice ? 'text-lime-400' : 'text-gray-400'}`} />
-                      )}
+                  <li key={device.device_id} className="flex items-start gap-3 px-5 py-3.5">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/[0.07] bg-raised">
+                      <DeviceIcon className={`h-4 w-4 ${isCurrentDevice ? 'text-sage-bright' : 'text-gray-400'}`} strokeWidth={1.75} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="text-sm font-medium text-gray-200 truncate">{device.device_name}</h4>
-                        {isCurrentDevice && (
-                          <span className="px-1.5 py-0.5 text-[10px] bg-lime-400/20 text-lime-400 rounded-full flex-shrink-0">
-                            Current
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-0.5 flex items-center gap-2">
+                        <h4 className="truncate text-sm font-medium text-ivory">{device.device_name}</h4>
+                        {isCurrentDevice && <span className="badge badge-sage flex-shrink-0">Current</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="h-3 w-3" strokeWidth={1.75} />
+                          {formatDate(device.last_active)}
+                        </span>
+                        {device.ip_address && (
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <MapPin className="h-3 w-3 flex-shrink-0" strokeWidth={1.75} />
+                            <span className="truncate tabular-nums">{device.ip_address}</span>
                           </span>
                         )}
                       </div>
-                      <div className="space-y-0.5 text-xs text-gray-400">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3 h-3" />
-                          <span>{formatDate(device.last_active)}</span>
-                        </div>
-                        {device.ip_address && (
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3 h-3" />
-                            <span className="truncate">{device.ip_address}</span>
-                          </div>
-                        )}
-                      </div>
                     </div>
-                  </div>
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           )}
-        </div>
-
-        {/* Right Column */}
-        <div className="flex flex-col gap-4 overflow-hidden">
-          {/* Change Password */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
-            <h3 className="text-base font-semibold mb-1">Change Password</h3>
-            <p className="text-xs text-gray-400 mb-4">Update your account password</p>
-
-            <div className="space-y-4 flex-1">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5" />
-                  Current Password
-                </label>
-                <input
-                  type="password"
-                  className="w-full px-3 py-2 text-sm bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50 transition-all"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder="Enter current password"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
-                  <Key className="w-3.5 h-3.5" />
-                  New Password
-                </label>
-                <input
-                  type="password"
-                  className="w-full px-3 py-2 text-sm bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50 transition-all"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Min. 6 characters"
-                />
-                <p className="text-[10px] text-gray-500">Password must be at least 6 characters</p>
-              </div>
-            </div>
-
-            <button
-              className="w-full mt-4 px-4 py-2.5 text-sm bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold rounded-lg hover:shadow-lg hover:shadow-lime-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={updatePassword}
-              disabled={loading}
-            >
-              {loading ? 'Updating...' : 'Update Password'}
+          <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+            {devices.length > 1 && (
+              <button onClick={() => setShowDeleteAllConfirm(true)} className="btn btn-ghost btn-sm">
+                Log out others
+              </button>
+            )}
+            <button onClick={() => setShowLogoutEverywhereConfirm(true)} className="btn btn-glass btn-sm text-[#D99A8B]">
+              Log out all
             </button>
           </div>
+        </Panel>
 
-          {/* Danger Zone */}
-          <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-4 h-4 text-red-400" />
-              <h3 className="text-base font-semibold text-red-400">Danger Zone</h3>
+        {/* Change Password */}
+        <Panel title="Change password" subtitle="Update your account password">
+          <div className="space-y-4">
+            <div>
+              <label className="field-label flex items-center gap-1.5" htmlFor="security-current-password">
+                <Lock className="h-3.5 w-3.5" strokeWidth={1.75} />
+                Current password
+              </label>
+              <input
+                id="security-current-password"
+                type="password"
+                className="field"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="Enter current password"
+              />
             </div>
-            <p className="text-xs text-gray-400 mb-4">
-              Permanently delete your account and all associated data. This cannot be undone. You will still need to confirm after clicking the button below.
-            </p>
-            <button
-              onClick={handleDeleteAccountClick}
-              className="w-full px-4 py-2.5 text-sm bg-red-500/10 text-red-400 border border-red-500/30 font-semibold rounded-lg hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete Account
-            </button>
+
+            <div>
+              <label className="field-label flex items-center gap-1.5" htmlFor="security-new-password">
+                <Key className="h-3.5 w-3.5" strokeWidth={1.75} />
+                New password
+              </label>
+              <input
+                id="security-new-password"
+                type="password"
+                className="field"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Min. 6 characters"
+              />
+              <p className="mt-1.5 text-xs text-gray-500">Password must be at least 6 characters</p>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button className="btn btn-primary btn-sm" onClick={updatePassword} disabled={loading}>
+                {loading ? 'Updating...' : 'Update password'}
+              </button>
+            </div>
           </div>
-        </div>
+        </Panel>
       </div>
+
+      {/* Danger Zone */}
+      <section className="panel border-[#D99A8B]/25">
+        <div className="panel-body flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="panel-title flex items-center gap-2 text-[#D99A8B]">
+              <AlertTriangle className="h-4 w-4" strokeWidth={1.75} />
+              Delete account
+            </h3>
+            <p className="mt-1 max-w-xl text-[13px] text-muted">
+              Permanently delete your account and all associated data. This cannot be undone. You will still need to confirm after clicking the button.
+            </p>
+          </div>
+          <button onClick={handleDeleteAccountClick} className="btn btn-glass btn-sm shrink-0 self-end text-[#D99A8B] sm:self-auto">
+            <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+            Delete account
+          </button>
+        </div>
+      </section>
 
       {/* Subscription Block Modal */}
       {mounted && showSubscriptionBlockModal && ReactDOM.createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2.5 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
-                <CreditCard className="w-5 h-5 text-yellow-400" />
+        <div className="modal-backdrop flex items-center justify-center p-4">
+          <div className="modal-surface w-full max-w-md overflow-hidden">
+            <div className="panel-header">
+              <div className="flex min-w-0 items-center gap-3">
+                <CreditCard className="h-[18px] w-[18px] flex-shrink-0 text-amber-300" strokeWidth={1.75} />
+                <div className="min-w-0">
+                  <h3 className="panel-title">Active subscription</h3>
+                  <p className="panel-subtitle">You must cancel your plan before deleting your account</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold">Active Subscription</h3>
-                <p className="text-xs text-gray-500">You must cancel your plan before deleting your account</p>
-              </div>
+              <button onClick={() => setShowSubscriptionBlockModal(false)} className="btn btn-ghost btn-sm h-8 w-8 p-0" aria-label="Close">
+                <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              </button>
             </div>
 
-            {/* Body */}
-            <div className="rounded-xl border border-white/10 bg-white/5 p-4 mb-5 space-y-2 text-sm text-gray-300">
+            <div className="space-y-2 p-5 text-sm text-gray-300">
               <p>
                 Your account currently has an{' '}
-                <span className="text-yellow-400 font-semibold">active Corva subscription</span>.
+                <span className="font-semibold text-ivory">active Corva subscription</span>.
                 Account deletion is not available while a subscription is active.
               </p>
-              <p className="text-gray-500 text-xs">
+              <p className="text-xs text-gray-500">
                 After cancelling, your access continues until the end of the billing period.
                 You can then return here to permanently delete your account.
               </p>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowSubscriptionBlockModal(false)}
-                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-sm font-medium text-gray-300"
-              >
+            <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              <button onClick={() => setShowSubscriptionBlockModal(false)} className="btn btn-ghost btn-sm">
                 Close
               </button>
               <button
@@ -447,11 +411,10 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
                   setShowSubscriptionBlockModal(false)
                   setActiveTab('billing')
                 }}
-                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20"
+                className="btn btn-primary btn-sm"
               >
-                <CreditCard className="w-4 h-4" />
-                Manage Billing
-                <ArrowRight className="w-3.5 h-3.5" />
+                Manage billing
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.75} />
               </button>
             </div>
           </div>
@@ -461,25 +424,24 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
 
       {/* Logout Others Modal */}
       {mounted && showDeleteAllConfirm && ReactDOM.createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-2">Logout All Other Devices?</h3>
-            <p className="text-sm text-gray-400 mb-6">
-              This will <span className="text-white font-medium">immediately log out</span> all devices except your current one.
+        <div className="modal-backdrop flex items-center justify-center p-4">
+          <div className="modal-surface w-full max-w-md overflow-hidden">
+            <div className="panel-header">
+              <h3 className="panel-title">Log out all other devices?</h3>
+              <button onClick={() => setShowDeleteAllConfirm(false)} className="btn btn-ghost btn-sm h-8 w-8 p-0" aria-label="Close">
+                <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              </button>
+            </div>
+            <p className="p-5 text-sm text-gray-300">
+              This will <span className="font-medium text-ivory">immediately log out</span> all devices except your current one.
               You'll need to log back in on those devices.
             </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteAllConfirm(false)}
-                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-sm font-medium"
-              >
+            <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              <button onClick={() => setShowDeleteAllConfirm(false)} className="btn btn-ghost btn-sm">
                 Cancel
               </button>
-              <button
-                onClick={removeAllOtherDevices}
-                className="flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 rounded-lg transition-all text-sm font-medium"
-              >
-                Logout Others
+              <button onClick={removeAllOtherDevices} className="btn btn-primary btn-sm">
+                Log out others
               </button>
             </div>
           </div>
@@ -489,25 +451,24 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
 
       {/* Logout Everywhere Modal */}
       {mounted && showLogoutEverywhereConfirm && ReactDOM.createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-2">Logout From All Devices?</h3>
-            <p className="text-sm text-gray-400 mb-6">
-              This will <span className="text-white font-medium">immediately log you out</span> from all devices, including this one.
+        <div className="modal-backdrop flex items-center justify-center p-4">
+          <div className="modal-surface w-full max-w-md overflow-hidden">
+            <div className="panel-header">
+              <h3 className="panel-title">Log out from all devices?</h3>
+              <button onClick={() => setShowLogoutEverywhereConfirm(false)} className="btn btn-ghost btn-sm h-8 w-8 p-0" aria-label="Close">
+                <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              </button>
+            </div>
+            <p className="p-5 text-sm text-gray-300">
+              This will <span className="font-medium text-ivory">immediately log you out</span> from all devices, including this one.
               You'll be redirected to the login page.
             </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowLogoutEverywhereConfirm(false)}
-                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-sm font-medium"
-              >
+            <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              <button onClick={() => setShowLogoutEverywhereConfirm(false)} className="btn btn-ghost btn-sm">
                 Cancel
               </button>
-              <button
-                onClick={logoutEverywhere}
-                className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all text-sm font-medium"
-              >
-                Logout All
+              <button onClick={logoutEverywhere} className="btn btn-sm bg-[#D99A8B] text-ink hover:bg-[#E3AC9E]">
+                Log out all
               </button>
             </div>
           </div>
@@ -517,73 +478,86 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
 
       {/* Delete Account Modal */}
       {mounted && showDeleteAccountConfirm && ReactDOM.createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1a] border border-red-500/30 rounded-2xl p-6 max-w-md w-full">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-red-500/10 rounded-xl">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
+        <div className="modal-backdrop flex items-center justify-center p-4">
+          <div className="modal-surface w-full max-w-md overflow-hidden">
+            <div className="panel-header">
+              <div className="flex min-w-0 items-center gap-3">
+                <AlertTriangle className="h-[18px] w-[18px] flex-shrink-0 text-[#D99A8B]" strokeWidth={1.75} />
+                <div className="min-w-0">
+                  <h3 className="panel-title">Delete account</h3>
+                  <p className="panel-subtitle">This action is permanent and irreversible</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-red-400">Delete Account</h3>
-                <p className="text-xs text-gray-500">This action is permanent and irreversible</p>
-              </div>
-            </div>
-
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-5 space-y-2.5 text-sm text-gray-300">
-              <p>Deleting your account will permanently erase all of your Corva data, including:</p>
-              <ul className="list-disc list-inside space-y-1 text-gray-400 text-xs">
-                <li>Your barbershop profile and account settings</li>
-                <li>All clients and their visit history</li>
-                <li>All appointments and booking records</li>
-                <li>All expenses and reports</li>
-                <li>All SMS campaigns, credits, and message history</li>
-                <li>All analytics and performance data</li>
-                <li>Your subscription and billing history</li>
-              </ul>
-              <p className="text-red-400 font-semibold text-xs pt-1">
-                ⚠ Clicking &quot;Delete My Account&quot; is the final step.
-              </p>
-              <p className="text-red-400 font-semibold text-xs">
-                ⚠ Corva support cannot restore anything after this point.
-              </p>
-            </div>
-
-            <div className="mb-5">
-              <p className="text-xs text-gray-400 mb-2">
-                To confirm, type{' '}
-                <span className="font-mono font-semibold text-white bg-white/10 px-1.5 py-0.5 rounded">
-                  delete {currentUsername}
-                </span>{' '}
-                below:
-              </p>
-              <input
-                type="text"
-                className="w-full px-3 py-2.5 text-sm bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all font-mono"
-                placeholder={`delete ${currentUsername}`}
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                onPaste={(e) => e.preventDefault()}
-                onCopy={(e) => e.preventDefault()}
-                onCut={(e) => e.preventDefault()}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-              />
-              {deleteConfirmText.length > 0 && !deleteConfirmValid && (
-                <p className="text-[10px] text-red-400 mt-1.5">
-                  Doesn't match — type exactly: delete {currentUsername}
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-3">
               <button
                 onClick={() => {
                   setShowDeleteAccountConfirm(false)
                   setDeleteConfirmText('')
                 }}
-                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all text-sm font-medium"
+                disabled={deletingAccount}
+                className="btn btn-ghost btn-sm h-8 w-8 p-0"
+                aria-label="Close"
+              >
+                <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              </button>
+            </div>
+
+            <div className="space-y-5 p-5">
+              <div className="space-y-2.5 rounded-lg border border-[#D99A8B]/20 bg-[#D99A8B]/[0.06] p-4 text-sm text-gray-300">
+                <p>Deleting your account will permanently erase all of your Corva data, including:</p>
+                <ul className="list-inside list-disc space-y-1 text-xs text-gray-400">
+                  <li>Your barbershop profile and account settings</li>
+                  <li>All clients and their visit history</li>
+                  <li>All appointments and booking records</li>
+                  <li>All expenses and reports</li>
+                  <li>All SMS campaigns, credits, and message history</li>
+                  <li>All analytics and performance data</li>
+                  <li>Your subscription and billing history</li>
+                </ul>
+                <p className="pt-1 text-xs font-semibold text-[#D99A8B]">
+                  Clicking &quot;Delete My Account&quot; is the final step.
+                </p>
+                <p className="text-xs font-semibold text-[#D99A8B]">
+                  Corva support cannot restore anything after this point.
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs text-muted">
+                  To confirm, type{' '}
+                  <span className="rounded bg-white/[0.08] px-1.5 py-0.5 font-mono font-semibold text-ivory">
+                    delete {currentUsername}
+                  </span>{' '}
+                  below:
+                </p>
+                <input
+                  type="text"
+                  className="field font-mono"
+                  placeholder={`delete ${currentUsername}`}
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  onPaste={(e) => e.preventDefault()}
+                  onCopy={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                />
+                {deleteConfirmText.length > 0 && !deleteConfirmValid && (
+                  <p className="mt-1.5 text-xs text-[#D99A8B]">
+                    Doesn't match — type exactly: delete {currentUsername}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              <button
+                onClick={() => {
+                  setShowDeleteAccountConfirm(false)
+                  setDeleteConfirmText('')
+                }}
+                className="btn btn-ghost btn-sm"
                 disabled={deletingAccount}
               >
                 Cancel
@@ -591,16 +565,16 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
               <button
                 onClick={deleteAccount}
                 disabled={!deleteConfirmValid || deletingAccount}
-                className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 rounded-lg transition-all text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="btn btn-sm bg-[#D99A8B] text-ink hover:bg-[#E3AC9E]"
               >
                 {deletingAccount ? (
                   <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.75} />
                     Deleting...
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
                     Delete My Account
                   </>
                 )}

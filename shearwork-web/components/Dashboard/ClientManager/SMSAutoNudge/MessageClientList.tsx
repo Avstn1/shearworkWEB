@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { NUDGING_PAUSED } from '@/lib/featureFlags'
 import { Users, Loader2, FileText, Zap, Clock, AlertCircle, X } from 'lucide-react';
 import { SMSMessage, PhoneNumber } from './types';
 
@@ -50,8 +51,8 @@ export function MessageClientList({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd] -mb-2">
-            <Users className="w-3 h-3 inline mr-1" />
+          <label className="field-label !mb-0 flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" strokeWidth={1.75} />
             Recipients ({phoneNumbers.length} clients)
           </label>
         </div>
@@ -64,7 +65,7 @@ export function MessageClientList({
           readOnly
           disabled
           rows={msg.isEditing ? 12 : 12}
-          className="w-full bg-white/5 border border-white/10 rounded-xl pb-4.5 px-3 sm:px-4 py-3 sm:py-4 text-white/70 text-xs sm:text-sm font-mono focus:outline-none resize-none cursor-default scrollbar-hide"
+          className="field !bg-white/[0.02] text-gray-300 text-xs sm:text-[13px] font-mono resize-none cursor-default scrollbar-hide"
           style={{ 
             caretColor: 'transparent',
             userSelect: 'text',
@@ -74,11 +75,9 @@ export function MessageClientList({
         />
         
         {/* Count Badge */}
-        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-sky-300/20 border border-sky-300/30 rounded-full">
-          <span className="text-[10px] sm:text-xs font-semibold text-sky-300">
-            {phoneNumbers.length}
-          </span>
-        </div>
+        <span className="badge badge-sage absolute top-2 sm:top-2.5 right-2 sm:right-3 tabular-nums">
+          {phoneNumbers.length}
+        </span>
       </div>
       
       {/* Action Buttons */}
@@ -90,11 +89,7 @@ export function MessageClientList({
             <button
               onClick={() => onSave(msg.id, 'draft')}
               disabled={isSaving || msg.message.length < 100}
-              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-base transition-all duration-300 ${
-                isSaving || msg.message.length < 100
-                  ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
-                  : 'bg-amber-300/20 text-amber-300 border border-amber-300/30 hover:bg-amber-300/30'
-              }`}
+className="btn btn-glass btn-sm w-full px-3 text-xs sm:text-sm"
             >
               {isSaving && savingMode === 'draft' ? (
                 <>
@@ -102,13 +97,13 @@ export function MessageClientList({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Clock className="w-4 h-4" strokeWidth={1.75} />
                   </motion.div>
                   <span className="hidden xs:inline">Saving...</span>
                 </>
               ) : (
                 <>
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <FileText className="w-4 h-4" strokeWidth={1.75} />
                   <span className="hidden xs:inline">Save Draft</span>
                   <span className="xs:hidden">Draft</span>
                 </>
@@ -119,7 +114,7 @@ export function MessageClientList({
             <div className="relative group">
               <button
                 onClick={() => {
-                  if (!isPartialLock && !isTrialPreview) {
+                  if (!isPartialLock && !isTrialPreview && !NUDGING_PAUSED) {
                     onSave(msg.id, 'activate');
                   }
                 }}
@@ -128,14 +123,10 @@ export function MessageClientList({
                   msg.message.length < 100 ||
                   !msg.isValidated ||
                   isPartialLock ||
-                  isTrialPreview
+                  isTrialPreview ||
+                  NUDGING_PAUSED
                 }
-                className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-base transition-all duration-300 ${
-                  // Check if button should be disabled
-                  isSaving || msg.message.length < 100 || !msg.isValidated || isPartialLock || isTrialPreview
-                    ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600/50'
-                    : 'bg-gradient-to-r from-sky-300 to-lime-300 text-black hover:shadow-[0_0_20px_rgba(125,211,252,0.6)]'
-                }`}
+                className="btn btn-primary btn-sm w-full px-3 text-xs sm:text-sm"
               >
                 {isSaving && savingMode === 'activate' ? (
                   <>
@@ -143,24 +134,24 @@ export function MessageClientList({
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                     >
-                      <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <Clock className="w-4 h-4" strokeWidth={1.75} />
                     </motion.div>
                     <span className="hidden xs:inline">Activating...</span>
                   </>
                 ) : (
                   <>
-                    <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Zap className="w-4 h-4" strokeWidth={1.75} />
                     <span className="hidden xs:inline">Activate</span>
                     <span className="xs:hidden">Activate</span>
                   </>
                 )}
               </button>
-              {(isPartialLock || isTrialPreview) && (
+              {(isPartialLock || isTrialPreview || NUDGING_PAUSED) && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-                  <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
-                    {isTrialPreview ? 'Activation available after upgrading' : 'Can be activated again next month'}
+                  <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
+                    {NUDGING_PAUSED ? 'Client nudging is paused for now' : isTrialPreview ? 'Activation available after upgrading' : 'Can be activated again next month'}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                      <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                      <div className="border-4 border-transparent border-t-raised" />
                     </div>
                   </div>
                 </div>
@@ -173,18 +164,18 @@ export function MessageClientList({
             <button
               onClick={() => onCancelEdit(msg.id)}
               disabled={isSaving}
-              className="w-full px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-base bg-white/5 text-[#bdbdbd] hover:bg-white/10 hover:text-white transition-all duration-300 border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-ghost btn-sm w-full text-xs sm:text-sm"
             >
-              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline mr-2" />
+              <X className="w-4 h-4" strokeWidth={1.75} />
               Cancel
             </button>
           )}
         </div>
       ) : (
         // When NOT editing - show info text
-        <div className="flex items-start gap-2 p-2.5 sm:p-3 bg-sky-300/10 border border-sky-300/20 rounded-xl">
-          <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-300 mt-0.5 flex-shrink-0" />
-          <p className="text-[10px] sm:text-xs text-sky-300">
+        <div className="flex items-start gap-2 p-3 bg-white/[0.03] border border-white/[0.07] rounded-lg">
+          <Users className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-xs text-muted">
             These clients are automatically selected based on their visit patterns and will receive your message when activated.
           </p>
         </div>

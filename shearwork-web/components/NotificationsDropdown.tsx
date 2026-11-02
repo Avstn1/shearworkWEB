@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { Bell, Check, Calendar } from 'lucide-react'
+import { Bell, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -142,13 +142,16 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
     <div className="relative" ref={dropdownRef}>
       {/* Bell */}
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 rounded-full hover:bg-white/10 transition"
+        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
+        aria-expanded={open}
+        className={`btn btn-ghost btn-sm relative h-9 w-9 !px-0 ${open ? '!bg-white/[0.06] !text-ivory' : ''}`}
       >
-        <Bell className="w-6 h-6 text-white" />
+        <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-lime-300 text-black text-[10px] font-bold flex items-center justify-center shadow-[0_0_8px_#c4ff85]">
-            {unreadCount}
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-sage px-1 text-[10px] font-semibold leading-none text-ink tabular-nums ring-2 ring-canvas">
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
@@ -156,69 +159,65 @@ export default function NotificationsDropdown({ userId }: NotificationsDropdownP
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
-            className="fixed md:absolute right-4 md:right-0 top-16 md:top-auto md:mt-2 w-[calc(100vw-2rem)] md:w-96
-              bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="modal-surface fixed md:absolute right-4 md:right-0 top-16 md:top-full md:mt-2 w-[calc(100vw-2rem)] md:w-96 z-50 overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-white/10">
-              <h3 className="text-sm font-semibold text-lime-300">
-                Notifications
-              </h3>
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-ivory">Notifications</h3>
+                {unreadCount > 0 && (
+                  <span className="badge badge-sage tabular-nums">{unreadCount} new</span>
+                )}
+              </div>
               <button
+                type="button"
                 onClick={handleMarkAllRead}
-                className="text-xs text-[#bdbdbd] hover:text-lime-300 transition"
+                className="btn btn-ghost btn-sm h-8 !px-2.5 text-xs"
               >
+                <Check className="h-3.5 w-3.5" strokeWidth={1.75} />
                 Mark all read
               </button>
             </div>
 
             {/* Content */}
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-sm text-[#bdbdbd]">
-                No notifications
+              <div className="empty-state py-10">
+                <Bell strokeWidth={1.75} />
+                <span>No notifications</span>
               </div>
             ) : (
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.map((n, i) => (
-                  <motion.div
-                    key={n.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    onClick={() => handleClickNotification(n)}
-                    className={`mx-2 my-1 rounded-xl p-3 cursor-pointer transition
-                      ${
-                        n.is_read
-                          ? 'hover:bg-white/5'
-                          : 'bg-lime-300/10 border border-lime-300/20'
-                      }`}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-white">
+              <ul className="max-h-96 overflow-y-auto divide-y divide-white/[0.06]">
+                {notifications.map((n) => (
+                  <li key={n.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleClickNotification(n)}
+                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.03]"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${n.is_read ? 'bg-transparent' : 'bg-sage'}`}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm ${n.is_read ? 'font-medium text-gray-300' : 'font-semibold text-ivory'}`}>
                           {n.header}
-                        </p>
-                        <p className="text-xs text-[#bdbdbd] mt-0.5">
+                        </span>
+                        <span className="mt-0.5 block text-[13px] leading-snug text-gray-400">
                           {n.message}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[#8a8a8a]">
-                          <Calendar className="w-3 h-3" />
+                        </span>
+                        <span className="mt-1 block text-xs text-gray-500">
                           {dayjs(n.created_at).fromNow()}
-                        </div>
-                      </div>
-
-                      {!n.is_read && (
-                        <Check className="w-4 h-4 text-lime-300 mt-0.5" />
-                      )}
-                    </div>
-                  </motion.div>
+                        </span>
+                      </span>
+                      {!n.is_read && <span className="sr-only">Unread</span>}
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </motion.div>
         )}

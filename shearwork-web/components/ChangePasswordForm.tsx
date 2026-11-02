@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Lock } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 
 interface ChangePasswordFormProps {
@@ -13,7 +14,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [messageColor, setMessageColor] = useState('text-red-400')
+  const [messageColor, setMessageColor] = useState('text-[#D99A8B]')
   const [showPasswords, setShowPasswords] = useState(false)
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -22,13 +23,13 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
 
     if (newPassword !== confirmPassword) {
       setMessage("New password and confirmation don't match")
-      setMessageColor('text-red-400')
+      setMessageColor('text-[#D99A8B]')
       return
     }
 
     if (!newPassword) {
       setMessage("New password cannot be empty")
-      setMessageColor('text-red-400')
+      setMessageColor('text-[#D99A8B]')
       return
     }
 
@@ -37,10 +38,10 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) {
         setMessage(`Error: ${error.message}`)
-        setMessageColor('text-red-400')
+        setMessageColor('text-[#D99A8B]')
       } else {
         setMessage('Password updated successfully!')
-        setMessageColor('text-green-400')
+        setMessageColor('text-sage-bright')
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
@@ -49,7 +50,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
       }
     } catch (err: any) {
       setMessage(`Unexpected error: ${err.message}`)
-      setMessageColor('text-red-400')
+      setMessageColor('text-[#D99A8B]')
     } finally {
       setLoading(false)
     }
@@ -58,41 +59,42 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
   return (
     <form
       onSubmit={handleChangePassword}
-      className="flex flex-col gap-4 bg-[var(--accent-1)] p-5 rounded-xl shadow-md border border-[var(--accent-2)] w-full max-w-md"
+      className="panel panel-body flex w-full max-w-md flex-col gap-4"
     >
-      <h2 className="font-semibold text-[var(--highlight)] text-lg mb-2">
-        🔒 Change Password
+      <h2 className="panel-title flex items-center gap-2">
+        <Lock className="h-4 w-4 text-gray-500" strokeWidth={1.75} />
+        Change Password
       </h2>
 
       {message && <p className={`text-sm ${messageColor}`}>{message}</p>}
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm text-[var(--text-subtle)]">Current Password</label>
+      <div>
+        <label className="field-label">Current Password</label>
         <input
           type={showPasswords ? 'text' : 'password'}
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+          className="field"
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm text-[var(--text-subtle)]">New Password</label>
+      <div>
+        <label className="field-label">New Password</label>
         <input
           type={showPasswords ? 'text' : 'password'}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+          className="field"
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm text-[var(--text-subtle)]">Confirm New Password</label>
+      <div>
+        <label className="field-label">Confirm New Password</label>
         <input
           type={showPasswords ? 'text' : 'password'}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-[var(--accent-3)]/20 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight)]"
+          className="field"
         />
       </div>
 
@@ -103,7 +105,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
           onChange={() => setShowPasswords(!showPasswords)}
           id="show-passwords"
         />
-        <label htmlFor="show-passwords" className="text-sm text-[var(--text-subtle)]">
+        <label htmlFor="show-passwords" className="text-[13px] text-muted">
           Show passwords
         </label>
       </div>
@@ -111,7 +113,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
       <button
         type="submit"
         disabled={loading}
-        className="bg-[var(--highlight)] text-[var(--foreground)] py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50"
+        className="btn btn-primary btn-sm self-end"
       >
         {loading ? 'Updating...' : 'Change Password'}
       </button>

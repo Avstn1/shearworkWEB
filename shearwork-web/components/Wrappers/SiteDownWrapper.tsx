@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ShieldCheck } from 'lucide-react';
 
 interface SiteDownWrapperProps {
   children: React.ReactNode;
@@ -10,34 +10,23 @@ export default function SiteDownWrapper({ children }: SiteDownWrapperProps) {
   return (
     <div className="relative h-full">
       {/* Overlay with service interruption message */}
-      <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-2xl">
-        <div className="text-center px-6 py-8 bg-gradient-to-br from-[#1a1f1b]/95 to-[#2e3b2b]/95 border border-amber-300/20 rounded-2xl shadow-2xl max-w-md mx-4">
-          <div className="mb-4 flex justify-center">
-            <div className="relative">
-              <AlertCircle className="w-16 h-16 text-amber-300 animate-pulse" />
-              <div className="absolute inset-0 animate-ping opacity-20">
-                <AlertCircle className="w-16 h-16 text-amber-300" />
-              </div>
-            </div>
+      <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm">
+        <div className="modal-surface mx-4 w-full max-w-md px-6 py-7 text-center">
+          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-lg border border-white/[0.07] bg-raised">
+            <AlertCircle className="h-[18px] w-[18px] text-amber-300" strokeWidth={1.75} />
           </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-amber-300 bg-clip-text text-transparent mb-3">
+          <h2 className="mb-2 text-lg font-semibold tracking-tight text-ivory">
             Temporary Service Interruption
           </h2>
-          <p className="text-[#bdbdbd] text-sm leading-relaxed mb-4">
+          <p className="mb-3 text-sm leading-relaxed text-gray-400">
             We're experiencing a temporary issue that's preventing us from accessing data right now.
           </p>
-          <p className="text-[#bdbdbd] text-sm leading-relaxed">
+          <p className="text-sm leading-relaxed text-gray-400">
             Our team has been notified and is working to get everything back up and running as quickly as possible. We sincerely apologize for any inconvenience this may cause.
           </p>
-          <div className="mt-6 pt-4 border-t border-lime-300/10">
-            <p className="text-lime-300/80 text-xs">
-              Your data is safe and this will be resolved shortly.
-            </p>
-          </div>
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <div className="w-2 h-2 bg-amber-300 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-            <div className="w-2 h-2 bg-amber-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 bg-amber-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+          <div className="mt-5 flex items-center justify-center gap-2 border-t border-white/[0.07] pt-4 text-xs text-gray-400">
+            <ShieldCheck className="h-4 w-4 text-sage" strokeWidth={1.75} />
+            Your data is safe and this will be resolved shortly.
           </div>
         </div>
       </div>

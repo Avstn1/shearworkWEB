@@ -1,7 +1,9 @@
 'use client'
 
+import { Scissors } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import { Stat } from '@/components/ui/AppKit'
 
 interface AvgTicketCardProps {
   userId: string
@@ -103,38 +105,21 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
   const change = calculateChange()
 
   return (
-    <div
-      className="flex flex-col min-h-[140px]"
-    >
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">💵 Avg Ticket</h2>
-
-      <div className="flex-1 flex items-center">
-        <p className="text-3xl font-bold text-white">
-          {loading
-            ? 'Loading...'
-            : avgTicket !== null
-              ? formatCurrency(avgTicket)
-              : 'N/A'}
-        </p>
-      </div>
-
-      <div className="flex justify-start mt-auto">
-        {change !== null ? (
-          <p
-            className={`text-sm font-semibold ${
-              change > 0
-                ? 'text-[#6ee7b7]'
-                : change < 0
-                  ? 'text-[#fbbf24]'
-                  : 'text-[#555]'
-            }`}
-          >
-            {change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`} <span className="text-[#555]">(vs. prior month)</span>
-          </p>
-        ) : (
-          <p className="text-sm text-[#555]">—</p>
-        )}
-      </div>
+    <div className="flex h-full w-full flex-col">
+      <Stat icon={Scissors} tone="sage"
+        label="Avg Ticket"
+        value={
+          loading ? (
+            <span className="text-base font-medium text-gray-500">Loading…</span>
+          ) : avgTicket !== null ? (
+            formatCurrency(avgTicket)
+          ) : (
+            'N/A'
+          )
+        }
+        delta={change}
+        hint={<span>{change !== null ? 'vs. prior month' : 'No prior month data'}</span>}
+      />
     </div>
   )
 }

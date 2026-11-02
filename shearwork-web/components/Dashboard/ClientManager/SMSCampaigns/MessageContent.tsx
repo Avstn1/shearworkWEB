@@ -117,15 +117,15 @@ export function MessageContent({
     <div className="space-y-3 sm:space-y-4 flex flex-col h-full">
       {/* Validation Reason Alert */}
       {msg.isValidated && msg.validationStatus === 'DENIED' && msg.validationReason && (
-        <div className="p-2.5 sm:p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg sm:rounded-xl flex items-start gap-2">
-          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 mt-0.5 flex-shrink-0" />
-          <p className="text-xs sm:text-sm text-rose-300">{msg.validationReason}</p>
+        <div className="p-3 bg-[#D99A8B]/10 border border-[#D99A8B]/20 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D99A8B] mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-[13px] text-[#D99A8B]">{msg.validationReason}</p>
         </div>
       )}
 
       {/* Message Textarea */}
       <div className="flex-1">
-        <label className="block text-xs sm:text-sm font-medium text-[#bdbdbd] mb-1.5 sm:mb-2">
+        <label className="field-label">
           Message Content (SMS limits: 100-240 characters)
         </label>
         <div className="relative">
@@ -137,19 +137,18 @@ export function MessageContent({
             placeholder="Type your marketing message here or generate a template..."
             rows={11}
             disabled={!msg.isEditing}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl px-3 sm:px-4 pb-12 sm:pb-15 -mb-3 py-2.5 sm:py-3 pr-16 sm:pr-20 text-sm sm:text-base text-white placeholder-[#bdbdbd]/50 focus:outline-none focus:ring-2 focus:ring-sky-300/50 focus:border-sky-300/50 transition-all resize-none overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 ${
+            className={`field pb-12 sm:pb-15 -mb-3 pr-16 sm:pr-20 resize-none overflow-y-auto ${
               !msg.isEditing ? 'cursor-not-allowed opacity-70' : ''
             }`}
-            style={{ scrollbarWidth: 'thin' }}
             maxLength={240}
           />
           <span
-            className={`absolute top-2.5 sm:top-3 right-2.5 sm:right-3 text-[10px] sm:text-xs font-medium ${
+            className={`absolute top-2.5 sm:top-3 right-2.5 sm:right-3 text-[11px] sm:text-xs font-medium tabular-nums ${
               msg.message.length < 100
-                ? 'text-amber-400'
+                ? 'text-amber-300'
                 : msg.message.length > 240
-                ? 'text-rose-400'
-                : 'text-lime-300'
+                ? 'text-[#D99A8B]'
+                : 'text-sage-bright'
             }`}
           >
             {msg.message.length}/240
@@ -159,18 +158,18 @@ export function MessageContent({
 
       {/* Test Requirements Info */}
       {!msg.isSaved && (
-        <div className="p-2.5 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg sm:rounded-xl flex items-start gap-2">
-          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-          <p className="text-xs sm:text-sm text-amber-300">
+        <div className="p-3 bg-amber-300/[0.06] border border-amber-300/15 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-[13px] text-amber-300/90">
             Save and validate this message as a draft before you can test it
           </p>
         </div>
       )}
 
       {msg.isSaved && !msg.isValidated && (
-        <div className="p-2.5 sm:p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg sm:rounded-xl flex items-start gap-2">
-          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-          <p className="text-xs sm:text-sm text-amber-300">
+        <div className="p-3 bg-amber-300/[0.06] border border-amber-300/15 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-[13px] text-amber-300/90">
             Validate this message before you can test it
           </p>
         </div>
@@ -178,8 +177,8 @@ export function MessageContent({
 
       {/* Test Cost Info */}
       {msg.isSaved && msg.isValidated && msg.validationStatus === 'DRAFT' && (
-        <div className="p-2.5 sm:p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg sm:rounded-xl">
-          <p className="text-xs sm:text-sm text-sky-300">
+        <div className="p-3 bg-[#A9C0D2]/[0.06] border border-[#A9C0D2]/15 rounded-lg">
+          <p className="text-[13px] text-[#A9C0D2]">
             Test messages cost 1 credit each once your free tests are used up.
           </p>
         </div>
@@ -193,7 +192,7 @@ export function MessageContent({
             <button
               onClick={handleGenerateTemplate}
               disabled={isGenerating}
-              className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold hover:bg-purple-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-glass btn-sm w-full px-2 sm:px-4 text-xs sm:text-sm"
             >
               {isGenerating ? (
                 <>
@@ -201,24 +200,24 @@ export function MessageContent({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Sparkles className="w-4 h-4" strokeWidth={1.75} />
                   </motion.div>
                   <span className="hidden sm:inline">Generating...</span>
                   <span className="sm:hidden">Gen...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Sparkles className="w-4 h-4" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Generate</span>
                   <span className="sm:hidden">Gen</span>
                 </>
               )}
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-              <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+              <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
                 AI-generate a message template
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                  <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                  <div className="border-4 border-transparent border-t-raised" />
                 </div>
               </div>
             </div>
@@ -229,7 +228,7 @@ export function MessageContent({
             <button
               onClick={() => onValidate(msg.id)}
               disabled={msg.message.length < 100 || validatingId === msg.id}
-              className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 bg-white/5 border border-white/10 text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-glass btn-sm w-full px-2 sm:px-4 text-xs sm:text-sm"
             >
               {validatingId === msg.id ? (
                 <>
@@ -237,24 +236,24 @@ export function MessageContent({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Shield className="w-4 h-4" strokeWidth={1.75} />
                   </motion.div>
                   <span className="hidden sm:inline">Validating...</span>
                   <span className="sm:hidden">Val...</span>
                 </>
               ) : (
                 <>
-                  <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Shield className="w-4 h-4" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Validate</span>
                   <span className="sm:hidden">Val</span>
                 </>
               )}
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-              <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+              <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
                 Check message for compliance issues
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                  <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                  <div className="border-4 border-transparent border-t-raised" />
                 </div>
               </div>
             </div>
@@ -287,7 +286,7 @@ export function MessageContent({
                 onRequestTest(msg.id);
               }}
               disabled={isTesting}
-              className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 bg-sky-300/20 border border-sky-300/30 text-sky-300 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold hover:bg-sky-300/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-glass btn-sm w-full px-2 sm:px-4 text-xs sm:text-sm"
             >
               {isTesting ? (
                 <>
@@ -295,23 +294,23 @@ export function MessageContent({
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Send className="w-4 h-4" strokeWidth={1.75} />
                   </motion.div>
                   <span className="hidden sm:inline">Sending...</span>
                   <span className="sm:hidden">Send...</span>
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Send className="w-4 h-4" strokeWidth={1.75} />
                   <span className="hidden sm:inline">Test</span>
                 </>
               )}
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none whitespace-nowrap">
-              <div className="bg-[#0a0a0a] border border-white/20 rounded-lg px-3 py-2 text-xs text-white shadow-xl">
+              <div className="bg-raised border border-white/[0.12] rounded-lg px-3 py-2 text-xs text-ivory">
                 Send test to your phone (1 credit)
                 <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
-                  <div className="border-4 border-transparent border-t-[#0a0a0a]" />
+                  <div className="border-4 border-transparent border-t-raised" />
                 </div>
               </div>
             </div>

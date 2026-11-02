@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { MoreVertical, FileText } from 'lucide-react'
 import ReportModal from './ReportModal'
+import { EmptyState } from '@/components/ui/AppKit'
 import toast from 'react-hot-toast'
 import { createPortal } from 'react-dom'
 import { useApp } from '@/contexts/AppContext'
@@ -134,49 +135,46 @@ export default function WeeklyReports({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 relative">
+      <div className="relative flex flex-col gap-2">
         {filteredReports.length > 0 ? (
           filteredReports.map((r) => (
             <div
               key={r.id}
-              className="relative rounded-xl p-3 border transition-all duration-300 cursor-pointer
-                hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_8px_24px_rgba(110,231,183,0.08)] hover:bg-[rgba(110,231,183,0.08)]"
-              style={{
-                background: 'rgba(110,231,183,0.04)',
-                borderColor: 'rgba(110,231,183,0.1)',
-                color: '#e8f0eb',
-              }}
+              className="group relative w-full cursor-pointer rounded-lg border border-white/[0.07] bg-white/[0.015] p-3 transition-colors hover:border-white/[0.12] hover:bg-white/[0.03]"
               onClick={() => {
                 setSelectedReport(r)
                 logWeeklyReportOpen(userId, r, role)
                 setIsEditing(false)
               }}
             >
-              {isAdmin && (
-                <>
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.05] text-gray-400 group-hover:text-sage-bright"><FileText size={15} strokeWidth={1.75} /></span>
+                <p className="min-w-0 flex-1 text-sm font-medium text-ivory">
+                  Week {r.week_number} <span className="text-gray-500">·</span>{' '}
+                  <span className="font-normal text-gray-400">{r.month} {r.year}</span>
+                </p>
+                {isAdmin && (
                   <button
+                    type="button"
+                    aria-label="Report actions"
                     onClick={(e) => {
                       e.stopPropagation()
-                      const rect = (e.target as HTMLElement).getBoundingClientRect()
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                       setMenuPosition({ top: rect.bottom + window.scrollY, left: rect.right - 120 })
                       setOpenMenu(openMenu === r.id ? null : r.id)
                     }}
-                    className="absolute top-2 right-2 p-1 rounded-md hover:bg-white/[0.08] transition"
+                    className="btn btn-ghost btn-sm px-1.5"
                   >
-                    <MoreVertical size={16} />
+                    <MoreVertical size={16} strokeWidth={1.75} />
                   </button>
-                </>
-              )}
-
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#6ee7b7]">
-                <FileText size={16} /> Week {r.week_number} - {r.month} {r.year}
+                )}
               </div>
             </div>
           ))
         ) : (
-          <div className="text-[#555] text-sm mt-2 col-span-full text-center">
+          <EmptyState icon={FileText} title="No weekly reports">
             No weekly reports available for this month/year.
-          </div>
+          </EmptyState>
         )}
       </div>
 
@@ -184,13 +182,10 @@ export default function WeeklyReports({
         createPortal(
           <div
             ref={menuRef}
-            className="fixed rounded-md shadow-lg w-28 z-[99999]"
+            className="fixed z-[99999] w-32 overflow-hidden rounded-lg border border-white/[0.12] bg-raised py-1 text-ivory shadow-lg"
             style={{
               top: `${menuPosition.top}px`,
               left: `${menuPosition.left}px`,
-              background: '#151c18',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#e8f0eb',
             }}
           >
             <button
@@ -198,13 +193,13 @@ export default function WeeklyReports({
                 const report = reports.find((r) => r.id === openMenu)
                 if (report) handleEdit(e, report)
               }}
-              className="block w-full text-left px-3 py-1 text-sm hover:bg-white/[0.06]"
+              className="block w-full px-3 py-2 text-left text-sm hover:bg-white/[0.05]"
             >
               Edit
             </button>
             <button
               onClick={(e) => handleDelete(e, openMenu)}
-              className="block w-full text-left px-3 py-1 text-sm text-[#fbbf24] hover:bg-[rgba(251,191,36,0.08)]"
+              className="block w-full px-3 py-2 text-left text-sm text-[#D99A8B] hover:bg-[#D99A8B]/[0.08]"
             >
               Delete
             </button>
@@ -230,7 +225,7 @@ export default function WeeklyReports({
                 .eq('id', selectedReport.id)
               if (error) toast.error('Failed to save report.')
               else {
-                toast.success('✅ Report updated!')
+                toast.success('Report updated!')
                 const updatedReport = { ...selectedReport, content: updatedContent }
                 setReports((prev) =>
                   prev.map((r) => (r.id === selectedReport.id ? updatedReport : r))

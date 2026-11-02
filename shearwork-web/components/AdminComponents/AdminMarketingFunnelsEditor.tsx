@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
+import { Megaphone, Plus, Trash2 } from 'lucide-react'
+import { EmptyState } from '@/components/ui/AppKit'
 
 interface Props {
   barberId: string
@@ -152,71 +154,88 @@ export default function AdminMarketingFunnelsEditor({ barberId, month }: Props) 
   }
 
   return (
-    <div className="bg-[#1f1f1a] p-4 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-[#E8EDC7] font-semibold text-lg">📣 Marketing Funnels Editor</h3>
-        <button
-          onClick={handleAdd}
-          className="px-3 py-1 bg-[#445539] rounded hover:bg-[#4d6544] text-white"
-        >
-          Add Funnel
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h3 className="panel-title">Marketing funnels</h3>
+          <p className="panel-subtitle">Client sources for {month}</p>
+        </div>
+        <button onClick={handleAdd} className="btn btn-glass btn-sm shrink-0">
+          <Plus size={16} strokeWidth={1.75} />
+          Add funnel
         </button>
-      </div>
+      </header>
 
       {loading ? (
-        <p className="text-gray-400">Loading funnels...</p>
+        <p className="panel-body text-sm text-muted">Loading funnels...</p>
       ) : rows.length === 0 ? (
-        <p className="text-gray-400">No funnel data yet for {month}. You can start by adding one.</p>
+        <EmptyState icon={Megaphone} title="No funnel data yet">
+          Nothing recorded for {month}. Start by adding a source.
+        </EmptyState>
       ) : (
-        <div className="space-y-3">
-          <div className="hidden md:flex text-sm text-gray-400 px-2">
-            <div className="flex-[4]">Source</div>
-            <div className="w-16 text-center">New</div>
-            <div className="w-20 text-center">Returning</div>
-            <div className="w-20 text-center">Retention</div>
-            <div className="w-32"></div>
-          </div>
-
-          {rows.map(row => (
-            <div key={row.id} className="flex flex-col md:flex-row md:items-center gap-2 bg-[#111] p-3 rounded">
-              <input
-                className="p-2 rounded bg-[#2b2b2b] text-white flex-[4] min-w-2"
-                value={row.source}
-                onChange={e => setRows(prev => prev.map(r => r.id === row.id ? { ...r, source: e.target.value } : r))}
-                placeholder="Source name"
-              />
-              <input
-                className="p-2 rounded bg-[#2b2b2b] text-white w-16 text-center"
-                value={row.new_clients}
-                onChange={e => handleNumericChange(e, val => setRows(prev => prev.map(r => r.id === row.id ? { ...r, new_clients: val } : r)))}
-                placeholder="0"
-              />
-              <input
-                className="p-2 rounded bg-[#2b2b2b] text-white w-20 text-center"
-                value={row.returning_clients}
-                onChange={e => handleNumericChange(e, val => setRows(prev => prev.map(r => r.id === row.id ? { ...r, returning_clients: val } : r)))}
-                placeholder="0"
-              />
-              <div className="w-20 text-center">{row.retention}%</div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleSave(row)}
-                  disabled={savingId === row.id}
-                  className="px-2 py-1 bg-[#445539] rounded hover:bg-[#4d6544] text-white text-xs"
-                >
-                  {savingId === row.id ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  onClick={() => handleDelete(row.id, row.isNew)}
-                  className="px-2 py-1 bg-red-600 rounded hover:bg-red-700 text-white text-xs"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="table-clean min-w-[560px]">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th className="w-24">New</th>
+                <th className="w-28">Returning</th>
+                <th className="w-24 text-right">Retention</th>
+                <th className="w-32" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row.id}>
+                  <td className="!py-2">
+                    <input
+                      className="field !h-8 !px-2 text-[13px]"
+                      value={row.source}
+                      onChange={e => setRows(prev => prev.map(r => r.id === row.id ? { ...r, source: e.target.value } : r))}
+                      placeholder="Source name"
+                    />
+                  </td>
+                  <td className="!py-2">
+                    <input
+                      className="field !h-8 !px-2 text-[13px] tabular-nums"
+                      value={row.new_clients}
+                      onChange={e => handleNumericChange(e, val => setRows(prev => prev.map(r => r.id === row.id ? { ...r, new_clients: val } : r)))}
+                      placeholder="0"
+                    />
+                  </td>
+                  <td className="!py-2">
+                    <input
+                      className="field !h-8 !px-2 text-[13px] tabular-nums"
+                      value={row.returning_clients}
+                      onChange={e => handleNumericChange(e, val => setRows(prev => prev.map(r => r.id === row.id ? { ...r, returning_clients: val } : r)))}
+                      placeholder="0"
+                    />
+                  </td>
+                  <td className="text-right tabular-nums">{row.retention}%</td>
+                  <td className="!py-2">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => handleSave(row)}
+                        disabled={savingId === row.id}
+                        className="btn btn-primary btn-sm !h-8"
+                      >
+                        {savingId === row.id ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(row.id, row.isNew)}
+                        className="btn btn-ghost btn-sm !h-8 !px-2 hover:!text-[#D99A8B]"
+                        aria-label="Delete funnel"
+                      >
+                        <Trash2 size={16} strokeWidth={1.75} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-    </div>
+    </section>
   )
 }

@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { Pencil, Repeat, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
+import { EmptyState, Panel, Segmented } from '@/components/ui/AppKit'
 
 interface ExpenseStatus {
   lastAdded: string | null
@@ -351,203 +351,227 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
     return { lastAdded, nextPending }
   }
 
-  if (loading) return <p className="text-sm text-gray-400">Loading recurring expenses. Please refresh the site.</p>
-
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   return (
-    <div className="flex flex-col h-[480px] gap-4">
-      <h3 className="text-white font-semibold text-lg">Recurring Expenses</h3>
-
-      {expenses.length === 0 ? (
-        <p className="text-sm text-gray-400">No recurring expenses found.</p>
+    <Panel
+      title="Recurring expenses"
+      subtitle={`${month} ${year}`}
+      actions={totalCount > 0 ? <span className="badge tabular-nums">{totalCount}</span> : undefined}
+      className="flex min-h-[420px] flex-col"
+      bodyClassName="flex flex-1 flex-col min-h-0"
+    >
+      {loading ? (
+        <p className="px-5 py-6 text-sm text-muted">Loading recurring expenses…</p>
+      ) : expenses.length === 0 ? (
+        <EmptyState icon={Repeat} title="No recurring expenses">
+          Expenses that are active in {month} will show up here.
+        </EmptyState>
       ) : (
         <>
-          <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+          <ul className="flex-1 divide-y divide-white/[0.06] overflow-y-auto">
             {expenses.map(exp => (
-              <motion.div
-                key={exp.id}
-                whileHover={{ scale: 1.01 }}
-                className="bg-white/10 border border-white/10 rounded-xl p-4 flex justify-between items-start"
-              >
+              <li key={exp.id} className="px-5 py-4">
                 {editingId === exp.id ? (
-                  <div className="flex flex-col gap-2 w-full">
-                    <input
-                      value={editLabel}
-                      onChange={e => setEditLabel(e.target.value)}
-                      placeholder="Label"
-                      className="px-2 py-1 bg-white/10 text-white border border-white/20 rounded-lg"
-                    />
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={editAmount}
-                      onChange={e => setEditAmount(e.target.value)}
-                      placeholder="Amount"
-                      className="px-2 py-1 bg-white/10 text-white border border-white/20 rounded-lg"
-                    />
-                    <select
-                      value={editFrequency}
-                      onChange={(e) => setEditFrequency(e.target.value as any)}
-                      className="px-2 py-1 bg-white/10 text-white border border-white/20 rounded-lg"
-                    >
-                      <option value="once">Once</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
-                    </select>
+                  <div className="flex w-full flex-col gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="field-label">Label</label>
+                        <input
+                          value={editLabel}
+                          onChange={e => setEditLabel(e.target.value)}
+                          placeholder="Label"
+                          className="field"
+                        />
+                      </div>
+                      <div>
+                        <label className="field-label">Amount</label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={editAmount}
+                          onChange={e => setEditAmount(e.target.value)}
+                          placeholder="Amount"
+                          className="field tabular-nums"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="field-label">Frequency</span>
+                      <Segmented
+                        className="w-full"
+                        value={editFrequency}
+                        onChange={setEditFrequency}
+                        options={[
+                          { value: 'once', label: 'Once' },
+                          { value: 'weekly', label: 'Weekly' },
+                          { value: 'monthly', label: 'Monthly' },
+                          { value: 'yearly', label: 'Yearly' },
+                        ]}
+                      />
+                    </div>
 
                     {editFrequency === 'weekly' && (
-                      <div className="flex gap-1 flex-wrap mt-1">
-                        {DAYS.map(d => (
-                          <button
-                            key={d}
-                            onClick={() => handleDayToggle(d)}
-                            className={`px-2 py-1 rounded-md text-xs font-semibold transition ${
-                              editSelectedDays.includes(d)
-                                ? 'bg-lime-400/40 text-lime-100'
-                                : 'bg-white/10 text-white/70 hover:text-white/90'
-                            }`}
-                          >
-                            {d}
-                          </button>
-                        ))}
+                      <div>
+                        <span className="field-label">Days</span>
+                        <div className="segmented flex w-full flex-wrap">
+                          {DAYS.map(d => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => handleDayToggle(d)}
+                              data-active={editSelectedDays.includes(d)}
+                              aria-pressed={editSelectedDays.includes(d)}
+                              className="segmented-item"
+                            >
+                              {d}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
 
                     {editFrequency === 'monthly' && (
-                      <div className="flex gap-2 mt-1 items-center">
-                        <label className="text-white text-sm">Day of month:</label>
+                      <div className="w-32">
+                        <label className="field-label">Day of month</label>
                         <input
                           type="number"
                           min={1}
                           max={31}
                           value={editMonthlyDay}
                           onChange={e => setEditMonthlyDay(parseInt(e.target.value))}
-                          className="w-16 px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
+                          className="field tabular-nums"
                         />
                       </div>
                     )}
 
                     {editFrequency === 'yearly' && (
-                      <div className="flex gap-2 mt-1 flex-wrap items-center">
-                        <label className="text-white text-sm">Month:</label>
-                        <select
-                          value={editYearlyMonth}
-                          onChange={e => setEditYearlyMonth(parseInt(e.target.value))}
-                          className="px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-                        >
-                          {Array.from({ length: 12 }, (_, i) => i).map(i => (
-                            <option key={i} value={i}>{i + 1}</option>
-                          ))}
-                        </select>
-                        <label className="text-white text-sm">Day:</label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={editYearlyDay}
-                          onChange={e => setEditYearlyDay(parseInt(e.target.value))}
-                          className="w-16 px-2 py-1 rounded-lg bg-white/10 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
-                        />
+                      <div className="grid grid-cols-2 gap-3 sm:w-64">
+                        <div>
+                          <label className="field-label">Month</label>
+                          <select
+                            value={editYearlyMonth}
+                            onChange={e => setEditYearlyMonth(parseInt(e.target.value))}
+                            className="field"
+                          >
+                            {Array.from({ length: 12 }, (_, i) => i).map(i => (
+                              <option key={i} value={i}>{i + 1}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="field-label">Day</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={31}
+                            value={editYearlyDay}
+                            onChange={e => setEditYearlyDay(parseInt(e.target.value))}
+                            className="field tabular-nums"
+                          />
+                        </div>
                       </div>
                     )}
 
-                    <input
-                      type="date"
-                      value={editStartDate}
-                      onChange={e => setEditStartDate(e.target.value)}
-                      className="px-2 py-1 bg-white/10 text-white border border-white/20 rounded-lg"
-                    />
-                    <input
-                      type="date"
-                      value={editEndDate || ''}
-                      onChange={e => setEditEndDate(e.target.value || null)}
-                      className="px-2 py-1 bg-white/10 text-white border border-white/20 rounded-lg"
-                    />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="field-label">Start date</label>
+                        <input
+                          type="date"
+                          value={editStartDate}
+                          onChange={e => setEditStartDate(e.target.value)}
+                          className="field"
+                        />
+                      </div>
+                      <div>
+                        <label className="field-label">End date (optional)</label>
+                        <input
+                          type="date"
+                          value={editEndDate || ''}
+                          onChange={e => setEditEndDate(e.target.value || null)}
+                          className="field"
+                        />
+                      </div>
+                    </div>
 
-                    <div className="flex gap-2 justify-end mt-1">
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="px-3 py-1 text-sm rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white transition"
-                      >Cancel</button>
-                      <button
-                        onClick={handleSaveEdit}
-                        className="px-3 py-1 text-sm rounded-full border border-lime-400/40 bg-lime-400/20 hover:bg-lime-400/30 text-lime-200 font-semibold transition"
-                      >Save</button>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">Cancel</button>
+                      <button onClick={handleSaveEdit} className="btn btn-primary btn-sm">Save</button>
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div>
-                      <p className="text-white font-medium">{exp.label}</p>
-                      <p className="text-sm text-gray-400">
-                        ${exp.amount.toFixed(2)} — {exp.frequency}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <p className="truncate text-sm font-medium text-ivory">{exp.label}</p>
+                        <p className="text-sm font-semibold tabular-nums text-ivory">${exp.amount.toFixed(2)}</p>
+                      </div>
+                      <p className="mt-0.5 text-[13px] capitalize text-muted">
+                        {exp.frequency}
                         {exp.frequency === 'weekly' && exp.weekly_days?.length
                           ? ` (${exp.weekly_days.join(', ')})`
                           : ''}
+                        <span className="text-gray-500 normal-case">
+                          {' · '}{exp.start_date}{exp.end_date ? ` → ${exp.end_date}` : ''}
+                        </span>
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {exp.start_date} {exp.end_date ? `→ ${exp.end_date}` : ''}
-                      </p>
-                      
+
                       {/* Status badges */}
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="mt-2 flex flex-wrap gap-1.5">
                         {(() => {
                           const status = getExpenseStatus(exp, month, parseInt(year))
                           return (
                             <>
                               {status.lastAdded && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-green-600/30 text-green-200 border border-green-500/30">
-                                  Added on {status.lastAdded}
-                                </span>
+                                <span className="badge badge-sage">Added {status.lastAdded}</span>
                               )}
                               {status.nextPending && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-amber-600/30 text-amber-200 border border-amber-500/30">
-                                  Next: {status.nextPending}
-                                </span>
+                                <span className="badge">Next {status.nextPending}</span>
                               )}
                               {!status.lastAdded && !status.nextPending && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-gray-600/30 text-gray-300 border border-gray-500/30">
-                                  Not active this month
-                                </span>
+                                <span className="badge">Not active this month</span>
                               )}
                             </>
                           )
                         })()}
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => startEdit(exp)}
-                        className="text-sm px-3 py-1 rounded-full border border-lime-400/30 bg-lime-400/20 hover:bg-lime-400/30 text-lime-300 font-semibold transition"
-                      >Edit</button>
+                    <div className="flex shrink-0 gap-1">
+                      <button onClick={() => startEdit(exp)} className="btn btn-ghost btn-sm" aria-label={`Edit ${exp.label}`}>
+                        <Pencil size={15} strokeWidth={1.75} />
+                        <span className="hidden sm:inline">Edit</span>
+                      </button>
                       <button
                         onClick={() => handleDelete(exp.id)}
-                        className="text-sm px-3 py-1 rounded-full border border-white/15 bg-white/10 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-white/60 font-semibold transition"
-                      >Delete</button>
+                        className="btn btn-ghost btn-sm hover:!text-[#D99A8B]"
+                        aria-label={`Delete ${exp.label}`}
+                      >
+                        <Trash2 size={15} strokeWidth={1.75} />
+                        <span className="hidden sm:inline">Delete</span>
+                      </button>
                     </div>
-                  </>
+                  </div>
                 )}
-              </motion.div>
+              </li>
             ))}
-          </div>
+          </ul>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex gap-2 justify-center mt-2">
+            <div className="flex items-center justify-between gap-2 border-t border-white/[0.07] px-5 py-3">
               <button
                 disabled={page === 1}
                 onClick={() => setPage(p => p - 1)}
-                className="px-3 py-1 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50 transition"
+                className="btn btn-glass btn-sm"
               >
                 Previous
               </button>
-              <span className="px-3 py-1 text-white">{page} / {totalPages}</span>
+              <span className="text-xs tabular-nums text-muted">{page} / {totalPages}</span>
               <button
                 disabled={page === totalPages}
                 onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50 transition"
+                className="btn btn-glass btn-sm"
               >
                 Next
               </button>
@@ -555,6 +579,6 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
           )}
         </>
       )}
-    </div>
+    </Panel>
   )
 }

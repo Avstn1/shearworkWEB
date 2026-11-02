@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend
 } from 'recharts'
+import { Loader2 } from 'lucide-react'
 
 interface HourRow {
   hour: number
@@ -189,7 +190,6 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
       : 'Finance Logs'
     : `Weekly Finance Logs from ${monday} to ${sunday}`
 
-  const title = `${titleText} | Logs: ${totalLogs} | Mode: ${displayMode}`
 
   // -------------------- Tooltip --------------------
   const tooltipContent = ({ payload, label }: any) => {
@@ -197,15 +197,16 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
     return (
       <div
         style={{
-          backgroundColor: '#1f2420',
-          border: '1px solid #55694b',
-          borderRadius: '0.5rem',
-          padding: '8px',
-          color: '#c4d2b8',
-          fontSize: '0.875rem',
+          backgroundColor: '#1D201E',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 8,
+          padding: '8px 10px',
+          color: '#ECEDEA',
+          fontSize: 12,
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+        <div style={{ fontWeight: 600, marginBottom: 4, color: '#9EA39C' }}>
           {viewMode === 'hourly' ? `${Number(label)%12||12}${Number(label)<12?'am':'pm'}` : label}
         </div>
         {payload.map((p: any) => (
@@ -220,27 +221,34 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
   // -------------------- Render --------------------
   return (
     <div className="w-full">
-      <div className="mb-2">
-        <h2 className="text-[#c4d2b8] font-semibold text-sm sm:text-base">{title}</h2>
+      <div className="mb-3">
+        <h2 className="panel-title">{titleText}</h2>
+        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+          <span className="badge tabular-nums">Logs: {totalLogs}</span>
+          <span className="badge capitalize">Mode: {displayMode}</span>
+        </p>
       </div>
 
       <div className="w-full h-64 relative">
         {loading ? (
-          <div className="p-4 text-center text-[#E8EDC7] opacity-70 text-sm">
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted">
+            <Loader2 size={16} strokeWidth={1.75} className="animate-spin" />
             Loading {viewMode} data...
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
               <XAxis
                 dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
-                stroke="#ccc"
+                stroke="rgba(255,255,255,0.06)"
+                tick={{ fill: '#7C817A', fontSize: 11 }}
+                tickLine={false}
                 tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
-              <YAxis stroke="#ccc" />
-              <Tooltip content={tooltipContent} />
-              <Legend />
+              <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7C817A', fontSize: 11 }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
+              <Tooltip content={tooltipContent} cursor={{ stroke: 'rgba(255,255,255,0.12)' }} />
+              <Legend iconType="plainline" iconSize={12} wrapperStyle={{ fontSize: 12, color: '#9EA39C' }} />
               
               {displayMode === 'separate' ? (
                 <>
@@ -248,7 +256,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                     type="monotone" 
                     dataKey="add_tips" 
                     name="Add Tips"
-                    stroke="#00e676" 
+                    stroke="#8CC470" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -256,7 +264,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                     type="monotone" 
                     dataKey="expense_edited" 
                     name="Edit Expense"
-                    stroke="#ff6d00" 
+                    stroke="#70A6DE" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -264,7 +272,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                     type="monotone" 
                     dataKey="expense_added" 
                     name="Add Expense"
-                    stroke="#1e88e5" 
+                    stroke="#E2B86E" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -274,8 +282,8 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                   type="monotone" 
                   dataKey="total" 
                   name="Total Finance Actions"
-                  stroke="#abf19aff"                   
-                  strokeWidth={3} 
+                  stroke="#8CC470"                   
+                  strokeWidth={2} 
                   dot={false} 
                 />
               )}

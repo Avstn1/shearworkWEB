@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
+import { CalendarDays } from 'lucide-react'
 
 interface Props {
   user_id: string
@@ -76,68 +77,31 @@ export default function OpenBookings({ user_id }: Props) {
     }
   }, [fetchOpenings, user_id])
 
-  const desktopRing = (
-    <div className="relative flex items-center justify-center flex-shrink-0">
-      <svg width="96" height="96" className="-rotate-90">
-        <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-        <circle cx="48" cy="48" r="40" fill="none" stroke="#a3e635" strokeWidth="8"
-          strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={0}
-          className="transition-all duration-700" />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-white leading-none">{totalOpenings}</span>
-        <span className="text-[10px] text-white/30 mt-0.5">slots</span>
-      </div>
-    </div>
-  )
-
-  const mobileRing = (
-    <div className="relative flex-shrink-0" style={{ width: 64, height: 64 }}>
-      <svg viewBox="0 0 64 64" width="64" height="64" className="-rotate-90">
-        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
-        <circle cx="32" cy="32" r="28" fill="none" stroke="#a3e635" strokeWidth="6"
-          strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 28}`} strokeDashoffset={0}
-          className="transition-all duration-700" />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm font-black text-white leading-none">{totalOpenings}</span>
-        <span className="text-[8px] text-white/30 mt-0.5">slots</span>
-      </div>
-    </div>
-  )
-
   return (
-    <div className="relative h-full w-full overflow-hidden
-      flex flex-col p-3
-      md:flex-row md:items-center md:justify-between md:px-2 md:py-0
-    ">
-      <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-lime-400/8 blur-3xl pointer-events-none" />
-
-      {/* Mobile label — fixed height, no subtitle */}
-      <div className="flex flex-col md:hidden" style={{ height: 46 }}>
-        <p className="text-white/40 uppercase font-medium tracking-widest text-[9px]">This Week</p>
-        <p className="text-white font-black leading-tight mt-0.5 text-sm">Open Bookings</p>
+    <div data-tone="sky" className="stat-root tone-sky flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
+      <div className="min-w-0">
+        <p className="stat-label">Open bookings</p>
+        <p className="stat-value mt-1.5 text-lg md:mt-2 md:text-[1.75rem]">
+          {loading ? '\u2014' : totalOpenings}
+        </p>
+        <p className="mt-1.5 text-[11px] leading-snug text-gray-500 md:text-xs">
+          <span className="md:hidden">Slots this week</span>
+          <span className="hidden md:inline">Available slots in your schedule this week</span>
+        </p>
       </div>
 
-      {/* Desktop label */}
-      <div className="hidden md:flex flex-col justify-center">
-        <p className="text-white/40 uppercase font-medium tracking-widest text-xs">This Week</p>
-        <p className="text-white font-black text-2xl leading-tight mt-1">Open Bookings</p>
-        <p className="text-white/30 text-xs mt-1">Available slots in your schedule</p>
-      </div>
-
-      {/* Mobile ring */}
-      <div className="md:hidden mt-auto">
-        {loading
-          ? <div className="w-8 h-8 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin" />
-          : mobileRing}
-      </div>
-
-      {/* Desktop ring */}
-      <div className="hidden md:block">
-        {loading
-          ? <div className="w-16 h-16 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin flex-shrink-0" />
-          : desktopRing}
+      <div className="relative h-12 w-12 flex-shrink-0 md:h-20 md:w-20">
+        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+          {!loading && (
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(112 166 222)" strokeWidth="8"
+              strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={0}
+              className="transition-all duration-700" />
+          )}
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <CalendarDays className="h-4 w-4 text-tone md:h-5 md:w-5" strokeWidth={1.75} />
+        </div>
       </div>
     </div>
   )

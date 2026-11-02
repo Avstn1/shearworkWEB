@@ -9,17 +9,17 @@ interface Props {
 
 const AppointmentCard: React.FC<Props> = ({ appointment }) => {
   return (
-    <div className="w-80 bg-[var(--accent-2)] p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-1 flex flex-col justify-between text-[var(--foreground)]">
+    <div className="panel flex w-80 flex-col justify-between p-5 text-ivory">
       <div className="mb-4">
-        <span className="text-[var(--accent-4)] text-sm">{appointment.date || '—'}</span>
-        <h3 className="text-[var(--foreground)] text-xl font-semibold mt-1">
+        <span className="text-xs tabular-nums text-muted">{appointment.date || '—'}</span>
+        <h3 className="mt-1 text-[15px] font-semibold text-ivory">
           {appointment.client_name || appointment.name}
         </h3>
-        <span className="text-[var(--accent-1)] text-sm">
+        <span className="text-[13px] text-gray-400">
           {appointment.service || `Clients: ${appointment.clients}`}
         </span>
       </div>
-      <div className="text-[var(--background)] font-bold text-2xl">
+      <div className="text-2xl font-semibold tabular-nums text-ivory">
         ${appointment.price || appointment.earnings}
       </div>
     </div>

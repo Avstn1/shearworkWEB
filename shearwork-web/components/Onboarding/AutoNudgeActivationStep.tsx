@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { CalendarClock, Check, Info, Loader2 } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 
@@ -178,104 +178,87 @@ export default function AutoNudgeActivationStep({
   }
 
   return (
-    <div className="space-y-6 animate-fadeInUp min-h-[calc(100vh-340px)]">
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeInUp {
-          animation: fadeInUp 0.4s ease-out forwards;
-        }
-      `}</style>
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h2 className="panel-title">Auto Nudge activation</h2>
+          <p className="panel-subtitle">Smart booking reminders to past clients when you have openings</p>
+        </div>
+      </header>
 
-      <div className="space-y-6 rounded-2xl border border-white/10 bg-black/20 p-6">
-        <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Auto Nudge Activation</h3>
-
+      <div className="panel-body">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-sage" />
           </div>
         ) : alreadyEnabled ? (
-          <div className="py-8 space-y-6">
-            {/* Success Badge */}
-            <div className="flex justify-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400/20 to-[#3af1f7]/20 border-2 border-emerald-400/40">
-                <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+          <div className="space-y-5">
+            {/* Success */}
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sage/15">
+                <Check className="h-6 w-6 text-sage-bright" strokeWidth={2} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-[17px] font-semibold text-ivory">
+                  Auto-Nudge system activated
+                </h3>
+                <p className="text-sm text-gray-400">
+                  You should receive a confirmation text shortly
+                </p>
               </div>
             </div>
 
-            {/* Success Message */}
-            <div className="text-center space-y-2">
-              <h4 className="text-xl font-semibold text-white">
-                Auto-Nudge System Activated!
-              </h4>
-              <p className="text-sm text-gray-400">
-                You should receive a confirmation text shortly
-              </p>
-            </div>
-
-            {/* Info Card */}
-            <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 space-y-3">
-              <p className="text-sm text-emerald-200 font-semibold">
-                📅 Your first nudge will be sent on:
-              </p>
-              <p className="text-base text-white font-semibold">
-                {firstNudgeDate} at 10:00 AM
-              </p>
+            {/* First nudge */}
+            <div className="flex items-start gap-3 rounded-lg border border-white/[0.07] bg-raised p-4">
+              <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-sage" strokeWidth={1.75} />
+              <div>
+                <p className="stat-label">Your first nudge will be sent on</p>
+                <p className="mt-1 text-[15px] font-semibold tabular-nums text-ivory">
+                  {firstNudgeDate} at 10:00 AM
+                </p>
+              </div>
             </div>
 
             {/* What happens next */}
-            <div className="rounded-xl border border-blue-400/30 bg-blue-400/10 p-4 space-y-3">
-              <p className="text-sm text-blue-200 font-semibold">
-                What happens next?
-              </p>
-              <ul className="text-xs text-blue-300 space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-400 mt-0.5">1.</span>
+            <div className="rounded-lg border border-white/[0.07] bg-raised p-4">
+              <p className="text-sm font-semibold text-ivory">What happens next?</p>
+              <ol className="mt-3 space-y-2.5 text-[13px] text-gray-300">
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/[0.12] text-[11px] font-semibold tabular-nums text-gray-400">1</span>
                   <span>You will receive a message from us around the date and time above and you will be asked to say YES to authorize your client auto-nudge</span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-blue-400 mt-0.5">2.</span>
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/[0.12] text-[11px] font-semibold tabular-nums text-gray-400">2</span>
                   <span>Once you do, just sit back and wait for your results. You'll get a summary text every Sunday at 10 PM with your bookings and revenue recovered. You can also view this under the Auto Nudge page's history</span>
                 </li>
                 {isBarelyLate && (
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">3.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/[0.12] text-[11px] font-semibold tabular-nums text-gray-400">3</span>
                     <span>Since your nudges will be sent out tomorrow and not on a Monday (our normal schedule), your results will still arrive on Sunday at 10 PM</span>
                   </li>
                 )}
-              </ul>
+              </ol>
               {isBarelyLate && (
-                <div className="mt-3 pt-3 border-t border-blue-400/20">
-                  <p className="text-xs text-blue-200 italic">
-                    💡 Normally, nudges are sent on Mondays and results arrive on Sunday nights. We're making a one-time exception to get you started right away. Next week, your nudges will be back to the normal Monday schedule.
+                <div className="mt-3 flex gap-2 border-t border-white/[0.07] pt-3">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#A9C0D2]" strokeWidth={1.75} />
+                  <p className="text-xs text-gray-400">
+                    Normally, nudges are sent on Mondays and results arrive on Sunday nights. We're making a one-time exception to get you started right away. Next week, your nudges will be back to the normal Monday schedule.
                   </p>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {/* Openings Display */}
-            <div className="text-center py-8">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400/20 to-[#3af1f7]/20 border-2 border-emerald-400/40 mb-4">
-                <span className="text-4xl font-bold text-emerald-300">
-                  {openingsCount !== null ? openingsCount : '—'}
-                </span>
-              </div>
-              <h4 className="text-xl font-semibold text-white mb-2">
+            <div className="py-4 text-center">
+              <p className="text-[44px] leading-none font-semibold tracking-tight tabular-nums text-ivory">
+                {openingsCount !== null ? openingsCount : '—'}
+              </p>
+              <h3 className="mt-4 text-[17px] font-semibold text-ivory">
                 We found {openingsCount || 0} opening{openingsCount !== 1 ? 's' : ''} this week
-              </h4>
-              <p className="text-sm text-gray-400">
+              </h3>
+              <p className="mt-1 text-sm text-gray-400">
                 Let Corva help you fill them automatically
               </p>
             </div>
@@ -285,15 +268,11 @@ export default function AutoNudgeActivationStep({
               type="button"
               onClick={handleActivate}
               disabled={activating}
-              className={`w-full py-4 font-semibold text-lg rounded-xl transition-all ${
-                activating
-                  ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg hover:scale-[1.02]'
-              }`}
+              className="btn btn-bright btn-lg w-full"
             >
               {activating ? (
                 <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Activating...
                 </span>
               ) : (
@@ -302,50 +281,43 @@ export default function AutoNudgeActivationStep({
             </button>
 
             {/* Confirmation Text */}
-            <div className="rounded-xl border border-blue-400/30 bg-blue-400/10 p-4">
-              <p className="text-xs text-blue-200">
-                Corva will send smart booking reminders to past clients when you have openings. 
+            <div className="flex gap-2.5 rounded-lg border border-white/[0.07] bg-raised px-3 py-2.5">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#A9C0D2]" strokeWidth={1.75} />
+              <p className="text-xs text-gray-400">
+                Corva will send smart booking reminders to past clients when you have openings.
                 You'll be notified when someone books.
               </p>
             </div>
           </div>
         )}
-
-        {/* Back and Finish Buttons */}
-        <div className="flex justify-between items-center gap-4 pt-4 border-t border-white/10">
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={activating}
-            className={`px-6 py-3 font-semibold rounded-xl transition-all ${
-              activating
-                ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                : 'bg-white/10 border border-white/20 hover:bg-white/15'
-            }`}
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            onClick={onFinish}
-            disabled={profileLoading || !alreadyEnabled}
-            className={`px-8 py-3 font-semibold rounded-xl transition-all ${
-              profileLoading || !alreadyEnabled
-                ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
-            }`}
-          >
-            {profileLoading ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Finishing...
-              </span>
-            ) : (
-              'Finish onboarding'
-            )}
-          </button>
-        </div>
       </div>
-    </div>
+
+      {/* Back and Finish */}
+      <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] px-5 py-4">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={activating}
+          className="btn btn-ghost"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={onFinish}
+          disabled={profileLoading || !alreadyEnabled}
+          className="btn btn-primary min-w-[140px]"
+        >
+          {profileLoading ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Finishing...
+            </span>
+          ) : (
+            'Finish onboarding'
+          )}
+        </button>
+      </div>
+    </section>
   )
 }

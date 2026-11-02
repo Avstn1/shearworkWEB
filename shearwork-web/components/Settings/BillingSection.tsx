@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, XCircle, AlertTriangle, CreditCard, Calendar as CalendarIcon } from 'lucide-react'
+import { Loader2, X, AlertTriangle, CreditCard, RotateCcw, Calendar as CalendarIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { Panel } from '@/components/ui/AppKit'
 
 type BillingSummary = {
   hasSubscription: boolean
@@ -131,204 +132,171 @@ export default function BillingSection() {
 
   if (loadingSummary && cancelAtPeriodEnd === null) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-lime-400"></div>
+      <div className="panel flex items-center justify-center py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-sage" strokeWidth={1.75} />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Billing</h2>
-        <p className="text-sm text-gray-400">Manage your subscription and billing information</p>
-      </div>
-
-      {/* Current Plan Card */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="p-2 bg-lime-500/20 rounded-lg">
-            <CreditCard className="w-5 h-5 text-lime-400" />
-          </div>
+    <div className="space-y-4 md:space-y-5">
+      {/* Plan + payment */}
+      <Panel
+        title="Billing"
+        subtitle="Manage your subscription and billing information"
+        actions={
+          hasSub
+            ? cancelAtPeriodEnd
+              ? <span className="badge badge-warn">Ending</span>
+              : <span className="badge badge-sage">Active</span>
+            : <span className="badge">Inactive</span>
+        }
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Current Plan</p>
+            <p className="stat-label flex items-center gap-1.5">
+              <CreditCard className="h-3.5 w-3.5" strokeWidth={1.75} />
+              Current plan
+            </p>
+            <p className="mt-2 text-lg font-semibold text-ivory">
+              {hasSub ? 'Corva Pro' : 'No active subscription'}
+            </p>
+            {hasSub && <p className="mt-0.5 text-[13px] text-muted">1 active subscription</p>}
           </div>
+          {hasSub && (
+            <div>
+              <p className="stat-label flex items-center gap-1.5">
+                <CalendarIcon className="h-3.5 w-3.5" strokeWidth={1.75} />
+                Billing amount
+              </p>
+              <p className="mt-2 text-lg font-semibold tabular-nums text-ivory">
+                {amountText ?? 'the plan price'} <span className="text-sm font-normal text-muted">/ {intervalLabel}</span>
+              </p>
+            </div>
+          )}
         </div>
-        <p className="text-xl font-bold mb-1">
-          {hasSub ? 'Corva Pro' : 'No active subscription'}
-        </p>
-        {hasSub && <p className="text-sm text-gray-400">1 active subscription</p>}
-      </div>
 
-      {/* Payment Details Card */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-emerald-500/20 rounded-lg">
-            <CalendarIcon className="w-5 h-5 text-emerald-400" />
-          </div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Payment Details</p>
-        </div>
+        <hr className="divider my-5" />
 
         {!hasSub ? (
           <p className="text-sm text-gray-300">
             You don&apos;t have an active subscription right now.
           </p>
-        ) : (
-          <div className="space-y-3">
-            {cancelAtPeriodEnd ? (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                <p className="text-sm text-amber-200">
-                  Your plan will end on{' '}
-                  <span className="font-semibold">{renewDateText ?? 'the current period end date'}</span>.
-                  You won&apos;t be charged again.
-                </p>
-              </div>
-            ) : (
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                <p className="text-sm text-emerald-200">
-                  Your plan will automatically renew on{' '}
-                  <span className="font-semibold">{renewDateText ?? 'the current period end date'}</span>.
-                </p>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-              <span className="text-sm text-gray-400">Billing Amount</span>
-              <span className="text-lg font-semibold">
-                {amountText ?? 'the plan price'} / {intervalLabel}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Manage Subscription Card */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Manage Subscription</h3>
-          <p className="text-sm text-gray-400">
-            {!cancelAtPeriodEnd
-              ? 'You can cancel your subscription at any time. Access will remain until the end of your current billing period.'
-              : 'Your subscription is scheduled to cancel at the end of the current billing period.'}
+        ) : cancelAtPeriodEnd ? (
+          <p className="text-sm text-amber-300">
+            Your plan will end on{' '}
+            <span className="font-semibold">{renewDateText ?? 'the current period end date'}</span>.
+            You won&apos;t be charged again.
           </p>
+        ) : (
+          <p className="text-sm text-gray-300">
+            Your plan will automatically renew on{' '}
+            <span className="font-semibold text-ivory">{renewDateText ?? 'the current period end date'}</span>.
+          </p>
+        )}
+      </Panel>
+
+      {/* Manage Subscription */}
+      <Panel title="Manage subscription">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm text-gray-300">
+              {!cancelAtPeriodEnd
+                ? 'You can cancel your subscription at any time. Access will remain until the end of your current billing period.'
+                : 'Your subscription is scheduled to cancel at the end of the current billing period.'}
+            </p>
+            <p className="text-xs text-gray-500">
+              You can&apos;t change plans in the app yet. We&apos;re working on adding this feature.
+            </p>
+          </div>
+
+          <button
+            onClick={cancelAtPeriodEnd ? handleResumeClick : handleCancelClick}
+            disabled={loadingAction || !hasSub}
+            className={`btn btn-sm shrink-0 self-end sm:self-auto ${
+              cancelAtPeriodEnd ? 'btn-primary' : 'btn-glass text-[#D99A8B]'
+            }`}
+          >
+            {loadingAction && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />}
+            <span>
+              {loadingAction
+                ? 'Processing…'
+                : cancelAtPeriodEnd
+                ? 'Resume Subscription'
+                : 'Cancel Subscription'}
+            </span>
+          </button>
         </div>
-
-        <button
-          onClick={cancelAtPeriodEnd ? handleResumeClick : handleCancelClick}
-          disabled={loadingAction || !hasSub}
-          className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-            cancelAtPeriodEnd
-              ? 'bg-gradient-to-r from-lime-400 to-emerald-400 text-black hover:shadow-lg hover:shadow-lime-400/20'
-              : 'bg-gradient-to-r from-rose-500 to-red-500 text-white hover:shadow-lg hover:shadow-rose-500/20'
-          }`}
-        >
-          {loadingAction && <Loader2 className="h-4 w-4 animate-spin" />}
-          <span>
-            {loadingAction
-              ? 'Processing…'
-              : cancelAtPeriodEnd
-              ? 'Resume Subscription'
-              : 'Cancel Subscription'}
-          </span>
-        </button>
-
-        <p className="text-xs text-gray-500">
-          You can&apos;t change plans in the app yet. We&apos;re working on adding this feature.
-        </p>
-      </div>
+      </Panel>
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-          <div className="relative z-50 w-full max-w-md bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-amber-500/20 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-amber-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-xl font-bold mb-2">Cancel subscription?</h4>
-                <p className="text-sm text-gray-300">
-                  If you cancel now, you&apos;ll keep access until the end of your current billing period. You can subscribe again later if you change your mind.
-                </p>
-              </div>
-              <button
-                onClick={handleCloseModal}
-                disabled={loadingAction}
-                className="text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="modal-backdrop absolute z-0" onClick={handleCloseModal} />
+        <div className="modal-surface relative z-50 w-full max-w-md overflow-hidden">
+          <div className="panel-header">
+            <div className="flex min-w-0 items-center gap-3">
+              <AlertTriangle className="h-[18px] w-[18px] flex-shrink-0 text-amber-300" strokeWidth={1.75} />
+              <h4 className="panel-title">Cancel subscription?</h4>
             </div>
-            <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                disabled={loadingAction}
-                className="px-6 py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50 font-medium"
-              >
-                Never mind
-              </button>
-              <button
-                onClick={handleConfirmCancel}
-                disabled={loadingAction}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold hover:shadow-lg hover:shadow-rose-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loadingAction && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span>Yes, cancel it</span>
-              </button>
-            </div>
+            <button
+              onClick={handleCloseModal}
+              disabled={loadingAction}
+              className="btn btn-ghost btn-sm h-8 w-8 p-0"
+              aria-label="Close"
+            >
+              <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </button>
+          </div>
+          <p className="p-5 text-sm text-gray-300">
+            If you cancel now, you&apos;ll keep access until the end of your current billing period. You can subscribe again later if you change your mind.
+          </p>
+          <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+            <button onClick={handleCloseModal} disabled={loadingAction} className="btn btn-ghost btn-sm">
+              Never mind
+            </button>
+            <button onClick={handleConfirmCancel} disabled={loadingAction} className="btn btn-sm bg-[#D99A8B] text-ink hover:bg-[#E3AC9E]">
+              {loadingAction && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />}
+              <span>Yes, cancel it</span>
+            </button>
           </div>
         </div>
+      </div>
       )}
 
       {/* Resume Confirmation Modal */}
       {showResumeConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={handleCloseModal}
-          />
-          <div className="relative z-50 w-full max-w-md bg-[#1a1f1b] border border-white/10 rounded-2xl shadow-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-emerald-500/20 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-emerald-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-xl font-bold mb-2">Resume subscription?</h4>
-                <p className="text-sm text-gray-300">
-                  You are scheduled to cancel your subscription at the end of the period. Do you want to resume auto-billing?
-                </p>
-              </div>
-              <button
-                onClick={handleCloseModal}
-                disabled={loadingAction}
-                className="text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="modal-backdrop absolute z-0" onClick={handleCloseModal} />
+        <div className="modal-surface relative z-50 w-full max-w-md overflow-hidden">
+          <div className="panel-header">
+            <div className="flex min-w-0 items-center gap-3">
+              <RotateCcw className="h-[18px] w-[18px] flex-shrink-0 text-sage-bright" strokeWidth={1.75} />
+              <h4 className="panel-title">Resume subscription?</h4>
             </div>
-            <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
-              <button
-                onClick={handleCloseModal}
-                disabled={loadingAction}
-                className="px-6 py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-all disabled:opacity-50 font-medium"
-              >
-                Never mind
-              </button>
-              <button
-                onClick={handleConfirmResume}
-                disabled={loadingAction}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-lime-400 to-emerald-400 text-black font-semibold hover:shadow-lg hover:shadow-lime-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loadingAction && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span>Yes, resume</span>
-              </button>
-            </div>
+            <button
+              onClick={handleCloseModal}
+              disabled={loadingAction}
+              className="btn btn-ghost btn-sm h-8 w-8 p-0"
+              aria-label="Close"
+            >
+              <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </button>
+          </div>
+          <p className="p-5 text-sm text-gray-300">
+            You are scheduled to cancel your subscription at the end of the period. Do you want to resume auto-billing?
+          </p>
+          <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+            <button onClick={handleCloseModal} disabled={loadingAction} className="btn btn-ghost btn-sm">
+              Never mind
+            </button>
+            <button onClick={handleConfirmResume} disabled={loadingAction} className="btn btn-primary btn-sm">
+              {loadingAction && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />}
+              <span>Yes, resume</span>
+            </button>
           </div>
         </div>
+      </div>
       )}
     </div>
   )

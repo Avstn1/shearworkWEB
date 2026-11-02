@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { PieChart as PieIcon } from 'lucide-react'
+import { PanelHeading } from '@/components/ui/AppKit'
+import DonutBreakdown from '@/components/ui/DonutBreakdown'
 import { supabase } from '@/utils/supabaseClient'
 
 interface ProfitMarginPieChartProps {
@@ -51,17 +53,10 @@ export default function ProfitMarginPieChart({
     fetchData()
   }, [userId, selectedMonth, selectedYear, refreshKey])
 
-  const COLORS = ['#aeea00', '#ff6d00']
-
   if (data.length === 0) {
     return (
-      <div className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[200px]"
-        style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
-        }}
-      >
-        <p className="text-[#E8EDC7] opacity-70 text-sm">
+      <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-white/[0.07]">
+        <p className="text-sm text-gray-500">
           No data yet for {selectedMonth}
         </p>
       </div>
@@ -69,31 +64,13 @@ export default function ProfitMarginPieChart({
   }
 
   return (
-    <div className="w-full h-64">
-      <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">
-        Profit vs Expenses
-      </h2>
-      <ResponsiveContainer width="100%" height="90%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            outerRadius={80}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
-          />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="flex w-full flex-col">
+      <PanelHeading icon={PieIcon} tone="sky" className="mb-4">Profit vs expenses</PanelHeading>
+      <DonutBreakdown
+        items={data}
+        formatValue={v => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+        totalLabel="Total"
+      />
     </div>
   )
 }

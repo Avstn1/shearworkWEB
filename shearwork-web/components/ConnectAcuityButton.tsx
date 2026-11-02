@@ -86,19 +86,16 @@ export default function ConnectAcuityButton({
   }, [connected, initialConnected, onConnectSuccess])
 
   if (loading) {
-    return <button className="px-4 py-2 bg-gray-400 text-white rounded-lg">Loading...</button>
+    return <button type="button" disabled className={`btn btn-glass btn-sm ${className}`}>Loading...</button>
   }
 
-  const baseClass =
-    variant === 'secondary'
-      ? 'bg-white/10 border border-white/20 text-white hover:bg-white/15'
-      : 'bg-blue-600 text-white hover:bg-blue-700'
+  const baseClass = variant === 'secondary' ? 'btn-glass' : 'btn-primary'
 
   return connected ? (
     <button
       type="button"
       onClick={handleDisconnect}
-      className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 ${className}`}
+      className={`btn btn-glass btn-sm text-[#D99A8B] ${className}`}
     >
       Disconnect Acuity
     </button>
@@ -108,9 +105,7 @@ export default function ConnectAcuityButton({
       onClick={handleConnect}
       disabled={disabled || preparing}
       title={disabledReason}
-      className={`px-4 py-2 rounded-lg ${baseClass} ${
-        disabled || preparing ? 'opacity-60 cursor-not-allowed' : ''
-      } ${className}`}
+      className={`btn btn-sm ${baseClass} ${className}`}
     >
       {preparing ? 'Preparing...' : 'Connect to Acuity'}
     </button>

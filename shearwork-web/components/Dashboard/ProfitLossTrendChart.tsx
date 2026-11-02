@@ -86,14 +86,8 @@ export default function ProfitLossTrendChart({
 
   if (data.length === 0) {
     return (
-      <div
-        className="p-4 rounded-lg shadow-md border flex items-center justify-center min-h-[200px]"
-        style={{
-          borderColor: 'var(--card-revenue-border)',
-          background: 'var(--card-revenue-bg)',
-        }}
-      >
-        <p className="text-[#E8EDC7] opacity-70 text-sm">
+      <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-white/[0.07]">
+        <p className="text-sm text-gray-500">
           No daily data yet for {selectedMonth}
         </p>
       </div>
@@ -102,33 +96,37 @@ export default function ProfitLossTrendChart({
 
   return (
     <div className="w-full h-64">
-      <h2 className="text-[#c4d2b8] font-semibold mb-2 text-sm sm:text-lg">
+      <h2 className="panel-title mb-3">
         Profit/Loss Trend (Daily)
       </h2>
 
       <ResponsiveContainer width="100%" height="90%">
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+          <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
           <XAxis
             dataKey="date"
-            stroke="#ccc"
+            stroke="rgba(255,255,255,0.06)"
+            tick={{ fill: '#7C817A', fontSize: 11 }}
+            tickLine={false}
             label={{
               value: 'Day of Month',
               position: 'insideBottom',
               offset: -5,
-              fill: '#ccc',
-              fontSize: 12,
+              fill: '#7C817A',
+              fontSize: 11,
             }}
           />
-          <YAxis stroke="#ccc" />
+          <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7C817A', fontSize: 11 }} tickLine={false} axisLine={false} />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#2b2b2b',
-              border: '1px solid #C8B653',
-              borderRadius: '8px',
-              color: '#F5F5DC',
+              backgroundColor: '#1D201E',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 8,
+              color: '#ECEDEA',
+              fontSize: 12,
             }}
-            itemStyle={{ color: '#E8EDC7' }}
+            itemStyle={{ color: '#ECEDEA' }}
+            labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
             formatter={(value: number, name: string) => {
               let label = ''
               switch (name) {
@@ -148,11 +146,11 @@ export default function ProfitLossTrendChart({
             }}
           />
 
-          <Legend />
+          <Legend iconType="square" wrapperStyle={{ color: '#9EA39C', fontSize: 12 }} />
           <Line
             type="monotone"
             dataKey="revenue"
-            stroke="#aeea00"
+            stroke="#8CC470"
             strokeWidth={2}
             name="Revenue"
             dot={false}
@@ -160,7 +158,7 @@ export default function ProfitLossTrendChart({
           <Line
             type="monotone"
             dataKey="expenses"
-            stroke="#ff6d00"
+            stroke="#E88470"
             strokeWidth={2}
             name="Expenses"
             dot={false}
@@ -168,7 +166,7 @@ export default function ProfitLossTrendChart({
           <Line
             type="monotone"
             dataKey="profit"
-            stroke="#00e676"
+            stroke="#70A6DE"
             strokeWidth={2}
             name="Profit"
             dot={false}

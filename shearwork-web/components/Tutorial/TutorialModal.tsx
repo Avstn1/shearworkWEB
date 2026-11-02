@@ -99,7 +99,7 @@ export default function TutorialModal({
 
   const content = (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="modal-backdrop z-[80] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -110,37 +110,37 @@ export default function TutorialModal({
         aria-describedby={descriptionId}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111312] p-6 shadow-2xl"
+        className="modal-surface w-full max-w-md p-6 outline-none"
         style={{ transition: reduceMotion ? 'none' : 'transform 200ms ease' }}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.65rem] uppercase tracking-[0.25em] text-[#9ca3af]">Tutorial</p>
-            <h2 id={titleId} className="mt-1 text-lg font-semibold text-white">
+            <p className="stat-label">Tutorial</p>
+            <h2 id={titleId} className="mt-1 text-[15px] font-semibold tracking-tight text-ivory">
               {step.title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-[#cbd5f5] transition hover:border-white/20 hover:text-white"
+            className="btn btn-ghost btn-sm h-8 w-8 shrink-0 !px-0"
             aria-label="Close tutorial"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" strokeWidth={1.75} />
           </button>
         </div>
 
-        <p id={descriptionId} className="mt-3 text-sm text-[#bdbdbd]">
+        <p id={descriptionId} className="mt-3 text-sm leading-relaxed text-gray-400">
           {step.description}
         </p>
 
         {step.imageSrc && (
-          <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
+          <div className="mt-4 overflow-hidden rounded-lg border border-white/[0.07]">
             <img src={step.imageSrc} alt="" className="w-full" />
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-between text-xs text-[#9ca3af]">
+        <div className="mt-6 flex items-center justify-between gap-3 text-xs tabular-nums text-gray-500">
           <span>
             Step {stepIndex + 1} of {totalSteps}
           </span>
@@ -149,18 +149,18 @@ export default function TutorialModal({
               type="button"
               onClick={onPrev}
               disabled={stepIndex === 0}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-glass btn-sm"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" strokeWidth={1.75} />
               Back
             </button>
             <button
               type="button"
               onClick={stepIndex === totalSteps - 1 ? onFinish : onNext}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:border-white/30"
+              className="btn btn-primary btn-sm"
             >
               {stepIndex === totalSteps - 1 ? 'Finish' : 'Next'}
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" strokeWidth={1.75} />
             </button>
           </div>
         </div>

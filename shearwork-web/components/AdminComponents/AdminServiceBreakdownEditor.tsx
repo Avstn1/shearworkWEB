@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
+import { Plus, Scissors, Trash2 } from 'lucide-react'
+import { EmptyState } from '@/components/ui/AppKit'
 
 interface Props {
   barberId: string
@@ -128,61 +130,67 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
   }
 
   return (
-    <div className="bg-[#1f1f1a] p-4 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="text-[#E8EDC7] font-semibold text-lg">💈 Service Breakdown Editor</h3>
-        <button
-          onClick={handleAdd}
-          className="px-3 py-1 bg-[#445539] rounded hover:bg-[#4d6544] text-white"
-        >
-          Add Service
-        </button>
-      </div>
-
-      {loading ? (
-        <p className="text-gray-400">Loading services...</p>
-      ) : rows.length === 0 ? (
-        <p className="text-gray-400">No service data yet for {month}. You can start by adding one.</p>
-      ) : (
-        <div className="space-y-2">
-          {rows.map(row => (
-            <div key={row.id} className="flex items-center gap-3">
-              <input
-                type="text"
-                value={row.service_name}
-                onChange={e => setRows(prev =>
-                  prev.map(r => r.id === row.id ? { ...r, service_name: e.target.value } : r)
-                )}
-                placeholder="Service Name"
-                className="p-2 rounded bg-[#2b2b2b] text-white w-40"
-              />
-              <input
-                type="text"
-                inputMode="decimal"
-                value={row.bookings}
-                onChange={e => handleNumericChange(e, val =>
-                  setRows(prev => prev.map(r => r.id === row.id ? { ...r, bookings: val } : r))
-                )}
-                placeholder="Bookings"
-                className="p-2 rounded bg-[#2b2b2b] text-white w-24"
-              />
-              <button
-                onClick={() => handleSave(row)}
-                disabled={savingId === row.id}
-                className="px-3 py-1 bg-[#445539] rounded hover:bg-[#4d6544] text-white text-sm"
-              >
-                {savingId === row.id ? 'Saving...' : row.isNew ? 'Save New' : 'Save'}
-              </button>
-              <button
-                onClick={() => handleDelete(row.id, row.isNew)}
-                className="px-3 py-1 bg-[#7b2b2b] rounded hover:bg-[#8b3939] text-white text-sm"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h3 className="panel-title">Service breakdown</h3>
+          <p className="panel-subtitle">Bookings per service for {month}</p>
         </div>
-      )}
-    </div>
+        <button onClick={handleAdd} className="btn btn-glass btn-sm shrink-0">
+          <Plus size={16} strokeWidth={1.75} />
+          Add service
+        </button>
+      </header>
+
+      <div className="panel-body">
+        {loading ? (
+          <p className="text-sm text-muted">Loading services...</p>
+        ) : rows.length === 0 ? (
+          <EmptyState icon={Scissors} title="No service data yet">
+            Nothing recorded for {month}. Start by adding a service.
+          </EmptyState>
+        ) : (
+          <div className="space-y-2">
+            {rows.map(row => (
+              <div key={row.id} className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={row.service_name}
+                  onChange={e => setRows(prev =>
+                    prev.map(r => r.id === row.id ? { ...r, service_name: e.target.value } : r)
+                  )}
+                  placeholder="Service name"
+                  className="field !w-48 flex-1 sm:flex-none"
+                />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={row.bookings}
+                  onChange={e => handleNumericChange(e, val =>
+                    setRows(prev => prev.map(r => r.id === row.id ? { ...r, bookings: val } : r))
+                  )}
+                  placeholder="Bookings"
+                  className="field !w-28 tabular-nums"
+                />
+                <button
+                  onClick={() => handleSave(row)}
+                  disabled={savingId === row.id}
+                  className="btn btn-primary btn-sm"
+                >
+                  {savingId === row.id ? 'Saving...' : row.isNew ? 'Save new' : 'Save'}
+                </button>
+                <button
+                  onClick={() => handleDelete(row.id, row.isNew)}
+                  className="btn btn-ghost btn-sm hover:!text-[#D99A8B]"
+                  aria-label="Delete service"
+                >
+                  <Trash2 size={16} strokeWidth={1.75} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   )
 }

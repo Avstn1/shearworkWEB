@@ -5,7 +5,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw, X, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 import SignOutButton from '@/components/SignOutButton'
@@ -39,6 +39,8 @@ import { supabase } from '@/utils/supabaseClient'
 import { isTrialActive } from '@/utils/trial'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { DASHBOARD_TUTORIAL_STEPS } from '@/lib/tutorials/dashboard'
+import { PageHeader, PanelHeading, Segmented } from '@/components/ui/AppKit'
+import { CalendarRange, FileText, GitCompareArrows } from 'lucide-react'
 
 const MONTHS = [
   'January','February','March','April','May','June',
@@ -119,13 +121,9 @@ export default function DashboardPage() {
     }
   }, [trialPromptMode])
 
-  /* ─────────────────────────────────────────────
-   * CARD STYLE — matched to AutoNudge dashboard
-   * Removed: backdrop-blur-lg, shadow-xl, bg-white/10
-   * Added:   bg-white/5 (matching AutoNudge cards)
-   * ───────────────────────────────────────────── */
-  const cardClass =
-    'bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col flex-1'
+  /* Graphite panels: stat tiles and content panels share one surface. */
+  const statClass = 'panel flex flex-col justify-center p-4'
+  const cardClass = 'panel flex min-h-0 flex-1 flex-col p-4 sm:p-5'
 
   useEffect(() => {
     if (!user?.id) return
@@ -170,7 +168,7 @@ export default function DashboardPage() {
   }, [selectedMonth, selectedYear])
 
   if (!user) {
-    return <div className="flex justify-center items-center h-screen text-white">Please log in to access your dashboard.</div>
+    return <div className="flex h-screen items-center justify-center bg-canvas text-sm text-muted">Please log in to access your dashboard.</div>
   }
 
   // -------------------- SYNC FUNCTIONS --------------------
@@ -252,145 +250,115 @@ export default function DashboardPage() {
   }
 
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen text-white">Loading dashboard...</div>
-  if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>
+  if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas text-sm text-muted">Loading dashboard…</div>
+  if (error) return <div className="flex h-screen items-center justify-center bg-canvas text-sm text-[#D99A8B]">{error}</div>
 
   // -------------------- HEADER COMPONENT --------------------
+  const VIEW_OPTIONS: Array<{ value: 'monthly' | 'yearly' | 'profit'; label: string }> = [
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'yearly', label: 'Yearly' },
+    { value: 'profit', label: 'Profit/Loss' },
+  ]
+
+  const VIEW_SUBTITLES: Record<'monthly' | 'yearly' | 'profit', string> = {
+    monthly: `Revenue, clients and reports for ${selectedMonth} ${selectedYear}.`,
+    yearly: `Totals, trends and top clients across ${selectedYear}.`,
+    profit: `Revenue against expenses for ${selectedMonth} ${selectedYear}.`,
+  }
+
   const DashboardHeader = () => (
-    <motion.div
-      variants={fadeInUp}
-      initial="hidden"
-      animate="visible"
-      className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-    >
-      {/* Welcome + Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
-        <div>
-          {/* ── Toned-down heading: single white color instead of animated gradient ── */}
-          <h1 className={`font-bold text-white ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-            Welcome back!
-          </h1>
-          <p className="text-xs text-[#bdbdbd]">Here's your local daily & monthly summary.</p>
-        </div>
-
-        {/* ── View switcher: unified muted style, no multi-color glows ── */}
-        <div data-tutorial-id="dashboard-view-switcher" className="flex gap-1 w-full sm:w-auto bg-[#1a1a1a] rounded-full p-1">
-          <button
-            onClick={() => setDashboardView('monthly')}
-            className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
-              dashboardView === 'monthly'
-                ? 'bg-white/10 text-white'
-                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setDashboardView('yearly')}
-            className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
-              dashboardView === 'yearly'
-                ? 'bg-white/10 text-white'
-                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-            }`}
-          >
-            Yearly
-          </button>
-          <button
-            onClick={() => setDashboardView('profit')}
-            className={`flex-1 sm:flex-none px-5 py-3 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
-              dashboardView === 'profit'
-                ? 'bg-white/10 text-white'
-                : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-            }`}
-          >
-            Profit/Loss
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <ManageTipsButton />
-          <TutorialLauncher
-            pageKey="dashboard"
-            steps={DASHBOARD_TUTORIAL_STEPS}
-            renderTrigger={(openTutorial) => (
-              <TutorialInfoButton onClick={openTutorial} label="Dashboard tutorial" />
-            )}
-          />
-        </div>
-      </div>
-
-      {/* Month + Year Selector */}
-      <div data-tutorial-id="dashboard-date-controls" className="flex flex-col flex-row sm:flex-row sm:items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-        <button
-          onClick={() => {
-            syncAcuityData()
-          }}
-          disabled={isRefreshing}
-          className="whitespace-nowrap flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Sync data"
-        >
-          <Loader2 className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="sm:inline">Sync</span>
-        </button>
-
-        {isRefreshing && (
-          <div className="flex items-center gap-1 text-xs text-[#bdbdbd] animate-pulse ml-2">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Syncing...</span>
+    <PageHeader icon={TrendingUp} tone="violet"
+      title="Analytics"
+      subtitle={VIEW_SUBTITLES[dashboardView]}
+      actions={
+        <>
+          <div data-tutorial-id="dashboard-view-switcher" className="w-full sm:w-auto">
+            <Segmented
+              options={VIEW_OPTIONS}
+              value={dashboardView}
+              onChange={setDashboardView}
+              className="w-full sm:w-auto"
+            />
           </div>
-        )}
-        
-        <MonthDropdown
-          selectedMonth={selectedMonth}
-          setSelectedMonth={setSelectedMonth}
-          disabled={isRefreshing}
-        />
 
-        <DailySelector
-          userId={user.id}
-          selectedYear={selectedYear}
-          selectedMonth={selectedMonth}
-          selectedDay={selectedDay}
-          setSelectedDay={setSelectedDay}
-          disabled={isRefreshing}
-        />
+          {/* Month + Day + Year selector, sync */}
+          <div data-tutorial-id="dashboard-date-controls" className="flex flex-wrap items-center gap-2">
+            <MonthDropdown
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              disabled={isRefreshing}
+            />
 
-        <YearDropdown
-          years={Array.from({ length: 5 }, (_, i) => getLocalMonthYear().year - 2 + i)}
-          selectedYear={selectedYear}
-          setSelectedYear={setSelectedYear}
-          disabled={isRefreshing}
-        />
-      </div>
-    </motion.div>
+            <DailySelector
+              userId={user.id}
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+              selectedDay={selectedDay}
+              setSelectedDay={setSelectedDay}
+              disabled={isRefreshing}
+            />
+
+            <YearDropdown
+              years={Array.from({ length: 5 }, (_, i) => getLocalMonthYear().year - 2 + i)}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              disabled={isRefreshing}
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                syncAcuityData()
+              }}
+              disabled={isRefreshing}
+              className="btn btn-glass btn-sm h-9"
+              title="Sync data"
+            >
+              {isRefreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
+              ) : (
+                <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
+              )}
+              <span>{isRefreshing ? 'Syncing…' : 'Sync'}</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ManageTipsButton />
+            <TutorialLauncher
+              pageKey="dashboard"
+              steps={DASHBOARD_TUTORIAL_STEPS}
+              renderTrigger={(openTutorial) => (
+                <TutorialInfoButton onClick={openTutorial} label="Dashboard tutorial" />
+              )}
+            />
+          </div>
+        </>
+      }
+    />
   )
 
   // -------------------- Shared selected-date string --------------------
   const selectedDateStr = `${selectedYear}-${String(MONTHS.indexOf(selectedMonth) + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
 
   // -------------------- MAIN DASHBOARD --------------------
+  // Desktop: three columns that fill the viewport (no page scroll); each panel
+  // scrolls inside itself if its content is taller. Mobile/tablet: stacked.
   const MainDashboard = () => (
-    <motion.div
-      className={`grid gap-4 flex-1 ${
-        isMobile
-          ? 'grid-cols-1'
-          : 'grid-cols-[minmax(200px,3fr)_minmax(150px,1.5fr)_minmax(100px,1fr)]'
-      }`}
-    >
-      {/* LEFT COLUMN */}
-      <div className="flex flex-col gap-4 pr-1">
-        <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <motion.div className={cardClass}>
+    <motion.div className="grid grid-cols-1 gap-4 lg:h-full lg:grid-cols-[minmax(0,3fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
+      {/* LEFT: stats + service breakdown */}
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <motion.div variants={fadeInUp} className="grid flex-shrink-0 grid-cols-1 gap-4 sm:grid-cols-3">
+          <motion.div className={statClass}>
             <DailyRevenueCard
               key={`daily-${refreshKey}`}
               userId={user.id}
               selectedDate={selectedDateStr}
             />
           </motion.div>
-          <motion.div className={cardClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
-          <motion.div className={cardClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
-        </motion.div>
-        <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <motion.div className={cardClass}>
+          <motion.div className={statClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
+          <motion.div className={statClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
+          <motion.div className={statClass}>
             <WeeklyRevenueCard
               key={`weekly-${refreshKey}`}
               userId={user.id}
@@ -398,43 +366,49 @@ export default function DashboardPage() {
               selectedYear={selectedYear}
             />
           </motion.div>
-          <motion.div className={cardClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} timeframe={'YTD'} /></motion.div>
-          <motion.div className={cardClass}><AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
+          <motion.div className={statClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} timeframe={'YTD'} /></motion.div>
+          <motion.div className={statClass}><AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></motion.div>
         </motion.div>
-        <motion.div variants={fadeInUp} className={cardClass}><ServiceBreakdownChart key={`services-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
+        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[320px] lg:min-h-0`}><ServiceBreakdownChart key={`services-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
       </div>
 
-      {/* MIDDLE COLUMN */}
-      <div className="flex flex-col gap-4 px-1">
-        <motion.div variants={fadeInUp} className={cardClass}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></motion.div>
-        <motion.div variants={fadeInUp} className={cardClass}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
+      {/* MIDDLE: top clients + funnels */}
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[280px] lg:min-h-0 lg:overflow-y-auto`}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></motion.div>
+        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[320px] lg:min-h-0`}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
       </div>
 
-      {/* RIGHT COLUMN */}
-      <div className="flex flex-col gap-4 pl-1">
-        <motion.div data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Monthly Reports</h2>
-          <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-        </motion.div>
-        <motion.div id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Weekly Reports</h2>
-          <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-        </motion.div>
-        <motion.div data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className={cardClass}>
-          <h2 className="text-[#bdbdbd] font-semibold mb-2 text-sm sm:text-lg">Weekly Comparison</h2>
-          <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
-        </motion.div>
+      {/* RIGHT: reports */}
+      <div className="flex min-h-0 min-w-0 flex-col gap-4">
+        <motion.section data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
+          <header className="panel-header py-3"><PanelHeading icon={FileText} tone="sage">Monthly reports</PanelHeading></header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+          </div>
+        </motion.section>
+        <motion.section id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
+          <header className="panel-header py-3"><PanelHeading icon={CalendarRange} tone="sky">Weekly reports</PanelHeading></header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+          </div>
+        </motion.section>
+        <motion.section data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
+          <header className="panel-header py-3"><PanelHeading icon={GitCompareArrows} tone="sand">Weekly comparison</PanelHeading></header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
+          </div>
+        </motion.section>
       </div>
     </motion.div>
   )
 
   // -------------------- PAGE CONTENT --------------------
   const content = (
-    <div className="min-h-screen flex flex-col p-4 text-[var(--foreground)] pt-[100px] bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+    <div className={`app-page flex flex-col ${dashboardView === 'monthly' ? 'lg:h-[calc(100dvh-var(--navbar-height,72px))] lg:min-h-0 lg:overflow-hidden lg:pb-6 xl:pb-6' : ''}`}>
       <DashboardHeader />
       {showTrialNote && (
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#bdbdbd]">
-          <span className="font-semibold text-white">Getting started:</span> Data will populate after your first sync.
+        <div className="panel mb-4 px-4 py-3 text-sm text-muted">
+          <span className="font-semibold text-ivory">Getting started:</span> Data will populate after your first sync.
           Use the Re‑sync button above after connecting your calendar.
         </div>
       )}
@@ -449,10 +423,11 @@ export default function DashboardPage() {
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={dashboardView}
-          initial={{ opacity: 0, y: 20 }}
+          className={dashboardView === 'monthly' ? 'lg:min-h-0 lg:flex-1' : undefined}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4, ease: 'easeInOut' }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
         >
 
           {dashboardView === 'monthly' && <MainDashboard />}
@@ -493,14 +468,14 @@ export default function DashboardPage() {
 
       {isMobile && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex flex-col">
-          <div className="absolute inset-0 backdrop-blur-sm bg-black/40" onClick={() => setMobileMenuOpen(false)} />
-          <div className="relative bg-[var(--accent-2)] p-4 w-64 shadow-lg z-50 flex flex-col min-h-full">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-[var(--highlight)] text-2xl font-bold">✂️ Corva</span>
-              <button onClick={() => setMobileMenuOpen(false)} className="text-[var(--text-bright)] text-xl">✕</button>
+          <div className="modal-backdrop" onClick={() => setMobileMenuOpen(false)} />
+          <div className="relative z-[61] flex min-h-full w-64 flex-col border-r border-white/[0.07] bg-surface p-4">
+            <div className="mb-6 flex items-center justify-between">
+              <span className="text-lg font-semibold text-ivory">Corva</span>
+              <button type="button" aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} className="btn btn-ghost btn-sm px-1.5"><X size={18} strokeWidth={1.75} /></button>
             </div>
-            <nav className="flex flex-col space-y-3 flex-1">
-              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-[var(--text-bright)] text-lg font-semibold hover:text-[var(--highlight)]">Dashboard</Link>
+            <nav className="flex flex-1 flex-col space-y-3">
+              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="text-sm font-medium text-gray-300 hover:text-ivory">Dashboard</Link>
             </nav>
             <div className="mt-auto w-full"><SignOutButton className="w-full" /></div>
           </div>

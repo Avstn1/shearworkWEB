@@ -22,10 +22,7 @@ export default function ConnectSquareButton({
 	variant = 'primary',
 }: ConnectSquareButtonProps) {
 	const [connecting, setConnecting] = useState(false)
-	const baseClass =
-		variant === 'secondary'
-			? 'bg-white/10 border border-white/20 text-white hover:bg-white/15'
-			: 'bg-blue-600 text-white hover:bg-blue-700'
+	const baseClass = variant === 'secondary' ? 'btn-glass' : 'btn-primary'
 
 	const connectSquare = async () => {
 		if (disabled || connecting) return
@@ -52,9 +49,7 @@ export default function ConnectSquareButton({
 			onClick={connectSquare}
 			disabled={connecting || disabled}
 			title={disabledReason}
-			className={`px-4 py-2 rounded-lg ${baseClass} ${
-				connecting || disabled ? 'opacity-60 cursor-not-allowed' : ''
-			} ${className}`}
+			className={`btn btn-sm ${baseClass} ${className}`}
 		>
 			{connecting ? 'Connecting...' : 'Connect to Square'}
 		</button>

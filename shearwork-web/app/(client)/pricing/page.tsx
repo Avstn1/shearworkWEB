@@ -7,7 +7,7 @@ import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
 } from '@stripe/react-stripe-js'
-import { Loader2, X, Check, Zap, Crown } from 'lucide-react'
+import { Loader2, X, Check, Zap, Crown, LogOut } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import { TRIAL_DAYS } from '@/lib/constants/trial'
@@ -58,9 +58,9 @@ const FEATURES = {
 // Loading component for Suspense fallback
 function PricingPageLoader() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
-      <Loader2 className="h-8 w-8 animate-spin text-[#7affc9]" />
-      <p className="mt-4 text-gray-300">Loading pricing...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-canvas">
+      <Loader2 className="h-6 w-6 animate-spin text-sage" />
+      <p className="mt-3 text-sm text-muted">Loading pricing...</p>
     </div>
   )
 }
@@ -298,9 +298,9 @@ function PricingPageContent() {
   // Show loading state while authenticating
   if (authenticating) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#7affc9]" />
-        <p className="mt-4 text-gray-300">Authenticating...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-canvas">
+        <Loader2 className="h-6 w-6 animate-spin text-sage" />
+        <p className="mt-3 text-sm text-muted">Authenticating...</p>
       </div>
     )
   }
@@ -313,37 +313,35 @@ function PricingPageContent() {
   const yearlySavings = monthly && yearly ? (monthly.amount * 12) - yearly.amount : null
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#181818] px-4 pt-20 sm:pt-24 pb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-canvas text-ivory px-4 pt-20 sm:pt-24 pb-10">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-          Pick a plan
-        </h1>
-        <p className="text-sm text-gray-400">
+        <h1 className="page-title text-[22px] md:text-[26px]">Pick a plan</h1>
+        <p className="page-subtitle">
           Fill empty chairs. Bring back clients. Make more money.
         </p>
       </div>
 
       {/* Plans */}
-      <div className={`flex flex-col lg:flex-row gap-5 w-full max-w-4xl ${showTrial ? '' : 'lg:max-w-2xl'}`}>
-        
+      <div className={`grid grid-cols-1 gap-4 w-full max-w-4xl ${showTrial ? 'lg:grid-cols-3' : 'lg:grid-cols-2 lg:max-w-2xl'}`}>
+
         {/* Trial */}
         {showTrial && (
-          <div className="flex-1 bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
+          <section className="panel flex flex-col p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-5 w-5 text-[#73aa57]" />
-              <h2 className="text-lg font-semibold text-white">Free Trial</h2>
+              <Zap className="h-4 w-4 text-sage" strokeWidth={1.75} />
+              <h2 className="panel-title">Free Trial</h2>
             </div>
-            
-            <div className="mb-1">
-              <span className="text-4xl font-bold text-white">$0</span>
+
+            <div className="mb-1 flex items-baseline gap-1.5">
+              <span className="text-[34px] leading-none font-semibold tracking-tight tabular-nums text-ivory">$0</span>
             </div>
-            <p className="text-sm text-gray-500 mb-6.5">{TRIAL_DAYS} days • No card required <br/> Takes 2 minutes to set up</p>
+            <p className="text-[13px] text-muted mb-6">{TRIAL_DAYS} days · No card required <br/> Takes 2 minutes to set up</p>
 
             <button
               onClick={() => startCheckout('trial')}
               disabled={loading || loadingPrices}
-              className="w-full rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
+              className="btn btn-glass w-full mb-5"
             >
               {loading && selectedPlan === 'trial' ? (
                 <Loader2 className="h-4 w-4 mx-auto animate-spin" />
@@ -352,42 +350,40 @@ function PricingPageContent() {
               )}
             </button>
 
+            <div className="divider mb-5" />
             <ul className="space-y-3">
               {FEATURES.trial.map((feature, i) => (
                 <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                  <Check className="h-4 w-4 text-[#73aa57] flex-shrink-0" />
+                  <Check className="h-4 w-4 text-sage flex-shrink-0" strokeWidth={1.75} />
                   {feature}
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         )}
 
         {/* Pro Yearly - Featured */}
-        <div className="flex-1 bg-[#1a1a1a] rounded-2xl p-6 border-2 border-[#73aa57]/50 relative">
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <span className="bg-[#73aa57] text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-              <Crown className="h-3 w-3" />
-              Best Value
+        <section className="panel flex flex-col p-6 !border-sage/45">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h2 className="panel-title">Pro Yearly</h2>
+            <span className="badge badge-sage">
+              <Crown className="h-3 w-3" strokeWidth={1.75} />
+              Best value
             </span>
           </div>
-          
-          <div className="flex items-center gap-2 mb-4 mt-1">
-            <h2 className="text-lg font-semibold text-white">Pro Yearly</h2>
-          </div>
-          
-          <div className="mb-1">
+
+          <div className="mb-1 flex items-baseline gap-1.5 min-h-[34px]">
             {loadingPrices || !yearly ? (
               <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
             ) : (
-              <span className="text-4xl font-bold text-white">
+              <span className="text-[34px] leading-none font-semibold tracking-tight tabular-nums text-ivory">
                 {formatAmount(yearly.amount, yearly.currency)}
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500 mb-1">per year</p>
+          <p className="text-[13px] text-muted mb-1">per year</p>
           {yearlySavings && yearlySavings > 0 && (
-            <p className="text-sm text-[#73aa57] font-medium mb-4">
+            <p className="text-[13px] text-sage-bright font-medium tabular-nums mb-4">
               Save {formatAmount(yearlySavings, yearly?.currency || 'usd')} vs monthly
             </p>
           )}
@@ -396,7 +392,7 @@ function PricingPageContent() {
           <button
             onClick={() => startCheckout('yearly')}
             disabled={loading || loadingPrices || !yearly}
-            className="w-full rounded-xl bg-[#73aa57] hover:bg-[#5b8f52] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
+            className="btn btn-primary w-full mb-5"
           >
             {loading && selectedPlan === 'yearly' ? (
               <Loader2 className="h-4 w-4 mx-auto animate-spin" />
@@ -405,37 +401,39 @@ function PricingPageContent() {
             )}
           </button>
 
+          <div className="divider mb-5" />
           <ul className="space-y-3">
             {FEATURES.proYearly.map((feature, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                <Check className="h-4 w-4 text-[#73aa57] flex-shrink-0" />
+                <Check className="h-4 w-4 text-sage flex-shrink-0" strokeWidth={1.75} />
                 {feature}
               </li>
             ))}
           </ul>
-        </div>
+        </section>
 
         {/* Pro Monthly */}
-        <div className="flex-1 bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
+        <section className="panel flex flex-col p-6">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-lg font-semibold text-white">Pro Monthly</h2>
+            <h2 className="panel-title">Pro Monthly</h2>
           </div>
-          
-          <div className="mb-1">
+
+          <div className="mb-1 flex items-baseline gap-1.5 min-h-[34px]">
             {loadingPrices || !monthly ? (
               <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
             ) : (
-              <span className="text-4xl font-bold text-white">
+              <span className="text-[34px] leading-none font-semibold tracking-tight tabular-nums text-ivory">
                 {formatAmount(monthly.amount, monthly.currency)}
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500 mb-11">per month</p>
+          <p className="text-[13px] text-muted mb-1">per month</p>
+          <div className="mb-4 h-5" />
 
           <button
             onClick={() => startCheckout('monthly')}
             disabled={loading || loadingPrices || !monthly}
-            className="w-full rounded-xl bg-[#2a2a2a] hover:bg-[#333] text-white font-semibold py-3 text-sm transition-colors disabled:opacity-50 mb-5"
+            className="btn btn-glass w-full mb-5"
           >
             {loading && selectedPlan === 'monthly' ? (
               <Loader2 className="h-4 w-4 mx-auto animate-spin" />
@@ -444,69 +442,86 @@ function PricingPageContent() {
             )}
           </button>
 
+          <div className="divider mb-5" />
           <ul className="space-y-3">
             {FEATURES.pro.map((feature, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                <Check className="h-4 w-4 text-[#73aa57] flex-shrink-0" />
+                <Check className="h-4 w-4 text-sage flex-shrink-0" strokeWidth={1.75} />
                 {feature}
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       </div>
 
       {/* Footer */}
       <p className="mt-6 text-xs text-gray-500">
-        Cancel anytime • Secure checkout by Stripe
+        Cancel anytime · Secure checkout by Stripe
       </p>
 
       {/* Modal: embedded checkout */}
       {clientSecret && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 overflow-y-auto">
-          <div className="relative w-full max-w-xl bg-[#050608] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => closeCheckout(true)}
-              className="absolute top-3 right-3 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition px-1.5 py-1.5 z-10"
-              aria-label="Close checkout"
-            >
-              <X className="w-4 h-4 text-gray-200" />
-            </button>
+        <div className="modal-backdrop z-50 flex items-center justify-center px-4 py-6 overflow-y-auto">
+          <div className="modal-surface relative w-full max-w-xl my-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.07]">
+              <h2 className="panel-title">
+                Secure checkout
+                {selectedPlan === 'monthly' && ' · Monthly plan'}
+                {selectedPlan === 'yearly' && ' · Yearly plan'}
+                {selectedPlan === 'trial' && ' · Trial plan'}
+              </h2>
+              <button
+                onClick={() => closeCheckout(true)}
+                className="btn btn-ghost btn-sm !h-8 !w-8 !p-0"
+                aria-label="Close checkout"
+              >
+                <X className="w-4 h-4" strokeWidth={1.75} />
+              </button>
+            </div>
 
-            <h2 className="text-sm font-semibold text-gray-100 mb-2">
-              Secure checkout
-              {selectedPlan === 'monthly' && ' • Monthly plan'}
-              {selectedPlan === 'yearly' && ' • Yearly plan'}
-              {selectedPlan === 'trial' && ' • Trial plan'}
-            </h2>
-
-            <EmbeddedCheckoutProvider
-              stripe={stripePromise}
-              options={{ clientSecret }}
-            >
-              <div className="min-h-[360px]">
-                <EmbeddedCheckout />
-              </div>
-            </EmbeddedCheckoutProvider>
+            <div className="p-4 md:p-5">
+              <EmbeddedCheckoutProvider
+                stripe={stripePromise}
+                options={{ clientSecret }}
+              >
+                <div className="min-h-[360px]">
+                  <EmbeddedCheckout />
+                </div>
+              </EmbeddedCheckoutProvider>
+            </div>
           </div>
         </div>
       )}
 
       {showCancelModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0b0f0e] p-6 text-white shadow-2xl">
-            <h2 className="text-lg font-semibold mb-2">Checkout Canceled</h2>
-            <p className="text-sm text-gray-300 mb-4">
-              Your subscription was not completed. You have not been charged. You can return to our site to try again or choose a different plan.
-            </p>
-            <button
-              onClick={() => {
-                setShowCancelModal(false)
-                router.push('/pricing')
-              }}
-              className="w-full rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black font-semibold py-2"
-            >
-              Return to pricing
-            </button>
+        <div className="modal-backdrop flex items-center justify-center px-4">
+          <div className="modal-surface w-full max-w-md text-ivory">
+            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.07]">
+              <h2 className="panel-title">Checkout canceled</h2>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="btn btn-ghost btn-sm !h-8 !w-8 !p-0"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" strokeWidth={1.75} />
+              </button>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-sm text-gray-300">
+                Your subscription was not completed. You have not been charged. You can return to our site to try again or choose a different plan.
+              </p>
+            </div>
+            <div className="flex justify-end px-5 pb-5">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false)
+                  router.push('/pricing')
+                }}
+                className="btn btn-primary btn-sm"
+              >
+                Return to pricing
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -519,8 +534,9 @@ function PricingPageContent() {
             await supabase.auth.signOut()
             setTimeout(() => (window.location.href = '/login'), 700)
           }}
-          className="px-4 py-2 bg-red-500/10 hover:bg-red-500/40 text-white font-medium rounded-2xl shadow-sm transition"
+          className="btn btn-ghost btn-sm"
         >
+          <LogOut className="h-4 w-4" strokeWidth={1.75} />
           Logout
         </button>
       </div>

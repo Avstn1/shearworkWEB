@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
-import { AnimatePresence, motion, Variants, easeInOut } from 'framer-motion'
+import { Check, Loader2 } from 'lucide-react'
+import { motion, Variants, easeInOut } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { supabase } from '@/utils/supabaseClient'
 import { useAuth } from '@/contexts/AuthContext'
@@ -51,7 +51,6 @@ function PricingReturnContent() {
   const [profileLoading, setProfileLoading] = useState(false)
   const [currentOnboardingStep, setCurrentOnboardingStep] = useState<'profile' | 'calendar' | 'booking-sync' | 'auto-nudge'>('profile')
   const [showValidationErrors, setShowValidationErrors] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
   // Calendar state
   const [calendarStatus, setCalendarStatus] = useState({
@@ -574,276 +573,180 @@ function PricingReturnContent() {
   // })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            {/* overlay */}
-            <div
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            {/* slide-over sidebar */}
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'tween', duration: 0.3 }}
-              className="relative w-72 bg-[#1a1f1b] border-r border-white/10 p-6 shadow-2xl z-50 flex flex-col min-h-full"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-emerald-300 text-2xl font-bold">Onboarding</span>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-gray-400 hover:text-white text-xl transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              {/* Mobile Steps */}
-              <div className="space-y-3 flex-1">
-                {stepLabels.map((step, index) => {
-                  const stepNum = index + 1
-                  const isActive = stepNum === currentStepNumber
-                  const isComplete = stepNum < currentStepNumber
-                  
-                  return (
-                    <div
-                      key={step.key}
-                      className={`p-4 rounded-xl border transition-all ${
-                        isComplete
-                          ? 'border-emerald-300/40 bg-emerald-400/10'
-                          : isActive
-                          ? 'border-emerald-300/40 bg-emerald-400/10'
-                          : 'border-white/10 bg-black/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold ${
-                          isComplete
-                            ? 'border-emerald-300 bg-emerald-300 text-black'
-                            : isActive
-                            ? 'border-emerald-300 text-emerald-300'
-                            : 'border-white/30 text-white/30'
-                        }`}>
-                          {isComplete ? '✓' : stepNum}
-                        </div>
-                        <div>
-                          <p className={`text-sm font-semibold ${
-                            isComplete || isActive ? 'text-white' : 'text-white/40'
-                          }`}>
-                            {step.label}
-                          </p>
-                          {stepNum === 1 && statusSummary && (
-                            <p className="text-xs text-emerald-300 mt-0.5">
-                              ✓ {statusSummary}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Page Content */}
-      <div
-        className="min-h-screen px-4 py-6 md:px-8 md:py-8"
-        style={{ paddingTop: 'calc(80px + 2.5rem)' }}
-      >
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-white">Onboarding</h1>
-            <p className="text-xs text-gray-400">Complete setup to unlock dashboard</p>
+    <div className="app-page">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="page-header !mb-5">
+          <div className="min-w-0">
+            <h1 className="page-title">Onboarding</h1>
+            <p className="page-subtitle">Complete setup to unlock your dashboard</p>
           </div>
+          {statusSummary && (
+            <span className="badge badge-sage tabular-nums">
+              <Check className="h-3 w-3" strokeWidth={2} />
+              {statusSummary}
+            </span>
+          )}
+        </div>
 
-          <div className="flex flex-col lg:flex-row gap-6 lg:items-stretch">
-            {/* Desktop Sidebar */}
-            <div className="hidden lg:flex w-72 flex-shrink-0">
-              <div className="w-full h-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
-                <div className="space-y-3">
-                  {stepLabels.map((step, index) => {
-                    const stepNum = index + 1
-                    const isActive = stepNum === currentStepNumber
-                    const isComplete = stepNum < currentStepNumber
-                    
-                    return (
-                      <div
-                        key={step.key}
-                        className={`p-4 rounded-xl border transition-all ${
-                          isComplete
-                            ? 'border-emerald-300/40 bg-emerald-400/10'
-                            : isActive
-                            ? 'border-emerald-300/40 bg-emerald-400/10'
-                            : 'border-white/10 bg-black/20'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold ${
-                            isComplete
-                              ? 'border-emerald-300 bg-emerald-300 text-black'
-                              : isActive
-                              ? 'border-emerald-300 text-emerald-300'
-                              : 'border-white/30 text-white/30'
-                          }`}>
-                            {isComplete ? '✓' : stepNum}
-                          </div>
-                          <div>
-                            <p className={`text-sm font-semibold ${
-                              isComplete || isActive ? 'text-white' : 'text-white/40'
-                            }`}>
-                              {step.label}
-                            </p>
-                            {stepNum === 1 && statusSummary && (
-                              <p className="text-xs text-emerald-300 mt-0.5">
-                                ✓ {statusSummary}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
+        {/* Step indicator */}
+        <ol className="mb-6 flex items-center gap-2 sm:gap-3" aria-label="Onboarding progress">
+          {stepLabels.map((step, index) => {
+            const stepNum = index + 1
+            const isActive = stepNum === currentStepNumber
+            const isComplete = stepNum < currentStepNumber
 
-            {/* Mobile Menu Button */}
-            <div className="flex lg:hidden">
-              <button
-                onClick={() => setMobileMenuOpen(true)}
-                className="px-6 py-2.5 bg-gradient-to-r from-emerald-400 to-[#3af1f7] text-black rounded-full font-semibold shadow-lg hover:shadow-emerald-400/20 transition-all"
+            return (
+              <li
+                key={step.key}
+                className={`flex items-center gap-2 sm:gap-3 ${index < stepLabels.length - 1 ? 'flex-1' : ''}`}
+                aria-current={isActive ? 'step' : undefined}
               >
-                Menu
-              </button>
-            </div>
-
-            {/* Main Content */}
-            <motion.div
-              key={currentOnboardingStep}
-              variants={fadeInUp}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="flex-1 flex flex-col"
-            >
-              {!hasAccess ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-xl h-full">
-                  <div className="space-y-4">
-                    {loading ? (
-                      <div className="flex items-center gap-2 text-sm text-gray-300">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Processing your subscription…
-                      </div>
-                    ) : sessionStatus === 'open' ? (
-                      <>
-                        <p className="text-lg font-semibold text-white">Checkout not completed</p>
-                        <p className="text-sm text-gray-300">
-                          Please return to pricing to finish checkout and activate your plan.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-lg font-semibold text-white">No active subscription</p>
-                        <p className="text-sm text-gray-300">
-                          We couldn&apos;t find an active subscription for this account. Please return to pricing to choose a plan.
-                        </p>
-                      </>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => router.push('/pricing')}
-                      className="w-full rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15"
-                    >
-                      Return to pricing
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${
+                      isComplete
+                        ? 'bg-sage/15 text-sage-bright'
+                        : isActive
+                        ? 'bg-ivory text-ink'
+                        : 'border border-white/[0.12] text-gray-500'
+                    }`}
+                  >
+                    {isComplete ? <Check className="h-3.5 w-3.5" strokeWidth={2.25} /> : stepNum}
+                  </span>
+                  <span
+                    className={`text-[13px] font-medium whitespace-nowrap ${
+                      isActive ? 'text-ivory' : isComplete ? 'text-gray-300 hidden md:inline' : 'text-gray-500 hidden md:inline'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
                 </div>
-              ) : waitingForWebhook ? (
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-xl h-full">
-                  <div className="flex items-center gap-3 text-sm text-gray-300">
+                {index < stepLabels.length - 1 && (
+                  <span
+                    className={`h-px flex-1 min-w-3 ${isComplete ? 'bg-sage/40' : 'bg-white/[0.08]'}`}
+                    aria-hidden="true"
+                  />
+                )}
+              </li>
+            )
+          })}
+        </ol>
+
+        {/* Main Content */}
+        <motion.div
+          key={currentOnboardingStep}
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          className="flex flex-col"
+        >
+          {!hasAccess ? (
+            <div className="panel panel-body">
+              <div className="space-y-4">
+                {loading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-300">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Processing your subscription…
                   </div>
+                ) : sessionStatus === 'open' ? (
+                  <>
+                    <p className="panel-title">Checkout not completed</p>
+                    <p className="text-sm text-gray-400">
+                      Please return to pricing to finish checkout and activate your plan.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="panel-title">No active subscription</p>
+                    <p className="text-sm text-gray-400">
+                      We couldn&apos;t find an active subscription for this account. Please return to pricing to choose a plan.
+                    </p>
+                  </>
+                )}
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/pricing')}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Return to pricing
+                  </button>
                 </div>
+              </div>
+            </div>
+          ) : waitingForWebhook ? (
+            <div className="panel panel-body">
+              <div className="flex items-center gap-3 text-sm text-gray-300">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing your subscription…
+              </div>
+            </div>
+          ) : (
+            <>
+              {currentOnboardingStep === 'profile' ? (
+                <ProfileStep
+                  fullName={fullName}
+                  setFullName={setFullName}
+                  phoneNumber={phoneNumber}
+                  setPhoneNumber={setPhoneNumber}
+                  userType={userType}
+                  setUserType={setUserType}
+                  selectedRole={selectedRole}
+                  setSelectedRole={setSelectedRole}
+                  commissionRate={commissionRate}
+                  setCommissionRate={setCommissionRate}
+                  username={username}
+                  setUsername={setUsername}
+                  usernameStatus={usernameStatus}
+                  setUsernameStatus={setUsernameStatus}
+                  bookingLink={bookingLink}
+                  setBookingLink={setBookingLink}
+                  avatarFile={avatarFile}
+                  setAvatarFile={setAvatarFile}
+                  avatarPreview={avatarPreview}
+                  setAvatarPreview={setAvatarPreview}
+                  showValidationErrors={showValidationErrors}
+                  isProfileValid={isProfileValid}
+                  isCommissionValid={isCommissionValid}
+                  isUsernameValid={isUsernameValid}
+                  isPhoneNumberValid={isPhoneNumberValid}
+                  isBookingLinkValid={isBookingLinkValid}
+                  onNext={handleProfileNext}
+                />
+              ) : currentOnboardingStep === 'calendar' ? (
+                <CalendarStep
+                  selectedProvider={selectedProvider}
+                  setSelectedProvider={setSelectedProvider}
+                  calendarStatus={calendarStatus}
+                  acuityCalendars={acuityCalendars}
+                  selectedAcuityCalendar={selectedAcuityCalendar}
+                  setSelectedAcuityCalendar={setSelectedAcuityCalendar}
+                  handleBeforeConnectAcuity={handleBeforeConnectAcuity}
+                  handleAcuityConnectSuccess={handleAcuityConnectSuccess}
+                  handleBeforeConnectSquare={handleBeforeConnectSquare}
+                  onBack={handleBack}
+                  onFinish={handleNext}
+                  onSaveCalendar={handleSaveCalendar}
+                  isCalendarConnected={isCalendarConnected}
+                  profileLoading={profileLoading}
+                />
+              ) : currentOnboardingStep === 'booking-sync' ? (
+                <BookingSyncStep
+                  onBack={handleBack}
+                  onNext={handleNext}
+                  profileLoading={profileLoading}
+                />
               ) : (
-                <>
-                  {currentOnboardingStep === 'profile' ? (
-                    <ProfileStep
-                      fullName={fullName}
-                      setFullName={setFullName}
-                      phoneNumber={phoneNumber}
-                      setPhoneNumber={setPhoneNumber}
-                      userType={userType}
-                      setUserType={setUserType}
-                      selectedRole={selectedRole}
-                      setSelectedRole={setSelectedRole}
-                      commissionRate={commissionRate}
-                      setCommissionRate={setCommissionRate}
-                      username={username}
-                      setUsername={setUsername}
-                      usernameStatus={usernameStatus}
-                      setUsernameStatus={setUsernameStatus}
-                      bookingLink={bookingLink}
-                      setBookingLink={setBookingLink}
-                      avatarFile={avatarFile}
-                      setAvatarFile={setAvatarFile}
-                      avatarPreview={avatarPreview}
-                      setAvatarPreview={setAvatarPreview}
-                      showValidationErrors={showValidationErrors}
-                      isProfileValid={isProfileValid}
-                      isCommissionValid={isCommissionValid}
-                      isUsernameValid={isUsernameValid}
-                      isPhoneNumberValid={isPhoneNumberValid}
-                      isBookingLinkValid={isBookingLinkValid}
-                      onNext={handleProfileNext}
-                    />
-                  ) : currentOnboardingStep === 'calendar' ? (
-                    <CalendarStep
-                      selectedProvider={selectedProvider}
-                      setSelectedProvider={setSelectedProvider}
-                      calendarStatus={calendarStatus}
-                      acuityCalendars={acuityCalendars}
-                      selectedAcuityCalendar={selectedAcuityCalendar}
-                      setSelectedAcuityCalendar={setSelectedAcuityCalendar}
-                      handleBeforeConnectAcuity={handleBeforeConnectAcuity}
-                      handleAcuityConnectSuccess={handleAcuityConnectSuccess}
-                      handleBeforeConnectSquare={handleBeforeConnectSquare}
-                      onBack={handleBack}
-                      onFinish={handleNext}
-                      onSaveCalendar={handleSaveCalendar}
-                      isCalendarConnected={isCalendarConnected}
-                      profileLoading={profileLoading}
-                    />
-                  ) : currentOnboardingStep === 'booking-sync' ? (
-                    <BookingSyncStep
-                      onBack={handleBack}
-                      onNext={handleNext}
-                      profileLoading={profileLoading}
-                    />
-                  ) : (
-                    <AutoNudgeActivationStep
-                      onBack={handleBack}
-                      onFinish={handleFinishOnboarding}
-                      profileLoading={profileLoading}
-                    />
-                  )}
-                </>
+                <AutoNudgeActivationStep
+                  onBack={handleBack}
+                  onFinish={handleFinishOnboarding}
+                  profileLoading={profileLoading}
+                />
               )}
-            </motion.div>
-          </div>
-        </div>
+            </>
+          )}
+        </motion.div>
       </div>
     </div>
   )
@@ -851,7 +754,7 @@ function PricingReturnContent() {
 
 export default function PricingReturnPage() {
   return (
-    <Suspense fallback={<p>Loading…</p>}>
+    <Suspense fallback={<div className="app-page flex items-center justify-center text-sm text-muted"><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading…</div>}>
       <PricingReturnContent />
     </Suspense>
   )

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import type { LucideIcon } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Search } from "lucide-react";
+import { EmptyState } from "@/components/ui/AppKit";
 
 export type RelatedItem = {
   label: string;
@@ -19,9 +22,9 @@ export type DocEntry = {
 };
 
 const TYPE_COLORS: Record<RelatedItem["type"], string> = {
-  api: "bg-sky-600/15 text-sky-300 border-sky-600/30 hover:bg-sky-600/25",
-  lib: "bg-green-600/15 text-green-400 border-green-600/30 hover:bg-green-600/25",
-  edge: "bg-purple-600/15 text-purple-300 border-purple-600/30 hover:bg-purple-600/25",
+  api: "badge-info",
+  lib: "badge-sage",
+  edge: "badge-warn",
 };
 
 const TYPE_LABELS: Record<RelatedItem["type"], string> = {
@@ -64,36 +67,36 @@ export function DocCard({
       id={entry.id}
       ref={ref}
       className={`
-        rounded-lg border transition-all duration-300 cursor-pointer
+        cursor-pointer rounded-lg border transition-colors duration-200
         ${highlighted
-          ? "border-green-500/70 bg-[#2a2f27] ring-2 ring-green-500/20"
+          ? "border-sage/60 bg-raised"
           : expanded
-          ? "border-[#55694b] bg-[#2a2f27]"
-          : "border-[#55694b]/40 bg-[#242924] hover:border-[#55694b] hover:bg-[#2a2f27]"
+          ? "border-white/[0.12] bg-raised"
+          : "border-white/[0.07] bg-surface hover:border-white/[0.12] hover:bg-raised"
         }
       `}
       onClick={() => setExpanded(!expanded)}
     >
       {/* Card Header */}
-      <div className="flex items-start justify-between gap-4 p-4">
+      <div className="flex items-start justify-between gap-4 px-4 py-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="font-mono text-sm font-semibold text-[var(--highlight)]">
+            <span className="font-mono text-[13px] font-semibold text-ivory">
               {entry.name}
             </span>
             {entry.tags?.map((tag) => (
               <span
                 key={tag}
-                className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#3a4431] text-[#9ca89a] border border-[#55694b]/50"
+                className="badge font-mono font-medium"
               >
                 {tag}
               </span>
             ))}
           </div>
-          <p className="text-[11px] font-mono text-[#9ca89a]/60 truncate">{entry.path}</p>
+          <p className="truncate font-mono text-[11px] text-gray-500">{entry.path}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <p className="text-xs text-[#9ca89a] max-w-xs hidden md:block">{entry.summary}</p>
+          <p className="hidden max-w-xs text-xs text-muted md:block">{entry.summary}</p>
           <ChevronIcon expanded={expanded} />
         </div>
       </div>
@@ -101,22 +104,22 @@ export function DocCard({
       {/* Expanded Content */}
       {expanded && (
         <div
-          className="px-4 pb-4 border-t border-[#55694b]/40"
+          className="border-t border-white/[0.07] px-4 pb-4"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="pt-4 space-y-4">
             {/* Description */}
             <div>
-              <h4 className="text-[10px] font-mono tracking-widest text-[#9ca89a]/60 uppercase mb-2">
+              <h4 className="stat-label mb-2">
                 Description
               </h4>
-              <p className="text-sm text-[#F1F5E9]/80 leading-relaxed">{entry.description}</p>
+              <p className="text-sm leading-relaxed text-gray-300">{entry.description}</p>
             </div>
 
             {/* Related */}
             {entry.related && entry.related.length > 0 && (
               <div>
-                <h4 className="text-[10px] font-mono tracking-widest text-[#9ca89a]/60 uppercase mb-2">
+                <h4 className="stat-label mb-2">
                   Related
                 </h4>
                 <div className="flex flex-wrap gap-2">
@@ -129,11 +132,11 @@ export function DocCard({
                           onJump(rel.targetId, TYPE_TAB[rel.type]);
                         }
                       }}
-                      className={`text-xs font-mono px-2 py-1 rounded border transition-colors ${TYPE_COLORS[rel.type]} ${rel.targetId ? "cursor-pointer" : "cursor-default"}`}
+                      className={`badge ${TYPE_COLORS[rel.type]} px-2 py-1 font-mono text-xs font-medium transition-opacity ${rel.targetId ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
                     >
-                      <span className="opacity-60 mr-1">{TYPE_LABELS[rel.type]}</span>
+                      <span className="opacity-60">{TYPE_LABELS[rel.type]}</span>
                       {rel.label}
-                      {rel.targetId && <span className="ml-1 opacity-50">↗</span>}
+                      {rel.targetId && <ArrowUpRight size={12} strokeWidth={1.75} className="opacity-60" />}
                     </button>
                   ))}
                 </div>
@@ -148,15 +151,11 @@ export function DocCard({
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 14 14"
-      fill="none"
-      className={`text-[#9ca89a] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-    >
-      <path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <ChevronDown
+      size={16}
+      strokeWidth={1.75}
+      className={`text-muted transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+    />
   );
 }
 
@@ -174,15 +173,15 @@ export function DocSection({
   onJump?: JumpHandler;
 }) {
   return (
-    <div className="mb-8">
-      <div className="flex items-center gap-3 mb-3">
-        <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-[#9ca89a]">{title}</h2>
-        <div className="flex-1 h-px bg-[#55694b]/40" />
-        <span className="text-xs font-mono text-[#9ca89a]/60">{entries.length}</span>
+    <div className="mb-6 last:mb-0">
+      <div className="mb-2.5 flex items-center gap-3">
+        <h3 className="font-mono text-xs font-medium text-muted">{title}</h3>
+        <div className="divider flex-1" />
+        <span className="text-xs tabular-nums text-gray-500">{entries.length}</span>
       </div>
       {entries.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#55694b]/40 py-8 text-center">
-          <p className="text-sm text-[#9ca89a]">{emptyMessage}</p>
+        <div className="rounded-lg border border-dashed border-white/[0.07]">
+          <EmptyState title={emptyMessage} />
         </div>
       ) : (
         <div className="space-y-2">
@@ -201,7 +200,7 @@ export function DocSection({
 }
 
 export function DocTabShell({
-  icon,
+  icon: Icon,
   title,
   subtitle,
   searchPlaceholder,
@@ -209,7 +208,7 @@ export function DocTabShell({
   searchValue,
   onSearchChange,
 }: {
-  icon: string;
+  icon: LucideIcon;
   title: string;
   subtitle: string;
   searchPlaceholder: string;
@@ -218,35 +217,34 @@ export function DocTabShell({
   onSearchChange: (v: string) => void;
 }) {
   return (
-    <div>
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">{icon}</span>
-            <h2
-              className="text-lg font-semibold text-[var(--highlight)]"
-              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-            >
-              {title}
-            </h2>
+    <section className="panel">
+      <header className="panel-header flex-wrap">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Icon size={18} strokeWidth={1.75} className="shrink-0 text-sage" />
+          <div className="min-w-0">
+            <h2 className="panel-title">{title}</h2>
+            <p className="panel-subtitle">{subtitle}</p>
           </div>
-          <p className="text-xs text-[#9ca89a]">{subtitle}</p>
         </div>
 
         {/* Search */}
-        <div className="relative w-72">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca89a] text-sm">⌕</span>
+        <div className="relative w-full sm:w-72">
+          <Search
+            size={16}
+            strokeWidth={1.75}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+          />
           <input
             type="text"
             placeholder={searchPlaceholder}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             onClick={(e) => e.stopPropagation()}
-            className="w-full bg-[#242924] border border-[#55694b]/50 rounded-lg pl-8 pr-4 py-2 text-sm text-[#F1F5E9] placeholder-[#9ca89a]/50 focus:outline-none focus:border-[#55694b] transition-colors"
+            className="field h-9 pl-9"
           />
         </div>
-      </div>
-      {children}
-    </div>
+      </header>
+      <div className="panel-body">{children}</div>
+    </section>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, CreditCard, Clock, AlertTriangle, Loader2, Check } from 'lucide-react'
+import { X, CreditCard, Clock, AlertTriangle, Loader2, Check, ArrowLeft } from 'lucide-react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   EmbeddedCheckout,
@@ -25,28 +25,19 @@ interface TrialPromptModalProps {
   onDismiss?: () => void
 }
 
-const COLORS = {
-  background: '#181818',
-  cardBg: '#1a1a1a',
-  surface: 'rgba(37, 37, 37, 0.6)',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
-  text: '#FFFFFF',
-  textMuted: 'rgba(255, 255, 255, 0.6)',
-  green: '#73aa57',
-  greenGlow: 'rgba(115, 170, 87, 0.4)',
-  yellow: '#f5e29a',
-  yellowGlow: 'rgba(245, 226, 154, 0.4)',
-  red: '#ef4444',
-  redGlow: 'rgba(239, 68, 68, 0.4)',
-}
+// Status tone per mode: sage = healthy, warn = muted sand, danger = muted coral.
+const TONE_CLASSES = {
+  sage: 'bg-sage/[0.12] text-sage-bright',
+  warn: 'bg-[#D8C59A]/[0.12] text-[#D8C59A]',
+  danger: 'bg-[#D99A8B]/[0.12] text-[#D99A8B]',
+} as const
 
 const getModeConfig = (mode: TrialPromptMode, daysRemaining: number) => {
   switch (mode) {
     case 'soft':
       return {
         icon: CreditCard,
-        iconColor: COLORS.green,
-        iconGlow: COLORS.greenGlow,
+        tone: 'sage' as const,
         title: `Your trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}.`,
         subtitle: 'Add a payment method to keep Auto-Fill sending reminders and filling your open slots. No charge until your trial ends.',
         primaryButton: 'Subscribe Now',
@@ -56,8 +47,7 @@ const getModeConfig = (mode: TrialPromptMode, daysRemaining: number) => {
     case 'urgent':
       return {
         icon: Clock,
-        iconColor: COLORS.yellow,
-        iconGlow: COLORS.yellowGlow,
+        tone: 'warn' as const,
         title: `Only ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left on your trial.`,
         subtitle: 'After your trial, Auto-Fill will pause. Subscribe now to keep your bookings coming in.',
         primaryButton: 'Subscribe Now',
@@ -67,8 +57,7 @@ const getModeConfig = (mode: TrialPromptMode, daysRemaining: number) => {
     case 'strong':
       return {
         icon: AlertTriangle,
-        iconColor: COLORS.red,
-        iconGlow: COLORS.redGlow,
+        tone: 'danger' as const,
         title: 'Your trial has ended.',
         subtitle: 'Auto-Fill is paused. Subscribe now to pick up right where you left off — your data is safe.',
         primaryButton: 'Subscribe Now',
@@ -134,6 +123,13 @@ export default function TrialPromptModal({
     setClientSecret(null)
   }
 
+  const planOptionClass = (active: boolean) =>
+    `flex-1 rounded-lg border p-3 text-left transition-colors ${
+      active
+        ? 'border-sage/45 bg-sage/[0.06]'
+        : 'border-white/[0.07] bg-canvas hover:border-white/[0.12]'
+    }`
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -142,168 +138,133 @@ export default function TrialPromptModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(4px)' }}
+          className="modal-backdrop z-50 flex items-center justify-center p-4 overflow-y-auto"
           onClick={handleBackdropClick}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[90vh] overflow-y-auto"
-            style={{
-              background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
-              border: `1px solid ${COLORS.glassBorder}`,
-            }}
+            className={`modal-surface relative w-full ${showCheckout ? 'max-w-xl' : 'max-w-md'} my-auto max-h-[90vh] overflow-y-auto`}
+            role="dialog"
+            aria-modal="true"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button - only for soft/urgent when not in checkout */}
-            {config.showClose && onDismiss && !showCheckout && (
-              <button
-                onClick={onDismiss}
-                className="absolute top-4 right-4 p-2 rounded-full transition-colors hover:bg-white/10 z-10"
-                style={{ color: COLORS.textMuted }}
-              >
-                <X size={20} />
-              </button>
-            )}
-
-            {/* Back button when in checkout */}
-            {showCheckout && mode !== 'strong' && (
-              <button
-                onClick={handleCloseCheckout}
-                className="absolute top-4 left-4 p-2 rounded-full transition-colors hover:bg-white/10 z-10 flex items-center gap-1 text-sm"
-                style={{ color: COLORS.textMuted }}
-              >
-                ← Back
-              </button>
-            )}
-
-            {/* Content */}
-            <div className="p-6 md:p-8">
-              {!showCheckout ? (
-                // Initial prompt view
-                <div className="text-center">
-                  {/* Icon */}
-                  <div
-                    className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6"
-                    style={{
-                      backgroundColor: `${config.iconColor}20`,
-                      boxShadow: `0 0 24px ${config.iconGlow}`,
-                    }}
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-3.5">
+              <div className="flex min-w-0 items-center gap-2">
+                {showCheckout && mode !== 'strong' && (
+                  <button
+                    onClick={handleCloseCheckout}
+                    className="btn btn-ghost btn-sm !h-8 !px-2 -ml-2"
+                    aria-label="Back to plans"
                   >
-                    <Icon size={32} style={{ color: config.iconColor }} />
+                    <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+                  </button>
+                )}
+                <h2 className="panel-title truncate">
+                  {showCheckout
+                    ? `Secure checkout · ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'} plan`
+                    : mode === 'strong'
+                    ? 'Trial ended'
+                    : 'Your trial'}
+                </h2>
+              </div>
+              {config.showClose && onDismiss && !showCheckout && (
+                <button
+                  onClick={onDismiss}
+                  className="btn btn-ghost btn-sm !h-8 !w-8 !p-0"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.75} />
+                </button>
+              )}
+            </div>
+
+            {!showCheckout ? (
+              // Initial prompt view
+              <>
+                <div className="px-5 py-5">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${TONE_CLASSES[config.tone]}`}>
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-semibold text-ivory">{config.title}</p>
+                      {config.subtitle && (
+                        <p className="mt-1 text-sm text-gray-400">{config.subtitle}</p>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Title */}
-                  <h2
-                    className="text-xl md:text-2xl font-bold mb-2"
-                    style={{ color: COLORS.text }}
-                  >
-                    {config.title}
-                  </h2>
-
-                  {/* Subtitle */}
-                  {config.subtitle && (
-                    <p
-                      className="text-sm md:text-base mb-6"
-                      style={{ color: COLORS.textMuted }}
-                    >
-                      {config.subtitle}
-                    </p>
-                  )}
-
-                  {!config.subtitle && <div className="mb-6" />}
-
                   {/* Plan selector */}
-                  <div className="flex gap-3 mb-4">
+                  <div className="mt-5 flex gap-3" role="radiogroup" aria-label="Plan">
                     <button
                       onClick={() => setSelectedPlan('monthly')}
-                      className="flex-1 p-3 rounded-xl border-2 transition-all text-left"
-                      style={{
-                        borderColor: selectedPlan === 'monthly' ? COLORS.green : COLORS.glassBorder,
-                        backgroundColor: selectedPlan === 'monthly' ? `${COLORS.green}10` : 'transparent',
-                      }}
+                      role="radio"
+                      aria-checked={selectedPlan === 'monthly'}
+                      className={planOptionClass(selectedPlan === 'monthly')}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: COLORS.text }}>Monthly</span>
-                        {selectedPlan === 'monthly' && <Check size={16} style={{ color: COLORS.green }} />}
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-[13px] font-medium text-gray-300">Monthly</span>
+                        {selectedPlan === 'monthly' && <Check className="h-4 w-4 text-sage" strokeWidth={2} />}
                       </div>
-                      <span className="text-lg font-bold" style={{ color: COLORS.green }}>$20</span>
-                      <span className="text-xs" style={{ color: COLORS.textMuted }}>/month</span>
+                      <span className="text-lg font-semibold tabular-nums text-ivory">$20</span>
+                      <span className="text-xs text-gray-500">/month</span>
                     </button>
 
                     <button
                       onClick={() => setSelectedPlan('yearly')}
-                      className="flex-1 p-3 rounded-xl border-2 transition-all text-left relative"
-                      style={{
-                        borderColor: selectedPlan === 'yearly' ? COLORS.yellow : COLORS.glassBorder,
-                        backgroundColor: selectedPlan === 'yearly' ? `${COLORS.yellow}10` : 'transparent',
-                      }}
+                      role="radio"
+                      aria-checked={selectedPlan === 'yearly'}
+                      className={planOptionClass(selectedPlan === 'yearly')}
                     >
-                      <div className="absolute -top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: COLORS.yellow, color: '#000' }}>
-                        Save $20
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-[13px] font-medium text-gray-300">
+                          Yearly
+                          <span className="badge badge-sage">Save $20</span>
+                        </span>
+                        {selectedPlan === 'yearly' && <Check className="h-4 w-4 text-sage" strokeWidth={2} />}
                       </div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: COLORS.text }}>Yearly</span>
-                        {selectedPlan === 'yearly' && <Check size={16} style={{ color: COLORS.yellow }} />}
-                      </div>
-                      <span className="text-lg font-bold" style={{ color: COLORS.yellow }}>$220</span>
-                      <span className="text-xs" style={{ color: COLORS.textMuted }}>/year</span>
+                      <span className="text-lg font-semibold tabular-nums text-ivory">$220</span>
+                      <span className="text-xs text-gray-500">/year</span>
                     </button>
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="flex flex-col gap-3">
-                    <button
-                      onClick={handleSubscribe}
-                      disabled={loading}
-                      className="w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      style={{
-                        background: `linear-gradient(135deg, ${COLORS.green} 0%, #5b8f52 100%)`,
-                        color: '#000',
-                        boxShadow: `0 4px 16px ${COLORS.greenGlow}`,
-                      }}
-                    >
-                      {loading && <Loader2 size={18} className="animate-spin" />}
-                      {loading ? 'Loading...' : config.primaryButton}
-                    </button>
-
-                    {config.secondaryButton && onDismiss && (
-                      <button
-                        onClick={onDismiss}
-                        className="w-full py-3 px-6 rounded-xl font-medium transition-all duration-200 hover:bg-white/5"
-                        style={{
-                          color: COLORS.textMuted,
-                          border: `1px solid ${COLORS.glassBorder}`,
-                        }}
-                      >
-                        {config.secondaryButton}
-                      </button>
-                    )}
                   </div>
                 </div>
-              ) : (
-                // Checkout view
-                <div>
-                  <h2 className="text-sm font-semibold text-gray-100 mb-4 text-center">
-                    Secure checkout • {selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'} plan
-                  </h2>
 
-                  {clientSecret && (
-                    <EmbeddedCheckoutProvider
-                      stripe={stripePromise}
-                      options={{ clientSecret }}
-                    >
-                      <div className="min-h-[360px]">
-                        <EmbeddedCheckout />
-                      </div>
-                    </EmbeddedCheckoutProvider>
+                {/* Footer */}
+                <div className="flex flex-col-reverse gap-2 border-t border-white/[0.07] px-5 py-4 sm:flex-row sm:justify-end">
+                  {config.secondaryButton && onDismiss && (
+                    <button onClick={onDismiss} className="btn btn-ghost btn-sm">
+                      {config.secondaryButton}
+                    </button>
                   )}
+                  <button
+                    onClick={handleSubscribe}
+                    disabled={loading}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {loading ? 'Loading...' : config.primaryButton}
+                  </button>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              // Checkout view
+              <div className="p-4 md:p-5">
+                {clientSecret && (
+                  <EmbeddedCheckoutProvider
+                    stripe={stripePromise}
+                    options={{ clientSecret }}
+                  >
+                    <div className="min-h-[360px]">
+                      <EmbeddedCheckout />
+                    </div>
+                  </EmbeddedCheckoutProvider>
+                )}
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

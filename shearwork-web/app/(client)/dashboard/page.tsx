@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import { LayoutGrid } from 'lucide-react'
+import { IconTile } from '@/components/ui/AppKit'
 import AutoNudgeStatus from '@/components/AutoNudgeDashboard/AutoNudgeStatus'
 import OpenBookings from '@/components/AutoNudgeDashboard/OpenBookings'
 import BookingCapacity from '@/components/AutoNudgeDashboard/BookingCapacity'
@@ -44,46 +46,53 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="flex flex-col bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b] p-3 pt-4 gap-3"
+      className="app-surface flex flex-col gap-3 p-3 pt-4 md:gap-4 md:p-6 xl:px-8"
       style={{
         height: 'calc(100dvh - var(--navbar-height, 72px))',
         marginTop: 'var(--navbar-height, 72px)',
       }}
     >
+      <div className="hidden flex-shrink-0 items-center gap-3 md:flex">
+        <IconTile icon={LayoutGrid} tone="sage" />
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">This week&apos;s Auto-Nudge activity and the clients worth reaching out to.</p>
+        </div>
+      </div>
 
       {/* ── TOP ROW ── */}
 
       {/* Mobile: 3 cards in a row + Corva's Impact full width below */}
       <div className="flex flex-col gap-3 flex-shrink-0 md:hidden">
         <div className="grid grid-cols-3 gap-3" style={{ height: 178 }}>
-          <div className="rounded-2xl border border-white/10 bg-white/5">
+          <div className="panel">
             <AutoNudgeStatus user_id={user_id!} />
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5">
+          <div className="panel">
             <OpenBookings user_id={user_id!} />
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5">
+          <div className="panel">
             <BookingCapacity user_id={user_id!} />
           </div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5" style={{ height: 100 }}>
+        <div className="panel panel-tint panel-accent tone-sage" style={{ height: 100 }}>
           <AutoNudgeImpact user_id={user_id!} />
         </div>
       </div>
 
       {/* Desktop: original grid with explicit height */}
       <div className="hidden md:grid grid-cols-3 gap-4 flex-shrink-0" style={{ height: '28%' }}>
-        <div className="rounded-2xl border border-white/10 bg-white/5">
+        <div className="panel">
           <AutoNudgeStatus user_id={user_id!} />
         </div>
         <div className="col-span-2 grid grid-cols-3 gap-4">
-          <div className="rounded-2xl border border-white/10 bg-white/5">
+          <div className="panel">
             <OpenBookings user_id={user_id!} />
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5">
+          <div className="panel">
             <BookingCapacity user_id={user_id!} />
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5">
+          <div className="panel panel-tint panel-accent tone-sage">
             <AutoNudgeImpact user_id={user_id!} />
           </div>
         </div>
@@ -93,7 +102,7 @@ export default function DashboardPage() {
 
       {/* Mobile: stacked + scrollable */}
       <div className="flex flex-col gap-3 flex-1 min-h-0 md:hidden overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex-shrink-0" style={{ height: 420 }}>
+        <div className="panel p-4 flex-shrink-0" style={{ height: 420 }}>
           <ClientHealth
             user_id={user_id!}
             sms_engaged_current_week={sms_engaged_current_week}
@@ -101,14 +110,14 @@ export default function DashboardPage() {
             onNudgeSuccess={() => setHistoryKey(k => k + 1)}
           />
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex-shrink-0" style={{ minHeight: 380 }}>
+        <div className="panel p-4 flex-shrink-0" style={{ minHeight: 380 }}>
           <AutoNudgeHistory key={historyKey} user_id={user_id!} />
         </div>
       </div>
 
       {/* Desktop: side by side */}
       <div className="hidden md:grid grid-cols-3 gap-4 flex-1 min-h-0">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 overflow-hidden">
+        <div className="panel p-4 overflow-hidden">
           <ClientHealth
             user_id={user_id!}
             sms_engaged_current_week={sms_engaged_current_week}
@@ -116,7 +125,7 @@ export default function DashboardPage() {
             onNudgeSuccess={() => setHistoryKey(k => k + 1)}
           />
         </div>
-        <div className="col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4 overflow-hidden">
+        <div className="col-span-2 panel p-4 overflow-hidden">
           <AutoNudgeHistory key={historyKey} user_id={user_id!} />
         </div>
       </div>

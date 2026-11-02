@@ -1,7 +1,9 @@
 'use client'
 
+import { Receipt } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
+import { Stat } from '@/components/ui/AppKit'
 
 type Timeframe = 'year' | 'Q1' | 'Q2' | 'Q3' | 'Q4'
 
@@ -146,20 +148,19 @@ export default function YearlyExpensesCard({ userId, year, timeframe }: Props) {
   const titleSuffix = timeframe === 'year' ? 'YTD' : timeframe
 
   return (
-    <div
-      className="flex flex-col justify-between"
-      style={{
-        height: '100%',
-      }}
-    >
-      <h2 className="text-[#8a9b90] text-base font-semibold mb-2">
-        💸 Total Expenses ({titleSuffix})
-      </h2>
-      <div className="flex-1 flex items-center justify-start">
-        <p className="text-3xl font-bold text-white truncate">
-          {loading ? 'Loading...' : total !== null ? formatCurrency(total) : 'N/A'}
-        </p>
-      </div>
+    <div className="flex h-full w-full flex-col">
+      <Stat icon={Receipt} tone="coral"
+        label={`Total Expenses (${titleSuffix})`}
+        value={
+          loading ? (
+            <span className="text-base font-medium text-gray-500">Loading…</span>
+          ) : total !== null ? (
+            <span className="block truncate">{formatCurrency(total)}</span>
+          ) : (
+            'N/A'
+          )
+        }
+      />
     </div>
   )
 }

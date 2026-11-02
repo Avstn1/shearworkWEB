@@ -128,55 +128,52 @@ export default function DailySelector({
 
 
   return (
-    <div className="relative w-28 flex items-center gap-1" ref={containerRef}>
-      <button onClick={goPrev} 
-        disabled={currentIndex <= 0 || disabled} 
-        className="p-1 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
+    <div className="relative flex items-center gap-0.5" ref={containerRef}>
+      <button
+        type="button"
+        aria-label="Previous day"
+        onClick={goPrev}
+        disabled={currentIndex <= 0 || disabled}
+        className="inline-flex h-9 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-ivory disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
       >
-        <ChevronLeft className="w-4 h-4" />
+        <ChevronLeft className="h-4 w-4" strokeWidth={1.75} />
       </button>
 
       <button
         type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Select day"
         onClick={() => !disabled && setOpen(!open)}
-        className={`
-          flex-1 flex justify-between items-center px-3 py-2 rounded-full font-semibold text-sm border shadow-md
-          bg-gradient-to-r from-amber-500/30 to-lime-500/30 text-white
-          transition-all duration-200
-          hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1
-          ${disabled ? 'opacity-50 cursor-not-allowed hover:scale-100 focus:ring-0' : ''}
-        `}
+        className={`flex h-9 items-center justify-between gap-2 rounded-lg border border-white/[0.09] bg-canvas px-3 text-sm font-medium text-ivory transition-colors hover:border-white/[0.16] min-w-[64px] tabular-nums ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
       >
         {availableDays[currentIndex] ?? '-'}
-        <ChevronDown className="ml-2 h-4 w-4" />
+        <ChevronDown className="h-4 w-4 text-gray-400" strokeWidth={1.75} />
       </button>
 
       <button
+        type="button"
+        aria-label="Next day"
         onClick={goNext}
         disabled={
           disabled ||
           currentIndex >= availableDays.length - 1 ||
           (isCurrentMonth && availableDays[currentIndex + 1] > maxSelectableDay)
         }
-        className="p-1 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="inline-flex h-9 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-ivory disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
       >
-        <ChevronRight className="w-4 h-4" />
+        <ChevronRight className="h-4 w-4" strokeWidth={1.75} />
       </button>
 
-
       {open && (
-        <ul className="absolute top-full mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-white/20 bg-[#1a1e18] shadow-lg z-50">
+        <ul role="listbox" className="absolute left-7 top-full z-50 mt-1 max-h-48 w-[64px] overflow-y-auto rounded-lg border border-white/[0.12] bg-raised py-1 shadow-lg">
           {availableDays.map((day) => (
             <li
               key={day}
+              role="option"
+              aria-selected={day === selectedDay}
               onClick={() => handleSelect(day)}
-              className={`
-                px-4 py-2 cursor-pointer select-none
-                ${day === selectedDay
-                  ? 'bg-amber-300 text-black font-semibold'
-                  : 'text-white hover:bg-white/20 hover:text-black'
-                }
-              `}
+              className={`w-full cursor-pointer select-none px-3 py-1.5 text-left text-sm transition-colors tabular-nums ${day === selectedDay ? 'bg-sage/[0.12] text-sage-bright' : 'text-gray-300 hover:bg-white/[0.05] hover:text-ivory'}`}
             >
               {day}
             </li>

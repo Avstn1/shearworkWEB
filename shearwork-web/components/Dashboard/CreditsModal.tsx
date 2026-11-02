@@ -127,23 +127,23 @@ function CheckoutForm({
       />
 
       {errorMessage && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400">
+        <div className="rounded-lg border border-[#D99A8B]/25 bg-[#D99A8B]/[0.06] px-3 py-2.5 text-sm text-[#D99A8B]">
           {errorMessage}
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-col-reverse gap-2 border-t border-white/[0.07] pt-4 sm:flex-row sm:justify-end">
         <button
           onClick={onCancel}
           disabled={isProcessing}
-          className="flex-1 px-6 py-3 bg-white/10 text-white rounded-lg font-semibold hover:bg-white/20 transition-all duration-300 border border-white/20 disabled:opacity-50"
+          className="btn btn-ghost btn-sm"
         >
           Cancel
         </button>
         <button
           onClick={handleSubmit}
           disabled={!stripe || !isReady || isProcessing}
-          className="flex-1 px-6 py-3 bg-lime-300 text-black rounded-lg font-semibold hover:bg-lime-400 transition-all duration-300 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="btn btn-primary btn-sm tabular-nums"
         >
           {!isReady && !isProcessing ? (
             <>
@@ -380,13 +380,13 @@ export default function CreditsModal({
   const getTransactionIcon = (type: 'credit' | 'debit' | 'reserve' | 'release') => {
     switch (type) {
       case 'credit':
-        return { Icon: ArrowUpRight, color: 'text-lime-300', bg: 'bg-lime-300/20' };
+        return { Icon: ArrowUpRight, color: 'text-sage-bright', bg: 'bg-sage/[0.12]' };
       case 'debit':
-        return { Icon: ArrowDownRight, color: 'text-red-400', bg: 'bg-red-400/20' };
+        return { Icon: ArrowDownRight, color: 'text-[#D99A8B]', bg: 'bg-[#D99A8B]/[0.12]' };
       case 'reserve':
-        return { Icon: Lock, color: 'text-amber-300', bg: 'bg-amber-300/20' };
+        return { Icon: Lock, color: 'text-[#D8C59A]', bg: 'bg-[#D8C59A]/[0.12]' };
       case 'release':
-        return { Icon: TrendingUp, color: 'text-sky-300', bg: 'bg-sky-300/20' };
+        return { Icon: TrendingUp, color: 'text-[#A9C0D2]', bg: 'bg-[#A9C0D2]/[0.12]' };
     }
   };
 
@@ -402,29 +402,29 @@ export default function CreditsModal({
     appearance: {
       theme: 'night' as const,
       variables: {
-        colorPrimary: '#c4ff85',
-        colorBackground: '#1a1a1a',
-        colorText: '#ffffff',
-        colorDanger: '#ef4444',
+        colorPrimary: '#8FB57A',
+        colorBackground: '#171A18',
+        colorText: '#ECEDEA',
+        colorDanger: '#D99A8B',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         spacingUnit: '4px',
         borderRadius: '8px',
-        colorTextSecondary: '#bdbdbd',
-        colorTextPlaceholder: '#6b7280',
+        colorTextSecondary: '#9EA39C',
+        colorTextPlaceholder: '#7C817A',
       },
       rules: {
         '.Input': {
-          backgroundColor: '#0a0a0a',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backgroundColor: '#111312',
+          border: '1px solid rgba(255, 255, 255, 0.09)',
           boxShadow: 'none',
         },
         '.Input:focus': {
-          border: '1px solid #c4ff85',
-          boxShadow: '0 0 0 1px #c4ff85',
+          border: '1px solid rgba(143, 181, 122, 0.6)',
+          boxShadow: '0 0 0 3px rgba(143, 181, 122, 0.15)',
         },
         '.Label': {
-          color: '#bdbdbd',
-          fontSize: '14px',
+          color: '#9EA39C',
+          fontSize: '13px',
         },
       },
     },
@@ -436,70 +436,64 @@ export default function CreditsModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="modal-backdrop z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
+          initial={{ y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 12, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] md:max-h-[73vh] overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          className="modal-surface max-w-3xl w-full max-h-[90vh] md:max-h-[73vh] overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/10">
-            <div>
-              <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-                <Coins className="w-5 h-5 md:w-6 md:h-6 text-lime-300" />
+          <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.07]">
+            <div className="min-w-0">
+              <h2 className="panel-title flex items-center gap-2">
+                <Coins className="w-4 h-4 text-sage" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Credits Manager</span>
                 <span className="sm:hidden">Credits</span>
               </h2>
-              <p className="text-xs md:text-sm text-[#bdbdbd] mt-1 hidden sm:block">
+              <p className="panel-subtitle hidden sm:block">
                 Manage your credits for SMS campaigns and premium features
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              className="btn btn-ghost btn-sm !h-8 !w-8 !p-0"
+              aria-label="Close"
             >
-              <X className="w-5 h-5 text-[#bdbdbd]" />
+              <X className="w-4 h-4" strokeWidth={1.75} />
             </button>
           </div>
 
           {/* View Switcher */}
-          <div className="p-3 md:p-6 border-b border-white/10">
-            <div className="flex gap-1 bg-[#0a0a0a] rounded-full p-1">
+          <div className="px-5 py-3 border-b border-white/[0.07]">
+            <div className="segmented w-full">
               <button
                 onClick={() => setActiveView('balance')}
-                className={`flex-1 px-2 md:px-6 py-2 md:py-3 rounded-full text-xs md:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1 md:gap-2 ${
-                  activeView === 'balance'
-                    ? 'bg-lime-300 text-black shadow-[0_0_12px_#c4ff85]'
-                    : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-                }`}
+                data-active={activeView === 'balance'}
+                className="segmented-item flex items-center justify-center gap-1.5"
               >
-                <Coins className="w-3 h-3 md:w-4 md:h-4" />
+                <Coins className="w-4 h-4" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Balance</span>
               </button>
               <button
                 onClick={() => setActiveView('history')}
-                className={`flex-1 px-2 md:px-6 py-2 md:py-3 rounded-full text-xs md:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1 md:gap-2 ${
-                  activeView === 'history'
-                    ? 'bg-lime-300 text-black shadow-[0_0_12px_#c4ff85]'
-                    : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-                }`}
+                data-active={activeView === 'history'}
+                className="segmented-item flex items-center justify-center gap-1.5"
               >
-                <History className="w-3 h-3 md:w-4 md:h-4" />
+                <History className="w-4 h-4" strokeWidth={1.75} />
                 <span className="hidden sm:inline">History</span>
               </button>
               <button
                 onClick={() => setActiveView('purchase')}
-                className={`flex-1 px-2 md:px-6 py-2 md:py-3 rounded-full text-xs md:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-1 md:gap-2 ${
-                  activeView === 'purchase'
-                    ? 'bg-lime-300 text-black shadow-[0_0_12px_#c4ff85]'
-                    : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-                }`}
+                data-active={activeView === 'purchase'}
+                className="segmented-item flex items-center justify-center gap-1.5"
               >
-                <ShoppingCart className="w-3 h-3 md:w-4 md:h-4" />
+                <ShoppingCart className="w-4 h-4" strokeWidth={1.75} />
                 <span className="hidden sm:inline">Buy</span>
                 <span className="sm:hidden">Buy</span>
               </button>
@@ -510,7 +504,7 @@ export default function CreditsModal({
           <div className="p-4 md:p-6 overflow-y-auto h-[calc(90vh-180px)] md:h-[calc(74vh-180px)]">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 text-lime-300 animate-spin" />
+                <Loader2 className="w-6 h-6 text-sage animate-spin" />
               </div>
             ) : (
               <AnimatePresence mode="wait">
@@ -525,56 +519,50 @@ export default function CreditsModal({
                     className="space-y-4 md:space-y-6"
                   >
                     {/* Credit Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {/* Available Credits */}
-                      <div className="relative overflow-hidden bg-gradient-to-br from-lime-300/20 to-green-500/10 border border-lime-300/30 rounded-2xl p-4 md:p-6">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-lime-300/10 rounded-full blur-3xl" />
-                        <div className="relative">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Coins className="w-4 h-4 md:w-5 md:h-5 text-lime-300" />
-                            <span className="text-xs md:text-sm font-medium text-lime-300">Available Credits</span>
-                          </div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-3xl md:text-5xl font-bold text-white">{availableCredits.toLocaleString()}</span>
-                            <span className="text-sm md:text-lg text-lime-300">credits</span>
-                          </div>
-                          <p className="text-[10px] md:text-xs text-[#bdbdbd] mt-2 md:mt-3">
-                            Ready to use for SMS campaigns and premium features
-                          </p>
+                      <div className="rounded-lg border border-white/[0.07] bg-raised p-4 md:p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Coins className="w-4 h-4 text-sage" strokeWidth={1.75} />
+                          <span className="stat-label">Available credits</span>
                         </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="stat-value">{availableCredits.toLocaleString()}</span>
+                          <span className="text-sm text-muted">credits</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Ready to use for SMS campaigns and premium features
+                        </p>
                       </div>
 
                       {/* Reserved Credits */}
-                      <div className="relative overflow-hidden bg-gradient-to-br from-amber-300/20 to-orange-500/10 border border-amber-300/30 rounded-2xl p-4 md:p-6">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-300/10 rounded-full blur-3xl" />
-                        <div className="relative">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Lock className="w-4 h-4 md:w-5 md:h-5 text-amber-300" />
-                            <span className="text-xs md:text-sm font-medium text-amber-300">Reserved Credits</span>
-                          </div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-3xl md:text-5xl font-bold text-white">{reservedCredits.toLocaleString()}</span>
-                            <span className="text-sm md:text-lg text-amber-300">credits</span>
-                          </div>
-                          <p className="text-[10px] md:text-xs text-[#bdbdbd] mt-2 md:mt-3">
-                            Allocated for scheduled messages
-                          </p>
+                      <div className="rounded-lg border border-white/[0.07] bg-raised p-4 md:p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Lock className="w-4 h-4 text-[#D8C59A]" strokeWidth={1.75} />
+                          <span className="stat-label">Reserved credits</span>
                         </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="stat-value">{reservedCredits.toLocaleString()}</span>
+                          <span className="text-sm text-muted">credits</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Allocated for scheduled messages
+                        </p>
                       </div>
                     </div>
 
                     {/* Total Balance */}
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6">
+                    <div className="rounded-lg border border-white/[0.07] p-4 md:p-5">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                          <p className="text-xs md:text-sm text-[#bdbdbd] mb-1">Total Balance</p>
-                          <p className="text-2xl md:text-3xl font-bold text-white">
+                          <p className="stat-label mb-1">Total balance</p>
+                          <p className="text-xl md:text-2xl font-semibold tabular-nums text-ivory">
                             {(availableCredits + reservedCredits).toLocaleString()} credits
                           </p>
                         </div>
                         <button
                           onClick={() => setActiveView('purchase')}
-                          className="w-full sm:w-auto px-4 md:px-6 py-2 md:py-3 bg-lime-300 text-black rounded-full text-sm md:text-base font-semibold hover:bg-lime-400 transition-all duration-300 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)]"
+                          className="btn btn-primary btn-sm w-full sm:w-auto"
                         >
                           Buy More Credits
                         </button>
@@ -582,16 +570,14 @@ export default function CreditsModal({
                     </div>
 
                     {/* Usage Info */}
-                    <div className="bg-sky-300/10 border border-sky-300/20 rounded-xl p-3 md:p-4">
-                      <div className="flex items-start gap-2 md:gap-3">
-                        <Zap className="w-4 h-4 md:w-5 md:h-5 text-sky-300 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <h4 className="text-xs md:text-sm font-semibold text-sky-300 mb-1">How Credits Work</h4>
-                          <p className="text-[10px] md:text-xs text-[#bdbdbd] leading-relaxed">
-                            Credits are used for SMS campaigns, premium analytics, and advanced features. 
-                            Each SMS message costs 1 credit. Reserved credits are allocated for your scheduled messages and will be automatically used when messages are sent. Unused credits never expire.
-                          </p>
-                        </div>
+                    <div className="flex items-start gap-2.5 rounded-lg border border-white/[0.07] bg-raised px-3 py-3 md:px-4">
+                      <Zap className="w-4 h-4 text-[#A9C0D2] mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+                      <div>
+                        <h4 className="text-[13px] font-semibold text-ivory mb-1">How credits work</h4>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                          Credits are used for SMS campaigns, premium analytics, and advanced features. 
+                          Each SMS message costs 1 credit. Reserved credits are allocated for your scheduled messages and will be automatically used when messages are sent. Unused credits never expire.
+                        </p>
                       </div>
                     </div>
                   </motion.div>
@@ -608,24 +594,18 @@ export default function CreditsModal({
                     className="space-y-3 md:space-y-4"
                   >
                     {/* Sub-view switcher */}
-                    <div className="flex gap-1 bg-[#0a0a0a] rounded-full p-1">
+                    <div className="segmented w-full">
                       <button
                         onClick={() => setHistorySubView('purchases')}
-                        className={`flex-1 px-3 md:px-4 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs font-semibold transition-all duration-300 ${
-                          historySubView === 'purchases'
-                            ? 'bg-lime-300 text-black'
-                            : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-                        }`}
+                        data-active={historySubView === 'purchases'}
+                        className="segmented-item"
                       >
                         Credit Purchases
                       </button>
                       <button
                         onClick={() => setHistorySubView('transactions')}
-                        className={`flex-1 px-3 md:px-4 py-1.5 md:py-2 rounded-full text-[10px] md:text-xs font-semibold transition-all duration-300 ${
-                          historySubView === 'transactions'
-                            ? 'bg-lime-300 text-black'
-                            : 'text-[#bdbdbd] hover:text-white hover:bg-[#2a2a2a]'
-                        }`}
+                        data-active={historySubView === 'transactions'}
+                        className="segmented-item"
                       >
                         Credit Transactions
                       </button>
@@ -633,17 +613,15 @@ export default function CreditsModal({
 
                     {isLoadingTransactions ? (
                       <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 text-lime-300 animate-spin" />
+                        <Loader2 className="w-6 h-6 text-sage animate-spin" />
                       </div>
                     ) : filteredTransactions.length === 0 ? (
-                      <div className="text-center py-8 md:py-12">
-                        <div className="w-16 h-16 md:w-20 md:h-20 bg-lime-300/10 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
-                          <History className="w-8 h-8 md:w-10 md:h-10 text-lime-300" />
-                        </div>
-                        <h3 className="text-lg md:text-xl font-semibold text-white mb-2">
+                      <div className="empty-state">
+                        <History strokeWidth={1.75} />
+                        <strong>
                           {historySubView === 'purchases' ? 'No Purchases Yet' : 'No Transactions Yet'}
-                        </h3>
-                        <p className="text-xs md:text-sm text-[#bdbdbd] max-w-md mx-auto mb-4 md:mb-6 px-4">
+                        </strong>
+                        <p className="max-w-md mx-auto mb-2 px-4">
                           {historySubView === 'purchases' 
                             ? 'Your credit purchase history will appear here once you make your first purchase'
                             : 'Your credit usage history will appear here once you start using credits'}
@@ -651,7 +629,7 @@ export default function CreditsModal({
                         {historySubView === 'purchases' && (
                           <button
                             onClick={() => setActiveView('purchase')}
-                            className="px-4 md:px-6 py-2 md:py-3 bg-lime-300 text-black rounded-full text-sm md:text-base font-semibold hover:bg-lime-400 transition-all duration-300 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)]"
+                            className="btn btn-primary btn-sm"
                           >
                             Buy Your First Credits
                           </button>
@@ -671,23 +649,23 @@ export default function CreditsModal({
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.05 }}
-                              className="bg-white/5 border border-white/10 rounded-xl p-3 md:p-4 hover:bg-white/10 transition-colors"
+                              className="rounded-lg border border-white/[0.07] p-3 md:p-4 hover:bg-white/[0.02] transition-colors"
                             >
                               <div className="flex items-start gap-3 md:gap-4">
                                 {/* Icon */}
-                                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full ${bg} flex items-center justify-center flex-shrink-0`}>
-                                  <Icon className={`w-4 h-4 md:w-5 md:h-5 ${color}`} />
+                                <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center flex-shrink-0`}>
+                                  <Icon className={`w-4 h-4 ${color}`} strokeWidth={1.75} />
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start justify-between gap-2 md:gap-4 mb-1 md:mb-2">
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-xs md:text-sm font-semibold text-white mb-0.5 truncate">
+                                      <p className="text-[13px] md:text-sm font-semibold text-ivory mb-0.5 truncate">
                                         {transaction.action}
                                       </p>
-                                      <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-[#bdbdbd]">
-                                        <Calendar className="w-3 h-3" />
+                                      <div className="flex items-center gap-1.5 text-[11px] md:text-xs text-gray-500">
+                                        <Calendar className="w-3 h-3" strokeWidth={1.75} />
                                         {formatDate(transaction.created_at)}
                                       </div>
                                     </div>
@@ -695,15 +673,15 @@ export default function CreditsModal({
                                     {/* Change Amount */}
                                     <div className="text-right flex-shrink-0">
                                       {availableDiff !== 0 && (
-                                        <div className={`text-xs md:text-sm font-semibold ${
-                                          availableDiff > 0 ? 'text-lime-300' : 'text-red-400'
+                                        <div className={`text-xs md:text-sm font-semibold tabular-nums ${
+                                          availableDiff > 0 ? 'text-sage-bright' : 'text-[#D99A8B]'
                                         }`}>
                                           Available {availableDiff > 0 ? '+' : ''}{availableDiff.toLocaleString()}
                                         </div>
                                       )}
                                       {reservedDiff !== 0 && (
-                                        <div className={`text-[10px] md:text-xs font-medium ${
-                                          reservedDiff > 0 ? 'text-amber-300' : 'text-sky-300'
+                                        <div className={`text-[11px] md:text-xs font-medium tabular-nums ${
+                                          reservedDiff > 0 ? 'text-[#D8C59A]' : 'text-[#A9C0D2]'
                                         }`}>
                                           {/* {reservedDiff > 0 ? 'Reserved' : 'Released'} {Math.abs(reservedDiff).toLocaleString()} */}
                                           Reserved {reservedDiff > 0 ? '+' : ''}{reservedDiff.toLocaleString()}
@@ -713,17 +691,17 @@ export default function CreditsModal({
                                   </div>
 
                                   {/* Balance Details */}
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[10px] md:text-xs">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[11px] md:text-xs tabular-nums">
                                     <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                                      <span className="text-[#bdbdbd]">Available:</span>
-                                      <span className="text-white font-medium">
+                                      <span className="text-gray-500">Available:</span>
+                                      <span className="text-gray-300 font-medium">
                                         {transaction.old_available.toLocaleString()} → {transaction.new_available.toLocaleString()}
                                       </span>
                                     </div>
-                                    <span className="hidden sm:inline text-[#bdbdbd]">|</span>
+                                    <span className="hidden sm:inline text-gray-500">|</span>
                                     <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                                      <span className="text-[#bdbdbd]">Reserved:</span>
-                                      <span className="text-white font-medium">
+                                      <span className="text-gray-500">Reserved:</span>
+                                      <span className="text-gray-300 font-medium">
                                         {transaction.old_reserved.toLocaleString()} → {transaction.new_reserved.toLocaleString()}
                                       </span>
                                     </div>
@@ -757,39 +735,39 @@ export default function CreditsModal({
                         return (
                           <div
                             key={pkg.amount}
-                            className={`relative overflow-hidden border rounded-xl p-3 transition-all duration-300 hover:scale-[1.02] cursor-pointer group ${
+                            className={`relative rounded-lg border p-3 md:p-4 transition-colors ${
                               pkg.popular
-                                ? 'bg-gradient-to-br from-lime-300/20 to-green-500/10 border-lime-300/50 shadow-[0_0_20px_rgba(196,255,133,0.2)]'
-                                : 'bg-white/5 border-white/10 hover:border-lime-300/30'
+                                ? 'border-sage/45 bg-raised'
+                                : 'border-white/[0.07] bg-raised hover:border-white/[0.12]'
                             }`}
                           >
                             {/* Best Savings Badge */}
                             {pkg.popular && (
-                              <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-lime-300 text-black text-[8px] md:text-[9px] font-bold rounded-full shadow-[0_0_8px_#c4ff85]">
-                                <span className="hidden sm:inline">BIGGEST SAVINGS at </span>23% off
-                              </div>
+                              <span className="badge badge-sage absolute top-2 right-2">
+                                <span className="hidden sm:inline">Biggest savings at </span>23% off
+                              </span>
                             )}
 
                             {/* Savings Badge */}
                             {pkg.savings && !pkg.popular && (
-                              <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[8px] md:text-[9px] font-bold rounded-full border border-green-500/30">
+                              <span className="badge absolute top-2 right-2">
                                 {pkg.savings}
-                              </div>
+                              </span>
                             )}
 
                             {/* Icon */}
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                              pkg.popular ? 'bg-lime-300/20' : 'bg-white/10'
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2.5 ${
+                              pkg.popular ? 'bg-sage/[0.12]' : 'bg-white/[0.06]'
                             }`}>
-                              <Icon className={`w-5 h-5 ${pkg.popular ? 'text-lime-300' : 'text-white'}`} />
+                              <Icon className={`w-4 h-4 ${pkg.popular ? 'text-sage-bright' : 'text-gray-300'}`} strokeWidth={1.75} />
                             </div>
 
                             {/* Credits for Price */}
                             <div className="mb-2.5">
-                              <p className="text-white font-semibold text-sm">
+                              <p className="text-ivory font-semibold text-sm tabular-nums">
                                 {pkg.amount.toLocaleString()} credits
                               </p>
-                              <p className="text-lime-300 text-xs">
+                              <p className="text-muted text-[13px] font-medium tabular-nums">
                                 ${price.toFixed(2)}
                               </p>
                             </div>
@@ -798,17 +776,13 @@ export default function CreditsModal({
                             <button 
                               onClick={() => handlePurchase(pkg.package)}
                               disabled={isPurchasing || !pricing}
-                              className={`w-full py-2 rounded-lg font-semibold text-xs transition-all duration-300 flex items-center justify-center gap-1 md:gap-2 ${
-                                pkg.popular
-                                  ? 'bg-lime-300 text-black hover:bg-lime-400 shadow-[0_0_12px_rgba(196,255,133,0.4)] hover:shadow-[0_0_16px_rgba(196,255,133,0.6)] disabled:opacity-50'
-                                  : 'bg-white/10 text-white border border-white/20 hover:bg-white/20 hover:border-lime-300/50 disabled:opacity-50'
-                              }`}
+                              className={`btn btn-sm w-full ${pkg.popular ? 'btn-primary' : 'btn-glass'}`}
                             >
                               {isPurchasing && selectedPackage === pkg.package ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />
                               ) : (
                                 <>
-                                  <ShoppingCart className="w-3 h-3" />
+                                  <ShoppingCart className="w-3.5 h-3.5" strokeWidth={1.75} />
                                   <span className="hidden sm:inline">Purchase</span>
                                   <span className="sm:hidden">Buy</span>
                                 </>
@@ -820,22 +794,22 @@ export default function CreditsModal({
                     </div>
 
                     {/* Payment Info */}
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-2.5">
+                    <div className="rounded-lg border border-white/[0.07] px-3 py-2.5">
                       <div className="flex items-start gap-2">
-                        <Check className="w-3.5 h-3.5 text-lime-300 mt-0.5 flex-shrink-0" />
-                        <div className="space-y-0.5">
-                          <h4 className="text-xs font-semibold text-white">Secure Payment</h4>
-                          <ul className="space-y-0.5 text-[10px] text-[#bdbdbd]">
+                        <Check className="w-3.5 h-3.5 text-sage mt-0.5 flex-shrink-0" strokeWidth={2} />
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-semibold text-ivory">Secure payment</h4>
+                          <ul className="space-y-0.5 text-[11px] text-gray-400">
                             <li className="flex items-center gap-1.5">
-                              <div className="w-1 h-1 bg-lime-300 rounded-full" />
+                              <div className="w-1 h-1 bg-sage rounded-full" />
                               Instant credit delivery
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <div className="w-1 h-1 bg-lime-300 rounded-full" />
+                              <div className="w-1 h-1 bg-sage rounded-full" />
                               Powered by Stripe
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <div className="w-1 h-1 bg-lime-300 rounded-full" />
+                              <div className="w-1 h-1 bg-sage rounded-full" />
                               Credits never expire
                             </li>
                           </ul>
@@ -855,7 +829,7 @@ export default function CreditsModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-4"
+            className="modal-backdrop flex items-center justify-center px-4"
             onClick={closeCheckout}
           >
             <motion.div
@@ -863,24 +837,27 @@ export default function CreditsModal({
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg bg-[#1a1a1a] border border-white/10 rounded-2xl p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+              role="dialog"
+              aria-modal="true"
+              className="modal-surface relative w-full max-w-lg max-h-[85vh] overflow-y-auto"
             >
-              <button
-                onClick={closeCheckout}
-                className="absolute top-3 right-3 md:top-4 md:right-4 inline-flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition p-2 z-10"
-                aria-label="Close checkout"
-              >
-                <X className="w-4 h-4 text-gray-200" />
-              </button>
-
-              <div className="mb-6">
-                <h2 className="text-lg md:text-xl font-bold text-white mb-1">
-                  Complete Your Purchase
-                </h2>
-                <p className="text-xs md:text-sm text-[#bdbdbd] mt-2 -mb-4">
-                  {selectedPackage && `${getPackageAmount(selectedPackage).toLocaleString()} credits • $${getPrice(selectedPackage).toFixed(2)}`}
-                </p>
+              <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.07]">
+                <div className="min-w-0">
+                  <h2 className="panel-title">Complete your purchase</h2>
+                  <p className="panel-subtitle tabular-nums">
+                    {selectedPackage && `${getPackageAmount(selectedPackage).toLocaleString()} credits · $${getPrice(selectedPackage).toFixed(2)}`}
+                  </p>
+                </div>
+                <button
+                  onClick={closeCheckout}
+                  className="btn btn-ghost btn-sm !h-8 !w-8 !p-0"
+                  aria-label="Close checkout"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.75} />
+                </button>
               </div>
+
+              <div className="p-5">
 
               <Elements stripe={stripePromise} options={stripeOptions}>
                 <CheckoutForm 
@@ -890,6 +867,7 @@ export default function CreditsModal({
                   packagePrice={selectedPackage ? getPrice(selectedPackage) : 0}
                 />
               </Elements>
+              </div>
             </motion.div>
           </motion.div>
         )}

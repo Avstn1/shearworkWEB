@@ -1,45 +1,38 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
+import { BarChart3, BellRing, Check, Link2, MessageSquareText, Zap } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { ButtonLink } from '@/components/ui/Button'
 
-const COLORS = {
-  background: '#181818',
-  cardBg: '#1a1a1a',
-  navBg: '#1b1d1b',
-  surface: 'rgba(37, 37, 37, 0.6)',
-  surfaceSolid: '#252525',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
-  text: '#FFFFFF',
-  textMuted: 'rgba(255, 255, 255, 0.6)',
-  green: '#73aa57',
-  greenLight: '#5b8f52',
-  greenGlow: 'rgba(115, 170, 87, 0.4)',
+const features: Array<{ title: string; desc: string; Icon: LucideIcon }> = [
+  { title: 'Auto-Fill Engine', desc: 'Recover open spots automatically.', Icon: Zap },
+  { title: 'Smart Client Reminders', desc: 'Reach past clients at the right time.', Icon: MessageSquareText },
+  { title: 'Booking Alerts', desc: 'Know the moment someone books.', Icon: BellRing },
+  { title: 'Simple Performance Insights', desc: 'See what works without the noise.', Icon: BarChart3 },
+  { title: 'Booking Integration', desc: 'Connect Acuity or Square.', Icon: Link2 },
+]
+
+const planFeatures = ['Auto-Fill your empty slots', 'Smart booking reminders', 'Real-time booking alerts', 'Weekly performance insights']
+
+function IconTile({ Icon }: { Icon: LucideIcon }) {
+  return (
+    <span className="relative mb-2 md:mb-4 grid h-8 w-8 md:h-11 md:w-11 place-items-center rounded-lg bg-white/[0.04] text-sage-bright ring-1 ring-inset ring-white/[0.08]">
+      <Icon className="h-4 w-4 md:h-5 md:w-5" strokeWidth={1.75} aria-hidden="true" />
+    </span>
+  )
 }
 
 export default function FeaturesAndPricing() {
-  const router = useRouter()
-
-  const features = [
-    { title: 'Auto-Fill Engine', desc: 'Recover open spots automatically.', icon: '⚡' },
-    { title: 'Smart Client Reminders', desc: 'Reach past clients at the right time.', icon: '💬' },
-    { title: 'Booking Alerts', desc: 'Know the moment someone books.', icon: '🔔' },
-    { title: 'Simple Performance Insights', desc: 'See what works without the noise.', icon: '📈' },
-    { title: 'Booking Integration', desc: 'Connect Acuity or Square.', icon: '🔗' },
-  ]
-
-  const plans = [{ name: 'Corva Pro', price: '$20/month' }]
-
   return (
     <section
       id="how-it-works"
-      className="h-screen flex items-center justify-center px-4 md:px-6 lg:px-8"
-      style={{
-        background: `linear-gradient(135deg, #181818 0%, #1a1a1a 30%, #1c1e1c 70%, #181818 100%)`,
-        color: COLORS.text,
-      }}
+      className="relative bg-canvas h-screen flex items-center justify-center px-4 md:px-6 lg:px-8 overflow-hidden text-ivory"
     >
-      <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row gap-4 md:gap-8 lg:gap-12 items-center justify-center">
+      <div className="aurora-bg" />
+      {/* Olive light behind the pricing card */}
+
+      <div className="relative max-w-7xl mx-auto w-full flex flex-col md:flex-row gap-4 md:gap-8 lg:gap-12 items-center justify-center">
 
         {/* LEFT — FEATURES */}
         <div className="w-full md:flex-[1.1] flex flex-col justify-center">
@@ -47,7 +40,7 @@ export default function FeaturesAndPricing() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-base md:text-xl lg:text-2xl font-bold mb-2 md:mb-4"
+            className="font-display text-base md:text-2xl lg:text-4xl font-semibold tracking-[-0.04em] mb-2 md:mb-6"
           >
             How Corva Makes You More Money
           </motion.h2>
@@ -55,27 +48,16 @@ export default function FeaturesAndPricing() {
           <div className="grid grid-cols-2 gap-2.5 md:gap-4">
             {features.map((f, i) => (
               <motion.div
-                key={i}
+                key={f.title}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: i * 0.04 }}
-                className={i === features.length - 1 ? 'col-span-2' : ''} // <-- last card spans 2 columns
+                className={i === features.length - 1 ? 'col-span-2' : ''}
               >
-                <div
-                  className="p-2.5 md:p-4 lg:p-5 rounded-lg md:rounded-xl shadow hover:shadow-lg transition-all duration-300 backdrop-blur-lg cursor-pointer hover:scale-[1.02]"
-                  style={{
-                    background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1c1e1c 100%)`,
-                    borderWidth: 1,
-                    borderColor: COLORS.glassBorder,
-                  }}
-                >
-                  <div className="text-base md:text-2xl lg:text-3xl mb-0.5 md:mb-2">{f.icon}</div>
-                  <h3 className="text-[11px] md:text-sm lg:text-base font-bold" style={{ color: COLORS.green }}>
-                    {f.title}
-                  </h3>
-                  <p className="text-[9px] md:text-xs lg:text-sm leading-tight md:leading-relaxed" style={{ color: COLORS.textMuted }}>
-                    {f.desc}
-                  </p>
+                <div className="group glass-card glass-card-hover h-full p-2.5 md:p-5 lg:p-6 rounded-lg md:rounded-xl">
+                  <IconTile Icon={f.Icon} />
+                  <h3 className="text-[11px] md:text-sm lg:text-base font-semibold text-ivory">{f.title}</h3>
+                  <p className="text-[9px] md:text-xs lg:text-sm leading-tight md:leading-relaxed text-muted">{f.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -83,12 +65,7 @@ export default function FeaturesAndPricing() {
         </div>
 
         {/* DIVIDER (desktop only) */}
-        <div
-          className="hidden md:block w-px h-52 md:h-64 lg:h-96"
-          style={{
-            background: `linear-gradient(180deg, transparent 0%, ${COLORS.glassBorder} 50%, transparent 100%)`,
-          }}
-        />
+        <div className="hidden md:block w-px h-52 md:h-64 lg:h-96 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
 
         {/* RIGHT — PRICING */}
         <div className="w-full md:flex-1 flex flex-col justify-center">
@@ -96,69 +73,49 @@ export default function FeaturesAndPricing() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-base md:text-xl lg:text-2xl font-bold mb-2 md:mb-4"
+            className="font-display text-base md:text-2xl lg:text-4xl font-semibold tracking-[-0.04em] mb-2 md:mb-6"
           >
             Pricing
           </motion.h2>
 
-          {plans.map((p, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div
-                className="rounded-lg md:rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-3 md:p-5 lg:p-6 backdrop-blur-lg flex flex-col"
-                style={{
-                  background: `linear-gradient(135deg, ${COLORS.cardBg} 0%, #1e221e 100%)`,
-                  borderWidth: 2,
-                  borderColor: COLORS.green,
-                }}
-              >
-                <h3 className="text-sm md:text-lg lg:text-xl font-bold mb-1 md:mb-3">{p.name}</h3>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="glass-panel relative overflow-hidden p-3 md:p-6 lg:p-8 flex flex-col">
 
-                <div className="flex items-baseline gap-1 md:gap-2 mb-2 md:mb-4">
-                  <p className="text-2xl md:text-4xl lg:text-5xl font-bold" style={{ color: COLORS.green }}>
-                    {p.price.split('/')[0]}
-                  </p>
-                  <span className="text-xs md:text-sm lg:text-base" style={{ color: COLORS.textMuted }}>
-                    /{p.price.split('/')[1]}
-                  </span>
-                </div>
-
-                <div className="space-y-1 md:space-y-2 mb-2 md:mb-4">
-                  {['Auto-Fill your empty slots', 'Smart booking reminders', 'Real-time booking alerts', 'Weekly performance insights'].map(
-                    (feature, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 md:gap-2">
-                        <div
-                          className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full"
-                          style={{ backgroundColor: COLORS.green }}
-                        />
-                        <span className="text-[10px] md:text-sm" style={{ color: COLORS.textMuted }}>
-                          {feature}
-                        </span>
-                      </div>
-                    )
-                  )}
-                </div>
-
-                <button
-                  className="w-full py-1.5 md:py-3 rounded-md md:rounded-xl font-semibold text-xs md:text-sm transition-all duration-300 hover:scale-105"
-                  onClick={() => router.push('/signup')}
-                  style={{
-                    background: `linear-gradient(135deg, ${COLORS.green} 0%, ${COLORS.greenLight} 100%)`,
-                    color: '#000',
-                  }}
-                >
-                  Start 21-Day Free Trial
-                </button>
-                <p className="mt-2 text-[10px] md:text-xs" style={{ color: COLORS.textMuted }}>
-                  No credit card required
-                </p>
+              <div className="relative flex items-center justify-between mb-1 md:mb-4">
+                <h3 className="text-sm md:text-lg lg:text-xl font-semibold">Corva Pro</h3>
+                <span className="rounded-md border border-sage/20 bg-sage/10 px-2 py-1 text-[9px] md:text-[11px] font-semibold text-sage">
+                  21-day free trial
+                </span>
               </div>
-            </motion.div>
-          ))}
+
+              <div className="relative flex items-baseline gap-1 md:gap-2 mb-2 md:mb-5">
+                <p className="font-display text-2xl md:text-5xl lg:text-6xl font-semibold tracking-[-0.05em] text-ivory">
+                  $20
+                </p>
+                <span className="text-xs md:text-sm lg:text-base text-muted">/month</span>
+              </div>
+
+              <ul className="relative space-y-1 md:space-y-2.5 mb-3 md:mb-6">
+                {planFeatures.map(feature => (
+                  <li key={feature} className="flex items-center gap-1.5 md:gap-2.5">
+                    <span className="grid h-3.5 w-3.5 md:h-5 md:w-5 place-items-center rounded-[4px] bg-sage text-ink">
+                      <Check className="h-2 w-2 md:h-3 md:w-3" strokeWidth={3} aria-hidden="true" />
+                    </span>
+                    <span className="text-[10px] md:text-sm text-gray-200">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <ButtonLink href="/signup" arrow className="relative w-full justify-between">
+                Start 21-Day Free Trial
+              </ButtonLink>
+              <p className="relative mt-2 md:mt-3 text-[10px] md:text-xs text-muted">No credit card required</p>
+            </div>
+          </motion.div>
         </div>
 
       </div>

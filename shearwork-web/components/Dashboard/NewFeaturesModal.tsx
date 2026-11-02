@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Bell, ChevronDown, ChevronUp, Eye, Shield } from 'lucide-react'
+import { X, Megaphone, ChevronDown, ChevronUp, Eye, Shield, Globe, Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import ReactMarkdown from 'react-markdown'
@@ -210,14 +210,14 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
     }
   }
 
-  const getCategoryColor = (category: string) => {
-    const colors = {
-      feature: 'bg-[#4a7c59]/20 text-[#a8d5ba] border-[#4a7c59]/40',
-      improvement: 'bg-[#5a7c9a]/20 text-[#a8c5d5] border-[#5a7c9a]/40',
-      bugfix: 'bg-[#7a4444]/20 text-[#d49999] border-[#7a4444]/40',
-      announcement: 'bg-[#6b5a7c]/20 text-[#c5a8d5] border-[#6b5a7c]/40',
+  const getCategoryBadge = (category: string) => {
+    const badges = {
+      feature: 'badge-sage',
+      improvement: 'badge-info',
+      bugfix: 'badge-danger',
+      announcement: '',
     }
-    return colors[category as keyof typeof colors] || colors.feature
+    return badges[category as keyof typeof badges] ?? badges.feature
   }
 
   const handleMajorChange = (value: string) => {
@@ -249,55 +249,52 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className={`fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 ${!userId ? 'pt-24' : ''}`}
+      className={`modal-backdrop flex items-center justify-center p-4 ${!userId ? 'pt-24' : ''}`}
       onClick={onClose}
     >
-      <motion.div
-        initial={{ scale: 0.95, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.95, y: 20 }}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-features-title"
         onClick={(e) => e.stopPropagation()}
-        className={`bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-[#55694b]/50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden mb-16 sm:mb-0 ${
+        className={`modal-surface w-full flex flex-col overflow-hidden mb-16 sm:mb-0 ${
           !userId ? 'max-w-4xl h-[75vh]' : 'max-w-5xl h-[85vh]'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#55694b]/30 flex-shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.07] flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-amber-400/20 to-lime-400/20 rounded-xl">
-              <Bell className="w-6 h-6 text-lime-300" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.07] bg-raised">
+              <Megaphone className="h-[18px] w-[18px] text-sage" strokeWidth={1.75} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-amber-200 to-lime-300 bg-clip-text text-transparent">
+              <h2 id="new-features-title" className="text-[15px] font-semibold tracking-tight text-ivory">
                 What's New
               </h2>
+              <p className="text-xs text-gray-500">Latest updates to Corva</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-2">
             {/* View Mode Toggle - Only show for admins */}
             {initialViewMode === 'adminView' && (
-              <div className="flex gap-1 bg-[#2a2a2a] p-1 rounded-xl">
+              <div className="segmented">
                 <button
+                  type="button"
                   onClick={() => setViewMode('barberView')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center gap-1.5 ${
-                    viewMode === 'barberView'
-                      ? 'bg-[#4a7c59]/40 text-[#a8d5ba]'
-                      : 'text-white/60 hover:text-white/80'
-                  }`}
+                  data-active={viewMode === 'barberView'}
+                  className="segmented-item flex items-center gap-1.5"
                 >
-                  <Eye className="w-3.5 h-3.5" />
+                  <Eye className="w-3.5 h-3.5" strokeWidth={1.75} />
                   User View
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewMode('adminView')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 flex items-center gap-1.5 ${
-                    viewMode === 'adminView'
-                      ? 'bg-[#6b5a7c]/40 text-[#c5a8d5]'
-                      : 'text-white/60 hover:text-white/80'
-                  }`}
+                  data-active={viewMode === 'adminView'}
+                  className="segmented-item flex items-center gap-1.5"
                 >
-                  <Shield className="w-3.5 h-3.5" />
+                  <Shield className="w-3.5 h-3.5" strokeWidth={1.75} />
                   Admin View
                 </button>
               </div>
@@ -314,183 +311,179 @@ export default function NewFeaturesModal({ isOpen, onClose, initialViewMode = 'b
             )}
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+              aria-label="Close"
+              className="btn btn-ghost btn-sm h-9 w-9 !px-0"
             >
-              <X className="w-6 h-6 text-gray-400" />
+              <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </button>
           </div>
         </div>
 
         {/* Content - Fixed Height */}
-        <div className="flex-1 overflow-y-auto p-6 min-h-0">
+        <div className="flex-1 overflow-y-auto p-5 min-h-0">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="w-12 h-12 border-4 border-[#55694b]/30 border-t-[#6b8e4e] rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-gray-400">Loading features...</p>
+                <div className="w-7 h-7 border-2 border-white/[0.08] border-t-sage rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-gray-400">Loading features...</p>
               </div>
             </div>
           ) : majorVersions.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Bell className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 text-lg">No updates yet</p>
-                <p className="text-gray-500 text-sm mt-2">Check back soon for new features!</p>
-              </div>
+            <div className="empty-state h-full">
+              <Megaphone strokeWidth={1.75} />
+              <strong>No updates yet</strong>
+              <span>Check back soon for new features!</span>
             </div>
           ) : currentGroup ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Minor Version Groups */}
-              <div className="space-y-4">
-                {currentGroup.minorGroups.map((minorGroup) => {
-                  const key = `${currentGroup.majorVersion}.${minorGroup.minorVersion}`
-                  const isExpanded = expandedMinorVersion === key
-                  
-                  return (
-                    <div key={key} className="border border-[#55694b]/30 rounded-2xl overflow-hidden">
-                      {/* Minor Version Header */}
-                      <button
-                        onClick={() => toggleMinorVersion(currentGroup.majorVersion, minorGroup.minorVersion)}
-                        className="w-full flex items-center justify-between p-4 bg-[#55694b]/10 hover:bg-[#55694b]/20 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-[#F1F5E9]">
-                            Version {currentGroup.majorVersion}.{minorGroup.minorVersion}
-                          </span>
-                          <span className="px-2 py-0.5 bg-[#55694b]/40 text-[#d4e7c5] text-xs font-semibold rounded-full">
-                            {minorGroup.features.length} {minorGroup.features.length === 1 ? 'update' : 'updates'}
-                          </span>
-                          {minorGroup.isLatest && (
-                            <span className="px-2 py-0.5 bg-lime-400/20 text-lime-300 text-xs font-semibold rounded-full border border-lime-400/40">
-                              Latest
-                            </span>
-                          )}
-                        </div>
-                        {isExpanded ? (
-                          <ChevronUp className="w-5 h-5 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-400" />
-                        )}
-                      </button>
+              {currentGroup.minorGroups.map((minorGroup) => {
+                const key = `${currentGroup.majorVersion}.${minorGroup.minorVersion}`
+                const isExpanded = expandedMinorVersion === key
 
-                      {/* Features List - Collapsible */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-4 space-y-4 bg-white/5">
-                              {minorGroup.features.map((feature, index) => (
-                                <div
-                                  key={feature.id}
-                                  className="bg-white/5 backdrop-blur-sm border border-[#55694b]/30 rounded-xl p-4"
-                                >
-                                  {/* Feature Header - Single Row */}
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                        <span className="px-2 py-0.5 bg-[#55694b]/40 text-lime-300 text-[10px] font-mono rounded">
-                                          v{feature.version}
-                                        </span>
-                                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg border ${getCategoryColor(feature.category)}`}>
-                                          {feature.category.charAt(0).toUpperCase() + feature.category.slice(1)}
-                                        </span>
-                                        {viewMode === 'adminView' && !feature.is_published && (
-                                          <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 text-[10px] font-semibold rounded-lg border border-amber-500/40">
-                                            Draft
-                                          </span>
-                                        )}
-                                      </div>
-                                      <h4 className="text-sm font-bold text-[#F1F5E9] leading-tight">
-                                        {feature.title}
-                                      </h4>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1 ml-3 flex-shrink-0">
-                                      <span className="text-[10px] text-gray-500">
-                                        {new Date(feature.released_at).toLocaleDateString('en-US', {
-                                          month: 'short',
-                                          day: 'numeric',
-                                          year: 'numeric'
-                                        })}
+                return (
+                  <div key={key} className="panel overflow-hidden">
+                    {/* Minor Version Header */}
+                    <button
+                      type="button"
+                      onClick={() => toggleMinorVersion(currentGroup.majorVersion, minorGroup.minorVersion)}
+                      aria-expanded={isExpanded}
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[15px] font-semibold text-ivory tabular-nums">
+                          Version {currentGroup.majorVersion}.{minorGroup.minorVersion}
+                        </span>
+                        <span className="badge tabular-nums">
+                          {minorGroup.features.length} {minorGroup.features.length === 1 ? 'update' : 'updates'}
+                        </span>
+                        {minorGroup.isLatest && (
+                          <span className="badge badge-sage">Latest</span>
+                        )}
+                      </div>
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 shrink-0 text-gray-500" strokeWidth={1.75} />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 shrink-0 text-gray-500" strokeWidth={1.75} />
+                      )}
+                    </button>
+
+                    {/* Features List - Collapsible */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="divide-y divide-white/[0.06] border-t border-white/[0.07]">
+                            {minorGroup.features.map((feature) => (
+                              <div key={feature.id} className="px-4 py-4">
+                                {/* Feature Header - Single Row */}
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                                      <span className="badge font-mono tabular-nums">
+                                        v{feature.version}
                                       </span>
-                                      {viewMode === 'adminView' && (
-                                        <span className="text-[10px] text-gray-500">
-                                          {feature.platform === 'both' ? '🌐📱' : feature.platform === 'web' ? '🌐' : '📱'}
-                                        </span>
+                                      <span className={`badge ${getCategoryBadge(feature.category)}`}>
+                                        {feature.category.charAt(0).toUpperCase() + feature.category.slice(1)}
+                                      </span>
+                                      {viewMode === 'adminView' && !feature.is_published && (
+                                        <span className="badge badge-warn">Draft</span>
                                       )}
                                     </div>
+                                    <h4 className="text-sm font-semibold text-ivory leading-snug">
+                                      {feature.title}
+                                    </h4>
                                   </div>
-
-                                  {/* Description */}
-                                  <div className="text-xs leading-relaxed">
-                                    <ReactMarkdown 
-                                      remarkPlugins={[remarkGfm]}
-                                      components={{
-                                        h1: ({node, ...props}) => <h1 className="text-lg font-bold text-[#F1F5E9] mt-4 mb-2 first:mt-0" {...props} />,
-                                        h2: ({node, ...props}) => <h2 className="text-base font-bold text-[#F1F5E9] mt-3 mb-2 first:mt-0" {...props} />,
-                                        h3: ({node, ...props}) => <h3 className="text-sm font-bold text-[#F1F5E9] mt-3 mb-1.5 first:mt-0" {...props} />,
-                                        ul: ({node, ...props}) => <ul className="list-disc pl-4 my-2 space-y-1" {...props} />,
-                                        ol: ({node, ...props}) => <ol className="list-decimal pl-4 my-2 space-y-1" {...props} />,
-                                        li: ({node, ...props}) => <li className="text-gray-300 leading-relaxed" {...props} />,
-                                        p: ({node, ...props}) => <p className="my-2 text-gray-300 leading-relaxed" {...props} />,
-                                        strong: ({node, ...props}) => <strong className="font-semibold text-[#F1F5E9]" {...props} />,
-                                        em: ({node, ...props}) => <em className="italic text-gray-200" {...props} />,
-                                        a: ({node, ...props}) => <a className="text-lime-400 hover:underline" {...props} />,
-                                        code: ({node, ...props}) => {
-                                          const isInline = !props.className
-                                          return isInline 
-                                            ? <code className="text-lime-300 bg-[#2a2a2a] px-1.5 py-0.5 rounded text-[11px] font-mono" {...props} />
-                                            : <code className="block text-lime-300 bg-[#2a2a2a] p-3 rounded-lg text-[11px] font-mono my-2 overflow-x-auto" {...props} />
-                                        },
-                                      }}
-                                    >
-                                      {feature.description}
-                                    </ReactMarkdown>
+                                  <div className="flex flex-col items-end gap-1 ml-3 flex-shrink-0">
+                                    <span className="text-xs text-gray-500 tabular-nums">
+                                      {new Date(feature.released_at).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                    </span>
+                                    {viewMode === 'adminView' && (
+                                      <span
+                                        className="flex items-center gap-1 text-gray-500"
+                                        title={feature.platform === 'both' ? 'Web + mobile' : feature.platform === 'web' ? 'Web' : 'Mobile'}
+                                      >
+                                        {feature.platform !== 'mobile' && <Globe className="w-3.5 h-3.5" strokeWidth={1.75} />}
+                                        {feature.platform !== 'web' && <Smartphone className="w-3.5 h-3.5" strokeWidth={1.75} />}
+                                      </span>
+                                    )}
                                   </div>
-
-                                  {/* Media */}
-                                  {(feature.image_url || feature.video_url) && (
-                                    <div className="space-y-3 mt-3">
-                                      {feature.image_url && (
-                                        <div className="rounded-xl overflow-hidden border border-[#55694b]/30">
-                                          <img 
-                                            src={feature.image_url} 
-                                            alt={feature.title}
-                                            className="w-full h-auto"
-                                          />
-                                        </div>
-                                      )}
-                                      {feature.video_url && (
-                                        <div className="rounded-xl overflow-hidden border border-[#55694b]/30">
-                                          <video 
-                                            src={feature.video_url}
-                                            controls
-                                            className="w-full h-auto"
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )
-                })}
-              </div>
+
+                                {/* Description */}
+                                <div className="text-[13px] leading-relaxed">
+                                  <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                      h1: ({node, ...props}) => <h1 className="text-base font-semibold text-ivory mt-4 mb-2 first:mt-0" {...props} />,
+                                      h2: ({node, ...props}) => <h2 className="text-[15px] font-semibold text-ivory mt-3 mb-2 first:mt-0" {...props} />,
+                                      h3: ({node, ...props}) => <h3 className="text-sm font-semibold text-ivory mt-3 mb-1.5 first:mt-0" {...props} />,
+                                      ul: ({node, ...props}) => <ul className="list-disc pl-4 my-2 space-y-1 marker:text-gray-600" {...props} />,
+                                      ol: ({node, ...props}) => <ol className="list-decimal pl-4 my-2 space-y-1 marker:text-gray-600" {...props} />,
+                                      li: ({node, ...props}) => <li className="text-gray-300 leading-relaxed" {...props} />,
+                                      p: ({node, ...props}) => <p className="my-2 text-gray-300 leading-relaxed" {...props} />,
+                                      strong: ({node, ...props}) => <strong className="font-semibold text-ivory" {...props} />,
+                                      em: ({node, ...props}) => <em className="italic text-gray-200" {...props} />,
+                                      a: ({node, ...props}) => <a className="text-sage-bright underline-offset-2 hover:underline" {...props} />,
+                                      code: ({node, ...props}) => {
+                                        const isInline = !props.className
+                                        return isInline
+                                          ? <code className="text-gray-200 bg-raised border border-white/[0.07] px-1.5 py-0.5 rounded text-[11px] font-mono" {...props} />
+                                          : <code className="block text-gray-200 bg-canvas border border-white/[0.07] p-3 rounded-lg text-[11px] font-mono my-2 overflow-x-auto" {...props} />
+                                      },
+                                    }}
+                                  >
+                                    {feature.description}
+                                  </ReactMarkdown>
+                                </div>
+
+                                {/* Media */}
+                                {(feature.image_url || feature.video_url) && (
+                                  <div className="space-y-3 mt-3">
+                                    {feature.image_url && (
+                                      <div className="rounded-lg overflow-hidden border border-white/[0.07]">
+                                        <img
+                                          src={feature.image_url}
+                                          alt={feature.title}
+                                          className="w-full h-auto"
+                                        />
+                                      </div>
+                                    )}
+                                    {feature.video_url && (
+                                      <div className="rounded-lg overflow-hidden border border-white/[0.07]">
+                                        <video
+                                          src={feature.video_url}
+                                          controls
+                                          className="w-full h-auto"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )
+              })}
             </div>
           ) : null}
         </div>
-
-      </motion.div>
+      </div>
     </motion.div>
   )
 }

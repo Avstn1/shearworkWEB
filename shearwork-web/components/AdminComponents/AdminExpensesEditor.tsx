@@ -3,7 +3,7 @@
 import { useState, useEffect, ChangeEvent } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
-import { motion } from 'framer-motion'
+import { Upload, X } from 'lucide-react'
 
 interface AdminExpensesEditorProps {
   barberId: string
@@ -112,9 +112,9 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {/* Expense Input + Label + Toggle */}
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
           inputMode="decimal"
@@ -124,100 +124,87 @@ export default function AdminExpensesEditor({ barberId, month, year, onUpdate }:
             if (/^\d*\.?\d{0,2}$/.test(value)) setExpenseAmount(value)
           }}
           placeholder="Enter expense amount"
-          className="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 
-                     focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all min-w-[120px]"
+          className="field !w-auto min-w-[120px] flex-1 tabular-nums"
         />
         <input
           type="text"
           value={expenseLabel}
           onChange={e => setExpenseLabel(e.target.value)}
           placeholder="Label for expense"
-          className="flex-1 px-3 py-2 rounded-lg bg-white/10 text-white border border-white/10 
-                     focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all min-w-[120px]"
+          className="field !w-auto min-w-[120px] flex-1"
         />
 
         {/* Toggle Add / Replace */}
-        <div className="relative flex bg-white/10 rounded-lg p-1 text-xs font-semibold overflow-hidden border border-white/10 w-32">
-          <motion.div
-            layout
-            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className={`absolute top-1 bottom-1 left-1 w-1/2 rounded-md ${
-              action === 'add' ? 'translate-x-full bg-lime-400/30' : 'translate-x-0 bg-amber-400/30'
-            }`}
-          />
+        <div className="segmented w-36">
           <button
+            type="button"
+            data-active={action === 'replace'}
             onClick={() => setAction('replace')}
-            className={`flex-1 py-1 z-10 transition-colors ${
-              action === 'replace' ? 'text-amber-100' : 'text-white/70 hover:text-white/90'
-            }`}
+            className="segmented-item"
           >
             Replace
           </button>
           <button
+            type="button"
+            data-active={action === 'add'}
             onClick={() => setAction('add')}
-            className={`flex-1 py-1 z-10 transition-colors ${
-              action === 'add' ? 'text-lime-100' : 'text-white/70 hover:text-white/90'
-            }`}
+            className="segmented-item"
           >
             Add
           </button>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={handleSaveExpense}
           disabled={loading}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-lime-400/40 to-amber-400/40 
-                     text-white font-semibold hover:shadow-md transition-all"
+          className="btn btn-primary btn-sm"
         >
           {loading ? 'Saving...' : 'Save'}
-        </motion.button>
+        </button>
       </div>
 
       {/* Live Totals */}
-      <div className="text-white text-sm">
-        {expenseAmount !== '' && (
-          <p>
-            New Total:{' '}
-            <span className="text-amber-300 font-bold">
-              ${newTotal.toFixed(2)}
-            </span>
-          </p>
-        )}
-      </div>
+      {expenseAmount !== '' && (
+        <p className="text-sm text-muted">
+          New total:{' '}
+          <span className="font-semibold tabular-nums text-ivory">
+            ${newTotal.toFixed(2)}
+          </span>
+        </p>
+      )}
 
       {/* Upload Receipt */}
-      <label className="w-full flex justify-center items-center px-4 py-2 bg-white/10 text-white rounded-lg cursor-pointer hover:bg-white/20 transition">
-        Upload Receipt
+      <label className="btn btn-glass btn-sm w-full cursor-pointer">
+        <Upload size={16} strokeWidth={1.75} />
+        Upload receipt
         <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
       </label>
 
       {/* Upload Modal */}
       {uploadingFile && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-zinc-900 rounded-lg p-6 w-[90%] max-w-md text-white flex flex-col gap-4 border border-white/10 shadow-xl">
-            <h2 className="text-lg font-semibold">Label your receipt</h2>
-            <p className="text-sm text-gray-400">Leave blank to default to today's date.</p>
-            <input
-              type="text"
-              value={receiptLabel}
-              onChange={e => setReceiptLabel(e.target.value)}
-              placeholder="Enter receipt label"
-              className="px-3 py-2 rounded-lg bg-white/10 text-white border border-white/20 
-                         focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all w-full"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={handleUploadCancel}
-                className="px-4 py-2 rounded-lg bg-red-600/70 hover:bg-red-600 transition"
-              >
+        <div className="modal-backdrop flex items-center justify-center p-4">
+          <div className="modal-surface w-full max-w-md text-ivory">
+            <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+              <h2 className="text-[15px] font-semibold">Label your receipt</h2>
+              <button onClick={handleUploadCancel} className="btn btn-ghost btn-sm !h-8 !px-2" aria-label="Close">
+                <X size={16} strokeWidth={1.75} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-3 px-5 py-4">
+              <p className="text-sm text-muted">Leave blank to default to today&apos;s date.</p>
+              <input
+                type="text"
+                value={receiptLabel}
+                onChange={e => setReceiptLabel(e.target.value)}
+                placeholder="Enter receipt label"
+                className="field"
+              />
+            </div>
+            <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-3">
+              <button onClick={handleUploadCancel} className="btn btn-ghost btn-sm">
                 Cancel
               </button>
-              <button
-                onClick={handleUploadConfirm}
-                className="px-4 py-2 rounded-lg bg-green-600/70 hover:bg-green-600 transition"
-              >
+              <button onClick={handleUploadConfirm} className="btn btn-primary btn-sm">
                 Upload
               </button>
             </div>

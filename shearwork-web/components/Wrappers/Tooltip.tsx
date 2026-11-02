@@ -13,24 +13,16 @@ export default function Tooltip({
     <div className="relative group flex justify-center items-center z-30">
       {children}
 
-      {/* Tooltip — themed for Corva */}
-        <div
-          className="
-            absolute top-full mt-2
-            opacity-0 group-hover:opacity-100 
-            pointer-events-none 
-            transition-all duration-200
-            whitespace-nowrap 
-
-            z-40
-
-            bg-gradient-to-r from-amber-300/90 to-lime-300/90
-            text-black font-semibold text-xs 
-          
-          px-2 py-1 
-          rounded-md shadow-[0_0_8px_rgba(255,255,255,0.25)]
-          border border-white/20
-          backdrop-blur-md
+      <div
+        role="tooltip"
+        className="
+          absolute top-full mt-2 z-40
+          pointer-events-none whitespace-nowrap
+          opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
+          transition-opacity duration-150
+          rounded-md border border-white/[0.12] bg-raised
+          px-2 py-1 text-xs font-medium text-ivory
+          shadow-[0_8px_24px_-8px_rgb(0_0_0/0.7)]
         "
       >
         {label}

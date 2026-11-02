@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { AlertTriangle, Check, Loader2 } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
 import ConnectAcuityButton from '@/components/ConnectAcuityButton'
 import ConnectSquareButton from '@/components/ConnectSquareButton'
@@ -102,31 +102,21 @@ export default function CalendarStep({
     }
   }
 
-  return (
-    <div className="space-y-6 animate-fadeInUp">
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeInUp {
-          animation: fadeInUp 0.4s ease-out forwards;
-        }
-      `}</style>
+  const continueDisabled = profileLoading || saving || !isCalendarConnected || !isCalendarSelected
 
-      <div className="space-y-6 rounded-2xl border border-white/10 bg-black/20 p-6">
-        <h3 className="text-sm font-semibold text-white uppercase tracking-[0.2em]">Connect your calendar</h3>
-        <p className="text-xs text-gray-400">
-          Choose the provider you want to sync. You can change this later in Settings.
-        </p>
-        
-        <div className="space-y-4">
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h2 className="panel-title">Connect your calendar</h2>
+          <p className="panel-subtitle">
+            Choose the provider you want to sync. You can change this later in Settings.
+          </p>
+        </div>
+      </header>
+
+      <div className="panel-body space-y-5">
+        <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Calendar provider">
           {(
             [
               {
@@ -142,43 +132,51 @@ export default function CalendarStep({
                 helper: 'Ideal if your POS and scheduling live in Square.',
               },
             ] as const
-          ).map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setSelectedProvider(option.id)}
-              className={`w-full rounded-2xl border p-4 text-left transition ${
-                selectedProvider === option.id
-                  ? 'border-emerald-400/40 bg-emerald-400/10'
-                  : 'border-white/10 bg-black/20 hover:border-white/30'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span
-                  className={`mt-1 h-4 w-4 rounded-full border ${
-                    selectedProvider === option.id
-                      ? 'border-emerald-300 bg-emerald-300'
-                      : 'border-white/30'
-                  }`}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-white">{option.title}</p>
-                  <p className="text-xs text-gray-300">{option.description}</p>
-                  <p className="text-[0.7rem] text-gray-400 mt-1">{option.helper}</p>
+          ).map((option) => {
+            const isSelected = selectedProvider === option.id
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => setSelectedProvider(option.id)}
+                className={`w-full rounded-lg border p-4 text-left transition-colors ${
+                  isSelected
+                    ? 'border-sage/45 bg-sage/[0.06]'
+                    : 'border-white/[0.07] bg-canvas hover:border-white/[0.12]'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                      isSelected ? 'border-sage' : 'border-white/25'
+                    }`}
+                  >
+                    {isSelected && <span className="h-2 w-2 rounded-full bg-sage" />}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-ivory">{option.title}</p>
+                      {option.id === 'acuity' && <span className="badge badge-sage">Recommended</span>}
+                    </div>
+                    <p className="mt-0.5 text-[13px] text-gray-400">{option.description}</p>
+                    <p className="mt-1 text-xs text-gray-500">{option.helper}</p>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
 
         {selectedProvider && (
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+          <div className="rounded-lg border border-white/[0.07] bg-raised p-4">
             <div className="flex flex-col gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-ivory">
                   {selectedProvider === 'acuity' ? 'Acuity selected' : 'Square selected'}
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-[13px] text-gray-400">
                   {providerConnected
                     ? 'Calendar connected successfully.'
                     : 'Connect to begin syncing appointments.'}
@@ -209,12 +207,12 @@ export default function CalendarStep({
               {providerConnected && selectedProvider === 'acuity' && acuityCalendars.length > 0 && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block mb-2 text-sm font-semibold text-white">Select Calendar</label>
+                    <label className="field-label">Select calendar</label>
                     <select
                       value={isCalendarLocked ? existingCalendar : selectedAcuityCalendar}
                       onChange={e => setSelectedAcuityCalendar(e.target.value)}
                       disabled={isCalendarLocked}
-                      className={`w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-[#3af1f7] transition-all ${
+                      className={`field ${
                         isCalendarLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                       }`}
                     >
@@ -231,28 +229,28 @@ export default function CalendarStep({
                     </select>
                   </div>
                   {!isCalendarLocked && (
-                    <div className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-3">
-                      <p className="text-xs text-rose-200 font-semibold">
-                        ⚠️ WARNING: You cannot change your calendar after clicking Next.
-                      </p>
-                      <p className="text-xs text-rose-200 mt-1">
-                        Make sure you select the correct calendar before proceeding.
-                      </p>
+                    <div className="flex gap-2.5 rounded-lg border border-[#D99A8B]/25 bg-[#D99A8B]/[0.06] px-3 py-2.5">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#D99A8B]" strokeWidth={1.75} />
+                      <div>
+                        <p className="text-xs font-semibold text-[#D99A8B]">
+                          You cannot change your calendar after clicking Continue.
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-400">
+                          Make sure you select the correct calendar before proceeding.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
               )}
               {providerConnected && (
                 <div className="flex flex-wrap gap-2">
-                  <span className="text-xs text-emerald-300 border border-emerald-300/30 rounded-full px-3 py-1 w-fit">
+                  <span className="badge badge-sage">
+                    <Check className="h-3 w-3" strokeWidth={2} />
                     {selectedProvider === 'acuity' ? 'Acuity account connected' : 'Square connected'}
                   </span>
                   {selectedProvider === 'acuity' && (
-                    <span className={`text-xs border rounded-full px-3 py-1 w-fit ${
-                      selectedAcuityCalendar 
-                        ? 'text-emerald-300 border-emerald-300/30' 
-                        : 'text-amber-300 border-amber-300/30'
-                    }`}>
+                    <span className={`badge ${selectedAcuityCalendar ? 'badge-sage' : 'badge-warn'}`}>
                       {selectedAcuityCalendar ? `Calendar selected: ${selectedAcuityCalendar}` : 'Calendar not selected'}
                     </span>
                   )}
@@ -261,30 +259,30 @@ export default function CalendarStep({
             </div>
           </div>
         )}
+      </div>
 
-        {/* Back and Next Buttons */}
-        <div className="flex justify-between items-center gap-4 pt-4 border-t border-white/10">
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={saving}
-            className={`px-6 py-3 font-semibold rounded-xl transition-all ${
-              saving
-                ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                : 'bg-white/10 border border-white/20 hover:bg-white/15'
-            }`}
-          >
-            Back
-          </button>
+      {/* Back and Continue */}
+      <div className="flex items-center justify-between gap-3 border-t border-white/[0.07] px-5 py-4">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={saving}
+          className="btn btn-ghost"
+        >
+          Back
+        </button>
+        <div className="flex items-center gap-3">
+          {!isCalendarConnected && (
+            <p className="hidden text-xs text-gray-500 sm:block">Connect a calendar to continue</p>
+          )}
+          {isCalendarConnected && !isCalendarSelected && !isCalendarLocked && (
+            <p className="hidden text-xs text-gray-500 sm:block">Select a calendar to continue</p>
+          )}
           <button
             type="button"
             onClick={handleNext}
-            disabled={profileLoading || saving || !isCalendarConnected || !isCalendarSelected}
-            className={`px-8 py-3 font-semibold rounded-xl transition-all ${
-              profileLoading || saving || !isCalendarConnected || !isCalendarSelected
-                ? 'bg-white/5 border border-white/10 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black hover:shadow-lg'
-            }`}
+            disabled={continueDisabled}
+            className="btn btn-primary min-w-[120px]"
           >
             {saving ? (
               <span className="inline-flex items-center gap-2">
@@ -292,22 +290,11 @@ export default function CalendarStep({
                 Saving...
               </span>
             ) : (
-              'Next'
+              'Continue'
             )}
           </button>
         </div>
-        
-        {!isCalendarConnected && (
-          <p className="text-xs text-gray-400 text-center">
-            Connect a calendar to continue
-          </p>
-        )}
-        {isCalendarConnected && !isCalendarSelected && !isCalendarLocked && (
-          <p className="text-xs text-gray-400 text-center">
-            Select a calendar to continue
-          </p>
-        )}
       </div>
-    </div>
+    </section>
   )
 }

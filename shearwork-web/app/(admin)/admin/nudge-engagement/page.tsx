@@ -6,7 +6,8 @@ import { supabase } from '@/utils/supabaseClient'
 import toast from 'react-hot-toast'
 import { format, getISOWeek, getYear, startOfISOWeek, endOfISOWeek, addWeeks, subWeeks } from 'date-fns'
 import { DayPicker } from 'react-day-picker'
-import { ChevronLeft, ChevronRight, Calendar, MessageSquare, CheckCircle, XCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, MessageSquare, CheckCircle, XCircle, Inbox, X, Activity } from 'lucide-react'
+import { AppPage, PageHeader, EmptyState } from '@/components/ui/AppKit'
 import 'react-day-picker/dist/style.css'
 
 // ----------------------------------------------------------------
@@ -73,8 +74,8 @@ function StatusPill({ is_sent, reason }: { is_sent: boolean; reason: string | nu
 
   if (is_sent) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold text-green-400 bg-green-600/15 border border-green-600/30">
-        <CheckCircle className="w-3 h-3" /> Sent
+      <span className="badge badge-sage">
+        <CheckCircle size={12} strokeWidth={1.75} /> Sent
       </span>
     )
   }
@@ -82,16 +83,15 @@ function StatusPill({ is_sent, reason }: { is_sent: boolean; reason: string | nu
   return (
     <div className="relative inline-block">
       <span
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold text-red-400 bg-red-600/15 border border-red-600/30 cursor-help"
+        className="badge badge-danger cursor-help"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <XCircle className="w-3 h-3" /> Failed
+        <XCircle size={12} strokeWidth={1.75} /> Failed
       </span>
       {showTooltip && reason && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-48 bg-[#1f2420] border border-[#55694b] rounded-lg px-3 py-2 text-xs text-[#F1F5E9] shadow-xl">
+        <div className="modal-surface absolute bottom-full left-1/2 z-50 mb-2 w-48 -translate-x-1/2 !rounded-lg px-3 py-2 text-xs text-ivory">
           {reason}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#55694b]" />
         </div>
       )}
     </div>
@@ -117,41 +117,70 @@ function WeekNav({
   onDateSelect: (d: Date | undefined) => void
 }) {
   return (
-    <div className="mb-4 bg-[#2a2f27] rounded-xl p-3 border border-[#55694b] shadow-md">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <button onClick={onPrev} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3a4431] text-[#F1F5E9] hover:bg-[#4b5a42] transition-all hover:scale-105 active:scale-95 text-sm">
-          <ChevronLeft size={16} /><span className="hidden sm:inline">Previous</span>
+    <div className="panel mb-4 px-3 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button onClick={onPrev} className="btn btn-ghost btn-sm" aria-label="Previous week">
+          <ChevronLeft size={16} strokeWidth={1.75} /><span className="hidden sm:inline">Previous</span>
         </button>
-        <div className="flex-1 text-center">
-          <div className="text-lg font-bold text-[var(--highlight)]">{weekInfo.title}</div>
-          {isCurrentWeek && (
-            <div className="inline-block px-2 py-0.5 rounded-full bg-green-600/20 border border-green-600/40 text-green-400 text-[10px] font-semibold mt-1">Current Week</div>
-          )}
+        <div className="flex flex-1 flex-wrap items-center justify-center gap-2 text-center">
+          <span className="text-[15px] font-semibold tabular-nums text-ivory">{weekInfo.title}</span>
+          {isCurrentWeek && <span className="badge badge-sage">Current week</span>}
         </div>
-        <div className="relative" ref={pickerRef}>
-          <button onClick={() => setShowDatePicker(!showDatePicker)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3a4431] text-[#F1F5E9] hover:bg-[#4b5a42] transition-all hover:scale-105 active:scale-95 text-sm">
-            <Calendar size={16} /><span className="hidden sm:inline">Jump to Date</span>
-          </button>
-          {showDatePicker && (
-            <div className="absolute right-0 top-full mt-2 z-50 bg-[#2f3a2d] border border-[#55694b] rounded-xl shadow-2xl p-3">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-semibold text-[var(--highlight)]">Select a Date</span>
-                <button onClick={() => setShowDatePicker(false)} className="px-2 py-0.5 text-xs bg-red-600 rounded-lg hover:bg-red-700 transition-colors">✕</button>
+        <div className="flex items-center gap-1">
+          <div className="relative" ref={pickerRef}>
+            <button onClick={() => setShowDatePicker(!showDatePicker)} className="btn btn-glass btn-sm">
+              <Calendar size={16} strokeWidth={1.75} /><span className="hidden sm:inline">Jump to date</span>
+            </button>
+            {showDatePicker && (
+              <div className="modal-surface absolute right-0 top-full z-50 mt-2 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted">Select a date</span>
+                  <button onClick={() => setShowDatePicker(false)} className="btn btn-ghost btn-sm !h-7 !px-1.5" aria-label="Close">
+                    <X size={14} strokeWidth={1.75} />
+                  </button>
+                </div>
+                <DayPicker
+                  mode="single" selected={currentWeek} onSelect={onDateSelect}
+                  className="text-ivory"
+                  modifiersClassNames={{ selected: 'bg-sage text-ink rounded-md font-semibold', today: 'text-sage-bright font-semibold' }}
+                  style={{ ['--rdp-accent-color' as any]: '#8FB57A' }}
+                  showOutsideDays
+                />
               </div>
-              <DayPicker
-                mode="single" selected={currentWeek} onSelect={onDateSelect}
-                className="rounded-lg bg-[#2f3a2d] text-[#F1F5E9]"
-                modifiersClassNames={{ selected: 'bg-green-600 text-[#F1F5E9] rounded-full font-bold', today: 'bg-green-600/30 text-[#F1F5E9] rounded-full font-semibold' }}
-                showOutsideDays
-              />
-            </div>
-          )}
+            )}
+          </div>
+          <button onClick={onNext} className="btn btn-ghost btn-sm" aria-label="Next week">
+            <span className="hidden sm:inline">Next</span><ChevronRight size={16} strokeWidth={1.75} />
+          </button>
         </div>
-        <button onClick={onNext} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3a4431] text-[#F1F5E9] hover:bg-[#4b5a42] transition-all hover:scale-105 active:scale-95 text-sm">
-          <span className="hidden sm:inline">Next</span><ChevronRight size={16} />
-        </button>
       </div>
     </div>
+  )
+}
+
+// ----------------------------------------------------------------
+// Shared bits
+// ----------------------------------------------------------------
+
+function Spinner() {
+  return (
+    <div className="flex flex-col items-center gap-3 py-12">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/[0.12] border-t-sage" />
+      <span className="text-sm text-muted">Loading...</span>
+    </div>
+  )
+}
+
+function RowIndex({ n }: { n: number }) {
+  return <span className="text-xs tabular-nums text-gray-500">{n}</span>
+}
+
+function Ratio({ value, total, tone }: { value: number; total: number; tone: 'sage' | 'info' }) {
+  if (total <= 0) return <span className="text-gray-500">—</span>
+  return (
+    <span className={`badge tabular-nums ${value > 0 ? (tone === 'sage' ? 'badge-sage' : 'badge-info') : ''}`}>
+      {value}/{total}
+    </span>
   )
 }
 
@@ -160,104 +189,72 @@ function WeekNav({
 // ----------------------------------------------------------------
 
 function EngagementTab({ records, loading }: { records: EngagementRecord[]; loading: boolean }) {
-  const Spinner = () => (
-    <div className="flex flex-col items-center gap-3 py-12">
-      <div className="w-10 h-10 border-4 border-[#55694b] border-t-green-600 rounded-full animate-spin" />
-      <span className="text-[#9ca89a] text-sm">Loading...</span>
-    </div>
-  )
   const Empty = () => (
-    <div className="flex flex-col items-center gap-3 py-12 px-6 text-center">
-      <div className="w-16 h-16 rounded-full bg-[#3a4431] flex items-center justify-center"><span className="text-3xl opacity-50">📭</span></div>
-      <div className="text-[#9ca89a]">No responses this week</div>
-      <div className="text-[#9ca89a]/60 text-sm">Barbers who reply "yes" from Monday 10:00 AM will appear here</div>
-    </div>
+    <EmptyState icon={Inbox} title="No responses this week">
+      Barbers who reply &quot;yes&quot; from Monday 10:00 AM will appear here.
+    </EmptyState>
   )
 
   return (
-    <div className="bg-[#2a2f27] rounded-xl shadow-xl border border-[#55694b] overflow-hidden">
+    <section className="panel overflow-hidden">
       {/* Mobile cards */}
-      <div className="sm:hidden divide-y divide-[#55694b]/50">
-        {loading ? <Spinner /> : records.length === 0 ? <Empty /> : records.map((record, index) => {
-          const hasData = record.total_clients > 0
-          return (
-            <div key={record.user_id} className="p-4 hover:bg-[#3a4431] transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-[#3a4431] flex items-center justify-center text-xs font-bold text-[var(--highlight)]">{index + 1}</div>
-                  <div>
-                    <div className="text-sm font-semibold text-[#F1F5E9]">{record.full_name}</div>
-                    <div className="text-xs font-mono text-[#9ca89a]">{formatPhone(record.phone)}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="text-xs text-[#9ca89a] mb-3">{formatTime(record.first_response_at)}</div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-[#1f2420] rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-[#9ca89a] uppercase tracking-wide mb-1">Bookings</div>
-                  <div className={`text-sm font-bold ${record.bookings_recovered > 0 ? 'text-green-400' : 'text-[#9ca89a]'}`}>
-                    {hasData ? `${record.bookings_recovered}/${record.total_clients}` : '—'}
-                  </div>
-                </div>
-                <div className="bg-[#1f2420] rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-[#9ca89a] uppercase tracking-wide mb-1">Replies</div>
-                  <div className={`text-sm font-bold ${record.client_replies > 0 ? 'text-sky-300' : 'text-[#9ca89a]'}`}>
-                    {hasData ? `${record.client_replies}/${record.total_clients}` : '—'}
-                  </div>
-                </div>
+      <div className="divide-y divide-white/[0.05] sm:hidden">
+        {loading ? <Spinner /> : records.length === 0 ? <Empty /> : records.map((record, index) => (
+          <div key={record.user_id} className="p-4">
+            <div className="mb-1 flex items-baseline gap-2">
+              <RowIndex n={index + 1} />
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-ivory">{record.full_name}</div>
+                <div className="font-mono text-xs text-muted">{formatPhone(record.phone)}</div>
               </div>
             </div>
-          )
-        })}
+            <div className="mb-3 text-xs text-gray-500">{formatTime(record.first_response_at)}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-md bg-raised px-3 py-2">
+                <div className="stat-label mb-1">Bookings</div>
+                <Ratio value={record.bookings_recovered} total={record.total_clients} tone="sage" />
+              </div>
+              <div className="rounded-md bg-raised px-3 py-2">
+                <div className="stat-label mb-1">Replies</div>
+                <Ratio value={record.client_replies} total={record.total_clients} tone="info" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-[#55694b]">
-          <thead className="bg-[#2f3a2d]">
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="table-clean">
+          <thead>
             <tr>
               {['#', 'Barber', 'Phone', 'First Response', 'Bookings Recovered', 'Client Replies'].map(h => (
-                <th key={h} className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--highlight)] whitespace-nowrap">{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#55694b]/50">
+          <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="py-12"><Spinner /></td></tr>
+              <tr><td colSpan={6}><Spinner /></td></tr>
             ) : records.length === 0 ? (
               <tr><td colSpan={6}><Empty /></td></tr>
-            ) : records.map((record, index) => {
-              const hasData = record.total_clients > 0
-              const isRecovered = record.bookings_recovered > 0
-              const hasReplies = record.client_replies > 0
-              return (
-                <tr key={record.user_id} className="hover:bg-[#3a4431] transition-colors group">
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#3a4431] group-hover:bg-[#4b5a42] text-sm font-bold text-[var(--highlight)] transition-colors">{index + 1}</div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap"><div className="text-base font-semibold text-[#F1F5E9]">{record.full_name}</div></td>
-                  <td className="px-4 py-4 whitespace-nowrap"><div className="text-sm font-mono text-[#9ca89a] bg-[#1f2420] px-3 py-1.5 rounded-lg inline-block">{formatPhone(record.phone)}</div></td>
-                  <td className="px-4 py-4 whitespace-nowrap"><div className="text-sm text-[#F1F5E9]">{formatTime(record.first_response_at)}</div></td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${!hasData ? 'text-[#9ca89a] bg-[#1f2420]' : isRecovered ? 'text-green-400 bg-green-600/15 border border-green-600/30' : 'text-[#9ca89a] bg-[#1f2420]'}`}>
-                      {isRecovered && <span>✓</span>}{hasData ? `${record.bookings_recovered}/${record.total_clients}` : '—'}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${hasReplies ? 'text-sky-300 bg-sky-600/15 border border-sky-600/30' : 'text-[#9ca89a] bg-[#1f2420]'}`}>
-                      {hasData ? `${record.client_replies}/${record.total_clients}` : '—'}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
+            ) : records.map((record, index) => (
+              <tr key={record.user_id}>
+                <td className="w-10"><RowIndex n={index + 1} /></td>
+                <td className="whitespace-nowrap font-medium text-ivory">{record.full_name}</td>
+                <td className="whitespace-nowrap font-mono text-[13px] text-muted">{formatPhone(record.phone)}</td>
+                <td className="whitespace-nowrap text-[13px] tabular-nums">{formatTime(record.first_response_at)}</td>
+                <td className="whitespace-nowrap"><Ratio value={record.bookings_recovered} total={record.total_clients} tone="sage" /></td>
+                <td className="whitespace-nowrap"><Ratio value={record.client_replies} total={record.total_clients} tone="info" /></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       {!loading && records.length > 0 && (
-        <div className="py-3 text-center text-xs text-[#9ca89a]">{records.length} {records.length === 1 ? 'barber' : 'barbers'} responded this week</div>
+        <div className="border-t border-white/[0.07] px-4 py-2.5 text-xs text-muted">{records.length} {records.length === 1 ? 'barber' : 'barbers'} responded this week</div>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -266,81 +263,68 @@ function EngagementTab({ records, loading }: { records: EngagementRecord[]; load
 // ----------------------------------------------------------------
 
 function SMSSentTab({ records, loading, emptyLabel }: { records: SMSSentRecord[]; loading: boolean; emptyLabel: string }) {
-  const Spinner = () => (
-    <div className="flex flex-col items-center gap-3 py-12">
-      <div className="w-10 h-10 border-4 border-[#55694b] border-t-green-600 rounded-full animate-spin" />
-      <span className="text-[#9ca89a] text-sm">Loading...</span>
-    </div>
-  )
-  const Empty = () => (
-    <div className="flex flex-col items-center gap-3 py-12 px-6 text-center">
-      <div className="w-16 h-16 rounded-full bg-[#3a4431] flex items-center justify-center"><span className="text-3xl opacity-50">📭</span></div>
-      <div className="text-[#9ca89a]">{emptyLabel}</div>
+  const Empty = () => <EmptyState icon={Inbox} title={emptyLabel} />
+
+  const MessageBody = ({ message }: { message: string }) => (
+    <div className="whitespace-pre-wrap break-words rounded-md bg-raised px-3 py-2 text-xs leading-relaxed text-gray-300">
+      {message || <span className="italic text-gray-500">No message</span>}
     </div>
   )
 
   return (
-    <div className="bg-[#2a2f27] rounded-xl shadow-xl border border-[#55694b] overflow-hidden">
+    <section className="panel overflow-hidden">
       {/* Mobile cards */}
-      <div className="sm:hidden divide-y divide-[#55694b]/50">
+      <div className="divide-y divide-white/[0.05] sm:hidden">
         {loading ? <Spinner /> : records.length === 0 ? <Empty /> : records.map((record, index) => (
-          <div key={record.id} className="p-4 hover:bg-[#3a4431] transition-colors">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#3a4431] flex items-center justify-center text-xs font-bold text-[var(--highlight)]">{index + 1}</div>
-                <div>
-                  <div className="text-sm font-semibold text-[#F1F5E9]">{record.full_name}</div>
-                  <div className="text-xs font-mono text-[#9ca89a] mt-0.5">{formatPhone(record.phone_normalized)}</div>
+          <div key={record.id} className="p-4">
+            <div className="mb-1 flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-baseline gap-2">
+                <RowIndex n={index + 1} />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-ivory">{record.full_name}</div>
+                  <div className="font-mono text-xs text-muted">{formatPhone(record.phone_normalized)}</div>
                 </div>
               </div>
               <StatusPill is_sent={record.is_sent} reason={record.reason} />
             </div>
-            <div className="text-xs text-[#9ca89a] mb-2">{formatTime(record.created_at)}</div>
-            <div className="bg-[#1f2420] rounded-lg px-3 py-2 text-xs text-[#F1F5E9]/80 leading-relaxed whitespace-pre-wrap break-words">
-              {record.message || <span className="text-[#9ca89a] italic">No message</span>}
-            </div>
+            <div className="mb-2 text-xs text-gray-500">{formatTime(record.created_at)}</div>
+            <MessageBody message={record.message} />
           </div>
         ))}
       </div>
 
       {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-[#55694b]">
-          <thead className="bg-[#2f3a2d]">
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="table-clean">
+          <thead>
             <tr>
               {['#', 'Barber', 'Phone', 'Sent At', 'Status', 'Message'].map(h => (
-                <th key={h} className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--highlight)] whitespace-nowrap">{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#55694b]/50">
+          <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="py-12"><Spinner /></td></tr>
+              <tr><td colSpan={6}><Spinner /></td></tr>
             ) : records.length === 0 ? (
               <tr><td colSpan={6}><Empty /></td></tr>
             ) : records.map((record, index) => (
-              <tr key={record.id} className="hover:bg-[#3a4431] transition-colors group align-top">
-                <td className="px-4 py-4 whitespace-nowrap">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#3a4431] group-hover:bg-[#4b5a42] text-sm font-bold text-[var(--highlight)] transition-colors">{index + 1}</div>
-                </td>
-                <td className="px-4 py-4 whitespace-nowrap"><div className="text-base font-semibold text-[#F1F5E9]">{record.full_name}</div></td>
-                <td className="px-4 py-4 whitespace-nowrap"><div className="text-sm font-mono text-[#9ca89a] bg-[#1f2420] px-3 py-1.5 rounded-lg inline-block">{formatPhone(record.phone_normalized)}</div></td>
-                <td className="px-4 py-4 whitespace-nowrap"><div className="text-sm text-[#F1F5E9]">{formatTime(record.created_at)}</div></td>
-                <td className="px-4 py-4 whitespace-nowrap"><StatusPill is_sent={record.is_sent} reason={record.reason} /></td>
-                <td className="px-4 py-4 max-w-sm">
-                  <div className="bg-[#1f2420] rounded-lg px-3 py-2 text-xs text-[#F1F5E9]/80 leading-relaxed whitespace-pre-wrap break-words">
-                    {record.message || <span className="text-[#9ca89a] italic">No message</span>}
-                  </div>
-                </td>
+              <tr key={record.id} className="align-top">
+                <td className="w-10"><RowIndex n={index + 1} /></td>
+                <td className="whitespace-nowrap font-medium text-ivory">{record.full_name}</td>
+                <td className="whitespace-nowrap font-mono text-[13px] text-muted">{formatPhone(record.phone_normalized)}</td>
+                <td className="whitespace-nowrap text-[13px] tabular-nums">{formatTime(record.created_at)}</td>
+                <td className="whitespace-nowrap"><StatusPill is_sent={record.is_sent} reason={record.reason} /></td>
+                <td className="max-w-sm"><MessageBody message={record.message} /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       {!loading && records.length > 0 && (
-        <div className="py-3 text-center text-xs text-[#9ca89a]">{records.length} {records.length === 1 ? 'message' : 'messages'} this week</div>
+        <div className="border-t border-white/[0.07] px-4 py-2.5 text-xs text-muted">{records.length} {records.length === 1 ? 'message' : 'messages'} this week</div>
       )}
-    </div>
+    </section>
   )
 }
 
@@ -479,27 +463,22 @@ export default function NudgeEngagementPage() {
   ]
 
   return (
-    <div className="pt-25 p-4 min-h-screen bg-[#1f2420] text-[#F1F5E9]">
-      {/* Header */}
-      <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--highlight)] mb-1">Nudge Dashboard</h1>
-          <p className="text-[#9ca89a] text-xs">Weekly overview of barber engagement, approvals, and update messages</p>
-        </div>
-        <div className="bg-gradient-to-br from-[#2a2f27] to-[#242924] rounded-xl p-3 border border-[#55694b] shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-600/20 border-2 border-green-600/40 flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-green-400" />
-            </div>
+    <AppPage>
+      <PageHeader icon={Activity} tone="coral"
+        title="Nudge Dashboard"
+        subtitle="Weekly overview of barber engagement, approvals, and update messages"
+        actions={
+          <div className="panel flex items-center gap-3 px-3.5 py-2">
+            <MessageSquare size={18} strokeWidth={1.75} className="text-sage" />
             <div>
-              <div className="text-[#9ca89a] text-xs font-medium">This Week</div>
-              <div className="text-xl font-bold text-[var(--highlight)]">
+              <div className="stat-label">This week</div>
+              <div className="text-[15px] font-semibold tabular-nums text-ivory">
                 {engagementLoading ? '...' : `${engagementRecords.length} engaged`}
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Week Nav */}
       <WeekNav
@@ -512,23 +491,21 @@ export default function NudgeEngagementPage() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 bg-[#2a2f27] p-1 rounded-xl border border-[#55694b]">
+      <div className="segmented mb-4 flex w-full sm:inline-flex sm:w-auto" role="tablist">
         {TABS.map(tab => (
           <button
             key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            data-active={activeTab === tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-              activeTab === tab.key
-                ? 'bg-[#3a4431] text-[var(--highlight)] shadow-md'
-                : 'text-[#9ca89a] hover:text-[#F1F5E9] hover:bg-[#3a4431]/50'
-            }`}
+            className="segmented-item flex items-center justify-center gap-1.5"
           >
             <span className="hidden sm:inline">{tab.label}</span>
             <span className="sm:hidden">{tab.short}</span>
             {!tab.loading && (
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                activeTab === tab.key ? 'bg-green-600/30 text-green-400' : 'bg-[#1f2420] text-[#9ca89a]'
-              }`}>
+              <span className={`badge tabular-nums ${activeTab === tab.key ? 'badge-sage' : ''}`}>
                 {tab.count}
               </span>
             )}
@@ -540,6 +517,6 @@ export default function NudgeEngagementPage() {
       {activeTab === 'engagement' && <EngagementTab records={engagementRecords} loading={engagementLoading} />}
       {activeTab === 'approval' && <SMSSentTab records={approvalRecords} loading={approvalLoading} emptyLabel="No approval SMS sent this week" />}
       {activeTab === 'update' && <SMSSentTab records={updateRecords} loading={updateLoading} emptyLabel="No update SMS sent this week" />}
-    </div>
+    </AppPage>
   )
 }

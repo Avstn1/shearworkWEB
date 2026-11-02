@@ -120,7 +120,7 @@ export default function WebAndMobileFeatures({
 
       if (error) throw error
 
-      toast.success('✅ Feature update deleted successfully!')
+      toast.success('Feature update deleted successfully!')
       
       if (editingId === featureId) {
         handleCancelEdit()
@@ -152,7 +152,7 @@ export default function WebAndMobileFeatures({
           .eq('id', editingId)
 
         if (error) throw error
-        toast.success('✅ Feature update updated successfully!')
+        toast.success('Feature update updated successfully!')
         fetchFeatures()
       } else {
         const { error } = await supabase
@@ -164,7 +164,7 @@ export default function WebAndMobileFeatures({
           }])
 
         if (error) throw error
-        toast.success('✅ Feature update created successfully!')
+        toast.success('Feature update created successfully!')
         handleCancelEdit()
         fetchFeatures()
       }

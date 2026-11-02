@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, TrendingUp, Calendar, Users, ArrowLeft, Info, Loader2, ChevronRight, Clock } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient';
 import HowAutoNudgeWorksModal from './Modals/HowAutoNudgeWorksModal';
+import { EmptyState } from '@/components/ui/AppKit';
 import ClientMessageHistory from '@/components/AutoNudgeDashboard/ClientMessageHistory';
 
 interface SmartBucket {
@@ -134,10 +135,10 @@ const getScheduledSendDate = (
 // ----------------------------------------------------------------
 
 const STATUS_BADGE: Record<SMSRecipient['status'], { label: string; classes: string }> = {
-  booked:   { label: '✓ Booked',  classes: 'bg-lime-300/10 text-lime-300 border-lime-300/20' },
-  messaged: { label: 'Messaged',  classes: 'bg-sky-300/10 text-sky-300 border-sky-300/20' },
-  pending:  { label: 'Pending',   classes: 'bg-amber-300/10 text-amber-300 border-amber-300/20' },
-  failed:   { label: '✗ Failed',  classes: 'bg-red-400/10 text-red-400 border-red-400/20' },
+  booked:   { label: 'Booked',    classes: 'badge-sage' },
+  messaged: { label: 'Messaged',  classes: 'badge-info' },
+  pending:  { label: 'Pending',   classes: 'badge-warn' },
+  failed:   { label: 'Failed',    classes: 'badge-danger' },
 };
 
 // ----------------------------------------------------------------
@@ -371,24 +372,24 @@ export default function SMSAutoNudge() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Header */}
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-4 sm:p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2 mb-1">
-                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-sky-300 flex-shrink-0" />
-                SMS Auto Nudge
-              </h2>
-              <p className="text-xs sm:text-sm text-white/40">
-                Your weekly automated SMS campaigns, controlled entirely by you via text.
-              </p>
+        <div className="panel">
+          <div className="panel-header !items-start">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <MessageSquare className="w-[18px] h-[18px] text-sage flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+              <div className="min-w-0">
+                <h2 className="panel-title">SMS Auto Nudge</h2>
+                <p className="panel-subtitle">
+                  Your weekly automated SMS campaigns, controlled entirely by you via text.
+                </p>
+              </div>
             </div>
             <button
               onClick={() => setShowHowItWorks(true)}
-              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-sky-300/10 border border-sky-300/20 text-sky-300 rounded-lg text-xs sm:text-sm font-semibold hover:bg-sky-300/20 transition-all"
+              className="btn btn-glass btn-sm !h-8 !px-2.5 !gap-1.5 text-xs flex-shrink-0"
             >
-              <Info className="w-3.5 h-3.5" />
+              <Info className="w-3.5 h-3.5" strokeWidth={1.75} />
               <span className="hidden sm:inline">How it works</span>
               <span className="sm:hidden">Info</span>
             </button>
@@ -396,18 +397,18 @@ export default function SMSAutoNudge() {
 
           {/* Summary Stats */}
           {!isLoading && campaigns.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-white/8">
-              <div className="p-3 bg-white/5 rounded-xl">
-                <p className="text-xs text-white/40 mb-1">Total Campaigns</p>
-                <p className="text-xl font-bold text-white">{campaigns.length}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 px-4 sm:px-5 py-4">
+              <div>
+                <p className="stat-label mb-1">Total campaigns</p>
+                <p className="text-xl font-semibold text-ivory tabular-nums">{campaigns.length}</p>
               </div>
-              <div className="p-3 bg-lime-400/5 border border-lime-400/10 rounded-xl">
-                <p className="text-xs text-white/40 mb-1">Total Booked</p>
-                <p className="text-xl font-bold text-lime-300">{totalBooked}</p>
+              <div>
+                <p className="stat-label mb-1">Total booked</p>
+                <p className="text-xl font-semibold text-sage-bright tabular-nums">{totalBooked}</p>
               </div>
-              <div className="p-3 bg-white/5 rounded-xl col-span-2 sm:col-span-1">
-                <p className="text-xs text-white/40 mb-1">Avg Booked / Week</p>
-                <p className="text-xl font-bold text-white">
+              <div className="col-span-2 sm:col-span-1">
+                <p className="stat-label mb-1">Avg booked / week</p>
+                <p className="text-xl font-semibold text-ivory tabular-nums">
                   {campaigns.length ? (totalBooked / campaigns.length).toFixed(1) : '0'}
                 </p>
               </div>
@@ -425,58 +426,52 @@ export default function SMSAutoNudge() {
               exit={{ opacity: 0, x: -16 }}
               transition={{ duration: 0.18 }}
             >
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b border-white/8">
-                  <TrendingUp className="w-4 h-4 text-lime-300" />
-                  <h3 className="font-bold text-white text-sm sm:text-base">Campaign History</h3>
+              <div className="panel overflow-hidden">
+                <div className="panel-header !justify-start">
+                  <TrendingUp className="w-4 h-4 text-sage" strokeWidth={1.75} />
+                  <h3 className="panel-title">Campaign history</h3>
                 </div>
 
                 {isLoading ? (
-                  <div className="flex flex-col items-center justify-center py-20 gap-3">
-                    <Loader2 className="w-7 h-7 text-sky-300 animate-spin" />
-                    <p className="text-sm text-white/40">Loading campaigns...</p>
+                  <div className="empty-state py-16">
+                    <Loader2 className="animate-spin" strokeWidth={1.75} />
+                    <p>Loading campaigns...</p>
                   </div>
                 ) : campaigns.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-1">
-                      <TrendingUp className="w-6 h-6 text-white/20" />
-                    </div>
-                    <p className="text-white/60 font-medium">No campaigns yet</p>
-                    <p className="text-xs text-white/30 max-w-xs">
-                      Once your first weekly nudge goes out and clients start booking, campaigns will show up here.
-                    </p>
-                  </div>
+                  <EmptyState icon={TrendingUp} title="No campaigns yet">
+                    Once your first weekly nudge goes out and clients start booking, campaigns will show up here.
+                  </EmptyState>
                 ) : (
-                  <div className="divide-y divide-white/5">
+                  <div className="divide-y divide-white/[0.05]">
                     {campaigns.map((campaign) => (
                       <button
                         key={campaign.bucket_id}
                         onClick={() => handleCampaignClick(campaign)}
-                        className="w-full flex items-center gap-4 px-4 sm:px-6 py-4 hover:bg-white/5 transition-colors text-left group"
+                        className="w-full flex items-center gap-4 px-4 sm:px-5 py-3.5 hover:bg-white/[0.02] transition-colors text-left group"
                       >
-                        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/5 border border-white/8 flex flex-col items-center justify-center">
-                          <span className="text-[9px] text-white/30 font-semibold uppercase tracking-wide">Wk</span>
-                          <span className="text-sm sm:text-base font-bold text-white leading-none">
+                        <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-raised border border-white/[0.07] flex flex-col items-center justify-center">
+                          <span className="text-[9px] text-gray-500 font-semibold uppercase tracking-wide">Wk</span>
+                          <span className="text-sm font-semibold text-ivory leading-none tabular-nums">
                             {campaign.iso_week.split('-W')[1]}
                           </span>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm sm:text-base font-semibold text-white truncate">
+                          <p className="text-sm font-semibold text-ivory truncate tabular-nums">
                             {campaign.week_start} – {campaign.week_end}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Calendar className="w-3 h-3 text-white/30 flex-shrink-0" />
-                            <p className="text-xs text-white/40 truncate">Started {formatDate(campaign.campaign_start)}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <Calendar className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" strokeWidth={1.75} />
+                            <p className="text-xs text-muted truncate tabular-nums">Started {formatDate(campaign.campaign_start)}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <div className="text-right">
-                            <p className="text-base sm:text-lg font-bold text-lime-300">{campaign.clients_booked}</p>
-                            <p className="text-[10px] text-white/30">booked</p>
+                            <p className="text-base font-semibold text-sage-bright tabular-nums">{campaign.clients_booked}</p>
+                            <p className="text-[11px] text-gray-500">booked</p>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/40 transition-colors" />
+                          <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-ivory transition-colors" strokeWidth={1.75} />
                         </div>
                       </button>
                     ))}
@@ -492,27 +487,28 @@ export default function SMSAutoNudge() {
               exit={{ opacity: 0, x: 16 }}
               transition={{ duration: 0.18 }}
             >
-              <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl overflow-hidden">
+              <div className="panel overflow-hidden">
                 {/* Detail Header */}
-                <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-white/8">
+                <div className="panel-header !justify-start">
                   <button
                     onClick={handleBack}
-                    className="p-1.5 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                    className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0"
+                    aria-label="Back"
                   >
-                    <ArrowLeft className="w-4 h-4 text-white/50" />
+                    <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm sm:text-base font-bold text-white truncate">
+                    <p className="panel-title truncate tabular-nums">
                       {selectedCampaign?.week_start} – {selectedCampaign?.week_end}
                     </p>
-                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                      <p className="text-xs text-white/40">
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5 text-xs tabular-nums">
+                      <p className="text-muted">
                         Started {selectedCampaign && formatDate(selectedCampaign.campaign_start)}
                       </p>
                       {selectedCampaign && (
                         <>
-                          <span className="text-white/20 text-xs">·</span>
-                          <span className="text-xs text-lime-300 font-semibold">
+                          <span className="text-gray-600">·</span>
+                          <span className="text-sage-bright font-medium">
                             {selectedCampaign.clients_booked} booked
                           </span>
                         </>
@@ -520,36 +516,33 @@ export default function SMSAutoNudge() {
                     </div>
                   </div>
                   {selectedCampaign && (
-                    <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-lime-300/10 border border-lime-300/20 rounded-full">
-                      <Users className="w-3.5 h-3.5 text-lime-300" />
-                      <span className="text-xs font-bold text-lime-300">{recipients.length} recipients</span>
-                    </div>
+                    <span className="badge flex-shrink-0 !py-1 tabular-nums">
+                      <Users className="w-3 h-3" strokeWidth={1.75} />
+                      {recipients.length} recipients
+                    </span>
                   )}
                 </div>
 
                 {/* Optimal timing notice */}
                 {recipients.length > 0 && !loadingRecipients && (
-                  <div className="mx-4 sm:mx-6 mt-4 flex items-start gap-2.5 px-4 py-3 bg-sky-300/5 border border-sky-300/15 rounded-xl">
-                    <Clock className="w-4 h-4 text-sky-300 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-white/50 leading-relaxed">
-                      Each client is messaged at their <span className="text-sky-300 font-semibold">personal optimal time</span> — based on when they historically tend to book. Clients with no clear pattern are reached on <span className="text-white/70 font-medium">Mondays at 10am</span>.
+                  <div className="mx-4 sm:mx-5 mt-4 flex items-start gap-2.5 p-3 bg-white/[0.03] border border-white/[0.07] rounded-lg">
+                    <Clock className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <p className="text-[13px] text-muted leading-relaxed">
+                      Each client is messaged at their <span className="text-ivory font-medium">personal optimal time</span> — based on when they historically tend to book. Clients with no clear pattern are reached on <span className="text-ivory font-medium">Mondays at 10am</span>.
                     </p>
                   </div>
                 )}
 
                 {/* Recipients */}
                 {loadingRecipients ? (
-                  <div className="flex flex-col items-center justify-center py-20 gap-3">
-                    <Loader2 className="w-7 h-7 text-sky-300 animate-spin" />
-                    <p className="text-sm text-white/40">Loading recipients...</p>
+                  <div className="empty-state py-16">
+                    <Loader2 className="animate-spin" strokeWidth={1.75} />
+                    <p>Loading recipients...</p>
                   </div>
                 ) : recipients.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 gap-2 text-center px-6">
-                    <Users className="w-8 h-8 text-white/15 mb-1" />
-                    <p className="text-white/50 font-medium text-sm">No recipients found</p>
-                  </div>
+                  <EmptyState icon={Users} title="No recipients found" />
                 ) : (
-                  <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {recipients.map((recipient, index) => {
                       const badge = STATUS_BADGE[recipient.status];
                       const isBooked = recipient.status === 'booked';
@@ -559,30 +552,30 @@ export default function SMSAutoNudge() {
                       return (
                         <div
                           key={`${recipient.client_id || recipient.phone}-${index}`}
-                          className={`rounded-xl border p-4 flex flex-col gap-3 ${
+                          className={`rounded-lg border p-3.5 flex flex-col gap-3 ${
                             isBooked
-                              ? 'bg-lime-300/5 border-lime-300/15'
+                              ? 'bg-sage/[0.04] border-sage/20'
                               : isMessaged
-                              ? 'bg-sky-300/5 border-sky-300/15'
+                              ? 'bg-white/[0.02] border-white/[0.07]'
                               : isFailed
-                              ? 'bg-red-400/5 border-red-400/15'
-                              : 'bg-white/[0.03] border-white/8'
+                              ? 'bg-[#D99A8B]/[0.04] border-[#D99A8B]/15'
+                              : 'bg-white/[0.02] border-white/[0.07]'
                           }`}
                         >
                           {/* Name + badges */}
                           <div className="flex items-start justify-between flex-wrap gap-1.5">
-                            <p className="text-sm font-bold text-white">
+                            <p className="text-sm font-semibold text-ivory">
                               {recipient.full_name
                                 ? capitalizeName(recipient.full_name)
-                                : <span className="text-white/30 font-normal">Unknown Client</span>
+                                : <span className="text-gray-500 font-normal">Unknown Client</span>
                               }
                             </p>
                             <div className="flex items-center flex-wrap gap-1 flex-shrink-0">
-                              <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge.classes}`}>
+                              <span className={`badge flex-shrink-0 ${badge.classes}`}>
                                 {badge.label}
                               </span>
                               {recipient.has_replied && (
-                                <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#73aa57]/10 text-[#73aa57] border-[#73aa57]/20">
+                                <span className="badge badge-sage flex-shrink-0">
                                   Replied
                                 </span>
                               )}
@@ -592,11 +585,12 @@ export default function SMSAutoNudge() {
                                     recipient.phone!,
                                     recipient.full_name ? capitalizeName(recipient.full_name) : recipient.phone!,
                                   )}
-                                  className="relative px-2 py-0.5 rounded-full text-[10px] font-semibold border border-violet-400/40 text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 hover:border-violet-400/70 transition-colors cursor-pointer whitespace-nowrap"
+                                  className="btn btn-glass btn-sm relative !h-6 !px-2 !gap-1 !text-[11px] !font-medium"
                                 >
                                   {recipient.has_unread && (
-                                    <span className="absolute -top-1 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#D99A8B]" />
                                   )}
+                                  <MessageSquare className="w-3 h-3" strokeWidth={1.75} />
                                   <span className="hidden sm:inline">Click to view message history</span>
                                   <span className="sm:hidden">Message History</span>
                                 </button>
@@ -606,15 +600,15 @@ export default function SMSAutoNudge() {
 
                           {/* Phone + send time / failure reason line */}
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-white/25 flex-shrink-0">
+                            <span className="text-xs text-gray-500 flex-shrink-0 tabular-nums">
                               {formatPhoneNumber(recipient.phone)}
                             </span>
                             {isFailed && recipient.failure_reason ? (
-                              <span className="text-[11px] text-red-400/70 truncate text-right">{recipient.failure_reason}</span>
+                              <span className="text-[11px] text-[#D99A8B] truncate text-right">{recipient.failure_reason}</span>
                             ) : (
-                              <div className="flex items-center gap-1 text-white/35">
-                                <Clock className="w-3 h-3 flex-shrink-0" />
-                                <span className="text-[11px]">
+                              <div className="flex items-center gap-1 text-muted">
+                                <Clock className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />
+                                <span className="text-[11px] tabular-nums">
                                   {isMessaged && recipient.messaged_at
                                     ? `Messaged on ${formatAbsolute(new Date(recipient.messaged_at))}`
                                     : isBooked
@@ -630,11 +624,11 @@ export default function SMSAutoNudge() {
 
                           {/* Booking details — only if booked */}
                           {isBooked && recipient.service && (
-                            <div className="pt-3 mt-auto border-t border-white/8 flex items-center justify-between gap-2">
+                            <div className="pt-3 mt-auto border-t border-white/[0.07] flex items-center justify-between gap-2">
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold text-lime-300 truncate">{recipient.service}</p>
+                                <p className="text-[13px] font-medium text-ivory truncate">{recipient.service}</p>
                                 {recipient.appointment_date && (
-                                  <p className="text-[11px] text-white/30 mt-0.5">
+                                  <p className="text-[11px] text-muted mt-0.5 tabular-nums">
                                     {new Date(recipient.appointment_date).toLocaleDateString('en-US', {
                                       month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
                                     })}
@@ -642,7 +636,7 @@ export default function SMSAutoNudge() {
                                 )}
                               </div>
                               {recipient.price && (
-                                <p className="text-sm font-bold text-lime-300 flex-shrink-0">${recipient.price}</p>
+                                <p className="text-sm font-semibold text-sage-bright flex-shrink-0 tabular-nums">${recipient.price}</p>
                               )}
                             </div>
                           )}

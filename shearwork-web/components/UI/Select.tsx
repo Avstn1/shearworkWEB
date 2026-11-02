@@ -33,21 +33,15 @@ export default function Select({ options, value, onChange, disabled }: SelectPro
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const btnClass = `
-    flex items-center justify-between p-3 rounded-xl border border-[var(--accent-2)]
-    bg-black/90 text-white cursor-pointer hover:bg-black/80 transition-all
-    ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-  `
+  const btnClass = `field flex items-center justify-between text-left transition-colors hover:border-white/[0.16] ${
+    disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+  }`
 
-  const optionClass = `
-    px-3 py-2 cursor-pointer rounded-xl
-    hover:bg-[var(--highlight)] hover:text-black transition-all
-  `
+  const optionClass = (selected: boolean) =>
+    `w-full cursor-pointer select-none px-3 py-1.5 text-left text-sm transition-colors ${selected ? 'bg-sage/[0.12] text-sage-bright' : 'text-gray-300 hover:bg-white/[0.05] hover:text-ivory'}`
 
-  const dropdownClass = `
-    absolute left-0 right-0 mt-2 bg-black/95 border border-[var(--accent-2)]
-    rounded-xl shadow-lg z-50 overflow-hidden
-  `
+  const dropdownClass = 'absolute left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-white/[0.12] bg-raised py-1 shadow-lg'
+
 
   return (
     <div className="relative w-full" ref={containerRef}>
@@ -56,22 +50,26 @@ export default function Select({ options, value, onChange, disabled }: SelectPro
         className={btnClass}
         onClick={() => !disabled && setOpen(prev => !prev)}
       >
-        <span>{selectedLabel}</span>
-        <ChevronDown className="w-4 h-4 ml-2" />
+        <span className="truncate">{selectedLabel}</span>
+        <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.75} />
       </button>
 
       <AnimatePresence>
         {open && (
           <motion.ul
-            initial={{ opacity: 0, y: -5 }}
+            initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            role="listbox"
             className={dropdownClass}
           >
             {options.map(opt => (
               <li
                 key={opt.value}
-                className={optionClass}
+                role="option"
+                aria-selected={opt.value === value}
+                className={optionClass(opt.value === value)}
                 onClick={() => {
                   onChange(opt.value)
                   setOpen(false)

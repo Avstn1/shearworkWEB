@@ -42,24 +42,24 @@ export default function ProfitLossDashboard({
     setRefreshKey((prev) => prev + 1)
   }, [selectedMonth, selectedYear, selectedDay, globalRefreshKey])
 
-  const cardClass =
-    'bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col flex-1'
+  const statClass = 'panel flex flex-col p-4 sm:p-5'
+  const cardClass = 'panel flex flex-1 flex-col p-4 sm:p-5'
 
   return (
     <motion.div
-      className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+      className="flex flex-col gap-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <motion.div className={cardClass}>
-            <DailyRevenueCard
-              key={`daily-${refreshKey}`}
-              userId={userId}
-              selectedDate={`${selectedYear}-${String(MONTHS.indexOf(selectedMonth)+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`}
-            />
+      <motion.div variants={fadeInUp} className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <motion.div className={statClass}>
+          <DailyRevenueCard
+            key={`daily-${refreshKey}`}
+            userId={userId}
+            selectedDate={`${selectedYear}-${String(MONTHS.indexOf(selectedMonth)+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`}
+          />
         </motion.div>
-        <motion.div className={cardClass}>
+        <motion.div className={statClass}>
           <MonthlyRevenueCard
             key={`revenue-${refreshKey}`}
             userId={userId}
@@ -67,10 +67,7 @@ export default function ProfitLossDashboard({
             year={selectedYear}
           />
         </motion.div>
-      </motion.div>
-
-      <motion.div variants={fadeInUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <motion.div className={cardClass}>
+        <motion.div className={statClass}>
           <MonthlyProfitCard
             key={`profit-${refreshKey}`}
             userId={userId}
@@ -78,7 +75,7 @@ export default function ProfitLossDashboard({
             year={selectedYear}
           />
         </motion.div>
-        <motion.div className={cardClass}>
+        <motion.div className={statClass}>
           <MonthlyExpensesCard
             key={`expenses-${refreshKey}`}
             userId={userId}
@@ -88,23 +85,25 @@ export default function ProfitLossDashboard({
         </motion.div>
       </motion.div>
 
-      <motion.div className={cardClass}>
-        <ProfitLossTrendChart
-          key={`trend-${refreshKey}`}
-          userId={userId}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-        />
-      </motion.div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <motion.div className={cardClass}>
+          <ProfitLossTrendChart
+            key={`trend-${refreshKey}`}
+            userId={userId}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+          />
+        </motion.div>
 
-      <motion.div className={cardClass}>
-        <ProfitMarginPieChart
-          key={`pie-${refreshKey}`}
-          userId={userId}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-        />
-      </motion.div>
+        <motion.div className={cardClass}>
+          <ProfitMarginPieChart
+            key={`pie-${refreshKey}`}
+            userId={userId}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+          />
+        </motion.div>
+      </div>
     </motion.div>
   )
 }

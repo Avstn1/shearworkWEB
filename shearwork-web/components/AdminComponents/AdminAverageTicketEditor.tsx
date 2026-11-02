@@ -88,26 +88,36 @@ export default function AdminAverageTicketEditor({ barberId, month }: Props) {
   }
 
   return (
-    <div className="bg-[#1f1f1a] p-4 rounded-lg shadow-md">
-      <h3 className="text-[#E8EDC7] font-semibold mb-3 text-lg">💵 Average Ticket Editor</h3>
-      <div className="flex items-center gap-3 mb-3">
-        <input
-          type="text"
-          inputMode="decimal"
-          value={avgTicket}
-          onChange={e => handleNumericChange(e, setAvgTicket)}
-          placeholder="Avg ticket"
-          className="p-2 rounded bg-[#2b2b2b] text-white w-32"
-        />
-        <button
-          onClick={saveAvgTicket}
-          disabled={loading}
-          className="px-4 py-2 bg-[#445539] text-white rounded hover:bg-[#4d6544]"
-        >
-          {loading ? 'Saving...' : 'Save'}
-        </button>
+    <section className="panel">
+      <header className="panel-header">
+        <div className="min-w-0">
+          <h3 className="panel-title">Average ticket</h3>
+          <p className="panel-subtitle">{month} {year}</p>
+        </div>
+      </header>
+      <div className="panel-body">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-40">
+            <label className="field-label">Avg ticket</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={avgTicket}
+              onChange={e => handleNumericChange(e, setAvgTicket)}
+              placeholder="Avg ticket"
+              className="field tabular-nums"
+            />
+          </div>
+          <button
+            onClick={saveAvgTicket}
+            disabled={loading}
+            className="btn btn-primary btn-sm"
+          >
+            {loading ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+        {recordExists && <p className="mt-3 text-xs text-muted">Existing record updated on save.</p>}
       </div>
-      {recordExists && <p className="text-sm text-gray-400">Existing record updated on save.</p>}
-    </div>
+    </section>
   )
 }

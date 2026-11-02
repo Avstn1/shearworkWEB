@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { Search, Zap } from "lucide-react";
+import { EmptyState } from "@/components/ui/AppKit";
 import { DocSection, DocTabShell, DocEntry, JumpHandler } from "./DocCard";
 
 const EDGE_ENTRIES: DocEntry[] = [
@@ -210,7 +212,7 @@ export default function EdgeFunctionDocs({
 
   return (
     <DocTabShell
-      icon="◎"
+      icon={Zap}
       title="Edge Functions"
       subtitle="Supabase Deno edge functions — scheduled and event-driven"
       searchPlaceholder="Search edge functions..."
@@ -218,9 +220,9 @@ export default function EdgeFunctionDocs({
       onSearchChange={setSearch}
     >
       {EDGE_ENTRIES.length === 0 ? (
-        <p className="text-sm text-[#9ca89a] text-center py-12">No edge functions documented yet.</p>
+        <EmptyState title="No edge functions documented yet." />
       ) : Object.keys(groups).length === 0 ? (
-        <p className="text-sm text-[#9ca89a] text-center py-12">No edge functions match your search.</p>
+        <EmptyState icon={Search} title="No edge functions match your search." />
       ) : (
         Object.entries(groups).map(([category, entries]) => (
           <DocSection

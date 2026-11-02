@@ -1,17 +1,19 @@
 "use client";
 
+import { BookOpen } from 'lucide-react'
 import { useState, useCallback, useEffect } from "react";
 import ApiDocs from "./ApiDocs";
 import LibDocs from "./LibDocs";
 import EdgeFunctionDocs from "./EdgeFunctionDocs";
 import type { JumpHandler } from "./DocCard";
+import { AppPage, PageHeader, Segmented } from "@/components/ui/AppKit";
 
 type Tab = "api" | "lib" | "edge";
 
-const TABS: { id: Tab; label: string; icon: string; description: string }[] = [
-  { id: "api", label: "API Routes", icon: "⬡", description: "Vercel serverless endpoints" },
-  { id: "lib", label: "Lib", icon: "◈", description: "Utility & helper files" },
-  { id: "edge", label: "Edge Functions", icon: "◎", description: "Supabase edge functions" },
+const TABS: { id: Tab; label: string; description: string }[] = [
+  { id: "api", label: "API Routes", description: "Vercel serverless endpoints" },
+  { id: "lib", label: "Lib", description: "Utility & helper files" },
+  { id: "edge", label: "Edge Functions", description: "Supabase edge functions" },
 ];
 
 export default function DocumentationPage() {
@@ -40,59 +42,29 @@ export default function DocumentationPage() {
   }, [highlightedId]);
 
   return (
-    <div className="min-h-screen bg-[#1f2420] text-[#F1F5E9]">
-      {/* Header */}
-      <div className="border-b border-[#55694b] bg-[#242924]">
-        <div className="max-w-7xl mx-auto px-6 pt-25 pb-0">
-          <div className="flex items-end gap-3 mb-1">
-            <span className="text-[10px] font-mono tracking-[0.3em] text-[#9ca89a] uppercase">
-              Admin / Internal Docs
-            </span>
-          </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-[var(--highlight)] mb-1"
-              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
-            Codebase Documentation
-          </h1>
-          <p className="text-sm text-[#9ca89a] mb-6">
-            Reference for API routes, utility libraries, and edge functions — their purpose, inputs, outputs, and relationships.
-          </p>
+    <AppPage>
+      <div className="mx-auto max-w-7xl">
+        <PageHeader icon={BookOpen} tone="sky"
+          title="Codebase documentation"
+          subtitle="Reference for API routes, utility libraries, and edge functions: their purpose, inputs, outputs, and relationships."
+        />
 
-          {/* Tabs */}
-          <div className="flex gap-0 -mb-px">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  group relative flex items-center gap-2.5 px-5 py-3 text-sm font-medium
-                  border-t border-l border-r transition-all duration-150
-                  ${activeTab === tab.id
-                    ? "bg-[#1f2420] border-[#55694b] border-b-[#1f2420] text-[var(--highlight)] z-10"
-                    : "bg-transparent border-transparent text-[#9ca89a] hover:text-[#F1F5E9]"
-                  }
-                `}
-              >
-                <span className={`text-base leading-none transition-colors ${activeTab === tab.id ? "text-green-400" : "text-[#55694b]"}`}>
-                  {tab.icon}
-                </span>
-                <span>{tab.label}</span>
-                {activeTab !== tab.id && (
-                  <span className="hidden group-hover:block absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-[#9ca89a] whitespace-nowrap">
-                    {tab.description}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+        {/* Tabs */}
+        <Segmented
+          className="mb-5 w-full overflow-x-auto sm:w-auto"
+          options={TABS.map((tab) => ({
+            value: tab.id,
+            label: <span title={tab.description}>{tab.label}</span>,
+          }))}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Content */}
         {activeTab === "api" && <ApiDocs highlightedId={highlightedId} onJump={handleJump} />}
         {activeTab === "lib" && <LibDocs highlightedId={highlightedId} onJump={handleJump} />}
         {activeTab === "edge" && <EdgeFunctionDocs highlightedId={highlightedId} onJump={handleJump} />}
       </div>
-    </div>
+    </AppPage>
   );
 }

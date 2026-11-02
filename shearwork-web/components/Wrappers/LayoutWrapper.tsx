@@ -56,10 +56,10 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
   // Show loading only for protected routes
   if ((isLoading || (user && profileStatus === 'loading')) && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#1A1D1B_0%,#111312_55%,#111312_100%)]">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#73aa57] mb-4"></div>
-          <p className="text-sm text-[#bdbdbd]">Loading profile...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#8FB57A] mb-4"></div>
+          <p className="text-sm text-[#B8BCB5]">Loading profile...</p>
         </div>
       </div>
     )
@@ -67,17 +67,17 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
   if (user && profileStatus === 'error' && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#1A1D1B_0%,#111312_55%,#111312_100%)]">
         <div className="text-center max-w-md px-6">
           <h2 className="text-lg font-semibold text-white">We couldn&apos;t load your profile</h2>
-          <p className="mt-2 text-sm text-[#bdbdbd]">
+          <p className="mt-2 text-sm text-[#B8BCB5]">
             Please refresh the page. If this keeps happening, try logging out and back in.
           </p>
           <button
             onClick={() => {
               globalThis.location.reload()
             }}
-            className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold"
+            className="btn btn-primary btn-sm mt-5"
           >
             Reload
           </button>
@@ -88,17 +88,17 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
 
   if (!user && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#101312] via-[#1a1f1b] to-[#2e3b2b]">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(100%_80%_at_50%_0%,#1A1D1B_0%,#111312_55%,#111312_100%)]">
         <div className="text-center max-w-md px-6">
           <h2 className="text-lg font-semibold text-white">Session expired</h2>
-          <p className="mt-2 text-sm text-[#bdbdbd]">
+          <p className="mt-2 text-sm text-[#B8BCB5]">
             Please log in again to continue.
           </p>
           <button
             onClick={() => {
               globalThis.location.href = '/login'
             }}
-            className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-[#7affc9] to-[#3af1f7] text-black text-sm font-semibold"
+            className="btn btn-primary btn-sm mt-5"
           >
             Go to login
           </button>
@@ -127,7 +127,7 @@ function LayoutWrapperContent({ children }: { children: ReactNode }) {
       {showSidebar && <Sidebar />}
 
       <div
-        className={`min-h-screen transition-all duration-300 ${
+        className={`flow-root min-h-screen transition-all duration-300 ${
           showSidebar ? 'md:ml-[var(--sidebar-width,0px)] md:w-[calc(100%-var(--sidebar-width,0px))]' : ''
         }`}
       >

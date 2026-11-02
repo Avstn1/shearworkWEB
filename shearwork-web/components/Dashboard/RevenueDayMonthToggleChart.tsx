@@ -21,28 +21,28 @@ export default function RevenueDayMonthToggleChart({
 }: Props) {
   const [view, setView] = useState<ViewMode>('weekday')
 
+  const item = 'segmented-item px-2.5 py-1 text-xs'
+
   return (
-    <div className="relative h-[300px] flex flex-col">
-      <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+    <div className="relative flex h-[300px] flex-col">
+      <div className="segmented absolute right-0 top-[-4px] z-10" role="tablist" aria-label="Group revenue by">
         <button
           type="button"
+          role="tab"
+          aria-selected={view === 'weekday'}
+          data-active={view === 'weekday'}
           onClick={() => setView('weekday')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
-            view === 'weekday'
-              ? 'bg-[rgba(167,139,250,0.18)] text-white border-[rgba(167,139,250,0.35)]'
-              : 'bg-black/40 text-[#555] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
-          }`}
+          className={item}
         >
           Day
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={view === 'month'}
+          data-active={view === 'month'}
           onClick={() => setView('month')}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
-            view === 'month'
-              ? 'bg-[rgba(167,139,250,0.18)] text-white border-[rgba(167,139,250,0.35)]'
-              : 'bg-black/40 text-[#555] border-white/[0.06] hover:bg-[rgba(167,139,250,0.1)] hover:text-[#a78bfa]'
-          }`}
+          className={item}
         >
           Month
         </button>

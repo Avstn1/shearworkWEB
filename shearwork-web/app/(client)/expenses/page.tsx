@@ -2,27 +2,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { MoreVertical, ReceiptText, X, Receipt } from 'lucide-react'
 import { supabase } from '@/utils/supabaseClient'
-import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import ExpensesViewer from '@/components/ExpensesViewer'
 import AdminRecurringExpenses from '@/components/AdminComponents/AdminRecurringExpenses'
 import { useAuth } from '@/contexts/AuthContext'
+import { AppPage, EmptyState, PageHeader, Panel, Stat } from '@/components/ui/AppKit'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i)
-
-const fadeInUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number = 1) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.5 },
-  }),
-}
 
 export default function UserExpensesPage() {
   const router = useRouter()
@@ -173,144 +164,143 @@ export default function UserExpensesPage() {
     setOpenMenu(null)
   }
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen text-[#bdbdbd]">Loading your expenses dashboard...</div>
+  if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas text-sm text-muted">Loading your expenses…</div>
 
   if (!user) {
     router.replace('/login')
     return null
   }
 
-  return (
-    <>
-      <motion.div
-        className="min-h-screen pt-[100px] px-4 sm:px-8 pb-8 bg-gradient-to-br from-[#0e100f] via-[#1a1e18] to-[#2b3a29] text-[var(--foreground)]"
-        initial="hidden"
-        animate="visible"
-      >
-        {/* HEADER */}
-        <motion.div variants={fadeInUp} className="flex flex-wrap justify-between items-center gap-4 mb-6">
-          <div>
-            <h1 className="font-bold bg-gradient-to-r from-amber-200 to-lime-400 bg-clip-text text-transparent text-2xl animate-gradient">Monthly Expenses</h1>
-            <p className="text-xs text-[#bdbdbd]">Track your one-off and recurring expenses per month.</p>
-          </div>
-        </motion.div>
+  const rangeLabel = (() => {
+    const monthIndex = MONTHS.indexOf(selectedMonth)
+    const today = new Date()
+    const isCurrentMonth = today.getMonth() === monthIndex && today.getFullYear() === selectedYear
+    const endDay = isCurrentMonth ? today.getDate() : new Date(selectedYear, monthIndex + 1, 0).getDate()
+    return `Showing expenses from ${selectedMonth} 1 to ${selectedMonth} ${endDay}, ${selectedYear}`
+  })()
 
-        {/* Month / Year Selectors */}
-        <motion.div variants={fadeInUp} className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-[#d4e1c1]">Month:</label>
+  return (
+    <AppPage>
+      <PageHeader icon={Receipt} tone="coral"
+        title="Expenses"
+        subtitle="Track your one-off and recurring expenses per month."
+        actions={
+          <>
+            <label className="sr-only" htmlFor="expenses-month">Month</label>
             <select
+              id="expenses-month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="ml-2 px-4 py-2 rounded-full bg-zinc-900/90 text-white text-sm font-semibold border border-zinc-700 shadow focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
+              className="field w-auto min-w-[9rem]"
             >{MONTHS.map(m => <option key={m} value={m}>{m}</option>)}</select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-[#d4e1c1]">Year:</label>
+            <label className="sr-only" htmlFor="expenses-year">Year</label>
             <select
+              id="expenses-year"
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="ml-2 px-4 py-2 rounded-full bg-zinc-900/90 text-white text-sm font-semibold border border-zinc-700 shadow focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"
+              className="field w-auto min-w-[6rem]"
             >{YEARS.map(y => <option key={y} value={y}>{y}</option>)}</select>
-          </div>
-        </motion.div>
+          </>
+        }
+      />
 
-        {/* Current Expense */}
-        <motion.div variants={fadeInUp} className="mb-6">
-          <p className="text-white font-semibold text-lg">Total Expenses to Date: <span className="text-lime-300 font-bold">${currentExpense.toFixed(2)}</span></p>
-          <p className="text-xs text-[#bdbdbd] mt-1">
-            {(() => {
-              const monthIndex = MONTHS.indexOf(selectedMonth)
-              const today = new Date()
-              const isCurrentMonth = today.getMonth() === monthIndex && today.getFullYear() === selectedYear
-              const endDay = isCurrentMonth ? today.getDate() : new Date(selectedYear, monthIndex + 1, 0).getDate()
-              return `Showing expenses from ${selectedMonth} 1 to ${selectedMonth} ${endDay}, ${selectedYear}`
-            })()}
-          </p>
-        </motion.div>
+      <div className="flex flex-col gap-4 md:gap-5">
+        {/* Total to date */}
+        <section className="panel panel-body">
+          <Stat icon={Receipt} tone="coral"
+            label="Total expenses to date"
+            value={`$${currentExpense.toFixed(2)}`}
+            hint={rangeLabel}
+          />
+        </section>
 
-        {/* Expenses + Recurring Editors */}
-        <motion.div variants={fadeInUp} className="grid gap-6 md:grid-cols-2">
-          <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6">
-            <ExpensesViewer barberId={user.id} month={selectedMonth} year={selectedYear.toString()} onUpdate={fetchData} />
-          </div>
-          <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl p-6">
-            <AdminRecurringExpenses barberId={user.id} month={selectedMonth} year={selectedYear} onUpdate={fetchData} />
-          </div>
-        </motion.div>
-
-        {/* Receipts Gallery */}
-        <motion.div variants={fadeInUp} className="mt-8">
-          <h2 className="font-semibold text-lg mb-4">Your Receipts</h2>
-          {receipts.length === 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="col-span-2 sm:col-span-4 flex items-center justify-center h-40 border border-white/10 rounded-lg">
-                <p className="text-sm text-[#bdbdbd]">No receipts uploaded yet.</p>
-              </div>
+        {/* List | add form */}
+        <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
+          <ExpensesViewer barberId={user.id} month={selectedMonth} year={selectedYear.toString()} onUpdate={fetchData} />
+          {/* AdminRecurringExpenses ships its own card chrome; flatten it so it sits inside the panel. */}
+          <section className="panel">
+            <div className="panel-body">
+              <AdminRecurringExpenses barberId={user.id} month={selectedMonth} year={selectedYear} onUpdate={fetchData} />
             </div>
+          </section>
+        </div>
+
+        {/* Receipts */}
+        <Panel title="Receipts" subtitle={`${selectedMonth} ${selectedYear}`}>
+          {receipts.length === 0 ? (
+            <EmptyState icon={ReceiptText} title="No receipts yet">
+              Receipts you upload for this month will appear here.
+            </EmptyState>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {receipts.map(r => (
                 <div
                   key={r.id}
-                  className="relative group rounded-lg overflow-hidden border border-white/10 shadow-md cursor-pointer"
+                  className="group relative cursor-pointer overflow-hidden rounded-lg border border-white/[0.07] bg-raised transition-colors hover:border-white/[0.12]"
                   onClick={() => setSelectedReceipt({ url: r.url, label: r.label || '' })}
                 >
                   <img
                     src={r.url}
                     alt={r.label || 'Receipt'}
-                    className="w-full h-40 object-cover hover:scale-105 transition-transform"
+                    className="h-40 w-full object-cover"
                   />
-                  <div className="absolute top-0 left-0 bg-gradient-to-r from-amber-400/70 to-lime-400/70 text-black font-semibold text-xs px-2 py-1 rounded-br-md">
-                    {r.label || new Date().toLocaleDateString()}
-                  </div>
-                  <div className="absolute top-2 right-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === r.id ? null : r.id) }}
-                      className="p-1 rounded-full bg-white/20 hover:bg-white/30 transition"
-                      title="Options"
-                    >⋮</button>
-                    {openMenu === r.id && (
-                      <div className="absolute right-0 mt-2 w-24 bg-zinc-900 border border-white/10 rounded-md shadow-lg z-10">
-                        <button
-                          onClick={() => handleDeleteReceipt(r.id, r.path)}
-                          disabled={loadingDelete === r.id}
-                          className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-600/30 transition"
-                        >{loadingDelete === r.id ? 'Deleting...' : 'Delete'}</button>
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between gap-2 border-t border-white/[0.07] px-3 py-2">
+                    <span className="truncate text-xs text-gray-300">
+                      {r.label || new Date().toLocaleDateString()}
+                    </span>
+                    <div className="relative shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === r.id ? null : r.id) }}
+                        className="btn btn-ghost btn-sm h-7 w-7 p-0"
+                        title="Options"
+                        aria-label="Receipt options"
+                      >
+                        <MoreVertical size={16} strokeWidth={1.75} />
+                      </button>
+                      {openMenu === r.id && (
+                        <div className="modal-surface absolute bottom-full right-0 z-10 mb-1 w-28 overflow-hidden py-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteReceipt(r.id, r.path) }}
+                            disabled={loadingDelete === r.id}
+                            className="block w-full px-3 py-2 text-left text-sm text-[#D99A8B] transition-colors hover:bg-white/[0.05] disabled:opacity-50"
+                          >{loadingDelete === r.id ? 'Deleting...' : 'Delete'}</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </motion.div>
+        </Panel>
+      </div>
 
-        {/* Receipt Modal */}
-        {selectedReceipt && (
+      {/* Receipt Modal */}
+      {selectedReceipt && (
+        <div
+          className="modal-backdrop flex items-center justify-center p-4"
+          onClick={() => setSelectedReceipt(null)}
+        >
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
-            onClick={() => setSelectedReceipt(null)}
+            className="modal-surface flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="relative bg-zinc-900 p-4 rounded-2xl shadow-xl max-w-3xl w-[90%] flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img src={selectedReceipt.url} alt={selectedReceipt.label} className="w-full h-auto rounded-lg" />
-              {selectedReceipt.label && (
-                <p className="mt-2 text-white font-semibold text-center">{selectedReceipt.label}</p>
-              )}
+            <div className="panel-header">
+              <h2 className="panel-title truncate">{selectedReceipt.label || 'Receipt'}</h2>
               <button
-                className="absolute top-2 right-2 p-2 bg-red-600/70 rounded-full hover:bg-red-600 transition text-white"
+                className="btn btn-ghost btn-sm h-8 w-8 p-0"
                 onClick={() => setSelectedReceipt(null)}
+                aria-label="Close"
               >
-                ✕
+                <X size={18} strokeWidth={1.75} />
               </button>
             </div>
+            <div className="overflow-auto p-4">
+              <img src={selectedReceipt.url} alt={selectedReceipt.label} className="h-auto w-full rounded-lg" />
+            </div>
           </div>
-        )}
-
-      </motion.div>
-    </>
+        </div>
+      )}
+    </AppPage>
   )
 }

@@ -7,7 +7,8 @@ import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay, subHours } from 'date-fns'
 import { DayPicker, DateRange } from 'react-day-picker'
-import { RefreshCcw } from "lucide-react"
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCcw, ScrollText, X } from "lucide-react"
+import { AppPage, EmptyState, PageHeader } from '@/components/ui/AppKit'
 import 'react-day-picker/dist/style.css'
 
 interface SystemLog {
@@ -123,10 +124,9 @@ export default function SystemLogsPage() {
   }
 
   const getStatusBadge = (status: SystemLog['status']) => {
-    const base = 'px-2 py-1 rounded-full text-xs font-semibold'
-    if (status === 'success') return <span className={`${base} bg-green-100 text-green-800`}>Success</span>
-    if (status === 'failed') return <span className={`${base} bg-red-100 text-red-800`}>Failed</span>
-    return <span className={`${base} bg-yellow-100 text-yellow-800`}>Pending</span>
+    if (status === 'success') return <span className="badge badge-sage">Success</span>
+    if (status === 'failed') return <span className="badge badge-danger">Failed</span>
+    return <span className="badge badge-warn">Pending</span>
   }
 
   const formatTimestamp = (ts: string) => {
@@ -148,47 +148,55 @@ export default function SystemLogsPage() {
 
   const Pagination = () =>
     totalPages > 1 ? (
-      <div className="flex justify-center items-center gap-3 mt-2">
+      <div className="flex items-center gap-2 text-[13px] text-muted">
         <button
           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
-          className="px-3 py-1 rounded-lg bg-[#3a4431] text-[#F1F5E9] disabled:opacity-50 hover:bg-[#4b5a42] transition-colors"
-        >&larr;</button>
-        <span>Page {currentPage} of {totalPages}</span>
+          aria-label="Previous page"
+          className="btn btn-ghost btn-sm px-2"
+        ><ChevronLeft size={16} strokeWidth={1.75} /></button>
+        <span className="tabular-nums">Page {currentPage} of {totalPages}</span>
         <button
           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-lg bg-[#3a4431] text-[#F1F5E9] disabled:opacity-50 hover:bg-[#4b5a42] transition-colors"
-        >&rarr;</button>
+          aria-label="Next page"
+          className="btn btn-ghost btn-sm px-2"
+        ><ChevronRight size={16} strokeWidth={1.75} /></button>
       </div>
     ) : null
 
-  return (
-    <>
-      <div className="p-4 sm:p-6 min-h-screen bg-[#1f2420] text-[#F1F5E9]">
-        <h1 className="text-3xl font-bold text-[var(--highlight)] mb-6">System Logs</h1>
+  const sortKeys = ['timestamp', 'source', 'status'] as const
 
-        <div className="sticky top-0 z-20 bg-[#1f2420] p-3 border-b border-[#55694b] flex flex-wrap gap-4 items-center">
+  return (
+    <AppPage>
+      <PageHeader icon={ScrollText} tone="sand"
+        title="System logs"
+        subtitle={loading ? 'Loading…' : `${logs.length} entries in range`}
+        actions={
+          <>
+            <Pagination />
+            <button onClick={fetchLogs} className="btn btn-glass btn-sm" aria-label="Refresh logs">
+              <RefreshCcw size={16} strokeWidth={1.75} />
+              Refresh
+            </button>
+          </>
+        }
+      />
+
+      <section className="panel">
+        <div className="panel-header flex-wrap justify-start gap-2">
           <input
             type="text"
             placeholder="Search all fields..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-[200px] px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)]"
+            className="field h-9 min-w-[200px] flex-1"
           />
-          <Pagination />
-
-          <button
-            onClick={fetchLogs}
-            className="px-4 py-2 rounded-lg bg-[#3a4431] text-[#F1F5E9] hover:bg-[#4b5a42] transition-colors"
-          >
-            <RefreshCcw size={25} />
-          </button>
 
           <select
             value={statusFilter || ''}
             onChange={e => setStatusFilter(e.target.value || null)}
-            className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+            className="field h-9 w-auto"
           >
             <option value="">All Statuses</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
@@ -197,7 +205,7 @@ export default function SystemLogsPage() {
           <select
             value={sourceFilter || ''}
             onChange={e => setSourceFilter(e.target.value || null)}
-            className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+            className="field h-9 w-auto"
           >
             <option value="">All Sources</option>
             {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -211,31 +219,32 @@ export default function SystemLogsPage() {
                 setDatePreset(value)
                 if (value === 'Custom') setShowCustomPicker(true)
               }}
-              className="px-4 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+              className="field h-9 w-auto"
             >
               {DATE_PRESETS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
 
             {datePreset === 'Custom' && showCustomPicker && (
-              <div className="absolute top-full mt-2 z-50 bg-[#2f3a2d] border border-[#55694b] rounded-lg shadow-lg p-2">
-                <div className="flex justify-end mb-1">
+              <div className="modal-surface absolute top-full z-50 mt-2 p-2">
+                <div className="mb-1 flex justify-end">
                   <button
                     onClick={() => setShowCustomPicker(false)}
-                    className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-red-700"
+                    aria-label="Close date picker"
+                    className="btn btn-ghost btn-sm h-8 px-2"
                   >
-                    ✕
+                    <X size={16} strokeWidth={1.75} />
                   </button>
                 </div>
                 <DayPicker
                   mode="range"
                   selected={customRange}
                   onSelect={range => setCustomRange(range as DateRange | undefined)}
-                  className="rounded-lg border border-[#55694b] bg-[#2f3a2d] text-[#F1F5E9]"
+                  className="rounded-lg bg-raised text-ivory"
                   modifiersClassNames={{
-                    selected: 'bg-green-600 text-[#F1F5E9] rounded-full',
-                    range_start: 'bg-green-700 text-[#F1F5E9] rounded-l-full',
-                    range_end: 'bg-green-700 text-[#F1F5E9] rounded-r-full',
-                    range_middle: 'bg-green-500 text-[#F1F5E9]',
+                    selected: 'bg-sage text-ink rounded-md',
+                    range_start: 'bg-sage text-ink rounded-l-md',
+                    range_end: 'bg-sage text-ink rounded-r-md',
+                    range_middle: 'bg-sage/20 text-ivory',
                   }}
                   showOutsideDays
                 />
@@ -246,50 +255,57 @@ export default function SystemLogsPage() {
           <select
             value={itemsPerPage}
             onChange={e => setItemsPerPage(Number(e.target.value))}
-            className="px-3 py-2 rounded-lg bg-[#2f3a2d] border border-[#55694b] focus:outline-none focus:ring-2 focus:ring-[var(--accent-3)] appearance-none"
+            className="field h-9 w-auto"
           >
             {ITEMS_OPTIONS.map(i => <option key={i} value={i}>{i} per page</option>)}
           </select>
 
-          <button onClick={resetFilters} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">Reset</button>
+          <button onClick={resetFilters} className="btn btn-ghost btn-sm h-9">Reset</button>
         </div>
 
-        <div className="mt-4 bg-[#2a2f27] rounded-xl shadow-md border border-[#55694b] max-h-[80vh] overflow-auto">
-          <table className="min-w-full divide-y divide-[#55694b]">
-            <thead className="bg-[#2f3a2d] sticky top-0 z-10">
+        <div className="max-h-[75vh] overflow-auto">
+          <table className="table-clean min-w-full">
+            <thead>
               <tr>
                 {['Log ID', 'Timestamp', 'Action', 'Details', 'Status', 'Source'].map((col, idx) => (
                   <th
                     key={idx}
-                    onClick={() => idx <= 2 && handleSort((['timestamp', 'source', 'status'] as const)[idx])}
-                    className={`px-6 py-3 text-left text-sm font-semibold cursor-pointer select-none ${idx <= 2 ? 'hover:text-[var(--highlight)]' : ''}`}
+                    onClick={() => idx <= 2 && handleSort(sortKeys[idx])}
+                    className={`select-none ${idx <= 2 ? 'cursor-pointer hover:text-ivory' : ''}`}
                   >
-                    {col} {idx <= 2 && sortField === (['timestamp', 'source', 'status'] as const)[idx] ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+                    <span className="inline-flex items-center gap-1">
+                      {col}
+                      {idx <= 2 && sortField === sortKeys[idx] && (
+                        sortOrder === 'asc'
+                          ? <ArrowUp size={12} strokeWidth={1.75} />
+                          : <ArrowDown size={12} strokeWidth={1.75} />
+                      )}
+                    </span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-6">Loading syslogs...</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-muted">Loading syslogs...</td></tr>
               ) : paginatedLogs.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-6">No logs found.</td></tr>
+                <tr><td colSpan={6}><EmptyState icon={ScrollText} title="No logs found." /></td></tr>
               ) : (
                 paginatedLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-[#3a4431] transition-colors">
-                    <td className="px-6 py-3">{log.id}</td>
-                    <td className="px-6 py-3">{weekdays[new Date(log.timestamp).getUTCDay()]}, {formatTimestamp(log.timestamp)}</td>
-                    <td className="px-6 py-3">{log.action}</td>
-                    <td className="px-6 py-3 max-w-xs truncate">{log.details || '-'}</td>
-                    <td className="px-6 py-3">{getStatusBadge(log.status)}</td>
-                    <td className="px-6 py-3">{log.source}</td>
+                  <tr key={log.id}>
+                    <td className="font-mono text-xs text-muted">{log.id}</td>
+                    <td className="whitespace-nowrap tabular-nums">{weekdays[new Date(log.timestamp).getUTCDay()]}, {formatTimestamp(log.timestamp)}</td>
+                    <td>{log.action}</td>
+                    <td className="max-w-xs truncate text-muted">{log.details || '-'}</td>
+                    <td>{getStatusBadge(log.status)}</td>
+                    <td className="text-muted">{log.source}</td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-      </div>
-    </>
+      </section>
+    </AppPage>
   )
 }

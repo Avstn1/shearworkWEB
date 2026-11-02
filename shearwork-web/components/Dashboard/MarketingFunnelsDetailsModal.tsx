@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronDown, ChevronUp, TrendingUp, Users, Percent, DollarSign } from 'lucide-react'
+import { EmptyState } from '@/components/ui/AppKit'
 import { supabase } from '@/utils/supabaseClient'
 
 interface MarketingFunnel {
@@ -271,6 +272,16 @@ export default function MarketingFunnelsDetailsModal({
 
   if (!isOpen) return null
 
+  const metric = (Icon: typeof Users, label: string, value: React.ReactNode) => (
+    <div className="rounded-md border border-white/[0.07] bg-canvas/60 px-2.5 py-2">
+      <div className="flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-gray-500" strokeWidth={1.75} />
+        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">{label}</p>
+      </div>
+      <p className="mt-1 text-base font-semibold tabular-nums text-ivory sm:text-lg">{value}</p>
+    </div>
+  )
+
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
@@ -281,111 +292,73 @@ export default function MarketingFunnelsDetailsModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
+            className="modal-backdrop z-[9999]"
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center p-4"
           >
-            <div className="bg-gradient-to-br from-[#1a1f1b] to-[#2e3b2b] border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl w-full h-[85vh] sm:h-[80vh] max-w-3xl flex flex-col overflow-hidden">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Marketing Funnels Details"
+              className="modal-surface pointer-events-auto flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden sm:h-[80vh]"
+            >
               {/* Header */}
-              <div className="bg-gradient-to-r from-[#748E63]/30 to-[#9AC8CD]/30 border-b border-white/10 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
-                <div className="min-w-0 flex-1 pr-2">
-                  <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[#E8EDC7] to-[#9AC8CD] bg-clip-text text-transparent">
-                    📣 Marketing Funnels Details
-                  </h2>
-                  <p className="text-[10px] sm:text-xs text-[#E8EDC7]/70 mt-0.5">
-                    {monthsDisplay} {year} • {detailedData.length} source{detailedData.length !== 1 ? 's' : ''}
+              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/[0.07] px-4 py-3.5 sm:px-5">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base font-semibold text-ivory sm:text-lg">Marketing Funnels Details</h2>
+                  <p className="mt-0.5 text-xs text-muted sm:text-[13px]">
+                    {monthsDisplay} {year} · {detailedData.length} source{detailedData.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
-                >
-                  <X className="w-5 h-5 sm:w-5 sm:h-5 text-[#E8EDC7]" />
+                <button type="button" onClick={onClose} aria-label="Close" className="btn btn-ghost btn-sm px-1.5">
+                  <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </button>
               </div>
 
-              {/* Content - Fixed Height with Hidden Scrollbar */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scroll-container">
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="p-3 sm:p-4">
                   {detailedData.length === 0 ? (
-                    <div className="text-center py-12">
-                      <p className="text-[#E8EDC7] opacity-70 text-sm">No data available</p>
-                    </div>
+                    <EmptyState icon={Users} title="No data available" />
                   ) : (
                     <div className="space-y-2">
                       {detailedData.map((funnel, idx) => (
-                        <div 
+                        <div
                           key={funnel.source}
-                          className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:border-[#9AC8CD]/30 transition-colors"
+                          className="overflow-hidden rounded-lg border border-white/[0.07] bg-raised transition-colors hover:border-white/[0.12]"
                         >
                           {/* Source Header */}
                           <button
+                            type="button"
                             onClick={() => toggleSource(funnel.source)}
-                            className="w-full p-2.5 sm:p-3 flex items-center justify-between hover:bg-white/5 transition-colors text-left"
+                            aria-expanded={expandedSource === funnel.source}
+                            className="flex w-full items-center justify-between p-3 text-left transition-colors hover:bg-white/[0.02]"
                           >
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-[#748E63] to-[#9AC8CD] flex items-center justify-center text-[#2a3612ff] font-bold text-xs">
+                            <div className="flex items-center gap-2.5">
+                              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-xs font-semibold tabular-nums text-gray-300">
                                 {idx + 1}
-                              </div>
-                              <h3 className="text-[#E8EDC7] text-sm sm:text-base font-semibold">
-                                {funnel.source}
-                              </h3>
+                              </span>
+                              <h3 className="text-sm font-semibold text-ivory sm:text-[15px]">{funnel.source}</h3>
                             </div>
                             {expandedSource === funnel.source ? (
-                              <ChevronUp className="w-4 h-4 text-[#E8EDC7]/70 flex-shrink-0" />
+                              <ChevronUp className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.75} />
                             ) : (
-                              <ChevronDown className="w-4 h-4 text-[#E8EDC7]/70 flex-shrink-0" />
+                              <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={1.75} />
                             )}
                           </button>
 
                           {/* Stats Grid */}
-                          <div className="px-2.5 sm:px-3 pb-2 sm:pb-2.5">
-                            <div className="grid grid-cols-3 gap-1.5">
-                              <div className="bg-gradient-to-br from-[#9AC8CD]/10 to-[#9AC8CD]/5 border border-[#9AC8CD]/20 p-1.5 rounded">
-                                <div className="flex items-center gap-0.5 mb-1">
-                                  <Users className="w-2.5 h-2.5 text-[#9AC8CD]" />
-                                  <p className="text-[#9AC8CD] text-[12px] font-semibold">New</p>
-                                </div>
-                                <p className="text-[#E8EDC7] text-base sm:text-lg font-bold">{funnel.new_clients}</p>
-                              </div>
-                              
-                              <div className="bg-gradient-to-br from-[#748E63]/10 to-[#748E63]/5 border border-[#748E63]/20 p-1.5 rounded">
-                                <div className="flex items-center gap-0.5 mb-1">
-                                  <TrendingUp className="w-2.5 h-2.5 text-[#748E63]" />
-                                  <p className="text-[#748E63] text-[12px] font-semibold">Returned</p>
-                                </div>
-                                <p className="text-[#E8EDC7] text-base sm:text-lg font-bold">{funnel.new_clients_retained}</p>
-                              </div>
-                              
-                              <div className="bg-gradient-to-br from-[#B19470]/10 to-[#B19470]/5 border border-[#B19470]/20 p-1.5 rounded">
-                                <div className="flex items-center gap-0.5 mb-1">
-                                  <Percent className="w-2.5 h-2.5 text-[#B19470]" />
-                                  <p className="text-[#B19470] text-[12px] font-semibold">Retention</p>
-                                </div>
-                                <p className="text-[#E8EDC7] text-base sm:text-lg font-bold">
-                                  {funnel.retention.toFixed(1)}%
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Average Ticket on separate row */}
-                            <div className="mt-1.5">
-                              <div className="bg-gradient-to-br from-[#F1EEDC]/10 to-[#F1EEDC]/5 border border-[#F1EEDC]/20 p-1.5 rounded">
-                                <div className="flex items-center gap-0.5 mb-1">
-                                  <DollarSign className="w-2.5 h-2.5 text-[#F1EEDC]" />
-                                  <p className="text-[#F1EEDC] text-[12px] font-semibold">Average Ticket</p>
-                                </div>
-                                <p className="text-[#E8EDC7] text-base sm:text-lg font-bold">
-                                  ${funnel.avg_ticket.toFixed(0)}
-                                </p>
-                              </div>
-                            </div>
+                          <div className="grid grid-cols-2 gap-2 px-3 pb-3 sm:grid-cols-4">
+                            {metric(Users, 'New', funnel.new_clients)}
+                            {metric(TrendingUp, 'Returned', funnel.new_clients_retained)}
+                            {metric(Percent, 'Retention', `${funnel.retention.toFixed(1)}%`)}
+                            {metric(DollarSign, 'Average Ticket', `$${funnel.avg_ticket.toFixed(0)}`)}
                           </div>
 
                           {/* Client Names List */}
@@ -398,35 +371,35 @@ export default function MarketingFunnelsDetailsModal({
                                 transition={{ duration: 0.2 }}
                                 className="overflow-hidden"
                               >
-                                <div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 border-t border-white/10 pt-2.5 sm:pt-3">
-                                  <h4 className="text-[#E8EDC7] text-[10px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5">
-                                    <Users className="w-3 h-3" />
-                                    New Clients ({funnel.client_names?.length || 0}):
+                                <div className="border-t border-white/[0.07] px-3 pb-3 pt-3">
+                                  <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted">
+                                    <Users className="h-3.5 w-3.5" strokeWidth={1.75} />
+                                    New Clients ({funnel.client_names?.length || 0})
                                   </h4>
                                   {funnel.client_names && funnel.client_names.length > 0 ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                                    <div className="grid max-h-48 grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2">
                                       {funnel.client_names.map((client, idx) => {
                                         const hasSecondVisitInTimeline = client.second_visit && isDateInTimeline(client.second_visit)
-                                        
+
                                         return (
-                                          <div 
+                                          <div
                                             key={idx}
-                                            className="bg-gradient-to-r from-white/5 to-white/10 border border-white/10 p-1.5 rounded hover:border-[#9AC8CD]/30 transition-colors"
+                                            className="rounded-md border border-white/[0.07] bg-canvas/60 px-2.5 py-2"
                                           >
-                                            <div className="flex flex-col gap-1">
-                                              <span className="text-[#E8EDC7] text-[12px] capitalize font-medium truncate">
+                                            <div className="flex flex-col gap-1.5">
+                                              <span className="truncate text-[13px] font-medium capitalize text-ivory">
                                                 {client.client_name}
                                               </span>
-                                              <div className="flex items-center gap-1.5 text-[9px]">
-                                                <div className="flex items-center gap-0.5">
-                                                  <span className="text-[#E8EDC7]/50 font-semibold">1st:</span>
-                                                  <span className="text-[#E8EDC7] bg-[#9AC8CD]/20 px-1 py-0.5 rounded whitespace-nowrap">
+                                              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                                <div className="flex items-center gap-1">
+                                                  <span className="text-gray-500">1st</span>
+                                                  <span className="badge badge-info tabular-nums">
                                                     {new Date(client.first_visit + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                   </span>
                                                 </div>
-                                                <div className="flex items-center gap-0.5">
-                                                  <span className="text-[#E8EDC7]/50 font-semibold">2nd:</span>
-                                                  <span className={`px-1 py-0.5 rounded text-[8px] ${hasSecondVisitInTimeline ? 'text-[#E8EDC7] bg-[#748E63]/20' : 'text-[#E8EDC7]/40 bg-white/5'}`}>
+                                                <div className="flex items-center gap-1">
+                                                  <span className="text-gray-500">2nd</span>
+                                                  <span className={`badge tabular-nums ${hasSecondVisitInTimeline ? 'badge-sage' : 'text-gray-500'}`}>
                                                     {hasSecondVisitInTimeline
                                                       ? new Date(client.second_visit! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                                       : timelineInfo.message
@@ -440,7 +413,7 @@ export default function MarketingFunnelsDetailsModal({
                                       })}
                                     </div>
                                   ) : (
-                                    <p className="text-[#E8EDC7] opacity-50 text-xs">No client data available</p>
+                                    <p className="text-xs text-gray-500">No client data available</p>
                                   )}
                                 </div>
                               </motion.div>
@@ -454,28 +427,14 @@ export default function MarketingFunnelsDetailsModal({
               </div>
 
               {/* Footer */}
-              <div className="p-2.5 sm:p-3 border-t border-white/10 bg-black/20 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
-                <p className="text-[10px] sm:text-[12px] text-[#E8EDC7]/50 text-center sm:text-left">
+              <div className="flex shrink-0 flex-col items-center justify-between gap-2 border-t border-white/[0.07] px-4 py-3 sm:flex-row sm:px-5">
+                <p className="text-center text-xs text-gray-500 sm:text-left">
                   Click on any source to view client details
                 </p>
-                <button
-                  onClick={onClose}
-                  className="px-4 sm:px-5 py-1.5 bg-gradient-to-r from-[#748E63] to-[#9AC8CD] hover:from-[#9AC8CD] hover:to-[#748E63] text-[#2a3612ff] rounded-lg transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 text-xs sm:text-sm w-full sm:w-auto"
-                >
+                <button type="button" onClick={onClose} className="btn btn-primary btn-sm w-full sm:w-auto">
                   Close
                 </button>
               </div>
-
-              {/* Hide scrollbar styles */}
-              <style jsx>{`
-                .custom-scroll-container {
-                  scrollbar-width: none;
-                  -ms-overflow-style: none;
-                }
-                .custom-scroll-container::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style>
             </div>
           </motion.div>
         </>

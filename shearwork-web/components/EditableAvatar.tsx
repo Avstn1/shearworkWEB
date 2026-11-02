@@ -18,21 +18,22 @@ export default function EditableAvatar({
   return (
     <button
       onClick={onClick}
-      className="rounded-full focus:outline-none relative group"
+      type="button"
+      className="group relative rounded-full"
       style={{ width: size, height: size }}
     >
       {avatarUrl ? (
         <img
           src={avatarUrl}
           alt="Avatar"
-          className="rounded-full object-cover w-full h-full hover:ring-2 hover:ring-teal-400 transition"
+          className="h-full w-full rounded-full object-cover ring-1 ring-white/[0.12] transition group-hover:ring-sage/60"
         />
       ) : (
-        <div className="rounded-full bg-teal-400 flex items-center justify-center text-gray-900 font-bold hover:ring-2 hover:ring-teal-400 transition w-full h-full">
+        <div className="flex h-full w-full items-center justify-center rounded-full bg-raised font-semibold text-ivory ring-1 ring-white/[0.12] transition group-hover:ring-sage/60">
           {fullName?.[0]?.toUpperCase() || 'U'}
         </div>
       )}
-      <div className="absolute inset-0 bg-black bg-opacity-30 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-sm font-semibold transition">
+      <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-sm font-medium text-ivory opacity-0 transition group-hover:opacity-100">
         Edit
       </div>
     </button>

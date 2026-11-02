@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <link rel="icon" type="image/png" href="/images/corvalogo.png" />
       </head>
-      <body className="bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 font-sans min-h-screen">
+      <body className="bg-gradient-to-b from-canvas via-gray-950 to-gray-900 text-gray-100 font-sans antialiased min-h-screen">
         <AuthProvider> 
           <AppProvider>
             {/* <ConditionalNavbar /> */}

@@ -2,15 +2,9 @@
 
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
-
-const COLORS = [
-  '#6ee7b7', '#a78bfa', '#67e8f9', '#fbbf24', '#f0abfc',
-  '#86efac', '#c4b5fd', '#a5f3fc', '#fcd34d', '#f5d0fe',
-  '#bbf7d0', '#ddd6fe', '#cffafe', '#fde68a', '#fae8ff',
-  '#d1fae5', '#ede9fe', '#e0f2fe', '#fef3c7', '#fdf4ff',
-  '#ecfdf5', '#f5f3ff', '#f0f9ff', '#fffbeb',
-]
+import { PieChart as PieIcon } from 'lucide-react'
+import { EmptyState, PanelHeading } from '@/components/ui/AppKit'
+import DonutBreakdown from '@/components/ui/DonutBreakdown'
 
 export interface ServiceBooking {
   service_name: string
@@ -57,10 +51,11 @@ export default function ServiceBreakdownChart({
 
   if (!data.length)
     return (
-      <div
-        className="flex items-center justify-center min-h-[360px]"
-      >
-        <p className="text-[#555]">No data to see here yet!</p>
+      <div className="flex min-h-[360px] flex-col lg:h-full lg:min-h-0">
+        <PanelHeading icon={PieIcon} tone="sage">Service breakdown</PanelHeading>
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState icon={PieIcon} title="No data to see here yet" />
+        </div>
       </div>
     )
 
@@ -85,89 +80,14 @@ export default function ServiceBreakdownChart({
     ]
   }
 
-  // -----------------------------
-
   return (
-    <div
-      className="flex flex-col flex-1"
-      style={{
-        minHeight: '360px',
-      }}
-    >
-      <h2 className="text-white text-xl font-semibold mb-4">
-        💈 Service Breakdown
-      </h2>
-
-      <div
-        className="flex flex-col md:flex-row gap-2 md:items-center flex-1"
-        style={{ overflow: 'hidden' }}
-      >
-        {/* Chart */}
-        <div className="flex-1 flex items-center justify-center min-h-[300px] md:min-h-[320px]">
-          <ResponsiveContainer width="100%" height={340}>
-            <PieChart>
-              <Pie
-                data={finalData}
-                dataKey="bookings"
-                nameKey="service_name"
-                outerRadius="80%"
-                innerRadius="45%"
-                labelLine={false}
-                isAnimationActive={false}
-              >
-                {finalData.map((_, index) => (
-                  <Cell
-                    key={index}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f1210',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  padding: '8px 12px',
-                }}
-                itemStyle={{ color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}
-                labelStyle={{ color: '#ffffff', fontWeight: 600 }}
-                formatter={(value, name) => [`${value} bookings`, name]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Legend */}
-        <div
-          className="flex flex-wrap md:flex-col gap-3 justify-center md:justify-start md:pl-4 text-[#8a9b90]"
-          style={{
-            fontSize: '0.95rem',
-            lineHeight: 1.3,
-            flexShrink: 0,
-          }}
-        >
-          {finalData.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2"
-              style={{ minWidth: '110px', wordBreak: 'break-word' }}
-            >
-              <span
-                style={{
-                  width: '12px',
-                  height: '12px',
-                  borderRadius: '50%',
-                  backgroundColor: COLORS[index % COLORS.length],
-                  display: 'inline-block',
-                }}
-              />
-              <span>{item.service_name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="flex min-h-[360px] flex-1 flex-col lg:h-full lg:min-h-0">
+      <PanelHeading icon={PieIcon} tone="sage" className="mb-4">Service breakdown</PanelHeading>
+      <DonutBreakdown
+        items={finalData.map(d => ({ name: String(d.service_name), value: Number(d.bookings) || 0 }))}
+        unit="bookings"
+        totalLabel="Bookings"
+      />
     </div>
   )
 }

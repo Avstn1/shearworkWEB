@@ -60,83 +60,41 @@ export default function AutoNudgeStatus({ user_id }: Props) {
     fetchStatus()
   }, [user_id])
 
-  const desktopRing = (
-    <div className="relative flex items-center justify-center flex-shrink-0">
-      <svg width="96" height="96" className="-rotate-90">
-        <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-        {active && (
-          <circle cx="48" cy="48" r="40" fill="none" stroke="#a3e635" strokeWidth="8"
-            strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={0}
-            className="transition-all duration-700" />
-        )}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-        <Zap className={`w-5 h-5 ${active ? 'text-lime-400' : 'text-white/20'}`} />
-        <span className={`text-xs font-bold ${active ? 'text-lime-400' : 'text-white/30'}`}>
-          {active ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-    </div>
-  )
-
-  const mobileRing = (
-    <div className="relative flex-shrink-0" style={{ width: 64, height: 64 }}>
-      <svg viewBox="0 0 64 64" width="64" height="64" className="-rotate-90">
-        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
-        {active && (
-          <circle cx="32" cy="32" r="28" fill="none" stroke="#a3e635" strokeWidth="6"
-            strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 28}`} strokeDashoffset={0}
-            className="transition-all duration-700" />
-        )}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-        <Zap className={`w-4 h-4 ${active ? 'text-lime-400' : 'text-white/20'}`} />
-        <span className={`text-[9px] font-bold ${active ? 'text-lime-400' : 'text-white/30'}`}>
-          {active ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-    </div>
-  )
-
   return (
-    <div className={`relative h-full w-full overflow-hidden
-      flex flex-col p-3
-      md:flex-row md:items-center md:justify-between md:px-2 md:py-0
-    `}>
-      <div className={`absolute -top-10 -right-10 w-48 h-48 rounded-full blur-3xl pointer-events-none ${active ? 'bg-lime-400/8' : 'bg-white/5'}`} />
+    <div data-tone="violet" className="stat-root tone-violet flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
+      <div className="min-w-0">
+        <p className="stat-label">Auto-Nudge</p>
+        <p
+          className={`stat-value mt-1.5 text-lg md:mt-2 md:text-[1.75rem] ${
+            active ? 'text-sage-bright' : 'text-muted'
+          }`}
+        >
+          {loading ? '\u2014' : active ? 'Active' : 'Inactive'}
+        </p>
+        <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-gray-500 md:text-xs">
+          <Clock className="mt-px h-3 w-3 flex-shrink-0" strokeWidth={1.75} />
+          <span>
+            Next: {getNextMonday()}
+            <span className="hidden md:inline"> at 10:00 AM</span>
+          </span>
+        </p>
+      </div>
 
-      {/* Mobile label — fixed height matching other cards */}
-      <div className="flex flex-col md:hidden" style={{ height: 46 }}>
-        <p className="text-white/40 uppercase font-medium tracking-widest text-[9px]">This Week</p>
-        <p className="text-white font-black leading-tight mt-0.5 text-sm">Auto-Nudge</p>
-        <div className="flex items-center gap-1 text-[9px] text-white/30 mt-1">
-          <Clock className="w-2.5 h-2.5 flex-shrink-0" />
-          <span>Next: {getNextMonday()}</span>
+      <div className="relative h-12 w-12 flex-shrink-0 md:h-20 md:w-20">
+        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+          {!loading && active && (
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(160 140 230)" strokeWidth="8"
+              strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={0}
+              className="transition-all duration-700" />
+          )}
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Zap
+            className={`h-4 w-4 md:h-5 md:w-5 ${active ? 'text-sage' : 'text-gray-600'}`}
+            strokeWidth={1.75}
+          />
         </div>
-      </div>
-
-      {/* Desktop label */}
-      <div className="hidden md:flex flex-col justify-center">
-        <p className="text-white/40 uppercase font-medium tracking-widest text-xs">This Week</p>
-        <p className="text-white font-black text-2xl leading-tight mt-1">Auto-Nudge</p>
-        <div className="flex items-center gap-1.5 mt-2 text-xs text-white/30">
-          <Clock className="w-3 h-3" />
-          <span>Next: {getNextMonday()} at 10:00 AM</span>
-        </div>
-      </div>
-
-      {/* Mobile ring */}
-      <div className="md:hidden mt-auto">
-        {loading
-          ? <div className="w-8 h-8 rounded-full border-2 border-white/10 border-t-white/30 animate-spin" />
-          : mobileRing}
-      </div>
-
-      {/* Desktop ring */}
-      <div className="hidden md:block">
-        {loading
-          ? <div className="w-16 h-16 rounded-full border-2 border-white/10 border-t-white/30 animate-spin flex-shrink-0" />
-          : desktopRing}
       </div>
     </div>
   )

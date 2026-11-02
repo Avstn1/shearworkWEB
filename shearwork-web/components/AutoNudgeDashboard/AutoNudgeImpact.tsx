@@ -83,39 +83,27 @@ export default function AutoNudgeImpact({ user_id }: Props) {
   }, [user_id])
 
   return (
-    <div className="relative h-full w-full
-      flex flex-col items-center justify-center
-      2xl:flex-row 2xl:items-center 2xl:justify-between
-      px-3 md:px-2
-    ">
-      <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-sky-400/8 blur-3xl pointer-events-none" />
-
-      {/* Label */}
-      <div className="flex flex-col items-center 2xl:items-start text-center 2xl:text-left">
-        <p className="text-white/40 uppercase font-medium tracking-widest text-[9px] md:text-xs">This Week</p>
-        <p className="text-white font-black leading-tight mt-0.5 text-sm md:hidden">Corva's Impact</p>
-        <p className="hidden md:block text-white font-black text-2xl leading-tight mt-1">Corva's Impact</p>
+    <div data-tone="sage" className="stat-root tone-sage flex h-full w-full flex-row items-center justify-between gap-4 overflow-hidden p-3 md:flex-col md:items-stretch md:justify-between md:p-5">
+      <div className="min-w-0">
+        <p className="stat-label">Corva&apos;s impact</p>
+        <p className="mt-1.5 text-[11px] leading-snug text-gray-500 md:text-xs">Recovered this week</p>
       </div>
 
-      {/* Stats */}
-      {loading ? (
-        <div className="mt-3 2xl:mt-0">
-          <div className="w-6 h-6 rounded-full border-2 border-sky-400/30 border-t-sky-400 animate-spin" />
+      <div className="flex items-end gap-5 md:gap-6">
+        <div className="min-w-0">
+          <p className="stat-value text-xl md:text-[1.75rem]">
+            {loading ? '\u2014' : bookingsRecovered}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-500 md:text-xs">Bookings</p>
         </div>
-      ) : (
-        <div className="flex items-center justify-center gap-4 md:gap-6 mt-3 2xl:mt-0">
-          <div className="w-px h-10 bg-white/10 hidden 2xl:block" />
-          <div className="flex flex-col items-center">
-            <span className="text-2xl md:text-4xl font-black text-lime-300 leading-none">{bookingsRecovered}</span>
-            <span className="text-[9px] md:text-[10px] text-white/30 mt-1 uppercase tracking-widest">Bookings</span>
-          </div>
-          <div className="w-px h-10 bg-white/10" />
-          <div className="flex flex-col items-center">
-            <span className="text-2xl md:text-4xl font-black text-white leading-none">${revenueRecovered?.toLocaleString()}</span>
-            <span className="text-[9px] md:text-[10px] text-white/30 mt-1 uppercase tracking-widest">Revenue</span>
-          </div>
+        <div className="h-9 w-px self-center bg-white/[0.07]" />
+        <div className="min-w-0">
+          <p className="stat-value text-xl md:text-[1.75rem]">
+            {loading ? '\u2014' : `$${(revenueRecovered ?? 0).toLocaleString()}`}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-500 md:text-xs">Revenue</p>
         </div>
-      )}
+      </div>
     </div>
   )
 }

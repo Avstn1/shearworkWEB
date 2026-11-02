@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Users, ArrowLeft, Loader2, TrendingUp } from 'lucide-react';
+import { X, Calendar, Users, ArrowLeft, Loader2, TrendingUp, CheckCircle, Clock } from 'lucide-react';
+import { EmptyState } from '@/components/ui/AppKit';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 
@@ -290,15 +291,15 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+          className="modal-backdrop !z-[70] flex items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ y: 8, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[70vw] max-w-5xl h-[70vh] sm:h-[80vh] flex flex-col overflow-hidden"
+            className="modal-surface w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[70vw] max-w-5xl h-[70vh] sm:h-[80vh] flex flex-col overflow-hidden"
           >
             <AnimatePresence mode="wait">
               {view === 'list' && (
@@ -311,63 +312,56 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                   className="flex flex-col h-full"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-gradient-to-r from-lime-500/10 to-emerald-500/10 flex-shrink-0">
-                    <div className="flex-1 min-w-0 pr-2">
-                      <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-lime-300 flex-shrink-0" />
-                        <span className="truncate">Barber Nudge History</span>
-                      </h3>
-                      <p className="text-sm text-[#bdbdbd] mt-2">
-                        Track your weekly barber nudge campaign success
-                      </p>
+                  <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-white/[0.07] flex-shrink-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <TrendingUp className="w-[18px] h-[18px] text-sage flex-shrink-0" strokeWidth={1.75} />
+                      <div className="min-w-0">
+                        <h3 className="text-[15px] font-semibold text-ivory truncate">Barber Nudge history</h3>
+                        <p className="text-xs text-muted mt-0.5">
+                          Track your weekly barber nudge campaign success
+                        </p>
+                      </div>
                     </div>
-                    <button
-                      onClick={onClose}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-                    >
-                      <X className="w-5 h-5 text-[#bdbdbd]" />
+                    <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Close">
+                      <X className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   </div>
 
                   {/* Campaigns List */}
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 min-h-0">
                     {isLoading ? (
-                      <div className="text-center py-12">
-                        <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
-                        <p className="text-base text-[#bdbdbd]">Updating your campaign history...</p>
+                      <div className="empty-state">
+                        <Loader2 className="animate-spin" strokeWidth={1.75} />
+                        <p>Updating your campaign history...</p>
                       </div>
                     ) : campaigns.length === 0 ? (
-                      <div className="text-center py-12">
-                        <TrendingUp className="w-12 h-12 text-[#bdbdbd] mx-auto mb-4 opacity-50" />
-                        <p className="text-base text-[#bdbdbd]">No barber nudge campaigns yet</p>
-                        <p className="text-sm text-[#bdbdbd] mt-2">
-                          Successful campaigns will appear here
-                        </p>
-                      </div>
+                      <EmptyState icon={TrendingUp} title="No barber nudge campaigns yet">
+                        Successful campaigns will appear here
+                      </EmptyState>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {campaigns.map((campaign) => (
                           <button
                             key={campaign.bucket_id}
                             onClick={() => handleCampaignClick(campaign)}
-                            className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-lime-300/30 transition-all duration-300 text-left group"
+                            className="w-full p-4 bg-white/[0.02] border border-white/[0.07] rounded-lg hover:bg-white/[0.04] hover:border-white/[0.12] transition-colors text-left group"
                           >
                             <div className="flex items-start justify-between mb-2 gap-2">
-                              <h4 className="font-semibold text-white group-hover:text-lime-300 transition-colors text-base">
+                              <h4 className="font-semibold text-ivory text-sm tabular-nums">
                                 {campaign.week_start} - {campaign.week_end}
                               </h4>
-                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-lime-300/10 text-lime-300 border border-lime-300/20 flex-shrink-0">
+                              <span className="badge badge-sage flex-shrink-0 tabular-nums">
                                 {campaign.clients_booked} booked
                               </span>
                             </div>
-                            <div className="flex items-center gap-4 text-xs text-[#bdbdbd] flex-wrap">
+                            <div className="flex items-center gap-3 text-xs text-muted flex-wrap tabular-nums">
                               <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3 flex-shrink-0" />
+                                <Calendar className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.75} />
                                 Started {formatDate(campaign.campaign_start)}
                               </span>
-                              <span className="hidden sm:inline">•</span>
-                              <span className="text-lime-300">Week {campaign.iso_week_number.split('-W')[1]}</span>
-                              <span className="hidden sm:inline">•</span>
+                              <span className="hidden sm:inline text-gray-600">·</span>
+                              <span>Week {campaign.iso_week_number.split('-W')[1]}</span>
+                              <span className="hidden sm:inline text-gray-600">·</span>
                               <span>{campaign.total_clients} clients nudged</span>
                             </div>
                           </button>
@@ -377,11 +371,8 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-4 sm:px-6 py-4 bg-white/5 flex-shrink-0">
-                    <button
-                      onClick={onClose}
-                      className="w-full px-6 py-3 rounded-xl font-bold text-base bg-white/10 text-white hover:bg-white/20 transition-all"
-                    >
+                  <div className="flex justify-end border-t border-white/[0.07] px-4 sm:px-5 py-3.5 flex-shrink-0">
+                    <button onClick={onClose} className="btn btn-glass btn-sm w-full sm:w-auto">
                       Close
                     </button>
                   </div>
@@ -398,45 +389,39 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                   className="flex flex-col h-full"
                 >
                   {/* Modal Header */}
-                  <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <button
-                        onClick={handleBack}
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-                      >
-                        <ArrowLeft className="w-4 h-4 text-[#bdbdbd]" />
+                  <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-white/[0.07] flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <button onClick={handleBack} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Back">
+                        <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
                       </button>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-bold text-white truncate">
+                        <h3 className="text-[15px] font-semibold text-ivory truncate tabular-nums">
                           {selectedCampaign.week_start} - {selectedCampaign.week_end}
                         </h3>
-                        <p className="text-xs text-[#bdbdbd] mt-0.5 truncate">
+                        <p className="text-xs text-muted mt-0.5 truncate">
                           Started {formatDate(selectedCampaign.campaign_start)}
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={onClose}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
-                    >
-                      <X className="w-5 h-5 text-[#bdbdbd]" />
+                    <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2 flex-shrink-0" aria-label="Close">
+                      <X className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   </div>
 
                   {/* Stats Bar */}
-                  <div className="px-4 py-3 border-b border-white/10 bg-white/5 flex-shrink-0">
-                    <div className="flex gap-4 text-xs">
+                  <div className="px-4 sm:px-5 py-3 border-b border-white/[0.07] bg-white/[0.02] flex-shrink-0">
+                    <div className="flex gap-6">
                       <div>
-                        <p className="text-[#bdbdbd] mb-0.5">Clients Booked</p>
-                        <p className="text-base font-bold text-lime-300">{selectedCampaign.clients_booked}</p>
+                        <p className="stat-label mb-0.5">Clients booked</p>
+                        <p className="text-base font-semibold text-sage-bright tabular-nums">{selectedCampaign.clients_booked}</p>
                       </div>
                       <div>
-                        <p className="text-[#bdbdbd] mb-0.5">Clients Nudged</p>
-                        <p className="text-base font-bold text-white">{selectedCampaign.total_clients}</p>
+                        <p className="stat-label mb-0.5">Clients nudged</p>
+                        <p className="text-base font-semibold text-ivory tabular-nums">{selectedCampaign.total_clients}</p>
                       </div>
                       <div>
-                        <p className="text-[#bdbdbd] mb-0.5">Week</p>
-                        <p className="text-base font-bold text-white">
+                        <p className="stat-label mb-0.5">Week</p>
+                        <p className="text-base font-semibold text-ivory tabular-nums">
                           {selectedCampaign.iso_week_number.split('-W')[1]}
                         </p>
                       </div>
@@ -444,65 +429,64 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                   </div>
 
                   {/* Recipients List */}
-                  <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 min-h-0">
                     {loadingRecipients ? (
-                      <div className="text-center py-12">
-                        <Loader2 className="w-8 h-8 text-lime-300 animate-spin mx-auto mb-4" />
-                        <p className="text-base text-[#bdbdbd]">Loading recipients...</p>
+                      <div className="empty-state">
+                        <Loader2 className="animate-spin" strokeWidth={1.75} />
+                        <p>Loading recipients...</p>
                       </div>
                     ) : recipients.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Users className="w-10 h-10 text-[#bdbdbd] mx-auto mb-2 opacity-50" />
-                        <p className="text-sm text-[#bdbdbd]">No recipients found</p>
-                      </div>
+                      <EmptyState icon={Users} title="No recipients found" />
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {recipients.map((recipient, index) => (
                           <div
                             key={`${recipient.client_id || recipient.phone_normalized}-${index}`}
-                            className={`p-4 rounded-xl border transition-all duration-200 ${
+                            className={`p-4 rounded-lg border transition-colors ${
                               recipient.status === 'booked'
-                                ? 'bg-gradient-to-br from-lime-300/10 to-lime-300/5 border-lime-300/30 hover:border-lime-300/50 hover:shadow-lg hover:shadow-lime-300/10'
-                                : 'bg-gradient-to-br from-amber-300/10 to-amber-300/5 border-amber-300/30 hover:border-amber-300/50 hover:shadow-lg hover:shadow-amber-300/10'
+                                ? 'bg-sage/[0.04] border-sage/20 hover:border-sage/30'
+                                : 'bg-white/[0.02] border-white/[0.07] hover:border-white/[0.12]'
                             }`}
                           >
-                            <div className="flex items-start justify-between gap-2 sm:gap-4 mb-3">
+                            <div className="flex items-start justify-between gap-2 sm:gap-4">
                               <div className="flex-1 min-w-0">
                                 {recipient.first_name && recipient.last_name ? (
-                                  <h4 className="font-bold text-white text-sm sm:text-base mb-1">
+                                  <h4 className="font-semibold text-ivory text-sm mb-0.5">
                                     {capitalizeName(`${recipient.first_name} ${recipient.last_name}`)}
                                   </h4>
                                 ) : (
-                                  <h4 className="font-bold text-[#bdbdbd] text-sm sm:text-base mb-1">Unknown Client</h4>
+                                  <h4 className="font-semibold text-muted text-sm mb-0.5">Unknown Client</h4>
                                 )}
-                                <p className="text-xs sm:text-sm text-[#bdbdbd]">
+                                <p className="text-xs text-muted tabular-nums">
                                   {formatPhoneNumber(recipient.phone_normalized || recipient.phone)}
                                 </p>
                               </div>
-                              <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap flex-shrink-0 ${
-                                recipient.status === 'booked'
-                                  ? 'bg-lime-300/20 text-lime-300 border border-lime-300/30'
-                                  : 'bg-amber-300/20 text-amber-300 border border-amber-300/30'
+                              <span className={`badge flex-shrink-0 ${
+                                recipient.status === 'booked' ? 'badge-sage' : 'badge-warn'
                               }`}>
-                                {recipient.status === 'booked' ? '✓ Booked' : '○ Pending'}
+                                {recipient.status === 'booked' ? (
+                                  <><CheckCircle className="w-3 h-3" strokeWidth={2} /> Booked</>
+                                ) : (
+                                  <><Clock className="w-3 h-3" strokeWidth={2} /> Pending</>
+                                )}
                               </span>
                             </div>
 
                             {recipient.status === 'booked' && recipient.service && recipient.appointment_date && (
-                              <div className="pt-3 border-t border-white/10">
+                              <div className="mt-3 pt-3 border-t border-white/[0.07]">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Service</p>
-                                    <p className="text-sm font-semibold text-lime-300 truncate">{recipient.service}</p>
+                                    <p className="text-[11px] text-muted mb-0.5">Service</p>
+                                    <p className="text-[13px] font-medium text-ivory truncate">{recipient.service}</p>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Appointment</p>
-                                    <p className="text-xs sm:text-sm font-semibold text-white break-words">{formatAppointmentDate(recipient.appointment_date)}</p>
+                                    <p className="text-[11px] text-muted mb-0.5">Appointment</p>
+                                    <p className="text-[13px] font-medium text-ivory break-words tabular-nums">{formatAppointmentDate(recipient.appointment_date)}</p>
                                   </div>
                                   {recipient.price && (
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-[10px] sm:text-xs text-[#bdbdbd] mb-1">Price</p>
-                                      <p className="text-sm font-semibold text-lime-300">${recipient.price}</p>
+                                      <p className="text-[11px] text-muted mb-0.5">Price</p>
+                                      <p className="text-[13px] font-semibold text-sage-bright tabular-nums">${recipient.price}</p>
                                     </div>
                                   )}
                                 </div>
@@ -515,12 +499,9 @@ export default function BarberNudgeHistoryModal({ isOpen, onClose }: BarberNudge
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-white/10 px-4 py-3 bg-white/5 flex-shrink-0">
-                    <button
-                      onClick={handleBack}
-                      className="w-full px-4 py-2 rounded-lg font-semibold text-sm bg-white/10 text-white hover:bg-white/20 transition-all duration-300"
-                    >
-                      Back to History
+                  <div className="flex justify-end border-t border-white/[0.07] px-4 sm:px-5 py-3.5 flex-shrink-0">
+                    <button onClick={handleBack} className="btn btn-glass btn-sm w-full sm:w-auto">
+                      Back to history
                     </button>
                   </div>
                 </motion.div>

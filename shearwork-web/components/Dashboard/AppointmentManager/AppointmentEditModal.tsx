@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 type AppointmentRow = {
   id: string;
@@ -117,6 +118,9 @@ export default function AppointmentEditModal({
     `${appointment?.client_first_name || ''} ${appointment?.client_last_name || ''}`.trim() ||
     'Unknown Client';
 
+  const detailLabel = 'text-xs text-muted';
+  const detailValue = 'text-right text-sm text-gray-200';
+
   return (
     <AnimatePresence>
       {isOpen && appointment && (
@@ -127,207 +131,154 @@ export default function AppointmentEditModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="modal-backdrop"
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="fixed inset-0 z-[61] flex items-center justify-center p-4"
           >
             <div
-              className="w-full max-w-md bg-gradient-to-br from-[#1a1f1b] to-[#252b26] rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="appointment-edit-title"
+              className="modal-surface w-full max-w-md overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="px-6 py-4 border-b border-white/10 bg-black/20">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">
-                    Edit Appointment
-                  </h3>
-                  <button
-                    onClick={onClose}
-                    className="p-1 rounded-lg hover:bg-white/10 transition text-[#bdbdbd] hover:text-white"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+                <h3 id="appointment-edit-title" className="text-[15px] font-semibold text-ivory">
+                  Edit Appointment
+                </h3>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="btn btn-ghost btn-sm !px-2"
+                >
+                  <X size={18} strokeWidth={1.75} />
+                </button>
               </div>
 
               {/* Content */}
-              <div className="px-6 py-5 space-y-4">
+              <div className="space-y-5 px-5 py-5">
                 {/* Appointment Details */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs text-[#a0a0a0] uppercase tracking-wide">
-                      Client
-                    </span>
-                    <span className="text-sm text-white font-medium text-right">
-                      {clientName}
-                    </span>
+                <dl className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className={detailLabel}>Client</dt>
+                    <dd className="text-right text-sm font-medium text-ivory">{clientName}</dd>
                   </div>
 
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs text-[#a0a0a0] uppercase tracking-wide">
-                      Date & Time
-                    </span>
-                    <span className="text-sm text-[#d4d4d4] text-right">
-                      {formatDateTime(appointment.datetime)}
-                    </span>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className={detailLabel}>Date &amp; Time</dt>
+                    <dd className={`${detailValue} tabular-nums`}>{formatDateTime(appointment.datetime)}</dd>
                   </div>
 
                   {appointment.phone_normalized && (
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs text-[#a0a0a0] uppercase tracking-wide">
-                        Phone
-                      </span>
-                      <span className="text-sm text-[#d4d4d4] text-right">
-                        {appointment.phone_normalized}
-                      </span>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className={detailLabel}>Phone</dt>
+                      <dd className={`${detailValue} tabular-nums`}>{appointment.phone_normalized}</dd>
                     </div>
                   )}
 
                   {appointment.service_type && (
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs text-[#a0a0a0] uppercase tracking-wide">
-                        Service
-                      </span>
-                      <span className="text-sm text-[#d4d4d4] text-right">
-                        {appointment.service_type}
-                      </span>
+                    <div className="flex items-start justify-between gap-4">
+                      <dt className={detailLabel}>Service</dt>
+                      <dd className={detailValue}>{appointment.service_type}</dd>
                     </div>
                   )}
-                </div>
+                </dl>
 
-                {/* Divider */}
-                <div className="border-t border-white/10" />
+                <hr className="divider" />
 
-                {/* Revenue Input */}
-                <div className="space-y-2">
-                  <label className="block text-xs text-[#a0a0a0] uppercase tracking-wide">
-                    Revenue
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-300 font-medium">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={revenue}
-                      onChange={(e) => setRevenue(e.target.value)}
-                      disabled={saving}
-                      className="w-full pl-7 pr-4 py-3 rounded-lg bg-black/30 border border-white/15 text-white text-lg font-medium placeholder:text-[#555] focus:outline-none focus:ring-2 focus:ring-green-300/70 disabled:opacity-50"
-                      placeholder="0.00"
-                    />
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Revenue Input */}
+                  <div>
+                    <label htmlFor="appt-revenue" className="field-label">
+                      Revenue
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                        $
+                      </span>
+                      <input
+                        id="appt-revenue"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={revenue}
+                        onChange={(e) => setRevenue(e.target.value)}
+                        disabled={saving}
+                        className="field !pl-7 tabular-nums disabled:opacity-50"
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Tip Input */}
-                <div className="space-y-2">
-                  <label className="block text-xs text-[#a0a0a0] uppercase tracking-wide">
-                    Tip
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-300 font-medium">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={tip}
-                      onChange={(e) => setTip(e.target.value)}
-                      disabled={saving}
-                      className="w-full pl-7 pr-4 py-3 rounded-lg bg-black/30 border border-white/15 text-white text-lg font-medium placeholder:text-[#555] focus:outline-none focus:ring-2 focus:ring-amber-300/70 disabled:opacity-50"
-                      placeholder="0.00"
-                    />
+                  {/* Tip Input */}
+                  <div>
+                    <label htmlFor="appt-tip" className="field-label">
+                      Tip
+                    </label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                        $
+                      </span>
+                      <input
+                        id="appt-tip"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={tip}
+                        onChange={(e) => setTip(e.target.value)}
+                        disabled={saving}
+                        className="field !pl-7 tabular-nums disabled:opacity-50"
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* Error/Success Messages */}
                 {error && (
-                  <div className="px-3 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm">
+                  <div className="flex items-center gap-2 rounded-lg border border-[#D99A8B]/25 bg-[#D99A8B]/10 px-3 py-2 text-sm text-[#D99A8B]">
+                    <AlertCircle size={16} strokeWidth={1.75} className="shrink-0" />
                     {error}
                   </div>
                 )}
                 {success && (
-                  <div className="px-3 py-2 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 text-sm flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                  <div className="flex items-center gap-2 rounded-lg border border-sage/25 bg-sage/10 px-3 py-2 text-sm text-sage-bright">
+                    <Check size={16} strokeWidth={1.75} className="shrink-0" />
                     Appointment updated successfully!
                   </div>
                 )}
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-white/10 bg-black/20 flex justify-end gap-3">
+              <div className="flex justify-end gap-2 border-t border-white/[0.07] px-5 py-4">
                 <button
+                  type="button"
                   onClick={onClose}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-[#bdbdbd] hover:text-white hover:bg-white/10 transition disabled:opacity-50"
+                  className="btn btn-ghost btn-sm"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving || success}
-                  className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${
-                    saving || success
-                      ? 'bg-amber-300/50 text-black/50 cursor-not-allowed'
-                      : 'bg-amber-300 text-black hover:bg-amber-200 shadow-lg hover:shadow-amber-300/30'
-                  }`}
+                  className="btn btn-primary btn-sm"
                 >
                   {saving ? (
-                    <span className="flex items-center gap-2">
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        />
-                      </svg>
+                    <>
+                      <Loader2 size={16} strokeWidth={1.75} className="animate-spin" />
                       Saving...
-                    </span>
+                    </>
                   ) : success ? (
                     'Saved!'
                   ) : (
