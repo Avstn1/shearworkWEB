@@ -147,7 +147,7 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
             <Bar
               dataKey="total_revenue"
               name="Revenue"
-              fill="#8FB57A"
+              fill="#8CC470"
               radius={[3, 3, 0, 0]}
             />
           </BarChart>

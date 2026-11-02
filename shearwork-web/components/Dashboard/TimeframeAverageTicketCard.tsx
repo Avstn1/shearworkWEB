@@ -95,7 +95,7 @@ export default function TimeframeAverageTicketCard({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat icon={Scissors} tone="sky"
+      <Stat icon={Scissors} tone="sage"
         label={`Avg Ticket (${titleSuffix})`}
         value={
           loading ? (

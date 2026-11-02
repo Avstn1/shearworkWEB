@@ -149,7 +149,7 @@ export default function YearlyExpensesCard({ userId, year, timeframe }: Props) {
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat icon={Receipt} tone="sand"
+      <Stat icon={Receipt} tone="coral"
         label={`Total Expenses (${titleSuffix})`}
         value={
           loading ? (

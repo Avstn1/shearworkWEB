@@ -217,7 +217,7 @@ export default function WeeklyRevenueCard({ userId, selectedMonth, selectedYear 
     'inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-white/[0.06] hover:text-ivory disabled:opacity-30 disabled:hover:bg-transparent'
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="stat-root tone-sky flex h-full w-full flex-col" data-tone="sky">
       {/* Header row: label + week navigator */}
       <div className="flex items-center justify-between gap-2">
         <p className="stat-label truncate">Weekly {label}</p>

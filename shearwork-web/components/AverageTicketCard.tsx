@@ -106,7 +106,7 @@ export default function AverageTicketCard({ userId, selectedMonth, year }: AvgTi
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat icon={Scissors} tone="sky"
+      <Stat icon={Scissors} tone="sage"
         label="Avg Ticket"
         value={
           loading ? (

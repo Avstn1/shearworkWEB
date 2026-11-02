@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { PieChart as PieIcon } from 'lucide-react'
+import { PanelHeading } from '@/components/ui/AppKit'
+import DonutBreakdown from '@/components/ui/DonutBreakdown'
 import { supabase } from '@/utils/supabaseClient'
 
 interface ProfitMarginPieChartProps {
@@ -51,8 +53,6 @@ export default function ProfitMarginPieChart({
     fetchData()
   }, [userId, selectedMonth, selectedYear, refreshKey])
 
-  const COLORS = ['#8FB57A', '#D99A8B']
-
   if (data.length === 0) {
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-white/[0.07]">
@@ -64,42 +64,13 @@ export default function ProfitMarginPieChart({
   }
 
   return (
-    <div className="w-full h-64">
-      <h2 className="panel-title mb-3">
-        Profit vs Expenses
-      </h2>
-      <ResponsiveContainer width="100%" height="90%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            outerRadius={80}
-            innerRadius={50}
-            stroke="#171A18"
-            strokeWidth={2}
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
-            contentStyle={{
-              backgroundColor: '#1D201E',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 8,
-              color: '#ECEDEA',
-              fontSize: 12,
-            }}
-            itemStyle={{ color: '#ECEDEA' }}
-            labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
-          />
-          <Legend iconType="square" wrapperStyle={{ color: '#9EA39C', fontSize: 12 }} />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="flex w-full flex-col">
+      <PanelHeading icon={PieIcon} tone="sky" className="mb-4">Profit vs expenses</PanelHeading>
+      <DonutBreakdown
+        items={data}
+        formatValue={v => `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+        totalLabel="Total"
+      />
     </div>
   )
 }

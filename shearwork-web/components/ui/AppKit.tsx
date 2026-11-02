@@ -7,7 +7,7 @@ import type { LucideIcon } from 'lucide-react'
  * headers and numbers look the same everywhere.
  */
 
-export type Tone = 'sage' | 'sky' | 'sand' | 'coral'
+export type Tone = 'sage' | 'sky' | 'sand' | 'coral' | 'violet'
 
 /** Tinted icon tile in one of the four accent tones. */
 export function IconTile({ icon: Icon, tone = 'sage', size = 'md' }: { icon: LucideIcon; tone?: Tone; size?: 'sm' | 'md' }) {
@@ -111,7 +111,7 @@ export function Stat({
   hint?: ReactNode
 }) {
   return (
-    <div className="min-w-0">
+    <div className={`stat-root min-w-0 ${icon ? `tone-${tone}` : ''}`} data-tone={icon ? tone : undefined}>
       <div className="flex items-center justify-between gap-2">
         <p className="stat-label">{label}</p>
         {icon && <IconTile icon={icon} tone={tone} size="sm" />}
@@ -185,7 +185,7 @@ export function PanelHeading({
   className?: string
 }) {
   return (
-    <div className={`flex min-w-0 items-center gap-2.5 ${className}`}>
+    <div className={`panel-heading tone-${tone} flex min-w-0 items-center gap-2.5 ${className}`} data-tone={tone}>
       <IconTile icon={icon} tone={tone} size="sm" />
       <h2 className="panel-title truncate">{children}</h2>
     </div>

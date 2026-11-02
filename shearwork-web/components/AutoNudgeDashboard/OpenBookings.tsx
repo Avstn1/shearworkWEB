@@ -78,7 +78,7 @@ export default function OpenBookings({ user_id }: Props) {
   }, [fetchOpenings, user_id])
 
   return (
-    <div className="tone-sky flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
+    <div data-tone="sky" className="stat-root tone-sky flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
       <div className="min-w-0">
         <p className="stat-label">Open bookings</p>
         <p className="stat-value mt-1.5 text-lg md:mt-2 md:text-[1.75rem]">
@@ -94,7 +94,7 @@ export default function OpenBookings({ user_id }: Props) {
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
           {!loading && (
-            <circle cx="50" cy="50" r="42" fill="none" stroke="#96B0C4" strokeWidth="8"
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(112 166 222)" strokeWidth="8"
               strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={0}
               className="transition-all duration-700" />
           )}

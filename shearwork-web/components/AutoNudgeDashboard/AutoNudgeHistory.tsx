@@ -247,7 +247,7 @@ export default function AutoNudgeHistory({ user_id }: Props) {
     <>
       <div className="flex h-full flex-col">
         <div className="mb-3 flex flex-shrink-0 items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
+          <div className="panel-heading tone-sky flex min-w-0 items-center gap-2.5" data-tone="sky">
             <IconTile icon={History} tone="sky" size="sm" />
             <div className="min-w-0">
               <h2 className="panel-title">AutoNudge history</h2>

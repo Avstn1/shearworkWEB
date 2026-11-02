@@ -240,7 +240,7 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
                     type="monotone" 
                     dataKey="success" 
                     name="Success"
-                    stroke="#8FB57A" 
+                    stroke="#8CC470" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -248,7 +248,7 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
                     type="monotone" 
                     dataKey="failed" 
                     name="Failed"
-                    stroke="#A9C0D2" 
+                    stroke="#70A6DE" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -258,7 +258,7 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
                   type="monotone" 
                   dataKey="total" 
                   name="Total Logins"
-                  stroke="#8FB57A"                   
+                  stroke="#8CC470"                   
                   strokeWidth={2} 
                   dot={false} 
                 />

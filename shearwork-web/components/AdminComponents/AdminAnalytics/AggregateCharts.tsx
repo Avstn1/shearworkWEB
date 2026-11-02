@@ -243,7 +243,7 @@ export default function AggregateChart({ startDate, endDate, targetDate, viewMod
                 type="monotone" 
                 dataKey="total" 
                 name="Total Activity"
-                stroke="#8FB57A" 
+                stroke="#8CC470" 
                 strokeWidth={2} 
                 dot={false}
                 strokeLinecap="round"

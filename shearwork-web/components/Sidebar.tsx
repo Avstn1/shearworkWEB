@@ -116,7 +116,7 @@ export default function Sidebar() {
                 title={item.label}
                 aria-current={active ? 'page' : undefined}
                 className={`relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors md:justify-center lg:justify-start ${
-                  active ? 'bg-white/[0.06] text-ivory' : 'text-gray-400 hover:bg-white/[0.04] hover:text-ivory'
+                  active ? 'bg-[rgb(140_196_112/0.12)] text-ivory' : 'text-gray-400 hover:bg-white/[0.04] hover:text-ivory'
                 }`}
               >
                 {active && <span className="absolute -left-3 top-2 bottom-2 w-0.5 rounded-r bg-sage" />}

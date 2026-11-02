@@ -124,7 +124,7 @@ export default function DailyRevenueCard({ userId, selectedDate }: DailyRevenueC
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat icon={CalendarDays} tone="sage"
+      <Stat icon={CalendarDays} tone="sand"
         label={`Daily ${label}`}
         value={
           loading ? (

@@ -147,7 +147,7 @@ export default function YearlyRevenueCard({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <Stat icon={BarChart3} tone="sage"
+      <Stat icon={BarChart3} tone="violet"
         label={`Total ${label} (${titleSuffix})`}
         value={
           loading ? (

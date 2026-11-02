@@ -20,7 +20,7 @@ import { Megaphone, Filter } from 'lucide-react'
 import { EmptyState, PanelHeading } from '@/components/ui/AppKit'
 
 // Graphite chart palette, indexed to keep series mapping: [1] new, [3] retained, [2] retention
-const COLORS = ['#B8BCB5', '#8FB57A', '#D8C59A', '#A9C0D2', '#D99A8B']
+const COLORS = ['#A08CE6', '#8CC470', '#E2B86E', '#70A6DE', '#E88470']
 
 export interface MarketingFunnel {
   source: string

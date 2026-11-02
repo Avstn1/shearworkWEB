@@ -256,7 +256,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                     type="monotone" 
                     dataKey="add_tips" 
                     name="Add Tips"
-                    stroke="#8FB57A" 
+                    stroke="#8CC470" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -264,7 +264,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                     type="monotone" 
                     dataKey="expense_edited" 
                     name="Edit Expense"
-                    stroke="#A9C0D2" 
+                    stroke="#70A6DE" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -272,7 +272,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                     type="monotone" 
                     dataKey="expense_added" 
                     name="Add Expense"
-                    stroke="#D8C59A" 
+                    stroke="#E2B86E" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -282,7 +282,7 @@ export default function FinanceChart({ startDate, endDate, targetDate, viewMode,
                   type="monotone" 
                   dataKey="total" 
                   name="Total Finance Actions"
-                  stroke="#8FB57A"                   
+                  stroke="#8CC470"                   
                   strokeWidth={2} 
                   dot={false} 
                 />

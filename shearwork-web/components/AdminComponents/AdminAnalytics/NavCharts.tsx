@@ -283,7 +283,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_expenses" 
                     name="Expenses"
-                    stroke="#8FB57A" 
+                    stroke="#8CC470" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -291,7 +291,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_dashboard" 
                     name="Dashboard"
-                    stroke="#A9C0D2" 
+                    stroke="#70A6DE" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -299,7 +299,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clickedSMSAutoNudge" 
                     name="SMS Auto Nudge"
-                    stroke="#D8C59A" 
+                    stroke="#E2B86E" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -307,7 +307,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clickedSMSCampaigns" 
                     name="SMS Campaigns"
-                    stroke="#B8BCB5" 
+                    stroke="#A08CE6" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -315,7 +315,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_clientSheets" 
                     name="Client Sheets"
-                    stroke="#D99A8B" 
+                    stroke="#E88470" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -323,7 +323,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_appointmentSheets" 
                     name="Appointment Sheets"
-                    stroke="#6F8F63" 
+                    stroke="#5FC2B5" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -333,7 +333,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                   type="monotone" 
                   dataKey="total" 
                   name="Total Actions"
-                  stroke="#8FB57A"                   
+                  stroke="#8CC470"                   
                   strokeWidth={2} 
                   dot={false} 
                 />

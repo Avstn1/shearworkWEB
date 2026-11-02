@@ -150,7 +150,7 @@ export default function ProfitLossTrendChart({
           <Line
             type="monotone"
             dataKey="revenue"
-            stroke="#8FB57A"
+            stroke="#8CC470"
             strokeWidth={2}
             name="Revenue"
             dot={false}
@@ -158,7 +158,7 @@ export default function ProfitLossTrendChart({
           <Line
             type="monotone"
             dataKey="expenses"
-            stroke="#D99A8B"
+            stroke="#E88470"
             strokeWidth={2}
             name="Expenses"
             dot={false}
@@ -166,7 +166,7 @@ export default function ProfitLossTrendChart({
           <Line
             type="monotone"
             dataKey="profit"
-            stroke="#A9C0D2"
+            stroke="#70A6DE"
             strokeWidth={2}
             name="Profit"
             dot={false}

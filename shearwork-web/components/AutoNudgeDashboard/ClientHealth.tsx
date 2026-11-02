@@ -362,7 +362,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
 
       {/* Header */}
       <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="panel-heading tone-coral flex min-w-0 items-center gap-2.5" data-tone="coral">
           <IconTile icon={HeartPulse} tone="coral" size="sm" />
           <h2 className="panel-title">Clients at risk</h2>
         </div>

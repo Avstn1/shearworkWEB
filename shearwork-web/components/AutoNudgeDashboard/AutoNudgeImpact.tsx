@@ -83,7 +83,7 @@ export default function AutoNudgeImpact({ user_id }: Props) {
   }, [user_id])
 
   return (
-    <div className="flex h-full w-full flex-row items-center justify-between gap-4 overflow-hidden p-3 md:flex-col md:items-stretch md:justify-between md:p-5">
+    <div data-tone="sage" className="stat-root tone-sage flex h-full w-full flex-row items-center justify-between gap-4 overflow-hidden p-3 md:flex-col md:items-stretch md:justify-between md:p-5">
       <div className="min-w-0">
         <p className="stat-label">Corva&apos;s impact</p>
         <p className="mt-1.5 text-[11px] leading-snug text-gray-500 md:text-xs">Recovered this week</p>

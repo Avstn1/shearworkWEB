@@ -256,7 +256,7 @@ export default function MonthlyReportChart({ startDate, endDate, targetDate, vie
                     type="monotone" 
                     dataKey="opened_monthly_report" 
                     name="Monthly Report"
-                    stroke="#8FB57A" 
+                    stroke="#8CC470" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -264,7 +264,7 @@ export default function MonthlyReportChart({ startDate, endDate, targetDate, vie
                     type="monotone" 
                     dataKey="opened_weekly_report" 
                     name="Weekly Report"
-                    stroke="#A9C0D2" 
+                    stroke="#70A6DE" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -272,7 +272,7 @@ export default function MonthlyReportChart({ startDate, endDate, targetDate, vie
                     type="monotone" 
                     dataKey="opened_wkComparison_report" 
                     name="Week Comparison"
-                    stroke="#D8C59A" 
+                    stroke="#E2B86E" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -282,7 +282,7 @@ export default function MonthlyReportChart({ startDate, endDate, targetDate, vie
                   type="monotone" 
                   dataKey="total" 
                   name="Total Report Interactions"
-                  stroke="#8FB57A"                   
+                  stroke="#8CC470"                   
                   strokeWidth={2} 
                   dot={false} 
                 />

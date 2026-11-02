@@ -207,7 +207,7 @@ export default function UserExpensesPage() {
       <div className="flex flex-col gap-4 md:gap-5">
         {/* Total to date */}
         <section className="panel panel-body">
-          <Stat icon={Receipt} tone="sand"
+          <Stat icon={Receipt} tone="coral"
             label="Total expenses to date"
             value={`$${currentExpense.toFixed(2)}`}
             hint={rangeLabel}

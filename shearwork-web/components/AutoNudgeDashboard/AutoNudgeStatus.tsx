@@ -61,7 +61,7 @@ export default function AutoNudgeStatus({ user_id }: Props) {
   }, [user_id])
 
   return (
-    <div className="flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
+    <div data-tone="violet" className="stat-root tone-violet flex h-full w-full flex-col justify-between gap-2 overflow-hidden p-3 md:flex-row md:items-center md:gap-4 md:p-5">
       <div className="min-w-0">
         <p className="stat-label">Auto-Nudge</p>
         <p
@@ -84,7 +84,7 @@ export default function AutoNudgeStatus({ user_id }: Props) {
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
           {!loading && active && (
-            <circle cx="50" cy="50" r="42" fill="none" stroke="#8FB57A" strokeWidth="8"
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(160 140 230)" strokeWidth="8"
               strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={0}
               className="transition-all duration-700" />
           )}
