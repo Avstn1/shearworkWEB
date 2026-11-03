@@ -6,23 +6,36 @@ import { CHART_COLORS, CHART_MUTED } from '@/lib/chartTheme'
 
 export type BreakdownItem = { name: string; value: number }
 
+/** Keep the largest `max - 1` items and sum the rest (including any existing "Others") into "Others". */
+function foldIntoOthers(items: BreakdownItem[], max: number): BreakdownItem[] {
+  if (items.length <= max) return items
+  const sorted = [...items].sort((a, b) => (a.name === 'Others' ? 1 : b.name === 'Others' ? -1 : b.value - a.value))
+  const keep = sorted.filter(i => i.name !== 'Others').slice(0, max - 1)
+  const rest = items.filter(i => !keep.includes(i)).reduce((sum, i) => sum + (i.value || 0), 0)
+  return [...keep, { name: 'Others', value: rest }]
+}
+
 /**
  * Donut + ranked list. The donut fills the available height with the total (or the
  * hovered slice) in its centre; the list shows each item's share as a coloured bar so the
  * numbers read without the chart. Items named "Others" are drawn in a muted grey.
  */
 export default function DonutBreakdown({
-  items,
+  items: allItems,
   unit = '',
   formatValue = (v: number) => v.toLocaleString(),
   totalLabel = 'Total',
+  maxItems = 5,
 }: {
   items: BreakdownItem[]
   /** Appended to values in the list, e.g. "bookings" */
   unit?: string
   formatValue?: (value: number) => string
   totalLabel?: string
+  /** Rows shown in the list; the rest are folded into "Others" so the card never scrolls */
+  maxItems?: number
 }) {
+  const items = foldIntoOthers(allItems, maxItems)
   const [active, setActive] = useState<number | null>(null)
   const total = items.reduce((sum, i) => sum + (i.value || 0), 0)
   const colorFor = (i: number) => (items[i]?.name === 'Others' ? CHART_MUTED : CHART_COLORS[i % CHART_COLORS.length])
@@ -71,7 +84,7 @@ export default function DonutBreakdown({
       </div>
 
       {/* Ranked list */}
-      <ul className="max-h-full min-w-0 space-y-2.5 self-center overflow-y-auto pr-1">
+      <ul className="min-w-0 space-y-2.5 self-center">
         {items.map((item, i) => (
           <li
             key={item.name}

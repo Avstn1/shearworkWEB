@@ -1,5 +1,7 @@
 'use client'
 
+import { useFitCount } from '@/hooks/useFitCount'
+import { ShowAllButton } from '@/components/ui/ShowAllModal'
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 
@@ -34,6 +36,7 @@ export default function MarketingFunnelsChart({
 }: MarketingFunnelsChartProps) {
   const [data, setData] = useState<MarketingFunnel[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const { ref: fitRef, count: fitCount } = useFitCount<HTMLUListElement>({ fallbackRowHeight: 42, gap: 12, deps: [data.length] })
 
   // Convert month name to number
   const getMonthNumber = (monthName: string): number => {
@@ -194,8 +197,8 @@ export default function MarketingFunnelsChart({
 
         {/* One row per source: bar = new clients (relative to the top source), inner bar =
             those who came back the same month. Reads well in a narrow column. */}
-        <ul className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-          {filteredData.map(f => (
+        <ul ref={fitRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+          {filteredData.slice(0, fitCount).map(f => (
             <li key={f.source}>
               <div className="flex items-baseline justify-between gap-3 text-[13px]">
                 <span className="truncate text-gray-200">{f.source}</span>
@@ -220,6 +223,9 @@ export default function MarketingFunnelsChart({
             </li>
           ))}
         </ul>
+        {filteredData.length > fitCount && (
+          <ShowAllButton total={filteredData.length} onClick={() => setIsModalOpen(true)} />
+        )}
         <div className="mt-3 flex flex-shrink-0 items-center gap-4 text-[11px] text-gray-400">
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm" style={{ backgroundColor: CHART_COLORS[0] }} />New clients</span>
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm" style={{ backgroundColor: CHART_COLORS[1] }} />Came back this month</span>

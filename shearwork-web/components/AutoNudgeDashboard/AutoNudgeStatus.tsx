@@ -30,14 +30,14 @@ const getCurrentISOWeek = (): string => {
   return `${thursday.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`
 }
 
-const getNextMonday = (): string => {
+const getNextMonday = (weekday: 'long' | 'short' = 'long'): string => {
   const now = new Date()
   const dayOfWeek = now.getDay()
   const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek
   const nextMonday = new Date(now)
   nextMonday.setDate(now.getDate() + daysUntilMonday)
   return nextMonday.toLocaleDateString('en-US', {
-    weekday: 'long', month: 'short', day: 'numeric'
+    weekday, month: 'short', day: 'numeric'
   })
 }
 
@@ -71,12 +71,11 @@ export default function AutoNudgeStatus({ user_id }: Props) {
         >
           {loading ? '\u2014' : active ? 'Active' : 'Inactive'}
         </p>
-        <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-gray-500 md:text-xs">
+        {/* Phones: one short line like the other stat cards; desktop has room for the full time */}
+        <p className="mt-1.5 text-xs leading-snug text-gray-500 md:hidden">Next: <span className="whitespace-nowrap">{getNextMonday('short')}</span></p>
+        <p className="mt-1.5 hidden items-start gap-1.5 text-xs leading-snug text-gray-500 md:flex">
           <Clock className="mt-px h-3 w-3 flex-shrink-0" strokeWidth={1.75} />
-          <span>
-            Next: {getNextMonday()}
-            <span className="hidden md:inline"> at 10:00 AM</span>
-          </span>
+          <span>Next: {getNextMonday()} at 10:00 AM</span>
         </p>
       </div>
 
