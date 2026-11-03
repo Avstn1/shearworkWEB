@@ -86,6 +86,8 @@ export default function DashboardPage() {
   const hasSyncedInitially = useRef(false)
   const isTrialUser = isTrialActive(profile)
   const firstSyncAfterConnect = useRef(false)
+  const pendingSync = useRef(false)
+  const latestSync = useRef<(manual?: boolean) => Promise<void>>(async () => {})
   const isSyncing = useRef(false)
   const showGettingStarted = isTrialUser
   const showTrialNote = isTrialUser && !profile?.onboarded
@@ -176,10 +178,17 @@ export default function DashboardPage() {
   // month synced recently. The Sync button forces a fresh sync and reports the result.
   const syncAcuityData = async (manual = false) => {
     if (!user) return
-    if (isSyncing.current) return
+    if (isSyncing.current) {
+      // Pickers stay usable during automatic checks: remember to sync the latest
+      // selection once the current request finishes
+      pendingSync.current = true
+      return
+    }
 
     isSyncing.current = true
-    setIsRefreshing(true)
+    // Only a manual sync shows "Syncing…" and locks the pickers; automatic checks are
+    // usually skipped by the server in a few hundred ms and should be invisible
+    if (manual) setIsRefreshing(true)
     const toastId = manual ? toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`) : undefined
 
     const timeoutId = setTimeout(() => {
@@ -214,9 +223,14 @@ export default function DashboardPage() {
     } finally {
       clearTimeout(timeoutId)
       isSyncing.current = false
-      setIsRefreshing(false)
+      if (manual) setIsRefreshing(false)
+      if (pendingSync.current) {
+        pendingSync.current = false
+        void latestSync.current()
+      }
     }
   }
+  latestSync.current = syncAcuityData
 
   const handleFullAcuitySync = async () => {
     setIsRefreshing(true)
