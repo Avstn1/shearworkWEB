@@ -1,12 +1,14 @@
 import { createSupabaseAdminClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/utils/api-auth'
+import { businessNow, businessTimeToUtcMs, businessWeekRange, datesBetween } from '@/lib/booking/torontoTime'
 
 const ACUITY_API_BASE = 'https://acuityscheduling.com/api/v1'
 const WORK_START_HOUR = 8
 const WORK_END_HOUR = 20
 const BOOKING_RATE_CACHE_TTL_MS = 5 * 60 * 1000
-const BOOKING_RATE_CACHE_VERSION = 'original-logic-v1'
+// v2: working hours in Toronto time, rest of the week only, same calendar as open-bookings
+const BOOKING_RATE_CACHE_VERSION = 'remaining-week-v2'
 
 type BookingRatePayload = {
   totalBooked: number
@@ -64,30 +66,19 @@ function buildBookingRateCacheKey(params: {
   ].join('|')
 }
 
-// ------------------- Date helpers -------------------
-function getWeekRange() {
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' }))
-  const dayOfWeek = now.getDay()
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-
-  const start = new Date(now)
-  start.setDate(now.getDate() + diff)
-  start.setHours(0, 0, 0, 0)
-
-  const end = new Date(start)
-  end.setDate(start.getDate() + 6)
-  end.setHours(23, 59, 59, 999)
-
-  const toStr = (d: Date) => d.toISOString().split('T')[0]
-  return { start: toStr(start), end: toStr(end) }
+// ------------------- Working window -------------------
+/** The part of `day`'s working hours (Toronto time) still ahead of `nowMs`, or null if none. */
+function remainingWorkWindow(day: string, nowMs: number): { start: number; end: number } | null {
+  const workStart = businessTimeToUtcMs(day, WORK_START_HOUR * 60)
+  const workEnd = businessTimeToUtcMs(day, WORK_END_HOUR * 60)
+  const start = Math.max(workStart, nowMs)
+  return start < workEnd ? { start, end: workEnd } : null
 }
 
-function getWeekDays(start: string, end: string) {
-  const days: string[] = []
-  for (let d = new Date(start); d <= new Date(end); d.setDate(d.getDate() + 1)) {
-    days.push(d.toISOString().split('T')[0])
-  }
-  return days
+function clipIntervals(intervals: { start: number; end: number }[], window: { start: number; end: number }) {
+  return intervals
+    .map(i => ({ start: Math.max(i.start, window.start), end: Math.min(i.end, window.end) }))
+    .filter(i => i.start < i.end)
 }
 
 // ------------------- Appointment helpers -------------------
@@ -208,7 +199,8 @@ async function fetchDayAvailability(
   accessToken: string,
   calendarId: number | string,
   appointmentTypeID: number | string,
-  day: string
+  day: string,
+  window: { start: number; end: number }
 ) {
 
   const url = new URL(`${ACUITY_API_BASE}/availability/times`)
@@ -225,24 +217,19 @@ async function fetchDayAvailability(
   const slots = (await res.json()) as AcuityAvailabilitySlot[]
   if (!Array.isArray(slots) || !slots.length) return { raw: [], merged: [], totalMinutes: 0 }
 
-  const workStart = new Date(`${day}T00:00:00`)
-  workStart.setHours(WORK_START_HOUR, 0, 0, 0)
-
-  const workEnd = new Date(`${day}T00:00:00`)
-  workEnd.setHours(WORK_END_HOUR, 0, 0, 0)
-
-  const intervals = slots
-    .map((slot) => {
-      if (!slot.time) return null
-      const start = Math.max(new Date(slot.time).getTime(), workStart.getTime())
-      const duration = Number(slot.duration ?? 30)
-      if (!Number.isFinite(duration) || duration <= 0) return null
-      const end = start + duration * 60000
-      return { start, end }
-    })
-    .filter((interval): interval is { start: number; end: number } =>
-      interval !== null && interval.start < workEnd.getTime()
-    )
+  // Acuity times carry the calendar's UTC offset, so compare as absolute instants
+  const intervals = clipIntervals(
+    slots
+      .map((slot) => {
+        if (!slot.time) return null
+        const start = new Date(slot.time).getTime()
+        const duration = Number(slot.duration ?? 30)
+        if (!Number.isFinite(start) || !Number.isFinite(duration) || duration <= 0) return null
+        return { start, end: start + duration * 60000 }
+      })
+      .filter((interval): interval is { start: number; end: number } => interval !== null),
+    window
+  )
 
   const { merged, totalMinutes } = mergeIntervals(intervals)
 
@@ -253,7 +240,8 @@ async function fetchDayAvailability(
 async function fetchDayBookedMinutes(
   accessToken: string,
   calendarId: number | string,
-  day: string
+  day: string,
+  window: { start: number; end: number }
 ) {
 
   const url = new URL(`${ACUITY_API_BASE}/appointments`)
@@ -287,7 +275,7 @@ async function fetchDayBookedMinutes(
     })
   }
 
-  const { merged, totalMinutes } = mergeIntervals(intervals)
+  const { merged, totalMinutes } = mergeIntervals(clipIntervals(intervals, window))
 
   return { totalMinutes, intervals: merged }
 }
@@ -314,7 +302,7 @@ export async function GET(request: Request) {
 
     const { data: tokenRow } = await serviceClient
       .from('acuity_tokens')
-      .select('access_token')
+      .select('access_token, calendar_id')
       .eq('user_id', user.id)
       .single()
 
@@ -323,22 +311,27 @@ export async function GET(request: Request) {
 
     const accessToken = tokenRow.access_token
 
-    const calendarsRes = await fetch(`${ACUITY_API_BASE}/calendars`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    // Same calendar as open-bookings: the ID saved with the Acuity connection, falling
+    // back to matching the profile's calendar name
+    let calendarId: number | string | null = tokenRow.calendar_id ?? null
+    if (calendarId === null) {
+      const calendarsRes = await fetch(`${ACUITY_API_BASE}/calendars`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
 
-    const calendars = (await calendarsRes.json()) as AcuityCalendar[]
+      const calendars = (await calendarsRes.json()) as AcuityCalendar[]
 
-    const match = calendars.find(
-      (calendar) =>
-        calendar.name?.trim().toLowerCase() === profile.calendar.trim().toLowerCase()
-    )
+      const match = calendars.find(
+        (calendar) =>
+          calendar.name?.trim().toLowerCase() === profile.calendar.trim().toLowerCase()
+      )
 
-    if (!match)
-      return NextResponse.json({ error: 'Calendar not found' }, { status: 400 })
+      if (!match)
+        return NextResponse.json({ error: 'Calendar not found' }, { status: 400 })
 
-    const calendarId = match.id
-    const { start, end } = getWeekRange()
+      calendarId = match.id
+    }
+    const { startDate: start, endDate: end } = businessWeekRange()
     const cacheKey = buildBookingRateCacheKey({
       userId: user.id,
       weekStart: start,
@@ -364,8 +357,8 @@ export async function GET(request: Request) {
     const computePromise = (async (): Promise<BookingRatePayload> => {
       let appointmentTypeID: number | string | null = null
 
-      if (profile.role === 'Owner') {
-        appointmentTypeID = await getRandomAppointmentTypeFromRecent(accessToken, calendarId)
+      if (profile.role?.toLowerCase() === 'owner') {
+        appointmentTypeID = await getRandomAppointmentTypeFromRecent(accessToken, calendarId!)
       }
 
       if (!appointmentTypeID) {
@@ -376,13 +369,18 @@ export async function GET(request: Request) {
         throw new Error('No appointment types found')
       }
 
-      const days = getWeekDays(start, end)
+      // Rest of the week only: past days have no open slots in Acuity, so counting
+      // their bookings would push the rate towards 100% as the week goes on
+      const nowMs = Date.now()
+      const days = datesBetween(businessNow().date, end)
+        .map(day => ({ day, window: remainingWorkWindow(day, nowMs) }))
+        .filter((d): d is { day: string; window: { start: number; end: number } } => d.window !== null)
 
       const results = await Promise.all(
-        days.map(async (day) => {
+        days.map(async ({ day, window }) => {
           const [booked, open] = await Promise.all([
-            fetchDayBookedMinutes(accessToken, calendarId, day),
-            fetchDayAvailability(accessToken, calendarId, appointmentTypeID!, day),
+            fetchDayBookedMinutes(accessToken, calendarId!, day, window),
+            fetchDayAvailability(accessToken, calendarId!, appointmentTypeID!, day, window),
           ])
 
           const finalOpenIntervals = subtractIntervals(open.merged, booked.intervals)

@@ -8,6 +8,7 @@ import {
 } from '@/lib/booking/serviceNormalization'
 import { pullAvailability } from '@/lib/booking/availability/orchestrator'
 import type { AvailabilitySlotRecord } from '@/lib/booking/availability/types'
+import { businessNow, businessWeekRange } from '@/lib/booking/torontoTime'
 
 const OPEN_BOOKINGS_DAY_END_MINUTES = 20 * 60
 const OPEN_BOOKINGS_SLOT_STALE_MS = 15 * 60 * 1000
@@ -148,7 +149,7 @@ function countNonOverlappingOpenings(
 
     const endMinutes = startMinutes + duration
 
-    if (endMinutes >= OPEN_BOOKINGS_DAY_END_MINUTES) continue
+    if (endMinutes > OPEN_BOOKINGS_DAY_END_MINUTES) continue
 
     const dayIntervals = perDayMap.get(slot.slot_date) ?? new Map<number, IntervalCandidate>()
     const existing = dayIntervals.get(startMinutes)
@@ -179,45 +180,14 @@ function countNonOverlappingOpenings(
   return total
 }
 
-function formatTorontoDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Toronto',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date)
-}
-
+// "Today" and "this week" in Toronto time (the server runs in UTC)
 function getTorontoNow(): TorontoNowContext {
-  const now = new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
-  )
-
-  return {
-    currentDate: formatTorontoDate(now),
-    currentMinutes: now.getHours() * 60 + now.getMinutes(),
-  }
+  const now = businessNow()
+  return { currentDate: now.date, currentMinutes: now.minutes }
 }
 
 function getWeekRange(weekOffset: number): OpenBookingsWeekRange {
-  const now = new Date(
-    new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })
-  )
-  const dayOfWeek = now.getDay()
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-
-  const start = new Date(now)
-  start.setDate(now.getDate() + diff + weekOffset * 7)
-  start.setHours(0, 0, 0, 0)
-
-  const end = new Date(start)
-  end.setDate(start.getDate() + 6)
-  end.setHours(23, 59, 59, 999)
-
-  return {
-    startDate: formatTorontoDate(start),
-    endDate: formatTorontoDate(end),
-  }
+  return businessWeekRange(new Date(), weekOffset)
 }
 
 function isFetchedAtStale(fetchedAt: string): boolean {
@@ -412,7 +382,7 @@ function filterRemainingWeekSlots(params: {
 
     const endMinutes = startMinutes + duration
 
-    if (endMinutes >= OPEN_BOOKINGS_DAY_END_MINUTES) {
+    if (endMinutes > OPEN_BOOKINGS_DAY_END_MINUTES) {
       return false
     }
 
