@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Search, X, UserCheck, SearchX, PartyPopper, HeartPulse } from 'lucide-react'
+import { Search, X, UserCheck, SearchX, PartyPopper, HeartPulse, Phone } from 'lucide-react'
 import { IconTile } from '@/components/ui/AppKit'
 import { NUDGING_PAUSED } from '@/lib/featureFlags'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -128,34 +128,55 @@ function getReportDateLabel(): string {
   }) + ' at 10pm'
 }
 
+function initialsOf(client: Client): string {
+  const letters = [client.first_name, client.last_name]
+    .map(part => part?.trim()?.[0])
+    .filter((ch): ch is string => Boolean(ch && /\p{L}/u.test(ch)))
+  return letters.join('').toUpperCase() || '?'
+}
+
+/** One client: big tap targets on phones (initials, name, status chips, call button). */
 function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: boolean }) {
   const name =
     [toTitleCase(client.first_name), toTitleCase(client.last_name)].filter(Boolean).join(' ') ||
     client.phone_normalized
 
   return (
-    <li className="py-3 first:pt-0 last:pb-0">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-ivory">{name}</span>
-          <span className={`badge flex-shrink-0 ${VISITING_TYPE_BADGE[client.visiting_type ?? ''] ?? ''}`}>
-            {client.visiting_type ?? 'unknown'}
-          </span>
-          {showMessaged && <span className="badge flex-shrink-0">Messaged</span>}
-        </div>
-        <span className="flex-shrink-0 text-xs tabular-nums text-muted">
-          Score <span className="font-semibold text-ivory">{Math.round(client.score)}</span>
+    <li className="py-3 first:pt-1 last:pb-1">
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[rgb(255_122_102/0.14)] text-sm font-semibold text-[#FFA799] ring-1 ring-inset ring-[rgb(255_122_102/0.28)]">
+          {initialsOf(client)}
         </span>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs tabular-nums text-gray-500">
-        <div className="flex flex-wrap gap-x-1.5">
-          <span>{client.phone_normalized}</span>
-          <span aria-hidden="true">&middot;</span>
-          <span className="text-[#FF8F7D]">{client.days_overdue}d overdue</span>
-          <span aria-hidden="true">&middot;</span>
-          <span>{client.days_since_last_visit}d since visit</span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-[15px] font-semibold text-ivory md:text-sm">{name}</span>
+            {showMessaged && <span className="badge flex-shrink-0">Messaged</span>}
+            <span className="ml-auto hidden flex-shrink-0 text-xs tabular-nums text-muted sm:inline">
+              Score <span className="font-semibold text-ivory">{Math.round(client.score)}</span>
+            </span>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs tabular-nums">
+            <span className="badge badge-danger">{client.days_overdue}d overdue</span>
+            <span className={`badge ${VISITING_TYPE_BADGE[client.visiting_type ?? ''] ?? ''}`}>
+              {client.visiting_type ?? 'unknown'}
+            </span>
+            <span className="text-gray-500">
+              every {client.expected_visit_interval_days}d &middot; last {client.days_since_last_visit}d ago
+            </span>
+          </div>
         </div>
-        <span className="flex-shrink-0">Usually every {client.expected_visit_interval_days}d</span>
+
+        {client.phone_normalized && (
+          <a
+            href={`tel:${client.phone_normalized}`}
+            aria-label={`Call ${name}`}
+            title={client.phone_normalized}
+            className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-lg bg-white/[0.05] text-sage-bright ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/[0.09]"
+          >
+            <Phone className="h-[18px] w-[18px]" strokeWidth={1.9} />
+          </a>
+        )}
       </div>
     </li>
   )
@@ -363,7 +384,7 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
     <div className="flex h-full flex-col">
 
       {/* Header */}
-      <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-2">
+      <div className="mb-3 hidden flex-shrink-0 items-center justify-between gap-2 md:flex">
         <div className="panel-heading tone-coral flex min-w-0 items-center gap-2.5" data-tone="coral">
           <IconTile icon={HeartPulse} tone="coral" size="sm" />
           <h2 className="panel-title">Clients at risk</h2>
@@ -379,8 +400,8 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
         value={tab}
         onChange={(v) => { setTab(v); setSearch('') }}
         options={[
-          { value: 'prospects', label: 'Prospects' },
-          { value: 'unbooked', label: 'Pending follow-up' },
+          { value: 'prospects', label: loadingProspects ? 'Prospects' : `Prospects · ${clients.length}` },
+          { value: 'unbooked', label: loadingUnbooked ? 'Pending follow-up' : `Pending · ${unbookedClients.length}` },
         ]}
       />
 
