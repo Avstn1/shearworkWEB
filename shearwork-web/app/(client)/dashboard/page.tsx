@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { LayoutGrid } from 'lucide-react'
-import { IconTile } from '@/components/ui/AppKit'
+import { IconTile, Segmented } from '@/components/ui/AppKit'
 import AutoNudgeStatus from '@/components/AutoNudgeDashboard/AutoNudgeStatus'
 import OpenBookings from '@/components/AutoNudgeDashboard/OpenBookings'
 import BookingCapacity from '@/components/AutoNudgeDashboard/BookingCapacity'
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [dateAutonudgeEnabled, setDateAutonudgeEnabled] = useState<string | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
+  const [mobileTab, setMobileTab] = useState<'clients' | 'history'>('clients')
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -62,20 +63,18 @@ export default function DashboardPage() {
 
       {/* ── TOP ROW ── */}
 
-      {/* Mobile: 3 cards in a row + Corva's Impact full width below */}
-      <div className="flex flex-col gap-3 flex-shrink-0 md:hidden">
-        <div className="grid grid-cols-3 gap-3" style={{ height: 178 }}>
-          <div className="panel">
-            <AutoNudgeStatus user_id={user_id!} />
-          </div>
-          <div className="panel">
-            <OpenBookings user_id={user_id!} />
-          </div>
-          <div className="panel">
-            <BookingCapacity user_id={user_id!} />
-          </div>
+      {/* Mobile: three compact stats + Impact full width, leaving room for the list */}
+      <div className="grid flex-shrink-0 grid-cols-3 gap-2 md:hidden">
+        <div className="panel h-[104px]">
+          <OpenBookings user_id={user_id!} />
         </div>
-        <div className="panel panel-tint panel-accent tone-sage" style={{ height: 100 }}>
+        <div className="panel h-[104px]">
+          <BookingCapacity user_id={user_id!} />
+        </div>
+        <div className="panel h-[104px]">
+          <AutoNudgeStatus user_id={user_id!} />
+        </div>
+        <div className="panel panel-tint panel-accent tone-sage col-span-3 h-[80px]">
           <AutoNudgeImpact user_id={user_id!} />
         </div>
       </div>
@@ -100,18 +99,29 @@ export default function DashboardPage() {
 
       {/* ── BOTTOM ROW ── */}
 
-      {/* Mobile: stacked + scrollable */}
-      <div className="flex flex-col gap-3 flex-1 min-h-0 md:hidden overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-        <div className="panel p-4 flex-shrink-0" style={{ height: 420 }}>
-          <ClientHealth
-            user_id={user_id!}
-            sms_engaged_current_week={sms_engaged_current_week}
-            date_autonudge_enabled={dateAutonudgeEnabled}
-            onNudgeSuccess={() => setHistoryKey(k => k + 1)}
-          />
-        </div>
-        <div className="panel p-4 flex-shrink-0" style={{ minHeight: 380 }}>
-          <AutoNudgeHistory key={historyKey} user_id={user_id!} />
+      {/* Mobile: one panel with tabs that fills the rest of the screen and scrolls inside,
+          instead of two long stacked panels */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 md:hidden">
+        <Segmented
+          className="w-full flex-shrink-0"
+          value={mobileTab}
+          onChange={setMobileTab}
+          options={[
+            { value: 'clients', label: 'Clients at risk' },
+            { value: 'history', label: 'Nudge history' },
+          ]}
+        />
+        <div className="panel min-h-0 flex-1 overflow-hidden p-3.5">
+          {mobileTab === 'clients' ? (
+            <ClientHealth
+              user_id={user_id!}
+              sms_engaged_current_week={sms_engaged_current_week}
+              date_autonudge_enabled={dateAutonudgeEnabled}
+              onNudgeSuccess={() => setHistoryKey(k => k + 1)}
+            />
+          ) : (
+            <AutoNudgeHistory key={historyKey} user_id={user_id!} />
+          )}
         </div>
       </div>
 
