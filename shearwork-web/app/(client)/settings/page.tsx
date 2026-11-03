@@ -114,7 +114,7 @@ function SettingsPageContent() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'tween', duration: 0.25 }}
-              className="relative z-50 flex min-h-full w-64 flex-col border-r border-white/[0.07] bg-[#141614] px-3 py-4"
+              className="relative z-50 flex min-h-full w-64 flex-col border-r border-white/[0.07] bg-[#11141A] px-3 py-4"
             >
               <div className="mb-4 flex items-center justify-between px-3">
                 <span className="text-[15px] font-semibold text-ivory">Settings</span>

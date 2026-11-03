@@ -19,10 +19,10 @@ import { ButtonLink } from '@/components/ui/Button'
 // Logged-out (marketing) mobile menu colours. The logged-in app chrome uses the
 // Graphite tokens from globals.css instead.
 const COLORS = {
-  navBg: '#161917',
-  surfaceSolid: '#171A18',
-  text: '#ECEDEA',
-  green: '#8FB57A',
+  navBg: '#13171C',
+  surfaceSolid: '#151920',
+  text: '#EEF1F5',
+  green: '#3DD27A',
 }
 
 type HoverEvent = React.MouseEvent<HTMLElement>
@@ -31,7 +31,7 @@ type HoverEvent = React.MouseEvent<HTMLElement>
 const hoverHighlight = {
   onMouseEnter: (e: HoverEvent) => {
     e.currentTarget.style.color = COLORS.green
-    e.currentTarget.style.backgroundColor = 'rgba(143, 181, 122, 0.1)'
+    e.currentTarget.style.backgroundColor = 'rgba(61, 210, 122, 0.1)'
   },
   onMouseLeave: (e: HoverEvent) => {
     e.currentTarget.style.color = COLORS.text
@@ -371,7 +371,7 @@ export default function Navbar() {
 
               <div
                 ref={menuRef}
-                className="md:hidden fixed left-0 top-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col border-r border-white/[0.07] bg-[#141614]"
+                className="md:hidden fixed left-0 top-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col border-r border-white/[0.07] bg-[#11141A]"
                 style={{ animation: 'slideInLeft 0.2s ease-out' }}
               >
                 <style jsx>{`
@@ -439,7 +439,7 @@ export default function Navbar() {
           ref={navRef}
           className="fixed top-0 w-full z-50 backdrop-blur-xl backdrop-saturate-150 shadow-[0_1px_0_rgb(255_255_255/0.06),0_12px_32px_-20px_rgb(0_0_0/0.8)]"
           style={{
-            backgroundColor: 'rgba(17, 19, 18, 0.85)',
+            backgroundColor: 'rgba(13, 16, 20, 0.85)',
           }}
         >
           <div className="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative">
@@ -490,7 +490,7 @@ export default function Navbar() {
                 className="md:hidden fixed left-0 top-0 h-screen w-64 z-50 shadow-2xl"
                 style={{
                   backgroundColor: COLORS.navBg,
-                  borderRight: `1px solid rgba(143, 181, 122, 0.2)`,
+                  borderRight: `1px solid rgba(61, 210, 122, 0.2)`,
                   animation: 'slideInLeft 0.3s ease-out',
                 }}
               >

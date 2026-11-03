@@ -33,7 +33,7 @@ export default function DeleteMessageConfirmModal({
           >
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.07]">
               <div className="flex items-center gap-2.5 min-w-0">
-                <AlertCircle className="w-[18px] h-[18px] text-[#D99A8B] flex-shrink-0" strokeWidth={1.75} />
+                <AlertCircle className="w-[18px] h-[18px] text-[#FF8F7D] flex-shrink-0" strokeWidth={1.75} />
                 <h3 className="text-[15px] font-semibold text-ivory">Delete message?</h3>
               </div>
               <button onClick={onClose} className="btn btn-ghost btn-sm !h-8 !px-2" aria-label="Close">
@@ -50,15 +50,15 @@ export default function DeleteMessageConfirmModal({
                   </>
                 ) : (
                   <>
-                    This message will be <span className="text-[#D99A8B] font-semibold">permanently deleted</span>.
+                    This message will be <span className="text-[#FF8F7D] font-semibold">permanently deleted</span>.
                     You won't be able to see it again or recover any information about it.
                   </>
                 )}
               </p>
 
               {deleteType === 'hard' && (
-                <div className="p-3 bg-[#D99A8B]/[0.08] border border-[#D99A8B]/20 rounded-lg">
-                  <div className="flex items-start gap-2 text-[13px] text-[#D99A8B]">
+                <div className="p-3 bg-[#FF8F7D]/[0.08] border border-[#FF8F7D]/20 rounded-lg">
+                  <div className="flex items-start gap-2 text-[13px] text-[#FF8F7D]">
                     <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                     <p>
                       <span className="font-semibold">This action cannot be undone.</span> All message data will be permanently removed.
@@ -69,7 +69,7 @@ export default function DeleteMessageConfirmModal({
 
               {deleteType === 'soft' && (
                 <div className="p-3 bg-white/[0.03] border border-white/[0.07] rounded-lg">
-                  <div className="flex items-start gap-2 text-[13px] text-[#A9C0D2]">
+                  <div className="flex items-start gap-2 text-[13px] text-[#9CCBFF]">
                     <Info className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                     <p>
                       You can view this campaign's details and recipients in Campaign History at any time.
@@ -85,7 +85,7 @@ export default function DeleteMessageConfirmModal({
               </button>
               <button
                 onClick={onConfirm}
-                className="btn btn-sm bg-[#D99A8B]/[0.14] text-[#D99A8B] shadow-[inset_0_0_0_1px_rgba(217,154,139,0.3)] hover:bg-[#D99A8B]/[0.22]"
+                className="btn btn-sm bg-[#FF8F7D]/[0.14] text-[#FF8F7D] shadow-[inset_0_0_0_1px_rgba(255,143,125,0.3)] hover:bg-[#FF8F7D]/[0.22]"
               >
                 <span className="hidden sm:inline">{deleteType === 'soft' ? 'Remove from Active' : 'Delete Permanently'}</span>
                 <span className="sm:hidden">{deleteType === 'soft' ? 'Remove' : 'Delete'}</span>

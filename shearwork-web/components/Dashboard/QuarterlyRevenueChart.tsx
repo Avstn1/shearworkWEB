@@ -124,9 +124,9 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
             margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
           >
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#7C817A', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="label" tick={{ fill: '#7B8596', fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis
-              tick={{ fill: '#7C817A', fontSize: 11 }}
+              tick={{ fill: '#7B8596', fontSize: 11 }}
               tickFormatter={(val) => `$${val}`}
               axisLine={false}
               tickLine={false}
@@ -135,19 +135,19 @@ export default function QuarterlyRevenueChart({ userId, year, timeframe }: Props
               formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
               contentStyle={{
-                backgroundColor: '#1D201E',
+                backgroundColor: '#1C212A',
                 border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: 8,
-                color: '#ECEDEA',
+                color: '#EEF1F5',
                 fontSize: 12,
               }}
-              itemStyle={{ color: '#ECEDEA' }}
-              labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
+              itemStyle={{ color: '#EEF1F5' }}
+              labelStyle={{ color: '#9AA3B2', fontWeight: 600 }}
             />
             <Bar
               dataKey="total_revenue"
               name="Revenue"
-              fill="#8CC470"
+              fill="#3DD27A"
               radius={[3, 3, 0, 0]}
             />
           </BarChart>

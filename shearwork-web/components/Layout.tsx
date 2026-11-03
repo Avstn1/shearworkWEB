@@ -69,7 +69,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col sm:flex-row min-h-screen bg-canvas text-ivory">
       {/* Sidebar for desktop */}
       {!isMobile && (
-        <aside className="flex w-60 shrink-0 flex-col border-r border-white/[0.07] bg-[#141614]">
+        <aside className="flex w-60 shrink-0 flex-col border-r border-white/[0.07] bg-[#11141A]">
           <Link href="/" className="flex h-16 items-center border-b border-white/[0.07] px-5">
             <Brand />
           </Link>
@@ -100,7 +100,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile menu overlay */}
       {isMobile && mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm">
-          <div className="flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#141614] px-4">
+          <div className="flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#11141A] px-4">
             <Brand />
             <button
               type="button"
@@ -111,7 +111,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </button>
           </div>
-          <nav className="flex flex-1 flex-col space-y-0.5 overflow-hidden bg-[#141614] px-3 py-4" aria-label="Main">
+          <nav className="flex flex-1 flex-col space-y-0.5 overflow-hidden bg-[#11141A] px-3 py-4" aria-label="Main">
             {navLinks.map((link) => renderLink(link, () => setMobileMenuOpen(false)))}
             <div className="mt-auto border-t border-white/[0.07] pt-3">
               <SignOutButton className="w-full" />

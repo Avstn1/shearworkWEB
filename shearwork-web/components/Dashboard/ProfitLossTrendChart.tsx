@@ -106,27 +106,27 @@ export default function ProfitLossTrendChart({
           <XAxis
             dataKey="date"
             stroke="rgba(255,255,255,0.06)"
-            tick={{ fill: '#7C817A', fontSize: 11 }}
+            tick={{ fill: '#7B8596', fontSize: 11 }}
             tickLine={false}
             label={{
               value: 'Day of Month',
               position: 'insideBottom',
               offset: -5,
-              fill: '#7C817A',
+              fill: '#7B8596',
               fontSize: 11,
             }}
           />
-          <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7C817A', fontSize: 11 }} tickLine={false} axisLine={false} />
+          <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7B8596', fontSize: 11 }} tickLine={false} axisLine={false} />
           <Tooltip
             contentStyle={{
-              backgroundColor: '#1D201E',
+              backgroundColor: '#1C212A',
               border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: 8,
-              color: '#ECEDEA',
+              color: '#EEF1F5',
               fontSize: 12,
             }}
-            itemStyle={{ color: '#ECEDEA' }}
-            labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
+            itemStyle={{ color: '#EEF1F5' }}
+            labelStyle={{ color: '#9AA3B2', fontWeight: 600 }}
             formatter={(value: number, name: string) => {
               let label = ''
               switch (name) {
@@ -146,11 +146,11 @@ export default function ProfitLossTrendChart({
             }}
           />
 
-          <Legend iconType="square" wrapperStyle={{ color: '#9EA39C', fontSize: 12 }} />
+          <Legend iconType="square" wrapperStyle={{ color: '#9AA3B2', fontSize: 12 }} />
           <Line
             type="monotone"
             dataKey="revenue"
-            stroke="#8CC470"
+            stroke="#3DD27A"
             strokeWidth={2}
             name="Revenue"
             dot={false}
@@ -158,7 +158,7 @@ export default function ProfitLossTrendChart({
           <Line
             type="monotone"
             dataKey="expenses"
-            stroke="#E88470"
+            stroke="#FF7A66"
             strokeWidth={2}
             name="Expenses"
             dot={false}
@@ -166,7 +166,7 @@ export default function ProfitLossTrendChart({
           <Line
             type="monotone"
             dataKey="profit"
-            stroke="#70A6DE"
+            stroke="#5AA9FF"
             strokeWidth={2}
             name="Profit"
             dot={false}

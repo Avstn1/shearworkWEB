@@ -359,7 +359,7 @@ export function MessageSchedule({
         )}
 
         {msg.clientLimit > availableCredits && (
-          <p className="text-xs text-[#D99A8B] mt-2 flex items-center gap-1.5">
+          <p className="text-xs text-[#FF8F7D] mt-2 flex items-center gap-1.5">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
             You only have {availableCredits} credits available
           </p>

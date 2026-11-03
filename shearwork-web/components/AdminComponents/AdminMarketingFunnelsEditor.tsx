@@ -223,7 +223,7 @@ export default function AdminMarketingFunnelsEditor({ barberId, month }: Props) 
                       </button>
                       <button
                         onClick={() => handleDelete(row.id, row.isNew)}
-                        className="btn btn-ghost btn-sm !h-8 !px-2 hover:!text-[#D99A8B]"
+                        className="btn btn-ghost btn-sm !h-8 !px-2 hover:!text-[#FF8F7D]"
                         aria-label="Delete funnel"
                       >
                         <Trash2 size={16} strokeWidth={1.75} />

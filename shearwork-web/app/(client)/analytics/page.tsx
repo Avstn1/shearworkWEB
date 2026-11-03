@@ -272,7 +272,7 @@ export default function DashboardPage() {
 
 
   if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas text-sm text-muted">Loading dashboard…</div>
-  if (error) return <div className="flex h-screen items-center justify-center bg-canvas text-sm text-[#D99A8B]">{error}</div>
+  if (error) return <div className="flex h-screen items-center justify-center bg-canvas text-sm text-[#FF8F7D]">{error}</div>
 
   // -------------------- HEADER COMPONENT --------------------
   const VIEW_OPTIONS: Array<{ value: 'monthly' | 'yearly' | 'profit'; label: string }> = [

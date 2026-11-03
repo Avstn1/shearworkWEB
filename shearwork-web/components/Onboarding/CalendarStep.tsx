@@ -229,10 +229,10 @@ export default function CalendarStep({
                     </select>
                   </div>
                   {!isCalendarLocked && (
-                    <div className="flex gap-2.5 rounded-lg border border-[#D99A8B]/25 bg-[#D99A8B]/[0.06] px-3 py-2.5">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#D99A8B]" strokeWidth={1.75} />
+                    <div className="flex gap-2.5 rounded-lg border border-[#FF8F7D]/25 bg-[#FF8F7D]/[0.06] px-3 py-2.5">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#FF8F7D]" strokeWidth={1.75} />
                       <div>
-                        <p className="text-xs font-semibold text-[#D99A8B]">
+                        <p className="text-xs font-semibold text-[#FF8F7D]">
                           You cannot change your calendar after clicking Continue.
                         </p>
                         <p className="mt-0.5 text-xs text-gray-400">

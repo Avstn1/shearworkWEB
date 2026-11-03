@@ -243,7 +243,7 @@ export default function TopClientsEditor({ barberId, month, year }: TopClientsEd
                 <td className="!py-2 text-right">
                   <button
                     onClick={() => handleRemoveClient(startIdx + idx)}
-                    className="btn btn-ghost btn-sm !h-8 !px-2 hover:!text-[#D99A8B]"
+                    className="btn btn-ghost btn-sm !h-8 !px-2 hover:!text-[#FF8F7D]"
                     aria-label="Remove client"
                   >
                     <X size={16} strokeWidth={1.75} />

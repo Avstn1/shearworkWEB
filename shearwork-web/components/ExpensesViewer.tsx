@@ -544,7 +544,7 @@ export default function ExpensesViewer({ barberId, month, year, onUpdate }: Expe
                       </button>
                       <button
                         onClick={() => handleDelete(exp.id)}
-                        className="btn btn-ghost btn-sm hover:!text-[#D99A8B]"
+                        className="btn btn-ghost btn-sm hover:!text-[#FF8F7D]"
                         aria-label={`Delete ${exp.label}`}
                       >
                         <Trash2 size={15} strokeWidth={1.75} />

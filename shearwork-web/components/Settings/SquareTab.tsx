@@ -291,7 +291,7 @@ export default function SquareTab() {
 					</div>
 					<div className="flex shrink-0 justify-end">
 						{connected ? (
-							<button onClick={handleDisconnect} className="btn btn-glass btn-sm text-[#D99A8B]">
+							<button onClick={handleDisconnect} className="btn btn-glass btn-sm text-[#FF8F7D]">
 								Disconnect Square
 							</button>
 						) : (

@@ -95,7 +95,7 @@ export default function ConnectAcuityButton({
     <button
       type="button"
       onClick={handleDisconnect}
-      className={`btn btn-glass btn-sm text-[#D99A8B] ${className}`}
+      className={`btn btn-glass btn-sm text-[#FF8F7D] ${className}`}
     >
       Disconnect Acuity
     </button>

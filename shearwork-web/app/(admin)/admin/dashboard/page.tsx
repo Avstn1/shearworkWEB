@@ -554,10 +554,10 @@ export default function AdminDashboardPage() {
                           'alignleft aligncenter alignright alignjustify | ' +
                           'bullist numlist outdent indent | removeformat | help',
                         content_style: `
-                          body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; font-size:14px; color:#ECEDEA; background-color:#171A18; }
+                          body { font-family:system-ui,-apple-system,'Segoe UI',sans-serif; font-size:14px; color:#EEF1F5; background-color:#151920; }
                           table { width:100%; border-collapse:collapse; }
                           th, td { border:1px solid rgba(255,255,255,0.12); padding:6px; }
-                          th { background:#1D201E; white-space:nowrap; }
+                          th { background:#1C212A; white-space:nowrap; }
                         `,
                       }}
                     />

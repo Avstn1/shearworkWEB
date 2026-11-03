@@ -558,7 +558,7 @@ export default function SMSAutoNudge() {
                               : isMessaged
                               ? 'bg-white/[0.02] border-white/[0.07]'
                               : isFailed
-                              ? 'bg-[#D99A8B]/[0.04] border-[#D99A8B]/15'
+                              ? 'bg-[#FF8F7D]/[0.04] border-[#FF8F7D]/15'
                               : 'bg-white/[0.02] border-white/[0.07]'
                           }`}
                         >
@@ -588,7 +588,7 @@ export default function SMSAutoNudge() {
                                   className="btn btn-glass btn-sm relative !h-6 !px-2 !gap-1 !text-[11px] !font-medium"
                                 >
                                   {recipient.has_unread && (
-                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#D99A8B]" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#FF8F7D]" />
                                   )}
                                   <MessageSquare className="w-3 h-3" strokeWidth={1.75} />
                                   <span className="hidden sm:inline">Click to view message history</span>
@@ -604,7 +604,7 @@ export default function SMSAutoNudge() {
                               {formatPhoneNumber(recipient.phone)}
                             </span>
                             {isFailed && recipient.failure_reason ? (
-                              <span className="text-[11px] text-[#D99A8B] truncate text-right">{recipient.failure_reason}</span>
+                              <span className="text-[11px] text-[#FF8F7D] truncate text-right">{recipient.failure_reason}</span>
                             ) : (
                               <div className="flex items-center gap-1 text-muted">
                                 <Clock className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />

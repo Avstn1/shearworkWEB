@@ -840,7 +840,7 @@ export default function ProfileTab() {
       {/* {showPhoneModal && (
         <Modal>
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-            <div className="bg-[#141614] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="bg-[#11141A] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold">Update Phone Number</h3>
                 <button
@@ -1022,7 +1022,7 @@ export default function ProfileTab() {
                 />
               </div>
               {usernameError && (
-                <p className="mt-2 text-[13px] text-[#D99A8B]">{usernameError}</p>
+                <p className="mt-2 text-[13px] text-[#FF8F7D]">{usernameError}</p>
               )}
               <p className="mt-2 text-xs text-gray-500">Only lowercase letters and numbers allowed</p>
             </div>

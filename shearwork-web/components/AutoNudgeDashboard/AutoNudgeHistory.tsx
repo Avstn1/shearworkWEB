@@ -320,7 +320,7 @@ export default function AutoNudgeHistory({ user_id }: Props) {
                     )}
 
                     {recipient.status === 'failed' && recipient.failure_reason && (
-                      <p className="text-[#D99A8B]">{recipient.failure_reason}</p>
+                      <p className="text-[#FF8F7D]">{recipient.failure_reason}</p>
                     )}
 
                     {recipient.status === 'messaged' && recipient.messaged_at && (

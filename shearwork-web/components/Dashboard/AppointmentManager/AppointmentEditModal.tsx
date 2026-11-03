@@ -245,7 +245,7 @@ export default function AppointmentEditModal({
 
                 {/* Error/Success Messages */}
                 {error && (
-                  <div className="flex items-center gap-2 rounded-lg border border-[#D99A8B]/25 bg-[#D99A8B]/10 px-3 py-2 text-sm text-[#D99A8B]">
+                  <div className="flex items-center gap-2 rounded-lg border border-[#FF8F7D]/25 bg-[#FF8F7D]/10 px-3 py-2 text-sm text-[#FF8F7D]">
                     <AlertCircle size={16} strokeWidth={1.75} className="shrink-0" />
                     {error}
                   </div>

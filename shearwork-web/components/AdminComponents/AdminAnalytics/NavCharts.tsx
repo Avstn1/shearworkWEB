@@ -224,16 +224,16 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
     return (
       <div
         style={{
-          backgroundColor: '#1D201E',
+          backgroundColor: '#1C212A',
           border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: 8,
           padding: '8px 10px',
-          color: '#ECEDEA',
+          color: '#EEF1F5',
           fontSize: 12,
           fontVariantNumeric: 'tabular-nums',
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 4, color: '#9EA39C' }}>
+        <div style={{ fontWeight: 600, marginBottom: 4, color: '#9AA3B2' }}>
           {viewMode === 'hourly' ? `${Number(label)%12||12}${Number(label)<12?'am':'pm'}` : label}
         </div>
         {payload.map((p: any) => (
@@ -269,13 +269,13 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
               <XAxis
                 dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
                 stroke="rgba(255,255,255,0.06)"
-                tick={{ fill: '#7C817A', fontSize: 11 }}
+                tick={{ fill: '#7B8596', fontSize: 11 }}
                 tickLine={false}
                 tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
-              <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7C817A', fontSize: 11 }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
+              <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7B8596', fontSize: 11 }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
               <Tooltip content={tooltipContent} cursor={{ stroke: 'rgba(255,255,255,0.12)' }} />
-              <Legend iconType="plainline" iconSize={12} wrapperStyle={{ fontSize: 12, color: '#9EA39C' }} />
+              <Legend iconType="plainline" iconSize={12} wrapperStyle={{ fontSize: 12, color: '#9AA3B2' }} />
               
               {displayMode === 'separate' ? (
                 <>
@@ -283,7 +283,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_expenses" 
                     name="Expenses"
-                    stroke="#8CC470" 
+                    stroke="#3DD27A" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -291,7 +291,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_dashboard" 
                     name="Dashboard"
-                    stroke="#70A6DE" 
+                    stroke="#5AA9FF" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -299,7 +299,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clickedSMSAutoNudge" 
                     name="SMS Auto Nudge"
-                    stroke="#E2B86E" 
+                    stroke="#FFB547" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -307,7 +307,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clickedSMSCampaigns" 
                     name="SMS Campaigns"
-                    stroke="#A08CE6" 
+                    stroke="#A78BFA" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -315,7 +315,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_clientSheets" 
                     name="Client Sheets"
-                    stroke="#E88470" 
+                    stroke="#FF7A66" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -323,7 +323,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                     type="monotone" 
                     dataKey="clicked_appointmentSheets" 
                     name="Appointment Sheets"
-                    stroke="#5FC2B5" 
+                    stroke="#2DD4BF" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -333,7 +333,7 @@ export default function NavChart({ startDate, endDate, targetDate, viewMode, dis
                   type="monotone" 
                   dataKey="total" 
                   name="Total Actions"
-                  stroke="#8CC470"                   
+                  stroke="#3DD27A"                   
                   strokeWidth={2} 
                   dot={false} 
                 />

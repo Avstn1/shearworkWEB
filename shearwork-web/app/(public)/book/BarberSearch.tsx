@@ -96,7 +96,7 @@ export function BarberSearch({ initialBarber }: BarberSearchProps) {
 
         {/* Search Results Dropdown */}
         {search.length >= 2 && !selectedBarber && (
-          <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-[#141614] shadow-2xl">
+          <div className="mb-6 overflow-hidden rounded-xl border border-white/10 bg-[#11141A] shadow-2xl">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-lime-400 border-t-transparent" />

@@ -99,11 +99,11 @@ export default function ClientPreviewModal({
                     </div>
                     <div>
                       <p className="stat-label mb-1 truncate">Since</p>
-                      <p className="text-lg sm:text-2xl font-semibold text-[#A9C0D2] tabular-nums">{previewStats.avg_days_since_last_visit}</p>
+                      <p className="text-lg sm:text-2xl font-semibold text-[#9CCBFF] tabular-nums">{previewStats.avg_days_since_last_visit}</p>
                     </div>
                     <div>
                       <p className="stat-label mb-1 truncate">Overdue</p>
-                      <p className="text-lg sm:text-2xl font-semibold text-[#D8C59A] tabular-nums">{previewStats.avg_days_overdue}</p>
+                      <p className="text-lg sm:text-2xl font-semibold text-[#FFC97A] tabular-nums">{previewStats.avg_days_overdue}</p>
                     </div>
                   </div>
 
@@ -117,12 +117,12 @@ export default function ClientPreviewModal({
                         <span className="sm:hidden">Urgency</span>
                       </div>
                       <div className="truncate">
-                        <span className="text-[#A9C0D2] font-medium">Since:</span>{" "}
+                        <span className="text-[#9CCBFF] font-medium">Since:</span>{" "}
                         <span className="hidden sm:inline">Days since last appointment</span>
                         <span className="sm:hidden">Since visit</span>
                       </div>
                       <div className="truncate">
-                        <span className="text-[#D8C59A] font-medium">Overdue:</span>{" "}
+                        <span className="text-[#FFC97A] font-medium">Overdue:</span>{" "}
                         <span className="hidden sm:inline">How late vs typical pattern</span>
                         <span className="sm:hidden">How late</span>
                       </div>
@@ -212,7 +212,7 @@ export default function ClientPreviewModal({
                         <span className="hidden sm:inline text-gray-600">·</span>
                         <span>{client.days_since_last_visit} days since visit</span>
                         <span className="hidden sm:inline text-gray-600">·</span>
-                        <span className="text-[#D8C59A]">{client.days_overdue} days overdue</span>
+                        <span className="text-[#FFC97A]">{client.days_overdue} days overdue</span>
                       </div>
                     </div>
                     <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0 tabular-nums">

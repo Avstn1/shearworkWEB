@@ -216,14 +216,14 @@ export function MessageCard({
       exit={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.3, delay: index * 0.1 }}
       className={`panel overflow-visible ${
-        isFullLock ? '!border-[#D99A8B]/30' : isPartialLock ? '!border-amber-300/25' : ''
+        isFullLock ? '!border-[#FF8F7D]/30' : isPartialLock ? '!border-amber-300/25' : ''
       }`}
     >
       {/* Full Lock Banner - Campaign in progress */}
       {isFullLock && (
-        <div className="px-3 sm:px-5 py-2.5 flex items-center gap-2 rounded-t-xl bg-[#D99A8B]/[0.07] border-b border-[#D99A8B]/20">
-          <Lock className="w-4 h-4 text-[#D99A8B] flex-shrink-0" strokeWidth={1.75} />
-          <p className="text-[13px] font-medium text-[#D99A8B]">
+        <div className="px-3 sm:px-5 py-2.5 flex items-center gap-2 rounded-t-xl bg-[#FF8F7D]/[0.07] border-b border-[#FF8F7D]/20">
+          <Lock className="w-4 h-4 text-[#FF8F7D] flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-[13px] font-medium text-[#FF8F7D]">
             Campaign in progress - Locked until messaging completes
           </p>
         </div>
@@ -259,7 +259,7 @@ export function MessageCard({
               msg.validationStatus === 'ACCEPTED' && msg.enabled
                 ? 'bg-sage/10 border-sage/20 text-sage-bright'
                 : isFullLock
-                  ? 'bg-[#D99A8B]/[0.08] border-[#D99A8B]/20 text-[#D99A8B]'
+                  ? 'bg-[#FF8F7D]/[0.08] border-[#FF8F7D]/20 text-[#FF8F7D]'
                   : isPartialLock
                     ? 'bg-amber-300/[0.08] border-amber-300/20 text-amber-300'
                     : 'bg-raised border-white/[0.07] text-ivory'
@@ -644,7 +644,7 @@ export function MessageCard({
                   {recipientsStats.failed > 0 && (
                     <div>
                       <p className="stat-label mb-1">Failed</p>
-                      <p className="text-base font-semibold text-[#D99A8B] tabular-nums">{recipientsStats.failed}</p>
+                      <p className="text-base font-semibold text-[#FF8F7D] tabular-nums">{recipientsStats.failed}</p>
                     </div>
                   )}
                 </div>
@@ -662,7 +662,7 @@ export function MessageCard({
                         className={`p-2.5 rounded-lg border transition-colors ${
                           recipient.is_sent
                             ? 'bg-white/[0.02] border-white/[0.07] hover:bg-white/[0.04]'
-                            : 'bg-[#D99A8B]/[0.04] border-[#D99A8B]/15 hover:bg-[#D99A8B]/[0.07]'
+                            : 'bg-[#FF8F7D]/[0.04] border-[#FF8F7D]/15 hover:bg-[#FF8F7D]/[0.07]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -681,7 +681,7 @@ export function MessageCard({
                                 {recipient.is_sent ? 'Sent' : 'Failed'}
                               </span>
                               {!recipient.is_sent && recipient.reason && (
-                                <span className="flex items-center gap-1 text-[11px] text-[#D99A8B] min-w-0">
+                                <span className="flex items-center gap-1 text-[11px] text-[#FF8F7D] min-w-0">
                                   <AlertCircle className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />
                                   <span className="truncate">{recipient.reason}</span>
                                 </span>
@@ -695,7 +695,7 @@ export function MessageCard({
                             {recipient.is_sent ? (
                               <CheckCircle className="w-4 h-4 text-sage" strokeWidth={1.75} />
                             ) : (
-                              <XCircle className="w-4 h-4 text-[#D99A8B]" strokeWidth={1.75} />
+                              <XCircle className="w-4 h-4 text-[#FF8F7D]" strokeWidth={1.75} />
                             )}
                           </div>
                         </div>
