@@ -109,10 +109,10 @@ export default function ReportModal({
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     font-size: clamp(9px, 2vw, 15px);
                     line-height: 1.6;
-                    background: #171A18;
-                    color: #ECEDEA;
+                    background: #151920;
+                    color: #EEF1F5;
                   }
-                  h1, h2, h3, h4 { font-weight: 600; color: #ECEDEA; }
+                  h1, h2, h3, h4 { font-weight: 600; color: #EEF1F5; }
 
                   p, li { margin-bottom: 0.75rem; }
                   img { max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
@@ -142,12 +142,12 @@ export default function ReportModal({
                   }
                   th {
                     font-weight: 600;
-                    background: #1D201E;
-                    color: #9EA39C;
+                    background: #1C212A;
+                    color: #9AA3B2;
                     text-overflow: ellipsis;
                   }
 
-                  a { color: #A9C79A; text-decoration: underline; word-break: break-all; }
+                  a { color: #6BE39C; text-decoration: underline; word-break: break-all; }
 
                   @media (max-width: 768px) {
                     body { font-size: 13px; padding: 0.5rem; }

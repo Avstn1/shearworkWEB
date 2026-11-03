@@ -94,7 +94,7 @@ export default function OpenBookings({ user_id }: Props) {
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
           {!loading && (
-            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(112 166 222)" strokeWidth="8"
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(90 169 255)" strokeWidth="8"
               strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 42}`} strokeDashoffset={0}
               className="transition-all duration-700" />
           )}

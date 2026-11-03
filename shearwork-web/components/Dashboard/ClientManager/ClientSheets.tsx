@@ -461,7 +461,7 @@ export default function ClientSheets() {
                 setActiveFilters([]);
                 setPage(1);
               }}
-              className="ml-1 text-xs font-medium text-muted transition-colors hover:text-[#D99A8B]"
+              className="ml-1 text-xs font-medium text-muted transition-colors hover:text-[#FF8F7D]"
             >
               Clear all
             </button>
@@ -478,7 +478,7 @@ export default function ClientSheets() {
           ) : error ? (
             <div className="empty-state">
               <AlertCircle aria-hidden="true" />
-              <p className="text-[#D99A8B]">{error}</p>
+              <p className="text-[#FF8F7D]">{error}</p>
             </div>
           ) : displayClients.length === 0 ? (
             <div className="empty-state">

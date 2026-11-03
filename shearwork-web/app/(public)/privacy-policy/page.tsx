@@ -31,15 +31,15 @@ function SectionCard({ icon, title, num, delay = 0, children }: SectionCardProps
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-60px' }}
       transition={{ duration: 0.45, delay, ease: 'easeOut' }}
-      className="rounded-2xl mb-5 overflow-hidden border border-white/[0.09] bg-[#181B19] hover:border-[#8FB57A]/20 transition-colors duration-300"
+      className="rounded-2xl mb-5 overflow-hidden border border-white/[0.09] bg-[#161A21] hover:border-[#3DD27A]/20 transition-colors duration-300"
     >
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-white/[0.09]">
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, #8FB57A 0%, #8FB57A 100%)',
-            boxShadow: '0 4px 14px rgba(143, 181, 122,0.35)',
+            background: 'linear-gradient(135deg, #3DD27A 0%, #3DD27A 100%)',
+            boxShadow: '0 4px 14px rgba(61, 210, 122,0.35)',
           }}
         >
           {icon}
@@ -62,7 +62,7 @@ function BodyText({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8FB57A] mt-5 mb-2 first:mt-0">
+    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#3DD27A] mt-5 mb-2 first:mt-0">
       {children}
     </p>
   );
@@ -71,7 +71,7 @@ function SectionLabel({ children }: { children: string }) {
 function DefItem({ term, desc }: DefItemProps) {
   return (
     <div className="flex gap-3 rounded-xl p-3 mb-2 bg-white/[0.03] border border-white/[0.09]">
-      <span className="font-mono text-[11px] font-medium text-[#8FB57A] w-24 flex-shrink-0 pt-0.5">
+      <span className="font-mono text-[11px] font-medium text-[#3DD27A] w-24 flex-shrink-0 pt-0.5">
         {term}
       </span>
       <span className="text-sm leading-relaxed text-white/55">{desc}</span>
@@ -84,7 +84,7 @@ function BulletItem({ children }: { children: React.ReactNode }) {
     <div className="flex items-start gap-3 mb-2">
       <span
         className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0"
-        style={{ background: '#8FB57A', boxShadow: '0 0 5px rgba(143, 181, 122,0.7)' }}
+        style={{ background: '#3DD27A', boxShadow: '0 0 5px rgba(61, 210, 122,0.7)' }}
       />
       <span className="text-sm leading-[1.8] text-white/55">{children}</span>
     </div>
@@ -93,7 +93,7 @@ function BulletItem({ children }: { children: React.ReactNode }) {
 
 function HighlightBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl p-4 mt-4 bg-[rgba(143, 181, 122,0.08)] border border-[rgba(143, 181, 122,0.22)]">
+    <div className="rounded-xl p-4 mt-4 bg-[rgba(61, 210, 122,0.08)] border border-[rgba(61, 210, 122,0.22)]">
       <p className="text-sm leading-relaxed text-white/70">{children}</p>
     </div>
   );
@@ -102,7 +102,7 @@ function HighlightBox({ children }: { children: React.ReactNode }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #161917 0%, #181B19 30%, #1b1e18 70%, #161917 100%)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #13171C 0%, #161A21 30%, #1b1e18 70%, #13171C 100%)' }}>
       <Navbar />
 
       <main
@@ -111,11 +111,11 @@ export default function PrivacyPolicyPage() {
         {/* Ambient glows */}
         <div
           className="absolute top-[-80px] left-[-100px] w-72 h-72 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'rgba(143, 181, 122,0.4)', opacity: 0.1 }}
+          style={{ background: 'rgba(61, 210, 122,0.4)', opacity: 0.1 }}
         />
         <div
           className="absolute bottom-[10%] right-[-80px] w-64 h-64 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'rgba(143, 181, 122,0.4)', opacity: 0.08 }}
+          style={{ background: 'rgba(61, 210, 122,0.4)', opacity: 0.08 }}
         />
 
         <div className="relative z-10 max-w-3xl mx-auto px-5 sm:px-6 pt-28 pb-24">
@@ -127,19 +127,19 @@ export default function PrivacyPolicyPage() {
             transition={{ duration: 0.6, ease: 'easeOut' }}
             className="mb-10"
           >
-            <div className="inline-flex items-center gap-2 rounded-lg px-3 py-1 mb-4 bg-[rgba(143, 181, 122,0.08)] border border-[rgba(143, 181, 122,0.22)]">
+            <div className="inline-flex items-center gap-2 rounded-lg px-3 py-1 mb-4 bg-[rgba(61, 210, 122,0.08)] border border-[rgba(61, 210, 122,0.22)]">
               <span
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ background: '#8FB57A', boxShadow: '0 0 6px rgba(143, 181, 122,0.8)' }}
+                style={{ background: '#3DD27A', boxShadow: '0 0 6px rgba(61, 210, 122,0.8)' }}
               />
-              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-[#8FB57A]">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-widest text-[#3DD27A]">
                 Privacy Policy
               </span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight leading-[1.1] mb-3">
               Your data,{' '}
-              <span className="text-[#8FB57A]">your trust.</span>
+              <span className="text-[#3DD27A]">your trust.</span>
             </h1>
             <p className="text-sm text-white/55">
               We're committed to transparency about how we collect and use your information.
@@ -153,7 +153,7 @@ export default function PrivacyPolicyPage() {
             transition={{ delay: 0.2 }}
             className="font-mono text-[11px] text-white/30 text-right mb-8"
           >
-            Last updated — <span className="text-[#8FB57A]">February 18, 2026</span>
+            Last updated — <span className="text-[#3DD27A]">February 18, 2026</span>
           </motion.p>
 
           {/* ── 01 Overview ── */}
@@ -201,7 +201,7 @@ export default function PrivacyPolicyPage() {
             <BulletItem>Password (stored encrypted)</BulletItem>
             <HighlightBox>
               We also collect information from mobile devices for a better user experience — these features are{' '}
-              <strong className="text-[#8FB57A] font-semibold">completely optional</strong>.
+              <strong className="text-[#3DD27A] font-semibold">completely optional</strong>.
             </HighlightBox>
           </SectionCard>
 
@@ -265,7 +265,7 @@ export default function PrivacyPolicyPage() {
             </BodyText>
             <HighlightBox>
               Every email we send includes detailed{' '}
-              <strong className="text-[#8FB57A] font-semibold">unsubscribe instructions</strong> at the bottom.
+              <strong className="text-[#3DD27A] font-semibold">unsubscribe instructions</strong> at the bottom.
             </HighlightBox>
           </SectionCard>
 
@@ -353,7 +353,7 @@ export default function PrivacyPolicyPage() {
               your device to identify the areas of our website you have visited
             </BulletItem>
             <HighlightBox>
-              We <strong className="text-[#8FB57A] font-semibold">never</strong> place personally identifiable
+              We <strong className="text-[#3DD27A] font-semibold">never</strong> place personally identifiable
               information in Cookies.
             </HighlightBox>
           </SectionCard>
@@ -392,8 +392,8 @@ export default function PrivacyPolicyPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.45, delay: 0.1 }}
-            className="rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mt-2 border border-[rgba(143, 181, 122,0.25)]"
-            style={{ background: 'linear-gradient(135deg, rgba(143, 181, 122,0.12) 0%, rgba(91,143,82,0.06) 100%)' }}
+            className="rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 mt-2 border border-[rgba(61, 210, 122,0.25)]"
+            style={{ background: 'linear-gradient(135deg, rgba(61, 210, 122,0.12) 0%, rgba(91,143,82,0.06) 100%)' }}
           >
             <div>
               <h3 className="text-white font-bold text-lg mb-1 tracking-tight">
@@ -405,8 +405,8 @@ export default function PrivacyPolicyPage() {
               href="mailto:support@corva.ca"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-black flex-shrink-0 transition-all duration-300 hover:scale-[1.03]"
               style={{
-                background: 'linear-gradient(135deg, #8FB57A 0%, #8FB57A 100%)',
-                boxShadow: '0 6px 24px rgba(143, 181, 122,0.35)',
+                background: 'linear-gradient(135deg, #3DD27A 0%, #3DD27A 100%)',
+                boxShadow: '0 6px 24px rgba(61, 210, 122,0.35)',
               }}
             >
               <Mail size={14} />

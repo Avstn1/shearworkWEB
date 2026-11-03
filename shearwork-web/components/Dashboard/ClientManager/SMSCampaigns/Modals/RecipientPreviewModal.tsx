@@ -1182,7 +1182,7 @@ return (
 
                       <button
                         onClick={handleResetSelections}
-                        className="btn btn-ghost btn-sm !h-8 !px-2.5 !text-[13px] hover:!text-[#D99A8B]"
+                        className="btn btn-ghost btn-sm !h-8 !px-2.5 !text-[13px] hover:!text-[#FF8F7D]"
                       >
                         <span className="hidden sm:inline">Reset All</span>
                         <span className="sm:hidden">Reset</span>
@@ -1245,7 +1245,7 @@ return (
                     <div className="flex gap-1.5 md:gap-2 flex-shrink-0">
                       <button
                         onClick={handleResetSelections}
-                        className="btn btn-ghost btn-sm !h-8 !px-2.5 !text-[13px] hover:!text-[#D99A8B]"
+                        className="btn btn-ghost btn-sm !h-8 !px-2.5 !text-[13px] hover:!text-[#FF8F7D]"
                       >
                         <span className="hidden sm:inline">Reset All</span>
                         <span className="sm:hidden">Reset</span>
@@ -1332,7 +1332,7 @@ return (
                               isBatchSelected
                                 ? "bg-sage/[0.06] border-sage/30"
                                 : isDeselected
-                                ? "bg-[#D8C59A]/[0.05] border-[#D8C59A]/25"
+                                ? "bg-[#FFC97A]/[0.05] border-[#FFC97A]/25"
                                 : "bg-raised border-white/[0.07] hover:border-white/[0.12]"
                             }`}
                           >
@@ -1382,7 +1382,7 @@ return (
                                   {client.days_since_last_visit} days since visit
                                 </span>
                                 <span className="hidden sm:inline text-gray-500">·</span>
-                                <span className="text-[#D8C59A] truncate">
+                                <span className="text-[#FFC97A] truncate">
                                   {client.days_overdue} days overdue
                                 </span>
                               </div>
@@ -1496,7 +1496,7 @@ return (
                     <X className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <div className="flex items-start gap-3 mb-4 pr-8">
-                    <div className="w-9 h-9 rounded-lg bg-white/[0.04] text-[#A9C0D2] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-white/[0.04] text-[#9CCBFF] flex items-center justify-center flex-shrink-0">
                       <AlertCircle className="w-[18px] h-[18px]" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1515,7 +1515,7 @@ return (
                   </div>
 
                   <div className="p-3 bg-white/[0.03] border border-white/[0.07] rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-[13px] text-[#A9C0D2]">
+                    <div className="flex items-start gap-2 text-[13px] text-[#9CCBFF]">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                       <p>
                         This client will not appear on the Client List page
@@ -1571,7 +1571,7 @@ return (
                     <X className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <div className="flex items-start gap-3 mb-4 pr-8">
-                    <div className="w-9 h-9 rounded-lg bg-[#D8C59A]/[0.12] text-[#D8C59A] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-[#FFC97A]/[0.12] text-[#FFC97A] flex items-center justify-center flex-shrink-0">
                       <AlertCircle className="w-[18px] h-[18px]" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1588,8 +1588,8 @@ return (
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-[13px] text-[#D8C59A]">
+                  <div className="p-3 bg-[#FFC97A]/[0.06] border border-[#FFC97A]/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-[13px] text-[#FFC97A]">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                       <p>
                         This client may or may not receive future messages
@@ -1645,7 +1645,7 @@ return (
                     <X className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <div className="flex items-start gap-3 mb-4 pr-8">
-                    <div className="w-9 h-9 rounded-lg bg-[#D8C59A]/[0.12] text-[#D8C59A] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-[#FFC97A]/[0.12] text-[#FFC97A] flex items-center justify-center flex-shrink-0">
                       <AlertCircle className="w-[18px] h-[18px]" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1662,8 +1662,8 @@ return (
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-[13px] text-[#D8C59A]">
+                  <div className="p-3 bg-[#FFC97A]/[0.06] border border-[#FFC97A]/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-[13px] text-[#FFC97A]">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                       <p>
                         This client will be excluded from all future sends of
@@ -1795,7 +1795,7 @@ return (
                   </button>
                   <div className="flex items-start gap-3 mb-4 pr-8">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      batchActionType === 'select' ? 'bg-white/[0.04] text-[#A9C0D2]' : 'bg-[#D8C59A]/[0.12] text-[#D8C59A]'
+                      batchActionType === 'select' ? 'bg-white/[0.04] text-[#9CCBFF]' : 'bg-[#FFC97A]/[0.12] text-[#FFC97A]'
                     }`}>
                       <AlertCircle className="w-[18px] h-[18px]" strokeWidth={1.75} />
                     </div>
@@ -1813,10 +1813,10 @@ return (
                   </div>
 
                   <div className={`p-3 rounded-lg mb-4 ${
-                    batchActionType === 'select' ? 'bg-white/[0.03] border border-white/[0.07]' : 'bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20'
+                    batchActionType === 'select' ? 'bg-white/[0.03] border border-white/[0.07]' : 'bg-[#FFC97A]/[0.06] border border-[#FFC97A]/20'
                   }`}>
                     <div className={`flex items-start gap-2 text-[13px] ${
-                      batchActionType === 'select' ? 'text-[#A9C0D2]' : 'text-[#D8C59A]'
+                      batchActionType === 'select' ? 'text-[#9CCBFF]' : 'text-[#FFC97A]'
                     }`}>
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                       <p>
@@ -1875,7 +1875,7 @@ return (
                     <X className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <div className="flex items-start gap-3 mb-4 pr-8">
-                    <div className="w-9 h-9 rounded-lg bg-[#D99A8B]/[0.14] text-[#D99A8B] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-[#FF8F7D]/[0.14] text-[#FF8F7D] flex items-center justify-center flex-shrink-0">
                       <AlertCircle className="w-[18px] h-[18px]" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1888,8 +1888,8 @@ return (
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#D99A8B]/[0.08] border border-[#D99A8B]/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-[13px] text-[#D99A8B]">
+                  <div className="p-3 bg-[#FF8F7D]/[0.08] border border-[#FF8F7D]/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-[13px] text-[#FF8F7D]">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                       <p>
                         This action cannot be undone. All custom selections will be cleared.
@@ -1906,7 +1906,7 @@ return (
                     </button>
                     <button
                       onClick={confirmReset}
-                      className="btn btn-sm bg-[#D99A8B]/[0.14] text-[#D99A8B] shadow-[inset_0_0_0_1px_rgba(217,154,139,0.3)] hover:bg-[#D99A8B]/[0.22]"
+                      className="btn btn-sm bg-[#FF8F7D]/[0.14] text-[#FF8F7D] shadow-[inset_0_0_0_1px_rgba(255,143,125,0.3)] hover:bg-[#FF8F7D]/[0.22]"
                     >
                       Reset All
                     </button>
@@ -2075,7 +2075,7 @@ return (
                     <X className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <div className="flex items-start gap-3 mb-4 pr-8">
-                    <div className="w-9 h-9 rounded-lg bg-[#D8C59A]/[0.12] text-[#D8C59A] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-[#FFC97A]/[0.12] text-[#FFC97A] flex items-center justify-center flex-shrink-0">
                       <AlertCircle className="w-[18px] h-[18px]" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -2089,8 +2089,8 @@ return (
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20 rounded-lg mb-4">
-                    <div className="flex items-start gap-2 text-[13px] text-[#D8C59A]">
+                  <div className="p-3 bg-[#FFC97A]/[0.06] border border-[#FFC97A]/20 rounded-lg mb-4">
+                    <div className="flex items-start gap-2 text-[13px] text-[#FFC97A]">
                       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                       <p>
                         To see your selected one-time recipients in the client list and add more, 

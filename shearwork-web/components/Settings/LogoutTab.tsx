@@ -25,7 +25,7 @@ export default function LogoutTab() {
           </p>
           <p className="text-xs text-gray-500">You can always log back in with your credentials.</p>
         </div>
-        <button onClick={logout} className="btn btn-glass btn-sm shrink-0 text-[#D99A8B]">
+        <button onClick={logout} className="btn btn-glass btn-sm shrink-0 text-[#FF8F7D]">
           <LogOut className="h-4 w-4" strokeWidth={1.75} />
           Sign out
         </button>

@@ -261,7 +261,7 @@ export default function ProfileStep({
                 required
               />
               {showValidationErrors && !fullName.trim() && (
-                <p className="mt-1 text-xs text-[#D99A8B]">Enter your barber name</p>
+                <p className="mt-1 text-xs text-[#FF8F7D]">Enter your barber name</p>
               )}
             </div>
 
@@ -282,7 +282,7 @@ export default function ProfileStep({
                 />
               </div>
               {showValidationErrors && !isPhoneNumberValid && (
-                <p className="mt-1 text-xs text-[#D99A8B]">Enter a valid 10-digit phone number</p>
+                <p className="mt-1 text-xs text-[#FF8F7D]">Enter a valid 10-digit phone number</p>
               )}
             </div>
           </div>
@@ -306,7 +306,7 @@ export default function ProfileStep({
               <option value="owner">Shop Owner / Manager</option>
             </select>
             {showValidationErrors && userType === '' && (
-              <p className="mt-1 text-xs text-[#D99A8B]">Select what best describes you</p>
+              <p className="mt-1 text-xs text-[#FF8F7D]">Select what best describes you</p>
             )}
           </div>
 
@@ -330,7 +330,7 @@ export default function ProfileStep({
                 <option value="rental">Chair Rental</option>
               </select>
               {showValidationErrors && selectedRole.barber_type === '' && (
-                <p className="mt-1 text-xs text-[#D99A8B]">Select how you operate</p>
+                <p className="mt-1 text-xs text-[#FF8F7D]">Select how you operate</p>
               )}
             </div>
 
@@ -350,7 +350,7 @@ export default function ProfileStep({
                   required
                 />
                 {showValidationErrors && !isCommissionValid && (
-                  <p className="mt-1 text-xs text-[#D99A8B]">
+                  <p className="mt-1 text-xs text-[#FF8F7D]">
                     Enter a rate between 1-100
                   </p>
                 )}
@@ -361,8 +361,8 @@ export default function ProfileStep({
 
         {/* Trust Message */}
         {userType && (
-          <div className="rounded-lg border border-[#A9C0D2]/20 bg-[#A9C0D2]/[0.06] px-3 py-2.5">
-            <p className="text-xs text-[#A9C0D2]">
+          <div className="rounded-lg border border-[#9CCBFF]/20 bg-[#9CCBFF]/[0.06] px-3 py-2.5">
+            <p className="text-xs text-[#9CCBFF]">
               You will only see your own schedule and data.
             </p>
           </div>
@@ -384,7 +384,7 @@ export default function ProfileStep({
               Where clients can book appointments with you directly
             </p>
             {showValidationErrors && !isBookingLinkValid && (
-              <p className="mt-1 text-xs text-[#D99A8B]">Enter your booking link</p>
+              <p className="mt-1 text-xs text-[#FF8F7D]">Enter your booking link</p>
             )}
           </div>
 
@@ -406,20 +406,20 @@ export default function ProfileStep({
                 <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sage" />
               )}
               {usernameStatus === 'taken' && (
-                <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#D99A8B]" />
+                <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#FF8F7D]" />
               )}
             </div>
             <p className="mt-1 text-xs text-gray-400">
               Used for tracking SMS bookings: https://www.corva.ca/book?profile={username || 'yourname'}
             </p>
             {showValidationErrors && !isUsernameValid && username.trim().length === 0 && (
-              <p className="mt-1 text-xs text-[#D99A8B]">Enter a username</p>
+              <p className="mt-1 text-xs text-[#FF8F7D]">Enter a username</p>
             )}
             {username.trim() && username.length < 3 && (
-              <p className="mt-1 text-xs text-[#D99A8B]">Username must be at least 3 characters</p>
+              <p className="mt-1 text-xs text-[#FF8F7D]">Username must be at least 3 characters</p>
             )}
             {usernameStatus === 'taken' && (
-              <p className="mt-1 text-xs text-[#D99A8B]">This username is already taken</p>
+              <p className="mt-1 text-xs text-[#FF8F7D]">This username is already taken</p>
             )}
           </div>
         </div>

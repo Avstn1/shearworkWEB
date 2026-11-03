@@ -103,7 +103,7 @@ export default function BookingCapacity({ user_id }: Props) {
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
           {!loading && capacity !== null && capacity > 0 && (
-            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(226 184 110)" strokeWidth="8"
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgb(255 181 71)" strokeWidth="8"
               strokeLinecap="round"
               strokeDasharray={`${circumference}`}
               strokeDashoffset={`${circumference * (1 - capacity / 100)}`}

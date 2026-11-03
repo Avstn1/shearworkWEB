@@ -319,7 +319,7 @@ export default function QStashPage() {
                           <button
                             onClick={() => handleDelete(schedule.scheduleId)}
                             disabled={deleting === schedule.scheduleId}
-                            className="btn btn-ghost btn-sm h-8 text-[#D99A8B] hover:text-[#D99A8B]"
+                            className="btn btn-ghost btn-sm h-8 text-[#FF8F7D] hover:text-[#FF8F7D]"
                           >
                             <Trash2 size={14} strokeWidth={1.75} />
                             {deleting === schedule.scheduleId ? 'Deleting...' : 'Delete'}

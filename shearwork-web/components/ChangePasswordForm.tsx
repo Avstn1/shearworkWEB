@@ -14,7 +14,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [messageColor, setMessageColor] = useState('text-[#D99A8B]')
+  const [messageColor, setMessageColor] = useState('text-[#FF8F7D]')
   const [showPasswords, setShowPasswords] = useState(false)
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -23,13 +23,13 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
 
     if (newPassword !== confirmPassword) {
       setMessage("New password and confirmation don't match")
-      setMessageColor('text-[#D99A8B]')
+      setMessageColor('text-[#FF8F7D]')
       return
     }
 
     if (!newPassword) {
       setMessage("New password cannot be empty")
-      setMessageColor('text-[#D99A8B]')
+      setMessageColor('text-[#FF8F7D]')
       return
     }
 
@@ -38,7 +38,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) {
         setMessage(`Error: ${error.message}`)
-        setMessageColor('text-[#D99A8B]')
+        setMessageColor('text-[#FF8F7D]')
       } else {
         setMessage('Password updated successfully!')
         setMessageColor('text-sage-bright')
@@ -50,7 +50,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
       }
     } catch (err: any) {
       setMessage(`Unexpected error: ${err.message}`)
-      setMessageColor('text-[#D99A8B]')
+      setMessageColor('text-[#FF8F7D]')
     } finally {
       setLoading(false)
     }

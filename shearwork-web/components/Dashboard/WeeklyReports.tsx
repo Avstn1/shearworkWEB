@@ -199,7 +199,7 @@ export default function WeeklyReports({
             </button>
             <button
               onClick={(e) => handleDelete(e, openMenu)}
-              className="block w-full px-3 py-2 text-left text-sm text-[#D99A8B] hover:bg-[#D99A8B]/[0.08]"
+              className="block w-full px-3 py-2 text-left text-sm text-[#FF8F7D] hover:bg-[#FF8F7D]/[0.08]"
             >
               Delete
             </button>

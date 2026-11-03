@@ -16,8 +16,8 @@ interface TrialStatusHubProps {
 type AutoNudgeStatus = 'loading' | 'not_active' | 'active'
 
 function getUrgencyColor(daysRemaining: number) {
-  if (daysRemaining <= 3) return 'bg-[#D99A8B]'
-  if (daysRemaining <= 7) return 'bg-[#D8C59A]'
+  if (daysRemaining <= 3) return 'bg-[#FF8F7D]'
+  if (daysRemaining <= 7) return 'bg-[#FFC97A]'
   return 'bg-sage'
 }
 
@@ -267,10 +267,10 @@ export default function TrialStatusHub({
                   {/* Next nudge date - only when active */}
                   {autoNudgeStatus === 'active' && nextNudgeDate && (
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#A9C0D2]" strokeWidth={1.75} />
+                      <Clock className="w-4 h-4 text-[#9CCBFF]" strokeWidth={1.75} />
                       <span className="text-sm">
                         <span className="text-muted">Next: </span>
-                        <span className="text-[#A9C0D2] font-medium">{nextNudgeDate}</span>
+                        <span className="text-[#9CCBFF] font-medium">{nextNudgeDate}</span>
                       </span>
                     </div>
                   )}
@@ -347,9 +347,9 @@ export default function TrialStatusHub({
             {/* Next nudge date - only when active */}
             {autoNudgeStatus === 'active' && nextNudgeDate && (
               <div className="flex items-center gap-2 shrink-0">
-                <Clock className="w-3.5 h-3.5 text-[#A9C0D2] shrink-0" strokeWidth={1.75} />
+                <Clock className="w-3.5 h-3.5 text-[#9CCBFF] shrink-0" strokeWidth={1.75} />
                 <span className="text-sm whitespace-nowrap">
-                  <span className="font-medium text-[#A9C0D2]">{nextNudgeDate}</span>
+                  <span className="font-medium text-[#9CCBFF]">{nextNudgeDate}</span>
                 </span>
               </div>
             )}

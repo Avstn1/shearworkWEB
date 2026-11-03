@@ -235,7 +235,7 @@ export default function WeeklyComparisonReports({
                         <button
                           type="button"
                           onClick={() => handleDelete(r.id)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#D99A8B] hover:bg-[#D99A8B]/[0.08]"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#FF8F7D] hover:bg-[#FF8F7D]/[0.08]"
                         >
                           <Trash2 size={14} strokeWidth={1.75} /> Delete
                         </button>

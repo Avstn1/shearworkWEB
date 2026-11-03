@@ -78,7 +78,7 @@ export default function TopClientsCard({ userId, selectedMonth, selectedYear }: 
       {loading ? (
         <div className="flex flex-1 items-center justify-center text-sm text-gray-500">Loading…</div>
       ) : error ? (
-        <div className="flex flex-1 items-center justify-center text-center text-sm text-[#D99A8B]">{error}</div>
+        <div className="flex flex-1 items-center justify-center text-center text-sm text-[#FF8F7D]">{error}</div>
       ) : clients.length === 0 ? (
         <div className="flex flex-1 items-center justify-center">
           <EmptyState icon={Users} title="No clients yet">

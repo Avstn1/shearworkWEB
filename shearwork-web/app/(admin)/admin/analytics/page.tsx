@@ -198,14 +198,14 @@ export default function AnalyticsPage() {
                       showOutsideDays
                       modifiersClassNames={{ today: 'rdp-day_today-custom' }}
                       modifiersStyles={{
-                        selected: { color: '#111312', fontWeight: 600, background: '#8FB57A' },
-                        range_start: { background: '#8FB57A', color: '#111312', borderRadius: '0.375rem 0 0 0.375rem' },
-                        range_end: { background: '#8FB57A', color: '#111312', borderRadius: '0 0.375rem 0.375rem 0' },
-                        range_middle: { background: 'rgba(143,181,122,0.18)', color: '#ECEDEA' },
+                        selected: { color: '#0D1014', fontWeight: 600, background: '#3DD27A' },
+                        range_start: { background: '#3DD27A', color: '#0D1014', borderRadius: '0.375rem 0 0 0.375rem' },
+                        range_end: { background: '#3DD27A', color: '#0D1014', borderRadius: '0 0.375rem 0.375rem 0' },
+                        range_middle: { background: 'rgba(61,210,122,0.18)', color: '#EEF1F5' },
                       }}
                       className="bg-transparent text-xs text-gray-300"
                       disabled={{ after: new Date() }}
-                      style={{ ['--rdp-accent-color' as any]: '#8FB57A' }}
+                      style={{ ['--rdp-accent-color' as any]: '#3DD27A' }}
                     />
                   </div>
                 </div>

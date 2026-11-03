@@ -305,7 +305,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
                 Log out others
               </button>
             )}
-            <button onClick={() => setShowLogoutEverywhereConfirm(true)} className="btn btn-glass btn-sm text-[#D99A8B]">
+            <button onClick={() => setShowLogoutEverywhereConfirm(true)} className="btn btn-glass btn-sm text-[#FF8F7D]">
               Log out all
             </button>
           </div>
@@ -355,10 +355,10 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
       </div>
 
       {/* Danger Zone */}
-      <section className="panel border-[#D99A8B]/25">
+      <section className="panel border-[#FF8F7D]/25">
         <div className="panel-body flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h3 className="panel-title flex items-center gap-2 text-[#D99A8B]">
+            <h3 className="panel-title flex items-center gap-2 text-[#FF8F7D]">
               <AlertTriangle className="h-4 w-4" strokeWidth={1.75} />
               Delete account
             </h3>
@@ -366,7 +366,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
               Permanently delete your account and all associated data. This cannot be undone. You will still need to confirm after clicking the button.
             </p>
           </div>
-          <button onClick={handleDeleteAccountClick} className="btn btn-glass btn-sm shrink-0 self-end text-[#D99A8B] sm:self-auto">
+          <button onClick={handleDeleteAccountClick} className="btn btn-glass btn-sm shrink-0 self-end text-[#FF8F7D] sm:self-auto">
             <Trash2 className="h-4 w-4" strokeWidth={1.75} />
             Delete account
           </button>
@@ -467,7 +467,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
               <button onClick={() => setShowLogoutEverywhereConfirm(false)} className="btn btn-ghost btn-sm">
                 Cancel
               </button>
-              <button onClick={logoutEverywhere} className="btn btn-sm bg-[#D99A8B] text-ink hover:bg-[#E3AC9E]">
+              <button onClick={logoutEverywhere} className="btn btn-sm bg-[#FF8F7D] text-ink hover:bg-[#FFA394]">
                 Log out all
               </button>
             </div>
@@ -482,7 +482,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
           <div className="modal-surface w-full max-w-md overflow-hidden">
             <div className="panel-header">
               <div className="flex min-w-0 items-center gap-3">
-                <AlertTriangle className="h-[18px] w-[18px] flex-shrink-0 text-[#D99A8B]" strokeWidth={1.75} />
+                <AlertTriangle className="h-[18px] w-[18px] flex-shrink-0 text-[#FF8F7D]" strokeWidth={1.75} />
                 <div className="min-w-0">
                   <h3 className="panel-title">Delete account</h3>
                   <p className="panel-subtitle">This action is permanent and irreversible</p>
@@ -502,7 +502,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
             </div>
 
             <div className="space-y-5 p-5">
-              <div className="space-y-2.5 rounded-lg border border-[#D99A8B]/20 bg-[#D99A8B]/[0.06] p-4 text-sm text-gray-300">
+              <div className="space-y-2.5 rounded-lg border border-[#FF8F7D]/20 bg-[#FF8F7D]/[0.06] p-4 text-sm text-gray-300">
                 <p>Deleting your account will permanently erase all of your Corva data, including:</p>
                 <ul className="list-inside list-disc space-y-1 text-xs text-gray-400">
                   <li>Your barbershop profile and account settings</li>
@@ -513,10 +513,10 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
                   <li>All analytics and performance data</li>
                   <li>Your subscription and billing history</li>
                 </ul>
-                <p className="pt-1 text-xs font-semibold text-[#D99A8B]">
+                <p className="pt-1 text-xs font-semibold text-[#FF8F7D]">
                   Clicking &quot;Delete My Account&quot; is the final step.
                 </p>
-                <p className="text-xs font-semibold text-[#D99A8B]">
+                <p className="text-xs font-semibold text-[#FF8F7D]">
                   Corva support cannot restore anything after this point.
                 </p>
               </div>
@@ -544,7 +544,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
                   spellCheck={false}
                 />
                 {deleteConfirmText.length > 0 && !deleteConfirmValid && (
-                  <p className="mt-1.5 text-xs text-[#D99A8B]">
+                  <p className="mt-1.5 text-xs text-[#FF8F7D]">
                     Doesn't match — type exactly: delete {currentUsername}
                   </p>
                 )}
@@ -565,7 +565,7 @@ export default function SecurityTab({ setActiveTab }: SecurityTabProps) {
               <button
                 onClick={deleteAccount}
                 disabled={!deleteConfirmValid || deletingAccount}
-                className="btn btn-sm bg-[#D99A8B] text-ink hover:bg-[#E3AC9E]"
+                className="btn btn-sm bg-[#FF8F7D] text-ink hover:bg-[#FFA394]"
               >
                 {deletingAccount ? (
                   <>

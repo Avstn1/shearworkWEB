@@ -218,11 +218,11 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                               <span className="hidden sm:inline text-gray-500">·</span>
                               <span className="text-sage">{campaign.success} sent</span>
                               <span className="hidden xs:inline text-gray-500">·</span>
-                              <span className="text-[#D99A8B] hidden xs:inline">{campaign.fail || 0} failed</span>
+                              <span className="text-[#FF8F7D] hidden xs:inline">{campaign.fail || 0} failed</span>
                               {((campaign.success / (campaign.success + (campaign.fail || 0))) * 100) > 0 && (
                                 <>
                                   <span className="hidden sm:inline text-gray-500">·</span>
-                                  <span className="text-[#A9C0D2] hidden sm:inline">
+                                  <span className="text-[#9CCBFF] hidden sm:inline">
                                     {((campaign.success / (campaign.success + (campaign.fail || 0))) * 100).toFixed(1)}% rate
                                   </span>
                                 </>
@@ -287,7 +287,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                         </div>
                         <div>
                           <p className="stat-label mb-1">Failed</p>
-                          <p className="text-lg font-semibold text-[#D99A8B] tabular-nums">{recipientsStats.failed || 0}</p>
+                          <p className="text-lg font-semibold text-[#FF8F7D] tabular-nums">{recipientsStats.failed || 0}</p>
                         </div>
                         {((recipientsStats.successful / (recipientsStats.successful + (recipientsStats.failed || 0))) * 100) > 0 && (
                           <div className="hidden xs:block">
@@ -341,7 +341,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                                     {recipient.is_sent ? 'Sent' : 'Failed'}
                                   </span>
                                   {!recipient.is_sent && recipient.reason && (
-                                    <span className="flex items-center gap-1 text-[11px] text-[#D99A8B] min-w-0">
+                                    <span className="flex items-center gap-1 text-[11px] text-[#FF8F7D] min-w-0">
                                       <AlertCircle className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />
                                       <span className="truncate">{recipient.reason}</span>
                                     </span>
@@ -355,7 +355,7 @@ export default function CampaignHistoryModal({ isOpen, onClose }: CampaignHistor
                                 {recipient.is_sent ? (
                                   <CheckCircle className="w-4 h-4 text-sage" strokeWidth={1.75} />
                                 ) : (
-                                  <XCircle className="w-4 h-4 text-[#D99A8B]" strokeWidth={1.75} />
+                                  <XCircle className="w-4 h-4 text-[#FF8F7D]" strokeWidth={1.75} />
                                 )}
                               </div>
                             </div>

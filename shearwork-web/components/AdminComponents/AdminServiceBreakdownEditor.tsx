@@ -181,7 +181,7 @@ export default function AdminServiceBreakdownEditor({ barberId, month }: Props) 
                 </button>
                 <button
                   onClick={() => handleDelete(row.id, row.isNew)}
-                  className="btn btn-ghost btn-sm hover:!text-[#D99A8B]"
+                  className="btn btn-ghost btn-sm hover:!text-[#FF8F7D]"
                   aria-label="Delete service"
                 >
                   <Trash2 size={16} strokeWidth={1.75} />

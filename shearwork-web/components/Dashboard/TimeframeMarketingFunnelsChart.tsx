@@ -19,7 +19,7 @@ import { Megaphone } from 'lucide-react'
 import { EmptyState } from '@/components/ui/AppKit'
 
 // Graphite chart palette, indexed to keep series mapping: [1] new, [3] retained, [2] retention
-const COLORS = ['#A08CE6', '#8CC470', '#E2B86E', '#70A6DE', '#E88470']
+const COLORS = ['#A78BFA', '#3DD27A', '#FFB547', '#5AA9FF', '#FF7A66']
 
 export interface MarketingFunnel {
   source: string
@@ -306,7 +306,7 @@ export default function TimeframeMarketingFunnelsChart({
               <XAxis
                 xAxisId="clients"
                 type="number"
-                stroke="#7C817A"
+                stroke="#7B8596"
                 hide
                 domain={[0, (dataMax: number) => dataMax / 0.95]}
               />
@@ -314,7 +314,7 @@ export default function TimeframeMarketingFunnelsChart({
                 xAxisId="retention"
                 type="number"
                 domain={[0, 100 / 0.95]}
-                stroke="#7C817A"
+                stroke="#7B8596"
                 hide
               />
 
@@ -340,13 +340,13 @@ export default function TimeframeMarketingFunnelsChart({
                     : [value, name]
                 }
                 contentStyle={{
-                  backgroundColor: '#1D201E',
+                  backgroundColor: '#1C212A',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 8,
-                  color: '#ECEDEA',
+                  color: '#EEF1F5',
                 }}
-                itemStyle={{ color: '#ECEDEA' }}
-                labelStyle={{ color: '#9EA39C', fontWeight: 600 }}
+                itemStyle={{ color: '#EEF1F5' }}
+                labelStyle={{ color: '#9AA3B2', fontWeight: 600 }}
               />
 
               <Legend
@@ -354,7 +354,7 @@ export default function TimeframeMarketingFunnelsChart({
                   value === 'Retention' ? 'Retention (%)' : value
                 }
                 iconType="square"
-                wrapperStyle={{ color: '#9EA39C', paddingTop: '10px', fontSize: 12 }}
+                wrapperStyle={{ color: '#9AA3B2', paddingTop: '10px', fontSize: 12 }}
               />
 
               <YAxis type="category" axisLine={false} tick={false} width={0} />
@@ -388,7 +388,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#111312"
+                          fill="#0D1014"
                           fontSize={labelFontSize}
                           fontWeight={600}
                           textAnchor="start"
@@ -403,7 +403,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 5}
                         y={y + height / 2}
-                        fill="#9EA39C"
+                        fill="#9AA3B2"
                         fontSize={labelFontSize}
                         fontWeight={600}
                         textAnchor="start"
@@ -436,7 +436,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 25}
                           y={y + height / 2}
-                          fill="#111312"
+                          fill="#0D1014"
                           fontSize={labelFontSize}
                           fontWeight={600}
                           textAnchor="start"
@@ -451,7 +451,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 25}
                         y={y + height / 2}
-                        fill="#9EA39C"
+                        fill="#9AA3B2"
                         fontSize={labelFontSize}
                         fontWeight={600}
                         textAnchor="start"
@@ -495,7 +495,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#111312"
+                          fill="#0D1014"
                           fontSize={labelFontSize}
                           fontWeight={600}
                           textAnchor="start"
@@ -510,7 +510,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 5}
                         y={y + height / 2}
-                        fill="#9EA39C"
+                        fill="#9AA3B2"
                         fontSize={labelFontSize}
                         fontWeight={600}
                         textAnchor="start"
@@ -546,7 +546,7 @@ export default function TimeframeMarketingFunnelsChart({
                         <text
                           x={x + 5}
                           y={y + height / 2}
-                          fill="#111312"
+                          fill="#0D1014"
                           fontSize={labelFontSize}
                           fontWeight={600}
                           textAnchor="start"
@@ -563,7 +563,7 @@ export default function TimeframeMarketingFunnelsChart({
                       <text
                         x={x + width + 5}
                         y={y + height / 2}
-                        fill="#9EA39C"
+                        fill="#9AA3B2"
                         fontSize={labelFontSize}
                         fontWeight={600}
                         textAnchor="start"

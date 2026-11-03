@@ -290,7 +290,7 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
         {!loadingFirstAppointment && firstAppointment && (
           <div className="rounded-lg border border-white/[0.07] bg-raised p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Calendar size={16} strokeWidth={1.75} className="text-[#A9C0D2]" />
+              <Calendar size={16} strokeWidth={1.75} className="text-[#9CCBFF]" />
               <h4 className="text-sm font-semibold text-ivory">Your first appointment</h4>
             </div>
             <p className="text-sm text-gray-300 leading-relaxed">
@@ -315,10 +315,10 @@ export default function Acuity({ userId, onSyncComplete, onSyncStateChange, exis
               </div>
             </div>
 
-            <div className="rounded-lg border border-[#D8C59A]/25 bg-[#D8C59A]/[0.05] p-4 flex items-start gap-3">
-              <AlertTriangle size={16} strokeWidth={1.75} className="text-[#D8C59A] flex-shrink-0 mt-0.5" />
+            <div className="rounded-lg border border-[#FFC97A]/25 bg-[#FFC97A]/[0.05] p-4 flex items-start gap-3">
+              <AlertTriangle size={16} strokeWidth={1.75} className="text-[#FFC97A] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-[#D8C59A] mb-1">Data accuracy note</p>
+                <p className="text-sm font-semibold text-[#FFC97A] mb-1">Data accuracy note</p>
                 <p className="text-xs text-gray-300 leading-relaxed">
                   Some client metrics (total visits, first appointment date, etc.) may be incomplete until your full history is synced. Once you receive the "Full Sync Complete" notification, all data will be accurate.
                 </p>

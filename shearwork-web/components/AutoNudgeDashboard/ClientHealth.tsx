@@ -144,7 +144,7 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
   return (
     <li className="py-3 first:pt-1 last:pb-1">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[rgb(232_132_112/0.14)] text-sm font-semibold text-[#F2A796] ring-1 ring-inset ring-[rgb(232_132_112/0.28)]">
+        <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[rgb(255_122_102/0.14)] text-sm font-semibold text-[#FFA799] ring-1 ring-inset ring-[rgb(255_122_102/0.28)]">
           {initialsOf(client)}
         </span>
 
