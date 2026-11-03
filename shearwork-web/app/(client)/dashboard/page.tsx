@@ -19,9 +19,16 @@ export default function DashboardPage() {
   const [historyKey, setHistoryKey] = useState(0)
   const [mobileTab, setMobileTab] = useState<'clients' | 'history'>('clients')
 
+  // Desktop fits the screen with no page scroll; phones scroll normally (iOS Safari's
+  // changing toolbar height makes a locked viewport layout unreliable there)
   useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
+    const lock = () => { document.body.style.overflow = window.innerWidth >= 768 ? 'hidden' : '' }
+    lock()
+    window.addEventListener('resize', lock)
+    return () => {
+      window.removeEventListener('resize', lock)
+      document.body.style.overflow = ''
+    }
   }, [])
 
   useEffect(() => {
@@ -47,9 +54,8 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="app-surface flex flex-col gap-3 p-3 pt-4 md:gap-4 md:p-6 xl:px-8"
+      className="app-surface flex min-h-[calc(100dvh-var(--navbar-height,72px))] flex-col gap-3 p-3 pt-4 md:h-[calc(100dvh-var(--navbar-height,72px))] md:gap-4 md:p-6 xl:px-8"
       style={{
-        height: 'calc(100dvh - var(--navbar-height, 72px))',
         marginTop: 'var(--navbar-height, 72px)',
       }}
     >
@@ -101,7 +107,7 @@ export default function DashboardPage() {
 
       {/* Mobile: one panel with tabs that fills the rest of the screen and scrolls inside,
           instead of two long stacked panels */}
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 md:hidden">
+      <div className="flex flex-col gap-2.5 md:hidden">
         <Segmented
           className="w-full flex-shrink-0"
           value={mobileTab}
@@ -111,16 +117,17 @@ export default function DashboardPage() {
             { value: 'history', label: 'Nudge history' },
           ]}
         />
-        <div className="panel min-h-0 flex-1 overflow-hidden p-3.5">
+        <div className="panel p-3.5">
           {mobileTab === 'clients' ? (
             <ClientHealth
+              maxRows={5}
               user_id={user_id!}
               sms_engaged_current_week={sms_engaged_current_week}
               date_autonudge_enabled={dateAutonudgeEnabled}
               onNudgeSuccess={() => setHistoryKey(k => k + 1)}
             />
           ) : (
-            <AutoNudgeHistory key={historyKey} user_id={user_id!} />
+            <AutoNudgeHistory key={historyKey} user_id={user_id!} maxRows={5} />
           )}
         </div>
       </div>

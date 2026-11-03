@@ -10,6 +10,8 @@ import ClientMessageHistory from '@/components/AutoNudgeDashboard/ClientMessageH
 import { EmptyState } from '@/components/ui/AppKit'
 
 interface Props {
+  /** Show this many rows (phones, natural page scroll) instead of measuring the card */
+  maxRows?: number
   user_id: string
 }
 
@@ -92,13 +94,14 @@ const formatPhoneNumber = (phone: string | null) => {
 const capitalizeName = (name: string) =>
   name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
 
-export default function AutoNudgeHistory({ user_id }: Props) {
+export default function AutoNudgeHistory({ user_id, maxRows }: Props) {
   const [recipients, setRecipients] = useState<SMSRecipient[]>([])
   const [totalClients, setTotalClients] = useState(0)
   const [clientsBooked, setClientsBooked] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
-  const { ref: fitRef, count: fitCount } = useFitCount<HTMLUListElement>({ fallbackRowHeight: 72, deps: [loading, recipients.length] })
+  const { ref: fitRef, count: measuredCount } = useFitCount<HTMLUListElement>({ fallbackRowHeight: 72, deps: [loading, recipients.length] })
+  const fitCount = maxRows ?? measuredCount
   const [activeThread, setActiveThread] = useState<{ phone: string; name: string } | null>(null)
 
   const openThread = async (phone: string, name: string) => {

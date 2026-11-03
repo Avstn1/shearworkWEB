@@ -12,6 +12,8 @@ import { supabase } from '@/utils/supabaseClient'
 import { EmptyState, Segmented } from '@/components/ui/AppKit'
 
 interface Props {
+  /** Show this many rows (phones, natural page scroll) instead of measuring the card */
+  maxRows?: number
   user_id: string
   sms_engaged_current_week: boolean
   date_autonudge_enabled: string | null
@@ -184,7 +186,7 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
   )
 }
 
-export default function ClientHealth({ user_id, sms_engaged_current_week, date_autonudge_enabled, onNudgeSuccess }: Props) {
+export default function ClientHealth({ user_id, sms_engaged_current_week, date_autonudge_enabled, onNudgeSuccess, maxRows }: Props) {
   const [tab, setTab] = useState<'prospects' | 'unbooked'>('prospects')
 
   const [clients, setClients] = useState<Client[]>([])
@@ -198,7 +200,8 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
   const [search, setSearch] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
   const [showAll, setShowAll] = useState(false)
-  const { ref: fitRef, count: fitCount } = useFitCount<HTMLUListElement>({ fallbackRowHeight: 66, deps: [tab, search, loadingProspects, loadingUnbooked] })
+  const { ref: fitRef, count: measuredCount } = useFitCount<HTMLUListElement>({ fallbackRowHeight: 66, deps: [tab, search, loadingProspects, loadingUnbooked] })
+  const fitCount = maxRows ?? measuredCount
 
   const reportDateLabel = getReportDateLabel()
 
