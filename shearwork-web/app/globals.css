@@ -472,6 +472,8 @@ html {
 
   .stat-label { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-muted); }
   .stat-value { font-size: 1.75rem; line-height: 1.1; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--color-ivory); }
+  /* Phones: stats sit two per row, so numbers need to be smaller to fit */
+  @media (max-width: 767px) { .stat-value { font-size: 1.375rem; } }
   .stat-delta-up { font-size: 0.75rem; font-weight: 600; color: var(--color-sage-bright); }
   .stat-delta-down { font-size: 0.75rem; font-weight: 600; color: #FF8F7D; }
 

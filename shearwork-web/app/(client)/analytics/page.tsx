@@ -80,6 +80,8 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [dashboardView, setDashboardView] = useState<'monthly' | 'yearly' | 'profit'>('monthly')
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate())
+  // Phones: one section at a time instead of one long column
+  const [mobileSection, setMobileSection] = useState<'overview' | 'services' | 'clients' | 'reports'>('overview')
   const [showTrialPrompt, setShowTrialPrompt] = useState(false)
 
   const isMobile = useIsMobile(MOBILE_BREAKPOINT)
@@ -290,7 +292,7 @@ export default function DashboardPage() {
   const DashboardHeader = () => (
     <PageHeader icon={TrendingUp} tone="violet"
       title="Analytics"
-      subtitle={VIEW_SUBTITLES[dashboardView]}
+      subtitle={isMobile ? undefined : VIEW_SUBTITLES[dashboardView]}
       actions={
         <>
           <div data-tutorial-id="dashboard-view-switcher" className="w-full sm:w-auto">
@@ -340,11 +342,11 @@ export default function DashboardPage() {
               ) : (
                 <RefreshCw className="h-4 w-4" strokeWidth={1.75} />
               )}
-              <span>{isRefreshing ? 'Syncing…' : 'Sync'}</span>
+              <span className="hidden sm:inline">{isRefreshing ? 'Syncing…' : 'Sync'}</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 sm:flex">
             <ManageTipsButton />
             <TutorialLauncher
               pageKey="dashboard"
@@ -365,6 +367,71 @@ export default function DashboardPage() {
   // -------------------- MAIN DASHBOARD --------------------
   // Desktop: three columns that fill the viewport (no page scroll); each panel
   // scrolls inside itself if its content is taller. Mobile/tablet: stacked.
+  const reportPanel = (
+    title: string,
+    icon: typeof FileText,
+    tone: 'sage' | 'sky' | 'sand',
+    body: React.ReactNode,
+    extra: Record<string, string> = {},
+  ) => (
+    <section {...extra} className="panel flex h-[240px] flex-col">
+      <header className="panel-header py-3"><PanelHeading icon={icon} tone={tone}>{title}</PanelHeading></header>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">{body}</div>
+    </section>
+  )
+
+  // Phones: section tabs so each answer is one tap away, not a long scroll
+  const MobileDashboard = () => (
+    <div className="flex flex-col gap-3">
+      <div className="sticky top-[var(--navbar-height,64px)] z-20 -mx-4 bg-canvas/95 px-4 py-2 backdrop-blur">
+        <Segmented
+          className="w-full"
+          value={mobileSection}
+          onChange={setMobileSection}
+          options={[
+            { value: 'overview', label: 'Overview' },
+            { value: 'services', label: 'Services' },
+            { value: 'clients', label: 'Clients' },
+            { value: 'reports', label: 'Reports' },
+          ]}
+        />
+      </div>
+
+      {mobileSection === 'overview' && (
+        <>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className={statClass}><DailyRevenueCard key={`daily-${refreshKey}`} userId={user.id} selectedDate={selectedDateStr} /></div>
+            <div className={statClass}><MonthlyRevenueCard key={`monthly-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></div>
+            <div className={statClass}><WeeklyRevenueCard key={`weekly-${refreshKey}`} userId={user.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></div>
+            <div className={statClass}><MonthlyExpensesCard key={`expenses-${refreshKey}`} userId={user?.id} month={selectedMonth} year={selectedYear} /></div>
+            <div className={statClass}><YearlyRevenueCard key={`yearly-${refreshKey}`} userId={user?.id} year={selectedYear} timeframe={'YTD'} /></div>
+            <div className={statClass}><AverageTicketCard key={`ticket-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} year={selectedYear} /></div>
+          </div>
+          <ManageTipsButton />
+        </>
+      )}
+
+      {mobileSection === 'services' && (
+        <div className={`${cardClass} min-h-[420px]`}><ServiceBreakdownChart key={`services-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></div>
+      )}
+
+      {mobileSection === 'clients' && (
+        <>
+          <div className={`${cardClass} h-[320px]`}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></div>
+          <div className={`${cardClass} h-[360px]`}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></div>
+        </>
+      )}
+
+      {mobileSection === 'reports' && (
+        <>
+          {reportPanel('Monthly reports', FileText, 'sage', <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />)}
+          {reportPanel('Weekly reports', CalendarRange, 'sky', <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />, { id: 'weekly-reports' })}
+          {reportPanel('Weekly comparison', GitCompareArrows, 'sand', <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />)}
+        </>
+      )}
+    </div>
+  )
+
   const MainDashboard = () => (
     <motion.div className="grid grid-cols-1 gap-4 lg:h-full lg:grid-cols-[minmax(0,3fr)_minmax(0,1.5fr)_minmax(0,1fr)]">
       {/* LEFT: stats + service breakdown */}
@@ -451,7 +518,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.25, ease: 'easeInOut' }}
         >
 
-          {dashboardView === 'monthly' && <MainDashboard />}
+          {dashboardView === 'monthly' && (isMobile ? <MobileDashboard /> : <MainDashboard />)}
           {dashboardView === 'yearly' && 
             <YearlyDashboard
               userId={user.id}
