@@ -18,20 +18,6 @@ interface SquareLocation {
 	selected: boolean
 }
 
-const MONTHS = [
-	'January',
-	'February',
-	'March',
-	'April',
-	'May',
-	'June',
-	'July',
-	'August',
-	'September',
-	'October',
-	'November',
-	'December',
-]
 
 export default function SquareTab() {
 	const [loading, setLoading] = useState(true)
@@ -244,21 +230,20 @@ export default function SquareTab() {
 		const toastId = toast.loading(`Syncing Square data for ${year}...`)
 
 		try {
-			for (const month of MONTHS) {
-				const res = await fetch(
-					`/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`
-				)
-				const body = await res.json().catch(() => ({}))
+			// One full-year sync (limited to a couple per hour) rather than 12 month syncs
+			const res = await fetch(
+				`/api/pull?granularity=year&year=${encodeURIComponent(year)}&force=1`
+			)
+			const body = await res.json().catch(() => ({}))
 
-				if (!res.ok) {
-					throw new Error(body?.error || `Sync failed for ${month} ${year}`)
-				}
+			if (!res.ok) {
+				throw new Error(body?.error || `Sync failed for ${year}`)
 			}
 
 			toast.success(`Synced data for all of ${year}`, { id: toastId })
 		} catch (err: any) {
 			console.error(err)
-			toast.error(`Failed to sync Square data for ${year}`, { id: toastId })
+			toast.error(`Failed to sync Square data for ${year}: ${err?.message || 'Unknown error'}`, { id: toastId })
 		} finally {
 			setSyncingAll(false)
 		}

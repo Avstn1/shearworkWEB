@@ -6,6 +6,8 @@ import { getAuthenticatedUser } from '@/utils/api-auth'
 import { pull } from '@/lib/booking/orchestrator'
 import { PullOptions, Month, MONTHS } from '@/lib/booking/types'
 import { isFinalAttempt, isQStashDelivery } from '@/lib/booking/syncQueue'
+import { enterSyncGate } from '@/lib/booking/syncGate'
+import { businessNow } from '@/lib/booking/torontoTime'
 
 const serviceSupabase = createSupabaseAdminClient()
 
@@ -29,7 +31,7 @@ const serviceSupabase = createSupabaseAdminClient()
  * - /api/pull?month=January&year=2025&dryRun=true
  */
 export async function GET(request: Request) {
-  const { user, supabase } = await getAuthenticatedUser(request)
+  const { user, supabase, isService } = await getAuthenticatedUser(request)
 
   if (!user || !supabase) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
@@ -91,6 +93,23 @@ export async function GET(request: Request) {
   if (weekNumberStr) options.weekNumber = parseInt(weekNumberStr, 10)
   if (dayStr) options.day = parseInt(dayStr, 10)
 
+  // User-triggered month/year syncs go through the gate (freshness, hourly limit,
+  // one-at-a-time). Background callers (queue, cron) are already paced and skip it.
+  const force = searchParams.get('force') === 'true' || searchParams.get('force') === '1'
+  const gate = !isService && !dryRun && (granularity === 'month' || granularity === 'year')
+    ? await enterSyncGate({
+        userId: user.id,
+        kind: granularity === 'year' ? 'year' : 'month',
+        scope: granularity === 'year' ? `year:${year}` : `month:${year}-${String(MONTHS.indexOf(month as Month) + 1).padStart(2, '0')}`,
+        isCurrentPeriod: isCurrentOrFuturePeriod(year, granularity === 'month' ? MONTHS.indexOf(month as Month) + 1 : null),
+        force,
+      })
+    : null
+  if (gate && !gate.run) {
+    return NextResponse.json({ endpoint: 'pull', options, ...gate.body }, { status: gate.status, headers: gate.headers })
+  }
+  const startedAt = Date.now()
+
   // sync_status bookkeeping applies to real (non dry-run) single-month pulls
   const trackStatus = granularity === 'month' && Boolean(month) && !dryRun
   const statusKey = { user_id: user.id, month: month as string, year }
@@ -112,6 +131,7 @@ export async function GET(request: Request) {
         const final = !isQStashDelivery(request) || isFinalAttempt(request)
         await setStatus(statusKey, final ? 'failed' : 'retrying', sourceErrors.join('; '))
       }
+      if (gate?.run) await gate.finish(false)
       return NextResponse.json({ endpoint: 'pull', options, error: 'Pull failed', result }, { status: 502 })
     }
 
@@ -120,15 +140,22 @@ export async function GET(request: Request) {
       if (previousStatus !== 'completed') await notifyIfHistoryComplete(user.id)
     }
 
-    return NextResponse.json({
-      endpoint: 'pull',
-      options,
-      dryRun,
-      skipAggregations,
-      result,
-    })
+    if (gate?.run) await gate.finish(true)
+    const durationMs = Date.now() - startedAt
+    return NextResponse.json(
+      {
+        endpoint: 'pull',
+        options,
+        dryRun,
+        skipAggregations,
+        durationMs,
+        result,
+      },
+      { headers: { 'Server-Timing': `pull;dur=${durationMs}` } },
+    )
   } catch (err) {
     console.error('Pull error:', err)
+    if (gate?.run) await gate.finish(false)
     if (trackStatus) {
       const final = !isQStashDelivery(request) || isFinalAttempt(request)
       await setStatus(statusKey, final ? 'failed' : 'retrying', String(err))
@@ -139,6 +166,13 @@ export async function GET(request: Request) {
     }, { status: 500 })
   }
 }
+/** True for the current Toronto month/year or a later one (data there still changes). */
+function isCurrentOrFuturePeriod(year: number, month: number | null): boolean {
+  const [nowYear, nowMonth] = businessNow().date.split('-').map(Number)
+  if (month === null) return year >= nowYear
+  return year > nowYear || (year === nowYear && month >= nowMonth)
+}
+
 type StatusKey = { user_id: string; month: string; year: number }
 
 /** Marks the month as processing and returns the status it had before. */

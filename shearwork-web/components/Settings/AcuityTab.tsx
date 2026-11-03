@@ -14,20 +14,6 @@ interface CalendarItem {
   [k: string]: any
 }
 
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
 
 export default function AcuityTab() {
   const [profile, setProfile] = useState<any>(null)
@@ -156,17 +142,16 @@ export default function AcuityTab() {
     const toastId = toast.loading(`Syncing ${year}...`)
 
     try {
-      for (const month of MONTHS) {
-        const res = await fetch(
-          `/api/pull?granularity=month&month=${encodeURIComponent(month)}&year=${encodeURIComponent(year)}`,
-          { method: 'GET' }
-        )
+      // One full-year sync (limited to a couple per hour) rather than 12 month syncs
+      const res = await fetch(
+        `/api/pull?granularity=year&year=${encodeURIComponent(year)}&force=1`,
+        { method: 'GET' }
+      )
 
-        const body = await res.json().catch(() => ({}))
+      const body = await res.json().catch(() => ({}))
 
-        if (!res.ok) {
-          throw new Error(body.error || `Sync failed for ${month} ${year}`)
-        }
+      if (!res.ok) {
+        throw new Error(body.error || `Sync failed for ${year}`)
       }
 
       toast.success(`Synced data for all of ${year}`, { id: toastId })
