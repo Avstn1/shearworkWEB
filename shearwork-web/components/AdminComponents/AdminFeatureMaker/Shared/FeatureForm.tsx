@@ -99,11 +99,11 @@ export default function FeatureForm({
                 required
                 value={formData.version}
                 onChange={(e) => onVersionChange(e.target.value)}
-                className={`field ${versionValidationError ? '!border-[#D99A8B]' : ''}`}
+                className={`field ${versionValidationError ? '!border-[#FF8F7D]' : ''}`}
                 placeholder="1.0.1"
               />
               {versionValidationError && (
-                <p className="text-[11px] text-[#D99A8B] mt-1 leading-tight">{versionValidationError}</p>
+                <p className="text-[11px] text-[#FF8F7D] mt-1 leading-tight">{versionValidationError}</p>
               )}
             </div>
           )}

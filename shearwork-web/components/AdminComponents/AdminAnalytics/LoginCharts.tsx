@@ -184,16 +184,16 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
     return (
       <div
         style={{
-          backgroundColor: '#1D201E',
+          backgroundColor: '#1C212A',
           border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: 8,
           padding: '8px 10px',
-          color: '#ECEDEA',
+          color: '#EEF1F5',
           fontSize: 12,
           fontVariantNumeric: 'tabular-nums',
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 4, color: '#9EA39C' }}>{formattedLabel}</div>
+        <div style={{ fontWeight: 600, marginBottom: 4, color: '#9AA3B2' }}>{formattedLabel}</div>
         {payload.map((p: any) => (
           <div key={p.dataKey} style={{ color: p.color }}>
             {`${p.name}: ${p.value}`}
@@ -226,13 +226,13 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
               <XAxis
                 dataKey={viewMode === 'hourly' ? 'hour' : 'day'}
                 stroke="rgba(255,255,255,0.06)"
-                tick={{ fill: '#7C817A', fontSize: 11 }}
+                tick={{ fill: '#7B8596', fontSize: 11 }}
                 tickLine={false}
                 tickFormatter={viewMode === 'hourly' ? (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'am' : 'pm'}` : undefined}
               />
-              <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7C817A', fontSize: 11 }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
+              <YAxis stroke="rgba(255,255,255,0.06)" tick={{ fill: '#7B8596', fontSize: 11 }} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
               <Tooltip content={tooltipContent} cursor={{ stroke: 'rgba(255,255,255,0.12)' }} />
-              <Legend iconType="plainline" iconSize={12} wrapperStyle={{ fontSize: 12, color: '#9EA39C' }} />
+              <Legend iconType="plainline" iconSize={12} wrapperStyle={{ fontSize: 12, color: '#9AA3B2' }} />
               
               {displayMode === 'separate' ? (
                 <>
@@ -240,7 +240,7 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
                     type="monotone" 
                     dataKey="success" 
                     name="Success"
-                    stroke="#8CC470" 
+                    stroke="#3DD27A" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -248,7 +248,7 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
                     type="monotone" 
                     dataKey="failed" 
                     name="Failed"
-                    stroke="#70A6DE" 
+                    stroke="#5AA9FF" 
                     strokeWidth={2} 
                     dot={false} 
                   />
@@ -258,7 +258,7 @@ export default function LoginChart({ startDate, endDate, targetDate, viewMode, d
                   type="monotone" 
                   dataKey="total" 
                   name="Total Logins"
-                  stroke="#8CC470"                   
+                  stroke="#3DD27A"                   
                   strokeWidth={2} 
                   dot={false} 
                 />

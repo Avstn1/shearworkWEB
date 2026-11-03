@@ -117,9 +117,9 @@ export function MessageContent({
     <div className="space-y-3 sm:space-y-4 flex flex-col h-full">
       {/* Validation Reason Alert */}
       {msg.isValidated && msg.validationStatus === 'DENIED' && msg.validationReason && (
-        <div className="p-3 bg-[#D99A8B]/10 border border-[#D99A8B]/20 rounded-lg flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-[#D99A8B] mt-0.5 flex-shrink-0" strokeWidth={1.75} />
-          <p className="text-[13px] text-[#D99A8B]">{msg.validationReason}</p>
+        <div className="p-3 bg-[#FF8F7D]/10 border border-[#FF8F7D]/20 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-[#FF8F7D] mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+          <p className="text-[13px] text-[#FF8F7D]">{msg.validationReason}</p>
         </div>
       )}
 
@@ -147,7 +147,7 @@ export function MessageContent({
               msg.message.length < 100
                 ? 'text-amber-300'
                 : msg.message.length > 240
-                ? 'text-[#D99A8B]'
+                ? 'text-[#FF8F7D]'
                 : 'text-sage-bright'
             }`}
           >
@@ -177,8 +177,8 @@ export function MessageContent({
 
       {/* Test Cost Info - Only show when saved AND validated */}
       {msg.isSaved && msg.isValidated && (
-        <div className="p-3 bg-[#A9C0D2]/[0.06] border border-[#A9C0D2]/15 rounded-lg">
-          <p className="text-[13px] text-[#A9C0D2]">
+        <div className="p-3 bg-[#9CCBFF]/[0.06] border border-[#9CCBFF]/15 rounded-lg">
+          <p className="text-[13px] text-[#9CCBFF]">
             Test messages cost 1 credit each once your free tests are used up.
           </p>
         </div>

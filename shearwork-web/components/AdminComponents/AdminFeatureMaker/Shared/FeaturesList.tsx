@@ -219,7 +219,7 @@ export default function FeaturesList({
                           e.stopPropagation()
                           onDeleteFeature(feature.id)
                         }}
-                        className="btn btn-ghost btn-sm !h-7 !px-2 !text-[11px] !text-[#D99A8B] whitespace-nowrap"
+                        className="btn btn-ghost btn-sm !h-7 !px-2 !text-[11px] !text-[#FF8F7D] whitespace-nowrap"
                       >
                         Delete
                       </button>

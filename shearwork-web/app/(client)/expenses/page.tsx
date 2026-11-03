@@ -262,7 +262,7 @@ export default function UserExpensesPage() {
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteReceipt(r.id, r.path) }}
                             disabled={loadingDelete === r.id}
-                            className="block w-full px-3 py-2 text-left text-sm text-[#D99A8B] transition-colors hover:bg-white/[0.05] disabled:opacity-50"
+                            className="block w-full px-3 py-2 text-left text-sm text-[#FF8F7D] transition-colors hover:bg-white/[0.05] disabled:opacity-50"
                           >{loadingDelete === r.id ? 'Deleting...' : 'Delete'}</button>
                         </div>
                       )}

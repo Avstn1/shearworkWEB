@@ -28,8 +28,8 @@ interface TrialPromptModalProps {
 // Status tone per mode: sage = healthy, warn = muted sand, danger = muted coral.
 const TONE_CLASSES = {
   sage: 'bg-sage/[0.12] text-sage-bright',
-  warn: 'bg-[#D8C59A]/[0.12] text-[#D8C59A]',
-  danger: 'bg-[#D99A8B]/[0.12] text-[#D99A8B]',
+  warn: 'bg-[#FFC97A]/[0.12] text-[#FFC97A]',
+  danger: 'bg-[#FF8F7D]/[0.12] text-[#FF8F7D]',
 } as const
 
 const getModeConfig = (mode: TrialPromptMode, daysRemaining: number) => {

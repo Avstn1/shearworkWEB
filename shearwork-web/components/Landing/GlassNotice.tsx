@@ -15,7 +15,7 @@ function MarkTile({ size }: { size: Size }) {
 }
 
 const SHELL =
-  'rounded-xl border border-white/[0.08] bg-[#1A1D1B]/95 ' +
+  'rounded-xl border border-white/[0.08] bg-[#181C24]/95 ' +
   'shadow-[0_20px_40px_-24px_rgb(0_0_0/0.8)] backdrop-blur-md'
 
 /** Corva's Auto-Nudge text asking the barber before it reaches out to clients. */
@@ -45,7 +45,7 @@ export function BookingToast({ size = 'md' }: { size?: Size }) {
   const sm = size === 'sm'
   return (
     <div
-      className={`${SHELL} flex items-start ${sm ? 'gap-2 p-2.5' : 'gap-3 p-3.5'} shadow-[inset_0_0_0_1px_rgb(143_181_122/0.25),0_20px_40px_-24px_rgb(0_0_0/0.8)]`}
+      className={`${SHELL} flex items-start ${sm ? 'gap-2 p-2.5' : 'gap-3 p-3.5'} shadow-[inset_0_0_0_1px_rgb(61_210_122/0.25),0_20px_40px_-24px_rgb(0_0_0/0.8)]`}
     >
       <MarkTile size={size} />
       <span className="min-w-0 flex-1">

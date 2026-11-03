@@ -151,7 +151,7 @@ function ClientRow({ client, showMessaged }: { client: Client; showMessaged?: bo
         <div className="flex flex-wrap gap-x-1.5">
           <span>{client.phone_normalized}</span>
           <span aria-hidden="true">&middot;</span>
-          <span className="text-[#D99A8B]">{client.days_overdue}d overdue</span>
+          <span className="text-[#FF8F7D]">{client.days_overdue}d overdue</span>
           <span aria-hidden="true">&middot;</span>
           <span>{client.days_since_last_visit}d since visit</span>
         </div>

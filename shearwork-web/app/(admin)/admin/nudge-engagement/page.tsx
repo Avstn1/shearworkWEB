@@ -143,7 +143,7 @@ function WeekNav({
                   mode="single" selected={currentWeek} onSelect={onDateSelect}
                   className="text-ivory"
                   modifiersClassNames={{ selected: 'bg-sage text-ink rounded-md font-semibold', today: 'text-sage-bright font-semibold' }}
-                  style={{ ['--rdp-accent-color' as any]: '#8FB57A' }}
+                  style={{ ['--rdp-accent-color' as any]: '#3DD27A' }}
                   showOutsideDays
                 />
               </div>

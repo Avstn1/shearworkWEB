@@ -214,7 +214,7 @@ export default function BillingSection() {
             onClick={cancelAtPeriodEnd ? handleResumeClick : handleCancelClick}
             disabled={loadingAction || !hasSub}
             className={`btn btn-sm shrink-0 self-end sm:self-auto ${
-              cancelAtPeriodEnd ? 'btn-primary' : 'btn-glass text-[#D99A8B]'
+              cancelAtPeriodEnd ? 'btn-primary' : 'btn-glass text-[#FF8F7D]'
             }`}
           >
             {loadingAction && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />}
@@ -255,7 +255,7 @@ export default function BillingSection() {
             <button onClick={handleCloseModal} disabled={loadingAction} className="btn btn-ghost btn-sm">
               Never mind
             </button>
-            <button onClick={handleConfirmCancel} disabled={loadingAction} className="btn btn-sm bg-[#D99A8B] text-ink hover:bg-[#E3AC9E]">
+            <button onClick={handleConfirmCancel} disabled={loadingAction} className="btn btn-sm bg-[#FF8F7D] text-ink hover:bg-[#FFA394]">
               {loadingAction && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />}
               <span>Yes, cancel it</span>
             </button>

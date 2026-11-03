@@ -55,12 +55,12 @@ export async function POST(request: Request) {
         "subject": "Your Verification Code - Corva",
         "htmlbody": `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #2E322F; margin-bottom: 20px;">Verify Your Email</h1>
+            <h1 style="color: #2E3542; margin-bottom: 20px;">Verify Your Email</h1>
             <p style="color: #666; font-size: 16px; margin-bottom: 30px;">
               Enter this code to verify your email address:
             </p>
             <div style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); padding: 30px; text-align: center; border-radius: 10px; margin: 30px 0;">
-              <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #181B19;">
+              <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #161A21;">
                 ${code}
               </span>
             </div>

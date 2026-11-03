@@ -28,8 +28,8 @@ export default function RevenueProgressCard({ actual, projected, className }: Pr
           value={percentage}
           text={`${Math.round(percentage)}%`}
           styles={buildStyles({
-            textColor: '#ECEDEA',
-            pathColor: '#8FB57A',
+            textColor: '#EEF1F5',
+            pathColor: '#3DD27A',
             trailColor: 'rgba(255,255,255,0.06)',
             textSize: '14px',
           })}

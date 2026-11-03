@@ -115,7 +115,7 @@ export default function AppointmentSheets() {
   const selectedDateStr = formatDateToISO(selectedDate);
 
   const calendarStyle: CSSProperties & { ['--rdp-accent-color']?: string } = {
-    '--rdp-accent-color': '#8FB57A',
+    '--rdp-accent-color': '#3DD27A',
   };
 
   // Close calendar when clicking outside
@@ -306,9 +306,9 @@ export default function AppointmentSheets() {
                     }}
                     modifiersStyles={{
                       selected: {
-                        color: '#111312',
+                        color: '#0D1014',
                         fontWeight: 600,
-                        background: '#8FB57A',
+                        background: '#3DD27A',
                         borderRadius: '6px',
                       },
                     }}
@@ -409,7 +409,7 @@ export default function AppointmentSheets() {
           ) : error ? (
             <div className="empty-state">
               <AlertCircle aria-hidden="true" />
-              <p className="text-[#D99A8B]">{error}</p>
+              <p className="text-[#FF8F7D]">{error}</p>
             </div>
           ) : appointments.length === 0 ? (
             <EmptyState icon={CalendarX} title={`No appointments found for ${formatDateDisplay(selectedDate)}.`}>

@@ -102,7 +102,7 @@ export default function Sidebar() {
   return (
     <>
       <aside
-        className="fixed left-0 z-40 hidden w-[var(--sidebar-width,224px)] flex-col border-r border-white/[0.07] bg-[#141614] md:flex"
+        className="fixed left-0 z-40 hidden w-[var(--sidebar-width,224px)] flex-col border-r border-white/[0.07] bg-[#11141A] md:flex"
         style={{ top: 'var(--navbar-height, 72px)', height: 'calc(100dvh - var(--navbar-height, 72px))' }}
       >
         <nav className="flex-1 space-y-0.5 px-3 py-4" aria-label="Main">

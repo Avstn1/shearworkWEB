@@ -64,9 +64,9 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
             {/* Modal Content */}
             <div className="overflow-y-auto flex-1 p-3 sm:p-5">
               <div className="space-y-2.5 sm:space-y-3">
-                <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20 rounded-lg">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-md bg-[#D8C59A]/[0.12] flex items-center justify-center">
-                    <Phone className="w-4 h-4 text-[#D8C59A]" strokeWidth={1.75} />
+                <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-[#FFC97A]/[0.06] border border-[#FFC97A]/20 rounded-lg">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-md bg-[#FFC97A]/[0.12] flex items-center justify-center">
+                    <Phone className="w-4 h-4 text-[#FFC97A]" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-ivory mb-1.5 text-sm">
@@ -229,7 +229,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-gray-500">Inactive status:</span>
                     <span className="badge">Inactive</span>
-                    <span className="text-xs text-[#D99A8B]">← No messages will be sent</span>
+                    <span className="text-xs text-[#FF8F7D]">← No messages will be sent</span>
                   </div>
                 </Step>
 
@@ -247,8 +247,8 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                   <p className="text-[13px] text-muted mb-2">
                     Add clients who should receive this specific message, regardless of the algorithm. These recipients count toward your max clients limit.
                   </p>
-                  <div className="p-2.5 bg-[#D8C59A]/[0.06] border border-[#D8C59A]/20 rounded-md mb-2">
-                    <div className="flex items-start gap-2 text-xs text-[#D8C59A]">
+                  <div className="p-2.5 bg-[#FFC97A]/[0.06] border border-[#FFC97A]/20 rounded-md mb-2">
+                    <div className="flex items-start gap-2 text-xs text-[#FFC97A]">
                       <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                       <p>
                         <span className="font-semibold">Important:</span> Your max clients setting determines how many people you're willing to message. If max is set to 0, you won't be able to see one-time recipients in your client list.
@@ -262,7 +262,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-gray-500">Example:</span>
-                      <span className="text-xs text-[#D99A8B]">Max = 0 → No clients visible, no messages sent</span>
+                      <span className="text-xs text-[#FF8F7D]">Max = 0 → No clients visible, no messages sent</span>
                     </div>
                   </div>
                 </Step>
@@ -270,7 +270,7 @@ export default function HowCampaignsWorkModal({ isOpen, onClose }: HowCampaignsW
                 {/* Important Note */}
                 <div className="p-3 sm:p-4 bg-white/[0.03] border border-white/[0.07] rounded-lg">
                   <div className="flex items-start gap-3">
-                    <Info className="w-4 h-4 text-[#D8C59A] flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <Info className="w-4 h-4 text-[#FFC97A] flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-ivory mb-1.5 text-sm">Important Reminders</h4>
                       <ul className="space-y-1 text-[13px] text-muted list-disc pl-4 marker:text-gray-500">

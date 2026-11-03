@@ -127,7 +127,7 @@ function CheckoutForm({
       />
 
       {errorMessage && (
-        <div className="rounded-lg border border-[#D99A8B]/25 bg-[#D99A8B]/[0.06] px-3 py-2.5 text-sm text-[#D99A8B]">
+        <div className="rounded-lg border border-[#FF8F7D]/25 bg-[#FF8F7D]/[0.06] px-3 py-2.5 text-sm text-[#FF8F7D]">
           {errorMessage}
         </div>
       )}
@@ -382,11 +382,11 @@ export default function CreditsModal({
       case 'credit':
         return { Icon: ArrowUpRight, color: 'text-sage-bright', bg: 'bg-sage/[0.12]' };
       case 'debit':
-        return { Icon: ArrowDownRight, color: 'text-[#D99A8B]', bg: 'bg-[#D99A8B]/[0.12]' };
+        return { Icon: ArrowDownRight, color: 'text-[#FF8F7D]', bg: 'bg-[#FF8F7D]/[0.12]' };
       case 'reserve':
-        return { Icon: Lock, color: 'text-[#D8C59A]', bg: 'bg-[#D8C59A]/[0.12]' };
+        return { Icon: Lock, color: 'text-[#FFC97A]', bg: 'bg-[#FFC97A]/[0.12]' };
       case 'release':
-        return { Icon: TrendingUp, color: 'text-[#A9C0D2]', bg: 'bg-[#A9C0D2]/[0.12]' };
+        return { Icon: TrendingUp, color: 'text-[#9CCBFF]', bg: 'bg-[#9CCBFF]/[0.12]' };
     }
   };
 
@@ -402,28 +402,28 @@ export default function CreditsModal({
     appearance: {
       theme: 'night' as const,
       variables: {
-        colorPrimary: '#8FB57A',
-        colorBackground: '#171A18',
-        colorText: '#ECEDEA',
-        colorDanger: '#D99A8B',
+        colorPrimary: '#3DD27A',
+        colorBackground: '#151920',
+        colorText: '#EEF1F5',
+        colorDanger: '#FF8F7D',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         spacingUnit: '4px',
         borderRadius: '8px',
-        colorTextSecondary: '#9EA39C',
-        colorTextPlaceholder: '#7C817A',
+        colorTextSecondary: '#9AA3B2',
+        colorTextPlaceholder: '#7B8596',
       },
       rules: {
         '.Input': {
-          backgroundColor: '#111312',
+          backgroundColor: '#0D1014',
           border: '1px solid rgba(255, 255, 255, 0.09)',
           boxShadow: 'none',
         },
         '.Input:focus': {
-          border: '1px solid rgba(143, 181, 122, 0.6)',
-          boxShadow: '0 0 0 3px rgba(143, 181, 122, 0.15)',
+          border: '1px solid rgba(61, 210, 122, 0.6)',
+          boxShadow: '0 0 0 3px rgba(61, 210, 122, 0.15)',
         },
         '.Label': {
-          color: '#9EA39C',
+          color: '#9AA3B2',
           fontSize: '13px',
         },
       },
@@ -538,7 +538,7 @@ export default function CreditsModal({
                       {/* Reserved Credits */}
                       <div className="rounded-lg border border-white/[0.07] bg-raised p-4 md:p-5">
                         <div className="flex items-center gap-2 mb-2">
-                          <Lock className="w-4 h-4 text-[#D8C59A]" strokeWidth={1.75} />
+                          <Lock className="w-4 h-4 text-[#FFC97A]" strokeWidth={1.75} />
                           <span className="stat-label">Reserved credits</span>
                         </div>
                         <div className="flex items-baseline gap-2">
@@ -571,7 +571,7 @@ export default function CreditsModal({
 
                     {/* Usage Info */}
                     <div className="flex items-start gap-2.5 rounded-lg border border-white/[0.07] bg-raised px-3 py-3 md:px-4">
-                      <Zap className="w-4 h-4 text-[#A9C0D2] mt-0.5 flex-shrink-0" strokeWidth={1.75} />
+                      <Zap className="w-4 h-4 text-[#9CCBFF] mt-0.5 flex-shrink-0" strokeWidth={1.75} />
                       <div>
                         <h4 className="text-[13px] font-semibold text-ivory mb-1">How credits work</h4>
                         <p className="text-xs text-gray-400 leading-relaxed">
@@ -674,14 +674,14 @@ export default function CreditsModal({
                                     <div className="text-right flex-shrink-0">
                                       {availableDiff !== 0 && (
                                         <div className={`text-xs md:text-sm font-semibold tabular-nums ${
-                                          availableDiff > 0 ? 'text-sage-bright' : 'text-[#D99A8B]'
+                                          availableDiff > 0 ? 'text-sage-bright' : 'text-[#FF8F7D]'
                                         }`}>
                                           Available {availableDiff > 0 ? '+' : ''}{availableDiff.toLocaleString()}
                                         </div>
                                       )}
                                       {reservedDiff !== 0 && (
                                         <div className={`text-[11px] md:text-xs font-medium tabular-nums ${
-                                          reservedDiff > 0 ? 'text-[#D8C59A]' : 'text-[#A9C0D2]'
+                                          reservedDiff > 0 ? 'text-[#FFC97A]' : 'text-[#9CCBFF]'
                                         }`}>
                                           {/* {reservedDiff > 0 ? 'Reserved' : 'Released'} {Math.abs(reservedDiff).toLocaleString()} */}
                                           Reserved {reservedDiff > 0 ? '+' : ''}{reservedDiff.toLocaleString()}

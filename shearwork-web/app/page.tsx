@@ -104,7 +104,7 @@ export default function HorizontalLandingPage() {
             className="relative w-screen min-h-screen lg:h-screen snap-start flex-shrink-0 overflow-y-auto lg:overflow-hidden flex flex-col" 
             style={{ 
               color: 'rgba(255, 255, 255, 0.6)',
-              background: '#111312'
+              background: '#0D1014'
             }}
           >
             <div className="aurora-bg" />

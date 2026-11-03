@@ -373,7 +373,7 @@ export default function ClientSheetsFilterDropdown({
                 onFiltersChange([]);
                 setFilterRows([{ id: Date.now().toString(), type: '', value: '' }]);
               }}
-              className="btn btn-ghost btn-sm !text-[#D99A8B]"
+              className="btn btn-ghost btn-sm !text-[#FF8F7D]"
             >
               Clear All
             </button>

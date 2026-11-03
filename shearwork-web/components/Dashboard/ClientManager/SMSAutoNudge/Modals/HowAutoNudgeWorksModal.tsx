@@ -66,7 +66,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                   <div className="absolute left-[4px] top-4 bottom-4 w-px bg-white/[0.07]" />
                   <div className="space-y-0">
                     <div className="flex gap-4 pb-5">
-                      <TimelineDot color="bg-[#A9C0D2]" />
+                      <TimelineDot color="bg-[#9CCBFF]" />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className="text-[13px] font-semibold text-ivory">Monday · 10 AM</span>
@@ -92,7 +92,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                       </div>
                     </div>
                     <div className="flex gap-4">
-                      <TimelineDot color="bg-[#D8C59A]" />
+                      <TimelineDot color="bg-[#FFC97A]" />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className="text-[13px] font-semibold text-ivory">Sunday · 10 PM</span>
@@ -125,7 +125,7 @@ export default function HowAutoNudgeWorksModal({ isOpen, onClose }: HowAutoNudge
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-white/[0.07]">
-                    <Clock className="w-4 h-4 text-[#D8C59A] flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+                    <Clock className="w-4 h-4 text-[#FFC97A] flex-shrink-0 mt-0.5" strokeWidth={1.75} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <p className="text-sm font-semibold text-ivory">If you onboarded Thursday–Sunday</p>

@@ -240,7 +240,7 @@ export default function AutoNudgeActivationStep({
               </ol>
               {isBarelyLate && (
                 <div className="mt-3 flex gap-2 border-t border-white/[0.07] pt-3">
-                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#A9C0D2]" strokeWidth={1.75} />
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9CCBFF]" strokeWidth={1.75} />
                   <p className="text-xs text-gray-400">
                     Normally, nudges are sent on Mondays and results arrive on Sunday nights. We're making a one-time exception to get you started right away. Next week, your nudges will be back to the normal Monday schedule.
                   </p>
@@ -282,7 +282,7 @@ export default function AutoNudgeActivationStep({
 
             {/* Confirmation Text */}
             <div className="flex gap-2.5 rounded-lg border border-white/[0.07] bg-raised px-3 py-2.5">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#A9C0D2]" strokeWidth={1.75} />
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#9CCBFF]" strokeWidth={1.75} />
               <p className="text-xs text-gray-400">
                 Corva will send smart booking reminders to past clients when you have openings.
                 You'll be notified when someone books.

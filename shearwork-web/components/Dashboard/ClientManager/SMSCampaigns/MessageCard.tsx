@@ -399,7 +399,7 @@ export function MessageCard({
               <div className="relative group">
                 <button
                   onClick={() => onRemove(msg.id)}
-                  className="btn btn-ghost btn-sm !h-8 !w-8 !p-0 flex-shrink-0 hover:!text-[#D99A8B]"
+                  className="btn btn-ghost btn-sm !h-8 !w-8 !p-0 flex-shrink-0 hover:!text-[#FF8F7D]"
                 >
                   <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                 </button>
@@ -653,7 +653,7 @@ export function MessageCard({
                   {recipientsStats.failed > 0 && (
                     <div>
                       <p className="stat-label mb-1">Failed</p>
-                      <p className="text-base font-semibold text-[#D99A8B] tabular-nums">{recipientsStats.failed}</p>
+                      <p className="text-base font-semibold text-[#FF8F7D] tabular-nums">{recipientsStats.failed}</p>
                     </div>
                   )}
                 </div>
@@ -674,7 +674,7 @@ export function MessageCard({
                         className={`p-2 sm:p-2.5 rounded-lg border transition-colors ${
                           recipient.is_sent
                             ? 'bg-raised/60 border-white/[0.07] hover:bg-raised'
-                            : 'bg-[#D99A8B]/[0.04] border-[#D99A8B]/15 hover:bg-[#D99A8B]/[0.07]'
+                            : 'bg-[#FF8F7D]/[0.04] border-[#FF8F7D]/15 hover:bg-[#FF8F7D]/[0.07]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -696,7 +696,7 @@ export function MessageCard({
                               </span>
                               {/* Failure Reason - Inline with tag */}
                               {!recipient.is_sent && recipient.reason && (
-                                <span className="flex items-center gap-1 text-[11px] text-[#D99A8B]">
+                                <span className="flex items-center gap-1 text-[11px] text-[#FF8F7D]">
                                   <AlertCircle className="w-3 h-3 flex-shrink-0" strokeWidth={1.75} />
                                   <span className="truncate">{recipient.reason}</span>
                                 </span>
@@ -710,7 +710,7 @@ export function MessageCard({
                             {recipient.is_sent ? (
                               <CheckCircle className="w-4 h-4 text-sage" strokeWidth={1.75} />
                             ) : (
-                              <XCircle className="w-4 h-4 text-[#D99A8B]" strokeWidth={1.75} />
+                              <XCircle className="w-4 h-4 text-[#FF8F7D]" strokeWidth={1.75} />
                             )}
                           </div>
                         </div>

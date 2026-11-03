@@ -14,17 +14,17 @@ import { Button, ButtonLink } from '@/components/ui/Button';
 
 // Color palette
 const COLORS = {
-  background: '#161917',
-  cardBg: '#181B19',
-  navBg: '#161917', 
-  surface: 'rgba(236, 237, 234, 0.05)',
-  surfaceSolid: '#171A18',
-  glassBorder: 'rgba(236, 237, 234, 0.09)',
-  text: '#ECEDEA',
-  textMuted: 'rgba(236, 237, 234, 0.62)',
-  green: '#8FB57A',
-  greenLight: '#8FB57A',
-  greenGlow: 'rgba(143, 181, 122, 0.4)',
+  background: '#13171C',
+  cardBg: '#161A21',
+  navBg: '#13171C', 
+  surface: 'rgba(238, 241, 245, 0.05)',
+  surfaceSolid: '#151920',
+  glassBorder: 'rgba(238, 241, 245, 0.09)',
+  text: '#EEF1F5',
+  textMuted: 'rgba(238, 241, 245, 0.62)',
+  green: '#3DD27A',
+  greenLight: '#3DD27A',
+  greenGlow: 'rgba(61, 210, 122, 0.4)',
 }
 
 export default function LoginPage() {
@@ -132,7 +132,7 @@ export default function LoginPage() {
             }}
             className="w-2 h-2 rounded-full transition-all duration-200"
             style={{
-              backgroundColor: index === 2 ? '#8FB57A' : 'rgba(255, 255, 255, 0.3)',
+              backgroundColor: index === 2 ? '#3DD27A' : 'rgba(255, 255, 255, 0.3)',
               transform: index === 2 ? 'scale(1.5)' : 'scale(1)',
               cursor: index === 2 ? 'default' : 'pointer',
             }}
@@ -144,7 +144,7 @@ export default function LoginPage() {
       <section 
         className="h-screen flex items-center overflow-auto lg:overflow-hidden px-4 sm:px-5 lg:px-8 py-4 lg:py-0 relative"
         style={{
-          background: `linear-gradient(135deg, #161917 0%, #181B19 30%, #1b1e18 70%, #161917 100%)`,
+          background: `linear-gradient(135deg, #13171C 0%, #161A21 30%, #1b1e18 70%, #13171C 100%)`,
           color: COLORS.text,
         }}
         onWheel={(e) => {
@@ -174,7 +174,7 @@ export default function LoginPage() {
               transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
               className="rounded-lg lg:rounded-xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl relative overflow-hidden h-full flex flex-col justify-between"
               style={{
-                background: `linear-gradient(180deg, rgba(236, 237, 234, 0.06) 0%, rgba(236, 237, 234, 0.02) 100%)`,
+                background: `linear-gradient(180deg, rgba(238, 241, 245, 0.06) 0%, rgba(238, 241, 245, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}
@@ -363,7 +363,7 @@ export default function LoginPage() {
                       transition={{ duration: 0.4, delay: 0.3 + idx * 0.1, ease: 'easeOut' }}
                       className="flex items-center gap-1.5 lg:gap-2 p-1 lg:p-2 rounded-md lg:rounded-lg transition-all duration-300 hover:-translate-x-1"
                       style={{
-                        backgroundColor: 'rgba(143, 181, 122, 0.1)',
+                        backgroundColor: 'rgba(61, 210, 122, 0.1)',
                       }}
                     >
                       <div 
@@ -393,7 +393,7 @@ export default function LoginPage() {
               transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
               className="rounded-lg lg:rounded-xl shadow-2xl p-3 lg:p-6 backdrop-blur-xl text-center"
               style={{
-                background: `linear-gradient(180deg, rgba(236, 237, 234, 0.06) 0%, rgba(236, 237, 234, 0.02) 100%)`,
+                background: `linear-gradient(180deg, rgba(238, 241, 245, 0.06) 0%, rgba(238, 241, 245, 0.02) 100%)`,
                 borderWidth: 1,
                 borderColor: COLORS.glassBorder,
               }}
