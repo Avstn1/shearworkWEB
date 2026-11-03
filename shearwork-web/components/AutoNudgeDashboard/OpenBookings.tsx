@@ -90,7 +90,7 @@ export default function OpenBookings({ user_id }: Props) {
         </p>
       </div>
 
-      <div className="relative h-12 w-12 flex-shrink-0 md:h-20 md:w-20">
+      <div className="relative hidden h-12 w-12 flex-shrink-0 md:block md:h-20 md:w-20">
         <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
           {!loading && (
