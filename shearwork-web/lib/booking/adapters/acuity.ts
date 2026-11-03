@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { redis } from '@/lib/redis'
 import { BookingAdapter } from './BookingAdapter'
 import { NormalizedAppointment, DateRange } from '../types'
 import { extractSourceFromForms } from '@/lib/marketingFunnels'
@@ -103,6 +104,16 @@ export class AcuityAdapter implements BookingAdapter {
 
     const targetCalendar = profile.calendar.trim().toLowerCase()
 
+    // The name -> id lookup costs an Acuity call on every sync; cache it for a day.
+    // Keyed by the calendar name, so switching calendars in Settings takes effect at once.
+    const cacheKey = `acuity:calendar-id:${userId}:${targetCalendar}`
+    try {
+      const cached = await redis.get<string | number>(cacheKey)
+      if (cached !== null && cached !== undefined) return String(cached)
+    } catch (err) {
+      console.error('[acuity] calendar id cache read failed:', err)
+    }
+
     const response = await fetch(`${this.apiBase}/calendars`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
@@ -119,6 +130,12 @@ export class AcuityAdapter implements BookingAdapter {
 
     if (!match) {
       throw new Error(`No matching calendar found for: ${targetCalendar}`)
+    }
+
+    try {
+      await redis.set(cacheKey, String(match.id), { ex: 24 * 60 * 60 })
+    } catch (err) {
+      console.error('[acuity] calendar id cache write failed:', err)
     }
 
     return match.id

@@ -172,42 +172,49 @@ export default function DashboardPage() {
   }
 
   // -------------------- SYNC FUNCTIONS --------------------
-  const syncAcuityData = async () => {
+  // Automatic syncs (page load, month change) are quiet: the server skips them if the
+  // month synced recently. The Sync button forces a fresh sync and reports the result.
+  const syncAcuityData = async (manual = false) => {
     if (!user) return
     if (isSyncing.current) return
 
     isSyncing.current = true
     setIsRefreshing(true)
-    const toastId = toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`)
+    const toastId = manual ? toast.loading(`Syncing data for ${selectedMonth} ${selectedYear}...`) : undefined
 
     const timeoutId = setTimeout(() => {
       if (isSyncing.current) {
         console.warn('Sync timeout reached, resetting state')
         isSyncing.current = false
         setIsRefreshing(false)
-        toast.error('Sync timed out. Please try again.', { id: toastId })
+        if (manual) toast.error('Sync timed out. Please try again.', { id: toastId })
       }
     }, 60000)
 
     try {
       const res = await fetch(
-        `/api/pull?granularity=month&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}`
+        `/api/pull?granularity=month&month=${encodeURIComponent(selectedMonth)}&year=${selectedYear}${manual ? '&force=1' : ''}`
       )
 
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || body.details || 'Pull failed')
 
-      setRefreshKey(prev => prev + 1)
-      toast.success(`Data updated for ${selectedMonth} ${selectedYear}`, { id: toastId })
+      if (body.skipped === 'in_progress') {
+        if (manual) toast.success('A sync is already running for this month', { id: toastId })
+      } else if (body.skipped) {
+        // Fresh enough: stored data is current, nothing to reload
+      } else {
+        setRefreshKey(prev => prev + 1)
+        if (manual) toast.success(`Data updated for ${selectedMonth} ${selectedYear}`, { id: toastId })
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error syncing data.'
       console.error(err)
-      toast.error(message, { id: toastId })
+      if (manual) toast.error(message, { id: toastId })
     } finally {
       clearTimeout(timeoutId)
       isSyncing.current = false
       setIsRefreshing(false)
-      toast.dismiss(toastId)
     }
   }
 
@@ -216,7 +223,7 @@ export default function DashboardPage() {
     const toastId = toast.loading('Performing full sync...')
 
     try {
-      const res = await fetch(`/api/pull?granularity=year&year=${selectedYear}`)
+      const res = await fetch(`/api/pull?granularity=year&year=${selectedYear}&force=1`)
 
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || body.details || 'Full sync failed')
@@ -308,7 +315,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => {
-                syncAcuityData()
+                syncAcuityData(true)
               }}
               disabled={isRefreshing}
               className="btn btn-glass btn-sm h-9"

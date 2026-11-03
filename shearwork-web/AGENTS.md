@@ -47,6 +47,13 @@
 - Background month syncs go through one QStash queue per barber (`lib/booking/syncQueue.ts`,
   parallelism 1 so a barber's months never run concurrently and duplicate clients).
   `/api/pull` records `sync_status`: queued → processing → completed | retrying → failed.
+- User-triggered `/api/pull` month/year syncs go through `lib/booking/syncGate.ts`
+  (`SYNC_POLICY`): skipped if the period synced recently (10 min current, 6 h past;
+  `force=1` bypasses), capped per account per hour (12 month / 2 year), one at a time
+  per period. Background callers (QStash, cron, service role) bypass it. Automatic
+  client syncs should not pass `force`; only explicit "Sync" buttons should.
+- Business dates/times ("today", "this week", "8am") use `lib/booking/torontoTime.ts`;
+  the server runs in UTC.
 - Page every Supabase read that can exceed 1000 rows (`fetchAllRows` / `selectAll` /
   `selectAllIn` in `lib/booking/db.ts`): PostgREST silently truncates at 1000.
 
