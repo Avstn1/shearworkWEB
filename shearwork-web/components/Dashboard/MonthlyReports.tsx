@@ -2,6 +2,8 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 'use client'
 
+import { useFitCount } from '@/hooks/useFitCount'
+import ShowAllModal, { ShowAllButton } from '@/components/ui/ShowAllModal'
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabaseClient'
 import { MoreVertical, Edit, Trash2, FileText } from 'lucide-react'
@@ -50,6 +52,7 @@ export default function MonthlyReports({
   filterYear,
   isAdmin = false,
 }: MonthlyReportsProps) {
+  const [showAll, setShowAll] = useState(false)
   const [reports, setReports] = useState<MonthlyReport[]>([])
   const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -102,6 +105,7 @@ export default function MonthlyReports({
     return (!filterMonth || r.month === filterMonth) &&
            (!filterYear || r.year === filterYear)
   })
+  const { ref: fitRef, count: fitCount } = useFitCount<HTMLDivElement>({ fallbackRowHeight: 62, gap: 8, deps: [filteredReports.length] })
 
   const handleEdit = (report: MonthlyReport) => {
     setSelectedReport(report)
@@ -153,11 +157,7 @@ export default function MonthlyReports({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  return (
-    <>
-      <div className="flex w-full flex-col gap-2">
-        {filteredReports.length > 0 ? (
-          filteredReports.map((r) => (
+  const renderReport = (r: (typeof filteredReports)[number]) => (
             <div
               key={r.id}
               className="group relative w-full cursor-pointer rounded-lg border border-white/[0.07] bg-white/[0.015] p-3 transition-colors hover:border-white/[0.12] hover:bg-white/[0.03]"
@@ -229,7 +229,13 @@ export default function MonthlyReports({
 
               </div>
             </div>
-          ))
+          )
+
+  return (
+    <>
+      <div ref={fitRef} className="flex w-full flex-col gap-2 min-h-0 flex-1 overflow-hidden">
+        {filteredReports.length > 0 ? (
+          filteredReports.slice(0, fitCount).map(renderReport)
         ) : (
           <EmptyState icon={FileText} title="No monthly reports">
             No monthly reports for this month/year.
@@ -251,6 +257,12 @@ export default function MonthlyReports({
           />,
           document.body
         )}
+      {filteredReports.length > fitCount && (
+        <ShowAllButton total={filteredReports.length} onClick={() => setShowAll(true)} />
+      )}
+      <ShowAllModal open={showAll} onClose={() => setShowAll(false)} title={`Monthly reports · ${filteredReports.length}`}>
+        <div className="flex flex-col gap-2 py-2">{filteredReports.map(renderReport)}</div>
+      </ShowAllModal>
     </>
   )
 }

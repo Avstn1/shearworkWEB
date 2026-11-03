@@ -395,7 +395,7 @@ export default function DashboardPage() {
 
       {/* MIDDLE: top clients + funnels */}
       <div className="flex min-h-0 min-w-0 flex-col gap-4">
-        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[280px] lg:min-h-0 lg:overflow-y-auto`}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></motion.div>
+        <motion.div variants={fadeInUp} className={`${cardClass} min-h-[280px] lg:min-h-0 lg:overflow-hidden`}><TopClientsCard key={`clients-${refreshKey}`} userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear} /></motion.div>
         <motion.div variants={fadeInUp} className={`${cardClass} min-h-[320px] lg:min-h-0`}><MarketingFunnelsChart key={`funnels-${refreshKey}`} barberId={user?.id} month={selectedMonth} year={selectedYear} /></motion.div>
       </div>
 
@@ -403,19 +403,19 @@ export default function DashboardPage() {
       <div className="flex min-h-0 min-w-0 flex-col gap-4">
         <motion.section data-tutorial-id="dashboard-monthly-reports" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
           <header className="panel-header py-3"><PanelHeading icon={FileText} tone="sage">Monthly reports</PanelHeading></header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
             <MonthlyReports key={`mreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </div>
         </motion.section>
         <motion.section id="weekly-reports" data-tutorial-id="dashboard-weekly-reports" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
           <header className="panel-header py-3"><PanelHeading icon={CalendarRange} tone="sky">Weekly reports</PanelHeading></header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
             <WeeklyReports key={`wreports-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </div>
         </motion.section>
         <motion.section data-tutorial-id="dashboard-weekly-comparison" variants={fadeInUp} className="panel flex min-h-0 flex-1 flex-col">
           <header className="panel-header py-3"><PanelHeading icon={GitCompareArrows} tone="sand">Weekly comparison</PanelHeading></header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
             <WeeklyComparisonReports key={`wcompare-${refreshKey}`} userId={user?.id} filterMonth={selectedMonth} filterYear={selectedYear} isAdmin={isAdmin} />
           </div>
         </motion.section>

@@ -5,6 +5,8 @@ import { toast } from 'react-hot-toast'
 import { Search, X, UserCheck, SearchX, PartyPopper, HeartPulse, Phone } from 'lucide-react'
 import { IconTile } from '@/components/ui/AppKit'
 import { NUDGING_PAUSED } from '@/lib/featureFlags'
+import { useFitCount } from '@/hooks/useFitCount'
+import ShowAllModal, { ShowAllButton } from '@/components/ui/ShowAllModal'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/utils/supabaseClient'
 import { EmptyState, Segmented } from '@/components/ui/AppKit'
@@ -195,6 +197,8 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
   const [engaged, setEngaged] = useState(sms_engaged_current_week)
   const [search, setSearch] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showAll, setShowAll] = useState(false)
+  const { ref: fitRef, count: fitCount } = useFitCount<HTMLUListElement>({ fallbackRowHeight: 66, deps: [tab, search, loadingProspects, loadingUnbooked] })
 
   const reportDateLabel = getReportDateLabel()
 
@@ -439,11 +443,28 @@ export default function ClientHealth({ user_id, sms_engaged_current_week, date_a
           )}
         </div>
       ) : (
-        <ul className="min-h-0 flex-1 divide-y divide-white/[0.06] overflow-y-auto pr-1.5">
-          {filtered.map((client) => (
-            <ClientRow key={client.client_id} client={client} showMessaged={tab === 'unbooked'} />
-          ))}
-        </ul>
+        <>
+          {/* Show what fits (no scrolling inside the card); the rest is one tap away */}
+          <ul ref={fitRef} className="min-h-0 flex-1 divide-y divide-white/[0.06] overflow-hidden">
+            {filtered.slice(0, fitCount).map((client) => (
+              <ClientRow key={client.client_id} client={client} showMessaged={tab === 'unbooked'} />
+            ))}
+          </ul>
+          {filtered.length > fitCount && (
+            <ShowAllButton total={filtered.length} onClick={() => setShowAll(true)} />
+          )}
+          <ShowAllModal
+            open={showAll}
+            onClose={() => setShowAll(false)}
+            title={tab === 'prospects' ? `Clients at risk · ${filtered.length}` : `Pending follow-up · ${filtered.length}`}
+          >
+            <ul className="divide-y divide-white/[0.06]">
+              {filtered.map((client) => (
+                <ClientRow key={client.client_id} client={client} showMessaged={tab === 'unbooked'} />
+              ))}
+            </ul>
+          </ShowAllModal>
+        </>
       )}
 
       {/* Nudge Clients Button */}
